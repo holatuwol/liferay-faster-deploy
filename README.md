@@ -17,3 +17,11 @@ rd() {
 	/path/to/liferay-faster-deploy/redeploy
 }
 ```
+
+Navigate to the root of the portal repository and invoke the function you created.
+
+```
+cd /path/to/portal/source
+
+rd
+```
