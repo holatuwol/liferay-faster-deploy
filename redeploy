@@ -25,18 +25,20 @@ applychanges() {
 	git diff ${COMPARE_HASH}..HEAD --name-only > deploy_changes.txt
 	git status -s | grep -vF '/rebel.xml' | grep -vF '.iml' | awk '{print $2}' >> deploy_changes.txt
 
+	# Identify the folders that need to change
+
+	python $(dirname $0)/redeploy.py > deploy_modules.txt
+
 	# Check if we need to rerun cachenpm
 
-	if [ "" != "$(grep -F package.json deploy_changes.txt)" ]; then
+	if isneedscachenpm; then
 		$(dirname $0)/cachenpm
-	else
-		$(dirname $0)/disablegwnpm
 	fi
 
 	# In the future, the script will handle reordering of folders, so just
 	# iterate over the result without any fancy logic here.
 
-	for folder in $(python $(dirname $0)/redeploy.py); do
+	for folder in $(cat deploy_modules.txt); do
 		echo -e "\nBuilding $folder"
 
 		pushd $folder > /dev/null
@@ -330,6 +332,16 @@ getparent() {
 
 	downloadbranch
 	return $?
+}
+
+isneedscachenpm() {
+	for folder in $(cat deploy_modules.txt); do
+		if [ -f "$folder/package.json" ]; then
+			return 0
+		fi
+	done
+
+	return 1
 }
 
 isnotbuildbranch() {
