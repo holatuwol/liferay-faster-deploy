@@ -1,9 +1,20 @@
 #!/bin/bash
 
-BUILD_FOLDER_PREFIX=/opt/liferay
-BUILD_FOLDER_SUFFIX=bundles
-TAG_ARCHIVE_MIRROR=http://mirrors/files.liferay.com/private/ee/fix-packs/support/tags
-BRANCH_ARCHIVE_MIRROR=http://cloud-10-50-0-165/builds
+if [ -z ${BUILD_FOLDER_PREFIX+x} ]; then
+	BUILD_FOLDER_PREFIX=/opt/liferay
+fi
+
+if [ -z ${BUILD_FOLDER_SUFFIX+x} ]; then
+	BUILD_FOLDER_SUFFIX=bundles
+fi
+
+if [ -z ${TAG_ARCHIVE_MIRROR+x} ]; then
+	TAG_ARCHIVE_MIRROR=http://mirrors/files.liferay.com/private/ee/fix-packs/support/tags
+fi
+
+if [ -z ${BRANCH_ARCHIVE_MIRROR+x} ]; then
+	BRANCH_ARCHIVE_MIRROR=http://cloud-10-50-0-165/builds
+fi
 
 applychanges() {
 	git ls-files | grep '/\(build.xml\|build.gradle\)$' > root_candidates.txt
