@@ -1,0 +1,78 @@
+#!/bin/bash
+
+cachenpm() {
+	cache_home="$HOME/.liferay/node/cache"
+
+	if [ "clean" == "$1" ]; then
+		rm -rf "${cache_home}"
+	fi
+
+	mkdir -p "${cache_home}/node_modules"
+
+	GIT_FOLDER=$PWD
+
+	while [ "/" != "$GIT_FOLDER" ] && [ ! -e "$GIT_FOLDER/.git" ]; do
+		GIT_FOLDER=$(dirname "$GIT_FOLDER")
+	done
+
+	if [ ! -e "$GIT_FOLDER/.git" ]; then
+		echo "Unable to find portal source root"
+		return 1
+	fi
+
+	pushd "$GIT_FOLDER" > /dev/null
+
+	cat /dev/null > "${cache_home}/cachenpm.txt"
+
+	for folder in $(git ls-files modules | grep -F package.json | xargs -I {} dirname "{}"); do
+		if [ ! -f "$folder/.lfrbuild-portal" ]; then
+			continue
+		fi
+
+		if [ ! -h "$folder/node_modules" ]; then
+			rm -rf "$folder/node_modules"
+			softlink "$folder/node_modules" "${cache_home}/node_modules"
+		fi
+
+		echo "$PWD/$folder/package.json" >> "${cache_home}/cachenpm.txt"
+	done
+
+	popd > /dev/null
+
+	cp -a $(dirname $0)/cachenpm.py ${cache_home}/cachenpm.py
+
+	pushd "${cache_home}" > /dev/null
+
+	if [ -f package.json ]; then
+		mv package.json package.json.old
+	fi
+
+	python cachenpm.py
+
+	if [ -f package.json.old ] && [ "" == "$(diff package.json package.json.old)" ]; then
+		echo 'package.json has no changes'
+	else
+		NPM_PRODUCTION=$(npm config get production)
+		npm config set production false
+
+		if [ "" != "$(which yarn)" ]; then
+			yarn
+		else
+			npm install
+		fi
+	fi
+
+	rm package.json.old
+
+	popd > /dev/null
+
+	if [ "" != "$NPM_PRODUCTION" ] && [ "false" != "$NPM_PRODUCTION" ]; then
+		npm config set production $NPM_PRODUCTION
+	fi
+}
+
+disablegwnpm() {
+	$(dirname $0)/disablegwnpm
+}
+
+cachenpm && disablegwnpm

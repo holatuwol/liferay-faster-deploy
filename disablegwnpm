@@ -1,0 +1,39 @@
+#!/bin/bash
+
+disablegwnpm() {
+	VCS_ROOT=$(git rev-parse --show-toplevel)
+
+	MODULES_HOME=
+
+	if [ -f $VCS_ROOT/modules/build.gradle ]; then
+		MODULES_HOME=$VCS_ROOT/modules
+	elif [ -f $VCS_ROOT/build.gradle ]; then
+		MODULES_HOME=$VCS_ROOT
+	else
+		return 0
+	fi
+
+	git checkout $MODULES_HOME/build.gradle
+	git update-index --assume-unchanged $MODULES_HOME/build.gradle
+
+	echo '
+
+gradle.beforeProject {
+	Project project ->
+
+	configure(project) {
+		pluginManager.withPlugin("com.liferay.node") {
+			node {
+				nodeDir = [System.getProperty("user.home"), ".liferay", "node", "node"].join(File.separator)
+			}
+
+			cleanDownloadNode.enabled = false
+			npmInstall.enabled = false
+		}
+	}
+}
+' >> $MODULES_HOME/build.gradle
+
+}
+
+disablegwnpm

@@ -1,0 +1,64 @@
+#!/bin/bash
+
+jrebel() {
+	SCRIPT_FOLDER=$(dirname $0)
+	TARGET_BRANCH=$(git symbolic-ref --short HEAD)
+
+	if [ "" == "$TARGET_BRANCH" ]; then
+		echo "Unable to build from detached head"
+		return 1
+	fi
+
+	local GIT_FOLDER=$PWD
+
+	while [ "/" != "$GIT_FOLDER" ] && [ ! -e "$GIT_FOLDER/.git" ]; do
+		GIT_FOLDER=$(dirname $GIT_FOLDER)
+	done
+
+	if [ ! -e $GIT_FOLDER/.git ]; then
+		echo "Unable to use git to locate $1"
+		return 1
+	fi
+
+	# git ls-files wants a relative path, so let's generate it
+
+	local ROOT_FOLDER=$(python -c "from __future__ import print_function; import os.path; print(os.path.relpath('$GIT_FOLDER', '$PWD'))")
+
+	# use git ls-files to find bnd.bnd files, then use grep -l to list matching files
+
+	local BND_LIST=$(git ls-files $ROOT_FOLDER | grep bnd.bnd)
+
+	for folder in core static modules; do
+		BASE_PATH=/opt/liferay/$TARGET_BRANCH/bundles/osgi/$folder
+
+		for file in $(ls -1 $BASE_PATH); do
+			BUNDLE_SYMBOLICNAME=$(echo $file | sed 's/.jar$//g')
+
+			BND_MATCHES=$(echo "$BND_LIST" | xargs grep -l ": .*${BUNDLE_SYMBOLICNAME}$" | xargs -I {} dirname {})
+
+			for bnd_match in $BND_MATCHES; do
+				JAR_PATH=$BASE_PATH/$file
+				MODULE_PATH="$PWD/$bnd_match"
+				RESOURCE_PATH="$MODULE_PATH/src/main/resources"
+
+				mkdir -p $RESOURCE_PATH
+				mkdir -p $MODULE_PATH/classes
+
+				if [ -d "$RESOURCE_PATH/META-INF/resources" ]; then
+					cp -f "$SCRIPT_FOLDER/jrebel-web.xml" "$RESOURCE_PATH/rebel.xml"
+				else
+					cp -f "$SCRIPT_FOLDER/jrebel.xml" "$RESOURCE_PATH/rebel.xml"
+				fi
+
+				sed -i.bak "s@MODULE_CLASSES@${MODULE_PATH}/classes@g" "$RESOURCE_PATH/rebel.xml"
+				sed -i.bak "s@MODULE_RESOURCES@${RESOURCE_PATH}/META-INF/resources@g" "$RESOURCE_PATH/rebel.xml"
+
+				rm -f "$RESOURCE_PATH/rebel.xml.bak"
+
+				zip -ujq "${JAR_PATH}" "${RESOURCE_PATH}/rebel.xml"
+			done
+		done
+	done
+}
+
+jrebel
