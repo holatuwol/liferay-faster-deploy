@@ -58,8 +58,8 @@ fixgradle() {
 	# if you appear to be building to a Liferay downloaded bundle rather
 	# than a built bundle, tell the user to use the override folder
 
-	if [ -d $GRADLE_LIFERAY_HOME/osgi/marketplace ] && [[ 0 -ne $(ls -1 $GRADLE_LIFERAY_HOME/osgi/marketplace | grep -F .lpkg | wc -l) ]]; then
-		if [ "" == "$(grep -F $OVERRIDE build.gradle)" ]; then
+	if [ -d "$GRADLE_LIFERAY_HOME/osgi/marketplace" ] && [[ 0 -ne $(ls -1 $GRADLE_LIFERAY_HOME/osgi/marketplace | grep -F .lpkg | wc -l) ]]; then
+		if [ "" == "$(grep -F "$OVERRIDE" build.gradle)" ]; then
 			echo "If you are absolutely sure you want to deploy to a release bundle with .lpkg files"
 			echo "(not recommended, because this may require a server restart after every deploy)"
 			echo "please add the following to build.gradle:"
