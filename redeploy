@@ -1,18 +1,20 @@
 #!/bin/bash
 
-if [ -z ${BUILD_FOLDER_PREFIX+x} ]; then
+if [ -z ${BUILD_FOLDER_PREFIX} ]; then
 	BUILD_FOLDER_PREFIX=/opt/liferay
 fi
 
-if [ -z ${BUILD_FOLDER_SUFFIX+x} ]; then
+if [ -z ${BUILD_FOLDER_SUFFIX} ]; then
 	BUILD_FOLDER_SUFFIX=bundles
+elif [ "/" == "${BUILD_FOLDER_SUFFIX}" ]; then
+	BUILD_FOLDER_SUFFIX=
 fi
 
-if [ -z ${TAG_ARCHIVE_MIRROR+x} ]; then
+if [ -z ${TAG_ARCHIVE_MIRROR} ]; then
 	TAG_ARCHIVE_MIRROR=http://mirrors/files.liferay.com/private/ee/fix-packs/support/tags
 fi
 
-if [ -z ${BRANCH_ARCHIVE_MIRROR+x} ]; then
+if [ -z ${BRANCH_ARCHIVE_MIRROR} ]; then
 	BRANCH_ARCHIVE_MIRROR=http://cloud-10-50-0-165/builds
 fi
 
@@ -367,10 +369,21 @@ if [[ 0 -ne $? ]]; then
 	exit $?
 fi
 
+echo "Using $BUILD_FOLDER_PREFIX as the root folder"
+
 if [ ! -d "$BUILD_FOLDER_PREFIX" ]; then
 	echo "${BUILD_FOLDER_PREFIX} does not exist"
 	exit 1
 fi
+
+mkdir -p "$BUILD_FOLDER_PREFIX/test"
+
+if [ ! -d "$BUILD_FOLDER_PREFIX/test" ]; then
+	echo "${USER} does not have permission to create folders in ${BUILD_FOLDER_PREFIX}"
+	exit 1
+fi
+
+rmdir "$BUILD_FOLDER_PREFIX/test"
 
 CURRENT_HASH=$(git log -1 --pretty='%H')
 
