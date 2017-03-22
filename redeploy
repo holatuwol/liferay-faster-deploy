@@ -179,7 +179,9 @@ downloadbranch() {
 
 			git checkout -f $BASE_BRANCH
 			git rebase $NEW_BASELINE
-			git checkout -f $TARGET_BRANCH
+			git reset --hard $NEW_BASELINE
+
+			git checkout $TARGET_BRANCH
 
 			if [ "" != "$NEEDS_STASH" ]; then
 				git stash pop
@@ -201,7 +203,7 @@ downloadbranch() {
 	# sure to clean up past builds to not take up too much space
 
 	if [ ! -f "$HOME/.liferay/builds/$BUILD_NAME" ]; then
-		rm "$HOME/.liferay/builds/${SHORT_NAME}*.tar.gz"
+		find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.tar.gz" | xargs rm
 
 		echo "Downloading snapshot for $SHORT_NAME ($NEW_BASELINE)"
 
