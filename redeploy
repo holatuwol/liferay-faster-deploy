@@ -305,28 +305,22 @@ getparent() {
 	BASE_BRANCH=
 
 	if isnotbuildbranch $TARGET_BRANCH; then
-		BASE_BRANCH=$(git symbolic-ref --short HEAD)
+		BASE_TAG=$(git describe HEAD --abbrev=0 2> /dev/null)
 
-		if isnotbuildbranch $BASE_BRANCH; then
-			BASE_TAG=$(git describe HEAD --abbrev=0 2> /dev/null)
+		if [ "" == "$BASE_TAG" ]; then
+			FULL_VERSION=$(grep lp.version= release.properties | cut -d'=' -f 2)
+			MAJOR_VERSION=$(grep lp.version.major= release.properties | cut -d'=' -f 2)
 
-			if [ "" == "$BASE_TAG" ]; then
-				BASE_BRANCH=$(git describe --all HEAD~1 --abbrev=0 | grep -v remotes | awk -F '/' '{ print $NF }')
-
-				while isnotbuildbranch $BASE_BRANCH; do
-					echo "Checking ancestor for $BASE_BRANCH"
-					BASE_BRANCH=$(git describe --all $BASE_BRANCH~1 --abbrev=0 | grep -v remotes | awk -F '/' '{ print $NF }')
-				done
-
-				if [ "" != "$BASE_BRANCH" ]; then
-					echo "Located valid ancestor $BASE_BRANCH"
-				fi
+			if [ "6.1" == "$MAJOR_VERSION" ]; then
+				BASE_BRANCH=ee-6.1.x
+			elif [ "6.2" == "$MAJOR_VERSION" ]; then
+				BASE_BRANCH=ee-6.2.x
+			elif [ "7.0" == "$MAJOR_VERSION" ] && [ "7.0.10" == "$FULL_VERSION" ]; then
+				BASE_BRANCH=ee-7.0.x
+			elif [ "7.0" == "$MAJOR_VERSION" ]; then
+				BASE_BRANCH=master
 			fi
 		fi
-	elif [ "master" == "$1" ]; then
-		BASE_BRANCH=master
-	else
-		BASE_BRANCH=ee-$(echo $1 | sed 's/\([0-9]\)/\1./g')
 	fi
 
 	# If we're using a tag, shortcut
@@ -338,7 +332,7 @@ getparent() {
 
 	# If we have a known branch, we'll use it
 
-	if [ "master" != "$BASE_BRANCH" ] && [ "ee-7.0.x" != "$BASE_BRANCH" ] && [ "ee-6.2.x" != "$BASE_BRANCH" ] && [ "ee-6.1.x" != "$BASE_BRANCH" ]; then
+	if isnotbuildbranch $BASE_BRANCH; then
 		echo "Unable to identify base branch, please rebase"
 		return 1
 	fi
