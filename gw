@@ -1,0 +1,109 @@
+#!/bin/bash
+
+fixgradle() {
+	# locate the gradlew binary
+
+	GRADLE_HOME=$PWD
+
+	while [ ! -e $GRADLE_HOME/gradlew ] && [ "/" != "$GRADLE_HOME" ]; do
+		GRADLE_HOME=$(dirname $GRADLE_HOME)
+	done
+
+	if [ ! -e $GRADLE_HOME/gradlew ]; then
+		echo 'Unable to find the gradlew binary'
+		return 1
+	fi
+
+	# if this is a blade workspace, don't do anything
+
+	if [ -f $GRADLE_HOME/gradle.properties ]; then
+		return 0
+	fi
+
+	# a settings.gradle in the parent folder can mess us up
+
+	if [ -f ../settings.gradle ] && [ ! -f ../gradlew ]; then
+		rm ../settings.gradle
+		git update-index --assume-unchanged ../settings.gradle
+	fi
+
+	# make sure we remembered to create an app.server.$USER.properties
+
+	if [ ! -f "$GRADLE_HOME/app.server.$USER.properties" ]; then
+		echo "Missing app.server.$USER.properties"
+		return 1
+	fi
+
+	# make sure we have a gradle.properties in the .gradle cache and
+	# that it matches app.server.$USER.properties
+
+	ANT_LIFERAY_HOME=$(grep -F app.server.parent.dir= $GRADLE_HOME/app.server.$USER.properties | cut -d'=' -f 2)
+
+	if [ -f "$GRADLE_HOME/.gradle/gradle.properties" ]; then
+		GRADLE_LIFERAY_HOME=$(grep -F liferay.home= $GRADLE_HOME/.gradle/gradle.properties | cut -d'=' -f 2)
+	else
+		GRADLE_LIFERAY_HOME=
+	fi
+
+	if [ ! -f "$GRADLE_HOME/.gradle/gradle.properties" ] || [ "$ANT_LIFERAY_HOME" != "$GRADLE_LIFERAY_HOME" ]; then
+		pushd $GRADLE_HOME > /dev/null
+
+		ant setup-sdk
+
+		GRADLE_LIFERAY_HOME=$ANT_LIFERAY_HOME
+
+		popd > /dev/null
+	fi
+
+	# if you appear to be building to a Liferay downloaded bundle rather
+	# than a built bundle, tell the user to use the override folder
+
+	if [ -d $GRADLE_LIFERAY_HOME/osgi/marketplace ] && [[ 0 -ne $(ls -1 $GRADLE_LIFERAY_HOME/osgi/marketplace | grep -F .lpkg | wc -l) ]]; then
+		if [ "" == "$(grep -F $OVERRIDE build.gradle)" ]; then
+			echo "If you are absolutely sure you want to deploy to a release bundle with .lpkg files"
+			echo "(not recommended, because this may require a server restart after every deploy)"
+			echo "please add the following to build.gradle:"
+			echo -e "\n\njar.archiveName = \"$JAR_NAME\"\n\nliferay {\n\tdeployDir = \"$OVERRIDE\"\n}"
+			return 1
+		fi
+	fi
+
+	# if we have a "default" dependency, make sure we have the snapshot in the .m2 cache
+
+	NEEDED_ARTIFACTS=$(grep -F '"com.liferay.portal"' build.gradle | grep -F '"default"' | grep -o 'name: "[^"]*"' | cut -d'"' -f 2)
+
+	if [ "" != "$NEEDED_ARTIFACTS" ]; then
+		for artifact in $NEEDED_ARTIFACTS; do
+			artifact_version=$(grep -F "${artifact}.version" $GRADLE_HOME/.gradle/gradle.properties | cut -d'=' -f 2)
+
+			if [ ! -d "${HOME}/.m2/repository/com/liferay/portal/${artifact}/${artifact_version}" ]; then
+				pushd $GRADLE_HOME > /dev/null
+				ant start install-portal-snapshots
+				popd > /dev/null
+			fi
+		done
+	fi
+}
+
+gw() {
+	fixgradle
+
+	# if there was an error trying to fix gradle, abort
+
+	if [[ 0 -ne $? ]]; then
+		return $?
+	fi
+
+	# run the gradlew binary, making sure to set GRADLE_OPTS if
+	# it is not yet set
+
+	if [ -f $GRADLE_HOME/gradlew ]; then
+		if [ "" == "$GRADLE_OPTS" ]; then
+			export GRADLE_OPTS='-Xms3g -Xmx3g -Dorg.gradle.workers.max=1'
+		fi
+
+		$GRADLE_HOME/gradlew $@
+	fi
+}
+
+gw $@
