@@ -367,6 +367,11 @@ if [[ 0 -ne $? ]]; then
 	exit $?
 fi
 
+if [ ! -d "$BUILD_FOLDER_PREFIX" ]; then
+	echo "${BUILD_FOLDER_PREFIX} does not exist"
+	exit 1
+fi
+
 CURRENT_HASH=$(git log -1 --pretty='%H')
 
 mkdir -p "$HOME/.liferay/builds"
