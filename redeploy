@@ -201,7 +201,7 @@ extract() {
 	OLD_BASELINE=
 
 	if [ -f "$TARGET_FOLDER/baseline.txt" ]; then
-		OLD_BASELINE=$(cat $TARGET_FOLDER/baseline.txt)
+		OLD_BASELINE=$(cat "$TARGET_FOLDER/baseline.txt")
 	fi
 
 	# Cleanup the folders before we untar. Only file we exclude is
@@ -211,6 +211,8 @@ extract() {
 		echo "$TARGET_FOLDER is already up to date"
 		return 0
 	fi
+
+	rm -f last_deploy.txt
 
 	pushd "$TARGET_FOLDER" > /dev/null
 
@@ -259,14 +261,8 @@ getparent() {
 
 	# Update app.server.$USER.properties
 
-	touch app.server.$USER.properties
-
-	if [ "" == "$(grep "app.server.parent.dir=${TARGET_FOLDER}" app.server.$USER.properties)" ]; then
-		echo -e "\n#app.server.parent.dir=${TARGET_FOLDER}" >> app.server.$USER.properties
-	fi
-
-	sed -i 's/^app.server.parent.dir=/#app.server.parent.dir=/g' app.server.$USER.properties
-	sed -i "s@#\(app.server.parent.dir=${TARGET_FOLDER}\)@\1@g" app.server.$USER.properties
+	TARGET_FOLDER="$TARGET_FOLDER" \
+		$(dirname $0)/appserverprops
 
 	# Identify the base branch so we know what to fetch
 

@@ -1,0 +1,83 @@
+#!/bin/bash
+
+appserverprops() {
+	touch app.server.$USER.properties
+
+	# Make sure the parent directory is set to the parameter we pass
+
+	if [ "" == "$(grep "app.server.parent.dir=${TARGET_FOLDER}" app.server.$USER.properties)" ]; then
+		echo -e "\n#app.server.parent.dir=${TARGET_FOLDER}" >> app.server.$USER.properties
+	fi
+
+	sed -i 's/^app.server.parent.dir=/#app.server.parent.dir=/g' app.server.$USER.properties
+	sed -i "s@#\(app.server.parent.dir=${TARGET_FOLDER}\)@\1@g" app.server.$USER.properties
+
+	# Make sure we have the right version of Tomcat
+
+	if [ "" != "$ARCHIVE_HOME" ]; then
+		cleanappserver
+	fi
+
+	# Disable the baseline report unless it's explicitly requested
+
+	echo 'baseline.jar.report.level=off' > build.$USER.properties
+	echo "build.repository.local.dir=$HOME/.m2/repository" >> build.$USER.properties
+
+	# If we're on an older CentOS server, we can't use the node.js SASS compiler
+
+	if [ "" != "$(which rpm)" ]; then
+		echo 'sass.compiler.class.name=ruby' >> build.$USER.properties
+	fi
+
+	# Avoid using ECJ for compilation
+
+	echo 'javac.compiler=modern' >> build.$USER.properties
+}
+
+cleanappserver() {
+	mkdir -p $ARCHIVE_HOME
+
+	TOMCAT_VERSION=$(grep -F app.server.tomcat.version= app.server.properties | cut -d'=' -f 2)
+	TOMCAT_MAJOR_VERSION=$(echo $TOMCAT_VERSION | cut -d'.' -f 1)
+
+	# make sure we have an archive file
+
+	ARCHIVE_FILE=${ARCHIVE_HOME}/apache-tomcat-${TOMCAT_VERSION}.tar.gz
+
+	if [ ! -f "$ARCHIVE_FILE" ]; then
+		pushd $ARCHIVE_HOME > /dev/null
+		wget "http://archive.apache.org/dist/tomcat/tomcat-${TOMCAT_MAJOR_VERSION}/v${TOMCAT_VERSION}/bin/apache-tomcat-${TOMCAT_VERSION}.tar.gz"
+		popd > /dev/null
+	fi
+
+	# cleanup the existing folder so that we can have a clean slate
+
+	TOMCAT_FOLDER=tomcat-${TOMCAT_VERSION}
+
+	rm -rf "$TARGET_FOLDER/$TOMCAT_FOLDER"
+	mkdir -p "$TARGET_FOLDER"
+
+	pushd "$TARGET_FOLDER" > /dev/null
+
+	tar -zxf "$ARCHIVE_FILE"
+	mv apache-tomcat-${TOMCAT_VERSION} $TOMCAT_FOLDER
+	rm -rf $TOMCAT_FOLDER/webapps/*
+
+	# setup catalina.properties
+
+	if [ "7" -lt "$TOMCAT_MAJOR_VERSION" ]; then
+		sed -i 's#common.loader=#common.loader="${catalina.base}/lib/ext/*.jar",#g' $TOMCAT_FOLDER/conf/catalina.properties
+	else
+		sed -i 's#common.loader=#common.loader=${catalina.base}/lib/ext/*.jar,#g' $TOMCAT_FOLDER/conf/catalina.properties
+	fi
+
+	popd > /dev/null
+
+}
+
+if [ "" == "$TARGET_FOLDER" ]; then
+	echo "Please set a target folder"
+	exit 1
+fi
+
+appserverprops $@
