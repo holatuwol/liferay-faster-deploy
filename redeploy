@@ -124,7 +124,7 @@ downloadbranch() {
 		BASE_HASH=$(git log -1 --pretty='%H' $BASE_BRANCH)
 
 		if [ "$BASE_HASH" != "$NEW_BASELINE" ]; then
-			NEEDS_STASH=$(git status -s)
+			NEEDS_STASH=$(git status -s | grep -v '??')
 
 			if [ "" != "$NEEDS_STASH" ]; then
 				git stash
