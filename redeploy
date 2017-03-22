@@ -49,6 +49,14 @@ applychanges() {
 	# In the future, the script will handle reordering of folders, so just
 	# iterate over the result without any fancy logic here.
 
+	if [ "" != "$(grep -v '^modules/' deploy_modules.txt)" ]; then
+		if [ "" != "$(grep setup-libs build.xml)" ]; then
+			ant setup-libs start
+		else
+			ant start
+		fi
+	fi
+
 	for folder in $(cat deploy_modules.txt); do
 		echo -e "\nBuilding $folder"
 
@@ -57,7 +65,7 @@ applychanges() {
 		if [[ "$folder" == modules/* ]]; then
 			gw deploy
 		else
-			ant jar install-portal-snapshots
+			ant jar install-portal-snapshot
 		fi
 
 		EXIT_STATUS=$?
@@ -202,7 +210,7 @@ extract() {
 		return 0
 	fi
 
-	builtin cd "$TARGET_FOLDER"
+	pushd "$TARGET_FOLDER" > /dev/null
 
 	rm -rf tomcat* osgi tools work
 
@@ -216,7 +224,7 @@ extract() {
 
 	echo -n "$NEW_BASELINE" > "baseline.txt"
 
-	builtin cd -
+	popd > /dev/null
 }
 
 getbuild() {
