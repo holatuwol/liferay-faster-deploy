@@ -159,10 +159,7 @@ downloadbranch() {
 		find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.tar.gz" | xargs rm
 
 		echo "Downloading snapshot for $SHORT_NAME ($NEW_BASELINE)"
-
-		builtin cd "$HOME/.liferay/builds/"
-		wget "${BRANCH_ARCHIVE_MIRROR}/${BUILD_NAME}"
-		builtin cd -
+		getbuild "${BRANCH_ARCHIVE_MIRROR}/${BUILD_NAME}"
 	fi
 
 	extract
@@ -174,10 +171,7 @@ downloadtag() {
 
 	if [ ! -f "$HOME/.liferay/builds/$BUILD_NAME" ]; then
 		echo "Downloading snapshot for $BASE_TAG"
-
-		builtin cd "$HOME/.liferay/builds/"
-		wget "${TAG_ARCHIVE_MIRROR}/${BUILD_NAME}"
-		builtin cd -
+		getbuild "${TAG_ARCHIVE_MIRROR}/${BUILD_NAME}"
 	fi
 
 	if [ ! -f "$HOME/.liferay/builds/$BUILD_NAME" ]; then
@@ -225,6 +219,18 @@ extract() {
 	builtin cd -
 }
 
+getbuild() {
+	builtin cd "$HOME/.liferay/builds/"
+
+	if [[ "$1" == s3://* ]]; then
+		aws s3 cp "$1" .
+	else
+		wget "$1"
+	fi
+
+	builtin cd -
+}
+
 getparent() {
 	# Identify the folder we build into
 
@@ -258,7 +264,7 @@ getparent() {
 	BASE_BRANCH=
 
 	if isnotbuildbranch $TARGET_BRANCH; then
-		BASE_TAG=$(git describe HEAD --abbrev=0 2> /dev/null)
+		BASE_TAG=$(git describe --tags HEAD --abbrev=0 2> /dev/null)
 
 		if [ "" == "$BASE_TAG" ]; then
 			FULL_VERSION=$(grep lp.version= release.properties | cut -d'=' -f 2)
