@@ -1,0 +1,50 @@
+#!/bin/bash
+
+gitcdp() {
+	if [ "" == "$1" ]; then
+		echo 'Please specify a packageinfo to locate'
+		return 1
+	fi
+
+	# check if we can use git ls-files
+
+	local GIT_FOLDER=$PWD
+
+	while [ "/" != "$GIT_FOLDER" ] && [ ! -e "$GIT_FOLDER/.git" ]; do
+		GIT_FOLDER=$(dirname $GIT_FOLDER)
+	done
+
+	if [ ! -e $GIT_FOLDER/.git ]; then
+		echo "Unable to use git to locate $1"
+		return 1
+	fi
+
+	# git ls-files wants a relative path, so let's generate it
+
+	local ROOT_FOLDER=$(python -c "from __future__ import print_function; import os.path; print(os.path.relpath('$GIT_FOLDER', '$PWD'))")
+
+	# use git ls-files to find packageinfo files
+
+	local SEARCH_STRING=$(echo $1 | sed 's@\.@/@g')
+	local PACKAGEINFO=$(git ls-files $ROOT_FOLDER | grep -F "/${SEARCH_STRING}/packageinfo")
+
+	if [ "" == "$PACKAGEINFO" ]; then
+		echo "No packageinfo found for $1"
+		return 1
+	fi
+
+	cat "$PACKAGEINFO"
+	echo ""
+
+	# we might be in the folder already, so account for that
+
+	local MATCHING_FOLDERS=$(echo $PACKAGEINFO | grep -o '.*/src')
+
+	if [ "" != "$MATCHING_FOLDERS" ]; then
+		builtin cd $(dirname $MATCHING_FOLDERS)
+	fi
+
+	pwd
+}
+
+gitcdp $@
