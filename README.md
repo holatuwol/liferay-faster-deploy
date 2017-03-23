@@ -4,6 +4,8 @@ Clone this repository.
 git clone git@github.com:holatuwol/liferay-faster-deploy.git
 ```
 
+# Use for Local Development
+
 Add a Bash function to `.bash_aliases` (or the equivalent on whichever shell you're using) which calls the script while also specifying where you want the builds to go by setting the `BUILD_FOLDER_PREFIX` variable. Use whatever shorthand you think makes sense, with the example here being `rd`.
 
 ```
@@ -23,3 +25,7 @@ cd /path/to/portal/source
 
 rd
 ```
+
+# Use for a Build Server
+
+TODO
