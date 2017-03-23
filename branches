@@ -73,7 +73,7 @@ cleanup() {
 
 prepare() {
 	BUILD_FOLDER_PREFIX="$BUILD_FOLDER_PREFIX" \
-		BUILD_FOLDER_SUFFIX="$TIMESTAMP"
+		BUILD_FOLDER_SUFFIX="$TIMESTAMP" \
 		TIMESTAMP="$TIMESTAMP" \
 			$(dirname $0)/prepare $@
 }
