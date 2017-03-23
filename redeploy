@@ -27,7 +27,7 @@ applychanges() {
 		LAST_DEPLOY_HASH=$(cat last_deploy.txt)
 
 		if [ "" != "$LAST_DEPLOY_HASH" ]; then
-			IS_ANCESTOR=$(git merge-base --is-ancestor $LAST_DEPLOY_HASH $CURRENT_HASH)
+			git merge-base --is-ancestor $LAST_DEPLOY_HASH $CURRENT_HASH
 
 			if [[ 0 -eq $? ]]; then
 				COMPARE_HASH=$LAST_DEPLOY_HASH
@@ -120,7 +120,7 @@ downloadbranch() {
 
 	NEW_BASELINE=$(curl -r 0-49 -s ${BRANCH_ARCHIVE_MIRROR}/${BUILD_LOG} | tail -1)
 
-	if [ "" == "$(git log -1 $NEW_BASELINE)" ]; then
+	if [ "" == "$(git log -1 $NEW_BASELINE 2> /dev/null)" ]; then
 		echo "Checking remotes for updates"
 
 		for remote in $(git remote); do
@@ -152,7 +152,7 @@ downloadbranch() {
 		fi
 	fi
 
-	IS_ANCESTOR=$(git merge-base --is-ancestor $NEW_BASELINE $CURRENT_HASH)
+	git merge-base --is-ancestor $NEW_BASELINE $CURRENT_HASH
 
 	if [[ 0 -ne $? ]]; then
 		echo "Rebasing against $SHORT_NAME ($NEW_BASELINE)"
@@ -270,21 +270,27 @@ getparent() {
 	BASE_BRANCH=
 
 	if isnotbuildbranch $TARGET_BRANCH; then
-		BASE_TAG=$(git describe --tags HEAD --abbrev=0 2> /dev/null)
+		FULL_VERSION=$(grep lp.version= release.properties | cut -d'=' -f 2)
+		MAJOR_VERSION=$(grep lp.version.major= release.properties | cut -d'=' -f 2)
 
-		if [ "" == "$BASE_TAG" ]; then
-			FULL_VERSION=$(grep lp.version= release.properties | cut -d'=' -f 2)
-			MAJOR_VERSION=$(grep lp.version.major= release.properties | cut -d'=' -f 2)
+		if [ "6.1" == "$MAJOR_VERSION" ]; then
+			BASE_BRANCH=ee-6.1.x
+		elif [ "6.2" == "$MAJOR_VERSION" ]; then
+			BASE_BRANCH=ee-6.2.x
+		elif [ "7.0" == "$MAJOR_VERSION" ] && [ "7.0.10" == "$FULL_VERSION" ]; then
+			BASE_BRANCH=ee-7.0.x
+		elif [ "7.0" == "$MAJOR_VERSION" ]; then
+			BASE_BRANCH=master
+		fi
 
-			if [ "6.1" == "$MAJOR_VERSION" ]; then
-				BASE_BRANCH=ee-6.1.x
-			elif [ "6.2" == "$MAJOR_VERSION" ]; then
-				BASE_BRANCH=ee-6.2.x
-			elif [ "7.0" == "$MAJOR_VERSION" ] && [ "7.0.10" == "$FULL_VERSION" ]; then
-				BASE_BRANCH=ee-7.0.x
-			elif [ "7.0" == "$MAJOR_VERSION" ]; then
-				BASE_BRANCH=master
-			fi
+		# If the branch isn't an ancestor, try to find a matching tag
+
+		git merge-base --is-ancestor $BASE_BRANCH HEAD
+
+		if [[ 0 -eq $? ]]; then
+			BASE_TAG=
+		else
+			BASE_TAG=$(git describe --tags HEAD --abbrev=0 2> /dev/null)
 		fi
 	fi
 
