@@ -1,0 +1,90 @@
+#!/bin/bash
+
+TIMESTAMP=$(date +%Y%m%d)
+
+if [ -z "${PORTAL_SOURCE_ROOT}" ]; then
+	PORTAL_SOURCE_ROOT=$HOME/source
+fi
+
+if [ -z "${BUILD_FOLDER_PREFIX}" ]; then
+	BUILD_FOLDER_PREFIX=/opt/liferay
+fi
+
+branches() {
+	# Start build
+
+	echo Started $(date)
+
+	# Build all branches
+
+	if [ -d "$BUILD_FOLDER_PREFIX/master" ]; then
+		checkout master && git rebase upstream/master && prepare master 60
+	fi
+
+	if [ -d "$BUILD_FOLDER_PREFIX/70x" ]; then
+		checkout ee-7.0.x && git rebase upstream/ee-7.0.x && prepare 70x 70
+	fi
+
+	if [ -d "$BUILD_FOLDER_PREFIX/62x" ]; then
+		checkout ee-6.2.x && git rebase upstream/ee-6.2.x && prepare 62x 62
+	fi
+
+	if [ -d "$BUILD_FOLDER_PREFIX/61x" ]; then
+		checkout ee-6.1.x && git rebase upstream/ee-6.1.x && prepare 61x 61
+	fi
+
+	echo Completed $(date)
+
+	# Finished build
+
+	checkout master
+
+	# Only retain last three builds
+
+	for folder in master 70x 62x 61x; do
+		if [ -d $BUILD_FOLDER_PREFIX/$folder ]; then
+			BUILD_COUNT=$(ls -1 $BUILD_FOLDER_PREFIX/$folder | grep -vF '.log' | wc -l)
+
+			if [[ $BUILD_COUNT -gt 3 ]]; then
+				for BUILD_ID in $(ls -1 $BUILD_FOLDER_PREFIX/$folder | grep -vF '.log' | sort | head -$(expr $BUILD_COUNT '-' 3)); do
+					rm -rf "$BUILD_FOLDER_PREFIX/$folder/$BUILD_ID"
+				done
+			fi
+		fi
+	done
+}
+
+checkout() {
+	cleanup
+	git checkout $1
+}
+
+cleanup() {
+	pushd $PORTAL_SOURCE_ROOT > /dev/null
+
+	git clean -xdf
+	git reset --hard
+
+	rm -rf $HOME/.gradle/caches/modules-2/files-2.1/com.liferay.portal
+	rm -rf $HOME/.m2/repository/com/liferay/portal
+
+	popd > /dev/null
+}
+
+prepare() {
+	BUILD_FOLDER_PREFIX="$BUILD_FOLDER_PREFIX" \
+		BUILD_FOLDER_SUFFIX="$TIMESTAMP"
+		TIMESTAMP="$TIMESTAMP" \
+			$(dirname $0)/prepare $@
+}
+
+update() {
+	for remote in $(git remote -v | cut -f 1 | sort -u); do
+		git fetch $remote --no-tags
+	done
+
+	git reflog expire --expire=now --all
+	git gc --prune
+}
+
+cd $PORTAL_SOURCE_ROOT && update && branches

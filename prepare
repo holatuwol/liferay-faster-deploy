@@ -1,0 +1,179 @@
+#!/bin/bash
+
+compile() {
+	echo "Starting compilation for $1"
+	GIT_HASH=$(git log -1 --pretty='%H')
+
+	sed -i 's/\${env.ANT_OPTS}/${env.GRADLE_OPTS}/g' build-common.xml
+	git update-index --assume-unchanged build-common.xml
+
+	# Setup properties
+
+	ARCHIVE_HOME="$HOME/.liferay/tomcat" \
+		TARGET_FOLDER="$TARGET_FOLDER" \
+			$(dirname $0)/appserverprops
+
+	# Begin building
+
+	echo 'Git Hash:' | tee "${TARGET_FOLDER}.log"
+	echo "$GIT_HASH" | tee -a "${TARGET_FOLDER}.log"
+	echo '' | tee -a "${TARGET_FOLDER}.log"
+
+	if [ -f modules/build.gradle ]; then
+		$(dirname $0)/skipmp | tee -a "${TARGET_FOLDER}.log"
+		$(dirname $0)/cachenpm | tee -a "${TARGET_FOLDER}.log"
+	fi
+
+	set -o pipefail
+	ant all | tee -a "${TARGET_FOLDER}.log"
+	EXIT_CODE=$?
+	set +o pipefail
+
+	if [[ $EXIT_CODE -ne 0 ]]; then
+		return $EXIT_CODE
+	fi
+}
+
+finish() {
+	BASE_BRANCH=ee-$(grep -F 'lp.version.major=' release.properties | cut -d'=' -f 2).x
+
+	TOMCAT_FOLDER=$TARGET_FOLDER/$(ls -1 $TARGET_FOLDER | grep -F 'tomcat-')
+
+	cp tools/servers/tomcat/bin/setenv.* $TOMCAT_FOLDER/bin
+	sed -i 's/@.*@ //g' $TOMCAT_FOLDER/bin/setenv.sh
+	sed -i 's/@.*@ //g' $TOMCAT_FOLDER/bin/setenv.bat
+
+	echo -en '\nGIT_HASH="'$GIT_HASH'"' >> $TOMCAT_FOLDER/bin/setenv.sh
+	echo -en '\r\nset GIT_HASH="'$GIT_HASH'"' >> $TOMCAT_FOLDER/bin/setenv.bat
+
+	echo -en '\nCATALINA_OPTS="$CATALINA_OPTS -Denv.COMPUTERNAME='$1'-$GIT_HASH"' >> $TOMCAT_FOLDER/bin/setenv.sh
+	echo -en '\r\nset "CATALINA_OPTS=%CATALINA_OPTS% -Denv.COMPUTERNAME='$1'-%GIT_HASH%"' >> $TOMCAT_FOLDER/bin/setenv.bat
+
+	echo -en '\n#JAVA_HOME=' >> $TOMCAT_FOLDER/bin/setenv.sh
+	echo -en '\r\nrem set JAVA_HOME=' >> $TOMCAT_FOLDER/bin/setenv.bat
+
+	echo -en '\nPATH=$JAVA_HOME/bin:$PATH' >> $TOMCAT_FOLDER/bin/setenv.sh
+	echo -en '\r\nset PATH="%JAVA_HOME%\\bin;%PATH%"' >> $TOMCAT_FOLDER/bin/setenv.bat
+
+	if [ "ee-6.2.x" == "$BASE_BRANCH" ] || [ "ee-6.1.x" == "$BASE_BRANCH" ]; then
+		sed -i 's/-Xmx[0-9]*[gm]/-Xms1g -Xmx1g/g' $TOMCAT_FOLDER/bin/setenv.sh
+		sed -i 's/-Xmx[0-9]*[gm]/-Xms1g -Xmx1g/g' $TOMCAT_FOLDER/bin/setenv.bat
+	else
+		sed -i 's/-Xmx[0-9]*[gm]/-Xms2g -Xmx2g/g' $TOMCAT_FOLDER/bin/setenv.sh
+		sed -i 's/-Xmx[0-9]*[gm]/-Xms2g -Xmx2g/g' $TOMCAT_FOLDER/bin/setenv.bat
+	fi
+
+	sed -i 's/ start / jpda start /g' $TOMCAT_FOLDER/bin/startup.sh
+	sed -i 's/ start / jpda start /g' $TOMCAT_FOLDER/bin/startup.bat
+
+	chmod u+x $TOMCAT_FOLDER/bin/*.sh
+
+	pushd $TARGET_FOLDER
+
+	dos2unix $TOMCAT_FOLDER/bin/setenv.sh
+	dos2unix $TOMCAT_FOLDER/bin/startup.sh
+
+	unix2dos $TOMCAT_FOLDER/bin/setenv.bat
+	unix2dos $TOMCAT_FOLDER/bin/startup.bat
+
+	if [ -d /var/www/html/builds ]; then
+		rm /var/www/html/builds/${1}-*.tar.gz
+		tar -zcf /var/www/html/builds/${1}-${TIMESTAMP}.tar.gz *
+	fi
+
+	if [ -d /var/www/html/logs ]; then
+		rm /var/www/html/logs/$1
+		ln -s "$TARGET_FOLDER" /var/www/html/logs/$1
+	fi
+
+	popd
+
+	sed -i "s@#JAVA_HOME=@JAVA_HOME=$JAVA_HOME@g" $TOMCAT_FOLDER/bin/setenv.sh
+
+	switchport 80 $2
+}
+
+javahome() {
+	if [ "" == "$1" ]; then
+		echo JAVA_HOME=$JAVA_HOME
+		return 0
+	fi
+
+	JAVA_HOME=
+
+	if [ -d /usr/java ]; then
+		JAVA_FOLDER=$(ls -1 /usr/java | grep -F 1.$1.0)
+
+		if [ "" != "$JAVA_FOLDER" ]; then
+			JAVA_HOME=/usr/java/$JAVA_FOLDER
+		fi
+	elif [ -d /usr/lib/jvm ]; then
+		JAVA_FOLDER=$(ls -1 /usr/lib/jvm | grep -F 1.$1.0)
+
+		if [ "" == "$JAVA_FOLDER" ]; then
+			JAVA_FOLDER=$(ls -1 /usr/lib/jvm | grep -F java-$1-oracle)
+		fi
+
+		if [ "" != "$JAVA_FOLDER" ]; then
+			JAVA_HOME=/usr/lib/jvm/$JAVA_FOLDER
+		fi
+	fi
+
+	echo JAVA_HOME=$JAVA_HOME
+
+	export JAVA_HOME
+}
+
+prepare() {
+	BASE_BRANCH=ee-$(grep -F 'lp.version.major=' release.properties | cut -d'=' -f 2).x
+	JSP_JAVA_VERSION=
+
+	if [ "ee-6.2.x" == "$BASE_BRANCH" ]; then
+		export ANT_OPTS='-Xms2g -Xmx2g -XX:MaxPermSize=512m'
+		javahome 6
+	elif [ "ee-6.1.x" == "$BASE_BRANCH" ]; then
+		export ANT_OPTS='-Xms2g -Xmx2g -XX:MaxPermSize=512m'
+		javahome 6
+	else
+		export GRADLE_OPTS='-Xms3g -Xmx3g -Dorg.gradle.workers.max=1'
+		export ANT_OPTS='-Xms1g -Xmx1g'
+		javahome 8
+	fi
+
+	echo $JAVA_HOME
+
+	compile $1 && finish $1 $2
+
+	if [ -d /var/www/html/builds ]; then
+		cp "${TARGET_FOLDER}.log" /var/www/html/builds/$1-${TIMESTAMP}.log
+	fi
+}
+
+switchport() {
+	if [ "" == "$(grep JPDA_ADDRESS= $TOMCAT_FOLDER/bin/setenv.sh)" ]; then
+		echo -e "\nJPDA_ADDRESS=${1}00" >> $TOMCAT_FOLDER/bin/setenv.sh
+		echo -e "\r\nset JPDA_ADDRESS=${1}00" >> $TOMCAT_FOLDER/bin/setenv.bat
+	fi
+
+	sed -i "s/\"$1/\"$2/g" $TOMCAT_FOLDER/conf/server.xml
+	sed -i "s/JPDA_ADDRESS=${1}/JPDA_ADDRESS=${2}/g" $TOMCAT_FOLDER/bin/setenv.sh
+	sed -i "s/JPDA_ADDRESS=${1}/JPDA_ADDRESS=${2}/g" $TOMCAT_FOLDER/bin/setenv.bat
+}
+
+if [ -z "${BUILD_FOLDER_PREFIX}" ]; then
+	echo "Please set a BUILD_FOLDER_PREFIX for the build"
+	return 1
+fi
+
+if [ -z "${TIMESTAMP}" ]; then
+	echo "Please set a TIMESTAMP for the build"
+	return 1
+fi
+
+if [ ! -z "${BUILD_FOLDER_SUFFIX}" ] && [ "/" != "$BUILD_FOLDER_SUFFIX" ]; then
+	TARGET_FOLDER="$BUILD_FOLDER_PREFIX/$1/$BUILD_FOLDER_SUFFIX"
+else
+	TARGET_FOLDER="$BUILD_FOLDER_PREFIX/$1"
+fi
+
+prepare $@
