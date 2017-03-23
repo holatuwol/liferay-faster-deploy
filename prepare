@@ -162,12 +162,12 @@ switchport() {
 
 if [ -z "${BUILD_FOLDER_PREFIX}" ]; then
 	echo "Please set a BUILD_FOLDER_PREFIX for the build"
-	return 1
+	exit 1
 fi
 
 if [ -z "${TIMESTAMP}" ]; then
 	echo "Please set a TIMESTAMP for the build"
-	return 1
+	exit 1
 fi
 
 if [ ! -z "${BUILD_FOLDER_SUFFIX}" ] && [ "/" != "$BUILD_FOLDER_SUFFIX" ]; then
