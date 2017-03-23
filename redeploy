@@ -106,19 +106,16 @@ downloadbranch() {
 	# Make sure there is a build on the archive mirror for our branch
 
 	SHORT_NAME=$(echo $BASE_BRANCH | sed 's/ee-//g' | sed 's/\.//g')
-	BUILD_NAME=$(curl -s $BRANCH_ARCHIVE_MIRROR/ | grep -o '<a href="'${SHORT_NAME}'-[^"]*.tar.gz">' | cut -d'"' -f 2 | sort | tail -1)
+	BUILD_NAME=$(getbuildname)
 
 	if [ "" == "$BUILD_NAME" ]; then
-		echo "Could not find build for $SHORT_NAME"
+		echo "Could not find build for $BASE_BRANCH"
 		return 1
 	fi
 
 	# Acquire the hash and make sure we have it
 
-	BUILD_LOG=$(echo $BUILD_NAME | cut -d'.' -f 1).log
-	UPDATE_TIME=$(echo $BUILD_NAME | cut -d'.' -f 1 | cut -d'-' -f 2)
-
-	NEW_BASELINE=$(curl -r 0-49 -s ${BRANCH_ARCHIVE_MIRROR}/${BUILD_LOG} | tail -1)
+	NEW_BASELINE=$(getbuildhash)
 
 	if [ "" == "$(git log -1 $NEW_BASELINE 2> /dev/null)" ]; then
 		echo "Checking remotes for updates"
@@ -221,7 +218,7 @@ extract() {
 	EXCLUDES=
 
 	if [ -d data ]; then
-		EXCLUDES=--exclude='data/hypersonic/lportal.script' --exclude='data/hypersonic/lportal.properties'
+		EXCLUDES="--exclude='data/hypersonic/lportal.script' --exclude='data/hypersonic/lportal.properties'"
 	fi
 
 	tar -zxf "$HOME/.liferay/builds/${BUILD_NAME}" $EXCLUDES
@@ -241,6 +238,37 @@ getbuild() {
 	fi
 
 	builtin cd -
+}
+
+getbuildhash() {
+	if [ -f "$HOME/.liferay/builds/${BUILD_NAME}.githash" ]; then
+		cat "$HOME/.liferay/builds/${BUILD_NAME}.githash"
+		return 0
+	fi
+
+	BUILD_LOG=$(echo $BUILD_NAME | cut -d'.' -f 1).log
+	UPDATE_TIME=$(echo $BUILD_NAME | cut -d'.' -f 1 | cut -d'-' -f 2)
+
+	if [[ "$BRANCH_ARCHIVE_MIRROR" == s3://* ]]; then
+		local BUCKET_NAME=$(echo $BRANCH_ARCHIVE_MIRROR | cut -d '/' -f 3)
+		local KEY_NAME=$(echo $BRANCH_ARCHIVE_MIRROR | cut -d '/' -f 4-)
+
+		aws s3api get-object --bucket $BUCKET_NAME --key $KEY_NAME/${BUILD_LOG} --range bytes=0-49 githash.txt > /dev/null
+		tail -1 githash.txt | tee "$HOME/.liferay/builds/${BUILD_NAME}.githash"
+		rm githash.txt
+	else
+		curl -r 0-49 -s ${BRANCH_ARCHIVE_MIRROR}/${BUILD_LOG} | tail -1 | tee "$HOME/.liferay/builds/${BUILD_NAME}.githash"
+	fi
+
+	exit 0
+}
+
+getbuildname() {
+	if [[ "$BRANCH_ARCHIVE_MIRROR" == s3://* ]]; then
+		aws s3 ls $BRANCH_ARCHIVE_MIRROR/ | awk '{ print $4 }' | grep ${SHORT_NAME}'-[^"]*.tar.gz$' | sort | tail -1
+	else
+		curl -s $BRANCH_ARCHIVE_MIRROR/ | grep -o '<a href="'${SHORT_NAME}'-[^"]*.tar.gz">' | cut -d'"' -f 2 | sort | tail -1
+	fi
 }
 
 getparent() {
@@ -292,6 +320,8 @@ getparent() {
 		else
 			BASE_TAG=$(git describe --tags HEAD --abbrev=0 2> /dev/null)
 		fi
+	else
+		BASE_BRANCH=$TARGET_BRANCH
 	fi
 
 	# If we're using a tag, shortcut
