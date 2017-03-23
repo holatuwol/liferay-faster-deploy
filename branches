@@ -2,14 +2,6 @@
 
 TIMESTAMP=$(date +%Y%m%d)
 
-if [ -z "${PORTAL_SOURCE_ROOT}" ]; then
-	PORTAL_SOURCE_ROOT=$HOME/source
-fi
-
-if [ -z "${BUILD_FOLDER_PREFIX}" ]; then
-	BUILD_FOLDER_PREFIX=/opt/liferay
-fi
-
 branches() {
 	# Start build
 
@@ -86,5 +78,20 @@ update() {
 	git reflog expire --expire=now --all
 	git gc --prune
 }
+
+if [ -z "${PORTAL_SOURCE_ROOT}" ]; then
+	echo "Please set a PORTAL_SOURCE_ROOT for the build"
+	exit 1
+fi
+
+if [ ! -e "$PORTAL_SOURCE_ROOT/.git" ]; then
+	echo "${PORTAL_SOURCE_ROOT} is not a git repository"
+	exit 1
+fi
+
+if [ -z "${BUILD_FOLDER_PREFIX}" ]; then
+	echo "Please set a BUILD_FOLDER_PREFIX for the build"
+	exit 1
+fi
 
 cd $PORTAL_SOURCE_ROOT && update && branches

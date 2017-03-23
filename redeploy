@@ -1,23 +1,5 @@
 #!/bin/bash
 
-if [ -z ${BUILD_FOLDER_PREFIX} ]; then
-	BUILD_FOLDER_PREFIX=/opt/liferay
-fi
-
-if [ -z ${BUILD_FOLDER_SUFFIX} ]; then
-	BUILD_FOLDER_SUFFIX=bundles
-elif [ "/" == "${BUILD_FOLDER_SUFFIX}" ]; then
-	BUILD_FOLDER_SUFFIX=
-fi
-
-if [ -z ${TAG_ARCHIVE_MIRROR} ]; then
-	TAG_ARCHIVE_MIRROR=http://mirrors/files.liferay.com/private/ee/fix-packs/support/tags
-fi
-
-if [ -z ${BRANCH_ARCHIVE_MIRROR} ]; then
-	BRANCH_ARCHIVE_MIRROR=http://cloud-10-50-0-165/builds
-fi
-
 applychanges() {
 	git ls-files | grep '/\(build.xml\|build.gradle\)$' > root_candidates.txt
 
@@ -395,27 +377,37 @@ setopts() {
 	fi
 }
 
+if [ -z "${BUILD_FOLDER_PREFIX}" ]; then
+	echo "Please set a BUILD_FOLDER_PREFIX for the build"
+	exit 1
+fi
+
+echo "Using $BUILD_FOLDER_PREFIX as the root folder"
+
+mkdir -p "$BUILD_FOLDER_PREFIX/.test"
+
+if [ ! -d "$BUILD_FOLDER_PREFIX/.test" ]; then
+	echo "${USER} does not have permission to create folders in ${BUILD_FOLDER_PREFIX}"
+	exit 1
+fi
+
+rmdir "$BUILD_FOLDER_PREFIX/.test"
+
+if [ -z "${TAG_ARCHIVE_MIRROR}" ]; then
+	echo "Please set a TAG_ARCHIVE_MIRROR for the build"
+	exit 1
+fi
+
+if [ -z "${BRANCH_ARCHIVE_MIRROR}" ]; then
+	echo "Please set a BRANCH_ARCHIVE_MIRROR for the build"
+	exit 1
+fi
+
 cdroot
 
 if [[ 0 -ne $? ]]; then
 	exit $?
 fi
-
-echo "Using $BUILD_FOLDER_PREFIX as the root folder"
-
-if [ ! -d "$BUILD_FOLDER_PREFIX" ]; then
-	echo "${BUILD_FOLDER_PREFIX} does not exist"
-	exit 1
-fi
-
-mkdir -p "$BUILD_FOLDER_PREFIX/test"
-
-if [ ! -d "$BUILD_FOLDER_PREFIX/test" ]; then
-	echo "${USER} does not have permission to create folders in ${BUILD_FOLDER_PREFIX}"
-	exit 1
-fi
-
-rmdir "$BUILD_FOLDER_PREFIX/test"
 
 CURRENT_HASH=$(git log -1 --pretty='%H')
 
