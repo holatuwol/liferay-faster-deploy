@@ -10,19 +10,19 @@ branches() {
 	# Build all branches
 
 	if [ -d "$BUILD_FOLDER_PREFIX/master" ]; then
-		checkout master && git rebase upstream/master && prepare master 60
+		checkout master && git rebase upstream/master && preparebranch master 60
 	fi
 
 	if [ -d "$BUILD_FOLDER_PREFIX/70x" ]; then
-		checkout ee-7.0.x && git rebase upstream/ee-7.0.x && prepare 70x 70
+		checkout ee-7.0.x && git rebase upstream/ee-7.0.x && preparebranch 70x 70
 	fi
 
 	if [ -d "$BUILD_FOLDER_PREFIX/62x" ]; then
-		checkout ee-6.2.x && git rebase upstream/ee-6.2.x && prepare 62x 62
+		checkout ee-6.2.x && git rebase upstream/ee-6.2.x && preparebranch 62x 62
 	fi
 
 	if [ -d "$BUILD_FOLDER_PREFIX/61x" ]; then
-		checkout ee-6.1.x && git rebase upstream/ee-6.1.x && prepare 61x 61
+		checkout ee-6.1.x && git rebase upstream/ee-6.1.x && preparebranch 61x 61
 	fi
 
 	echo Completed $(date)
@@ -63,12 +63,37 @@ cleanup() {
 	popd > /dev/null
 }
 
-prepare() {
+preparebranch() {
 	BUILD_FOLDER_PREFIX="$BUILD_FOLDER_PREFIX" \
 		BUILD_FOLDER_SUFFIX="$TIMESTAMP" \
-		ARCHIVE_FOLDER="/var/www/html/builds"
+		ARCHIVE_FOLDER="/var/www/html/builds" \
 		TIMESTAMP="$TIMESTAMP" \
 			$(dirname $0)/prepare $@
+}
+
+preparefixpack() {
+	BUILD_FOLDER_PREFIX="$BUILD_FOLDER_PREFIX" \
+		BUILD_FOLDER_SUFFIX="" \
+		ARCHIVE_FOLDER="/var/www/html/builds" \
+		TIMESTAMP="" \
+			$(dirname $0)/prepare temp 80
+}
+
+fixpacks() {
+	counter=4
+
+	while [[ 0 -eq $? ]]; do
+		counter=$(expr $counter '+' 1)
+		tag_id=fix-pack-de-$id-7010
+
+		if [ "" == "$(git tag | grep -F "$tag_id")" ]; then
+			git fetch --no-tags git@github.com:liferay/liferay-portal-ee.git tags/$tag_id:refs/tags/$tag_id
+		fi
+
+		if [ ! -f "/var/www/html/builds/${tag_id}.tar.gz" ]; then
+			checkout ${tag_id} && preparefixpack
+		fi
+	done
 }
 
 update() {
@@ -95,4 +120,4 @@ if [ -z "${BUILD_FOLDER_PREFIX}" ]; then
 	exit 1
 fi
 
-cd $PORTAL_SOURCE_ROOT && update && branches
+cd $PORTAL_SOURCE_ROOT && update && branches && fixpacks

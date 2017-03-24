@@ -78,7 +78,12 @@ finish() {
 
 	if [ -d "${ARCHIVE_FOLDER}" ]; then
 		rm ${ARCHIVE_FOLDER}/${1}-*.tar.gz
-		tar -zcf ${ARCHIVE_FOLDER}/${1}-${TIMESTAMP}.tar.gz *
+
+		if [ "" != "$TIMESTAMP" ]; then
+			tar -zcf ${ARCHIVE_FOLDER}/${1}-${TIMESTAMP}.tar.gz *
+		else
+			tar -zcf ${ARCHIVE_FOLDER}/${1}.tar.gz *
+		fi
 	fi
 
 	if [ -d /var/www/html/logs ]; then
@@ -145,7 +150,11 @@ prepare() {
 	compile $1 && finish $1 $2
 
 	if [ -d "${ARCHIVE_FOLDER}" ]; then
-		cp "${TARGET_FOLDER}.log" ${ARCHIVE_FOLDER}/$1-${TIMESTAMP}.log
+		if [ "" != "$TIMESTAMP" ]; then
+			cp "${TARGET_FOLDER}.log" ${ARCHIVE_FOLDER}/$1-${TIMESTAMP}.log
+		else
+			cp "${TARGET_FOLDER}.log" ${ARCHIVE_FOLDER}/$1.log
+		fi
 	fi
 }
 
@@ -162,11 +171,6 @@ switchport() {
 
 if [ -z "${BUILD_FOLDER_PREFIX}" ]; then
 	echo "Please set a BUILD_FOLDER_PREFIX for the build"
-	exit 1
-fi
-
-if [ -z "${TIMESTAMP}" ]; then
-	echo "Please set a TIMESTAMP for the build"
 	exit 1
 fi
 
