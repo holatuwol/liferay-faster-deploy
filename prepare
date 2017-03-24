@@ -24,6 +24,8 @@ compile() {
 		$(dirname $0)/cachenpm | tee -a "${TARGET_FOLDER}.log"
 	fi
 
+	$(dirname $0)/fixbnd
+
 	set -o pipefail
 	ant all | tee -a "${TARGET_FOLDER}.log"
 	EXIT_CODE=$?

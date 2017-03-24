@@ -1,6 +1,8 @@
 #!/bin/bash
 
 applychanges() {
+	$(dirname $0)/fixbnd
+
 	git ls-files | grep '/\(build.xml\|build.gradle\)$' > root_candidates.txt
 
 	COMPARE_HASH=$NEW_BASELINE
