@@ -35,8 +35,6 @@ compile() {
 }
 
 finish() {
-	BASE_BRANCH=ee-$(grep -F 'lp.version.major=' release.properties | cut -d'=' -f 2).x
-
 	TOMCAT_FOLDER=$TARGET_FOLDER/$(ls -1 $TARGET_FOLDER | grep -F 'tomcat-')
 
 	cp tools/servers/tomcat/bin/setenv.* $TOMCAT_FOLDER/bin

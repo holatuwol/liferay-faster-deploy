@@ -2,12 +2,6 @@
 
 TIMESTAMP=$(date +%Y%m%d)
 
-branches() {
-	PORTAL_SOURCE_ROOT="$PORTAL_SOURCE_ROOT" \
-		BUILD_FOLDER_PREFIX="$BUILD_FOLDER_PREFIX" \
-			$HOME/redeploy/branches
-}
-
 prepare() {
 	BUILD_FOLDER_PREFIX="$BUILD_FOLDER_PREFIX" \
 		BUILD_FOLDER_SUFFIX="" \
@@ -73,29 +67,10 @@ pulls() {
 	echo Started pull request builds at $(date)
 	echo
 
-	# Clear out previous builds and fetch latest changes from upstream
-
-	if [ "all" == "$1" ]; then
-		rm -rf "$BUILD_FOLDER_PREFIX"
-		mkdir "$BUILD_FOLDER_PREFIX"
-		rm -f $ARCHIVE_FOLDER/*
-	fi
-
 	# Fetch list of open pull requests
 
 	curl -H "Authorization: token $AUTH_TOKEN" -s $PULL_API_URL | \
 		jq '.[] | {(.html_url):.base.ref}' | grep -v '[{}]' | tr -d '"' | tr -d ' ' > $HOME/pulls.txt
-
-	# Cleanup pull request branches so they can be re-checked out
-
-	if [ "all" == "$1" ]; then
-		for pull_id in $(git branch | grep -o 'pr-.*' | cut -d'-' -f 2); do
-			git branch -D pr-$pull_id
-		done
-
-		cx all
-		branches
-	fi
 
 	# Checkout and build current pull requests
 
@@ -105,7 +80,7 @@ pulls() {
 	for line in $(cat $HOME/pulls.txt); do
 		pull_id=$(echo $line | cut -d':' -f 2 | grep -o '/pull/.*' | cut -d'/' -f 3)
 
-		if [ "all" == "$1" ] || [ ! -f /var/www/html/builds/${pull_id}-${TIMESTAMP}.tar.gz ]; then
+		if [ ! -f /var/www/html/builds/${pull_id}-${TIMESTAMP}.tar.gz ]; then
 			echo "Started build for pull request $pull_id at $(date)"
 			pull $pull_id
 			echo "Completed build for pull request $pull_id at $(date)"
