@@ -121,14 +121,17 @@ downloadbranch() {
 				git stash
 			fi
 
-			git checkout -f $BASE_BRANCH
-			git rebase $NEW_BASELINE
-			git reset --hard $NEW_BASELINE
+			git checkout -f $BASE_BRANCH && git rebase $NEW_BASELINE && git reset --hard $NEW_BASELINE && git checkout $TARGET_BRANCH
 
-			git checkout $TARGET_BRANCH
+			REBASE_STATUS=$?
 
 			if [ "" != "$NEEDS_STASH" ]; then
 				git stash pop
+			fi
+
+			if [[ 0 -ne $REBASE_STATUS ]]; then
+				echo "Failed to update base branch"
+				return $REBASE_STATUS
 			fi
 		fi
 	fi
@@ -357,7 +360,7 @@ isnotbuildbranch() {
 }
 
 redeploy() {
-	setopts && getparent && applychanges
+	getparent && setopts && applychanges
 }
 
 setopts() {
@@ -416,3 +419,5 @@ CURRENT_HASH=$(git log -1 --pretty='%H')
 mkdir -p "$HOME/.liferay/builds"
 
 time redeploy
+
+git checkout build-common.xml
