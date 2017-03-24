@@ -7,10 +7,16 @@ branch() {
 		return 0
 	fi
 
-	checkout $1 && git rebase upstream/$1
+	checkout $1
+
+	if [ "$1" != "$(git symbolic-ref --short HEAD)" ]; then
+		return 1
+	fi
+
+	git rebase upstream/$1
 
 	if [[ 0 -ne $? ]]; then
-		return $?
+		return 1
 	fi
 
 	BUILD_FOLDER_PREFIX="$BUILD_FOLDER_PREFIX" \
@@ -73,13 +79,13 @@ fixpack() {
 
 	if [ "" == "$(git tag | grep -F "$1")" ]; then
 		git fetch --no-tags git@github.com:liferay/liferay-portal-ee.git tags/$1:refs/tags/$1
+
+		if [ "" == "$(git tag | grep -F "$1")" ]; then
+			return 1
+		fi
 	fi
 
 	checkout $1
-
-	if [[ 0 -ne $? ]]; then
-		return $?
-	fi
 
 	BUILD_FOLDER_PREFIX="$BUILD_FOLDER_PREFIX/temp" \
 		BUILD_FOLDER_SUFFIX="" \
@@ -89,12 +95,12 @@ fixpack() {
 }
 
 fixpacks() {
-	counter=4
+	counter=5
+	tag_id=fix-pack-de-5-7010
 
-	while [[ 0 -eq $? ]]; do
+	while fixpack $tag_id; do
 		counter=$(expr $counter '+' 1)
 		tag_id=fix-pack-de-$counter-7010
-		fixpack $tag_id
 	done
 }
 

@@ -11,10 +11,6 @@ prepare() {
 }
 
 pull() {
-	if [[ $? -ne 0 ]]; then
-		return $?
-	fi
-
 	if [ "" == "$1" ]; then
 		echo "Please specify a pull request ID"
 		return 1
@@ -56,10 +52,6 @@ pull() {
 }
 
 pulls() {
-	if [[ $? -ne 0 ]]; then
-		return $?
-	fi
-
 	cd "$PORTAL_SOURCE_ROOT"
 
 	# Start build

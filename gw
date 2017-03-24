@@ -91,7 +91,7 @@ gw() {
 	# if there was an error trying to fix gradle, abort
 
 	if [[ 0 -ne $? ]]; then
-		return $?
+		return 1
 	fi
 
 	# run the gradlew binary, making sure to set GRADLE_OPTS if
