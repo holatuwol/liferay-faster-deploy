@@ -77,6 +77,10 @@ fixpack() {
 
 	checkout $1
 
+	if [[ 0 -ne $? ]]; then
+		return $?
+	fi
+
 	BUILD_FOLDER_PREFIX="$BUILD_FOLDER_PREFIX/temp" \
 		BUILD_FOLDER_SUFFIX="" \
 		ARCHIVE_FOLDER="/var/www/html/builds" \
