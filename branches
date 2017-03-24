@@ -66,6 +66,7 @@ cleanup() {
 prepare() {
 	BUILD_FOLDER_PREFIX="$BUILD_FOLDER_PREFIX" \
 		BUILD_FOLDER_SUFFIX="$TIMESTAMP" \
+		ARCHIVE_FOLDER="/var/www/html/builds"
 		TIMESTAMP="$TIMESTAMP" \
 			$(dirname $0)/prepare $@
 }

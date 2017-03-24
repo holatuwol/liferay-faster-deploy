@@ -76,9 +76,9 @@ finish() {
 	unix2dos $TOMCAT_FOLDER/bin/setenv.bat
 	unix2dos $TOMCAT_FOLDER/bin/startup.bat
 
-	if [ -d /var/www/html/builds ]; then
-		rm /var/www/html/builds/${1}-*.tar.gz
-		tar -zcf /var/www/html/builds/${1}-${TIMESTAMP}.tar.gz *
+	if [ -d "${ARCHIVE_FOLDER}" ]; then
+		rm ${ARCHIVE_FOLDER}/${1}-*.tar.gz
+		tar -zcf ${ARCHIVE_FOLDER}/${1}-${TIMESTAMP}.tar.gz *
 	fi
 
 	if [ -d /var/www/html/logs ]; then
@@ -144,8 +144,8 @@ prepare() {
 
 	compile $1 && finish $1 $2
 
-	if [ -d /var/www/html/builds ]; then
-		cp "${TARGET_FOLDER}.log" /var/www/html/builds/$1-${TIMESTAMP}.log
+	if [ -d "${ARCHIVE_FOLDER}" ]; then
+		cp "${TARGET_FOLDER}.log" ${ARCHIVE_FOLDER}/$1-${TIMESTAMP}.log
 	fi
 }
 
@@ -167,6 +167,11 @@ fi
 
 if [ -z "${TIMESTAMP}" ]; then
 	echo "Please set a TIMESTAMP for the build"
+	exit 1
+fi
+
+if [ -z "${ARCHIVE_FOLDER}" ]; then
+	echo "Please set a ARCHIVE_FOLDER for the build"
 	exit 1
 fi
 
