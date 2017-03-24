@@ -28,7 +28,7 @@ jrebel() {
 
 	local BND_LIST=$(git ls-files $ROOT_FOLDER | grep bnd.bnd)
 
-	for folder in core static modules; do
+	for folder in core static; do
 		BASE_PATH=/opt/liferay/$TARGET_BRANCH/bundles/osgi/$folder
 
 		for file in $(ls -1 $BASE_PATH); do
@@ -56,6 +56,10 @@ jrebel() {
 				rm -f "$RESOURCE_PATH/rebel.xml.bak"
 
 				zip -ujq "${JAR_PATH}" "${RESOURCE_PATH}/rebel.xml"
+
+				pushd $MODULE_PATH/classes > /dev/null
+				unzip -q "${JAR_PATH}"
+				popd > /dev/null
 			done
 		done
 	done
