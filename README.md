@@ -12,7 +12,7 @@ Add a Bash function to `.bash_aliases` (or the equivalent on whichever shell you
 rd() {
 	BUILD_FOLDER_PREFIX=/opt/liferay \
 		BUILD_FOLDER_SUFFIX=bundles \
-		TAG_ARCHIVE_MIRROR=http://mirrors/files.liferay.com/private/ee/fix-packs/support/tags \
+		TAG_ARCHIVE_MIRROR=http://cloud-10-50-0-165/builds \
 		BRANCH_ARCHIVE_MIRROR=http://cloud-10-50-0-165/builds \
 			/path/to/liferay-faster-deploy/redeploy
 }
