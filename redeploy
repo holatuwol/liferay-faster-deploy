@@ -33,6 +33,10 @@ applychanges() {
 		fi
 	done
 
+	echo "Deploying modules:"
+	cat deploy_modules.txt
+	echo ""
+
 	# Check if we need to rerun cachenpm
 
 	if isneedscachenpm; then
