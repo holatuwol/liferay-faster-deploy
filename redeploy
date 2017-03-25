@@ -1,8 +1,6 @@
 #!/bin/bash
 
 applychanges() {
-	$(dirname $0)/fixbnd
-
 	git ls-files | grep '/\(build.xml\|build.gradle\)$' > root_candidates.txt
 
 	COMPARE_HASH=$NEW_BASELINE
@@ -25,6 +23,15 @@ applychanges() {
 	# Identify the folders that need to change
 
 	python $(dirname $0)/redeploy.py > deploy_modules.txt
+
+	# If any of the folders that are affected is one that has
+	# one of the version range macros, make sure to fix it
+
+	for folder in $(git ls-files modules | grep build.gradle | xargs grep -l 'version: "\[' | xargs -I {} dirname {}); do
+		if [ "" != "$(grep -F "$folder" deploy_modules.txt)" ]; then
+			echo $(dirname $0)/fixbnd $folder
+		fi
+	done
 
 	# Check if we need to rerun cachenpm
 
