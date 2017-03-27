@@ -1,7 +1,11 @@
 #!/bin/bash
 
 applychanges() {
-	git ls-files | grep '/\(build.xml\|build.gradle\)$' > root_candidates.txt
+	# Generate the source trie
+
+	$(dirname $0)/sourcetrie
+
+	# Identify the changes
 
 	COMPARE_HASH=$NEW_BASELINE
 
@@ -20,7 +24,7 @@ applychanges() {
 	git diff ${COMPARE_HASH}..HEAD --name-only > deploy_changes.txt
 	git status -s | grep -vF '/rebel.xml' | grep -vF '.iml' | awk '{print $2}' >> deploy_changes.txt
 
-	# Identify the folders that need to change
+	# Identify the folders that need to be redeployed
 
 	python $(dirname $0)/redeploy.py > deploy_modules.txt
 
