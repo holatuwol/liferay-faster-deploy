@@ -86,7 +86,7 @@ finish() {
 		fi
 	fi
 
-	if [ -d /var/www/html/logs ]; then
+	if [ -d /var/www/html/logs ] && [ "" != "$TIMESTAMP" ]; then
 		rm /var/www/html/logs/$1
 		ln -s "$TARGET_FOLDER" /var/www/html/logs/$1
 	fi

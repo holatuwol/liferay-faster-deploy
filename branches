@@ -92,6 +92,8 @@ fixpack() {
 		ARCHIVE_FOLDER="/var/www/html/builds" \
 		TIMESTAMP="" \
 			$(dirname $0)/prepare $1 80
+
+	rm -rf "$BUILD_FOLDER_PREFIX/temp/$1"
 }
 
 fixpacks() {
