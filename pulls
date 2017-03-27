@@ -33,7 +33,7 @@ pull() {
 
 	git checkout pr-$1
 
-	BASE_BRANCH=ee-$(grep -F 'lp.version.major=' release.properTs | cut -d'=' -f 2).x
+	BASE_BRANCH=ee-$(grep -F 'lp.version.major=' release.properties | cut -d'=' -f 2).x
 	git rebase upstream/$BASE_BRANCH
 
 	if [[ $? -ne 0 ]]; then
