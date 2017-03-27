@@ -5,7 +5,7 @@ TIMESTAMP=$(date +%Y%m%d)
 prepare() {
 	BUILD_FOLDER_PREFIX="$BUILD_FOLDER_PREFIX" \
 		BUILD_FOLDER_SUFFIX="" \
-		ARCHIVE_FOLDER="/var/www/html/builds"
+		ARCHIVE_FOLDER="/var/www/html/builds" \
 		TIMESTAMP="$TIMESTAMP" \
 			$(dirname $0)/prepare $@
 }
