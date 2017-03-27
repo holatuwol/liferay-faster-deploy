@@ -2,16 +2,16 @@
 
 fixbnd() {
 	sed -i.bak 's/version: "\[[^"]*\"/version: "default"/g' $1
-	python "$(dirname $0)/fixbnd.py" "$MODULE_PATH"
-	rm "$MODULE_PATH/bnd.bnd"
-	mv "$MODULE_PATH/bnd.tmp" "$MODULE_PATH/bnd.bnd"
+	python "$(dirname $0)/fixbnd.py" "$1"
+	rm "$1/bnd.bnd"
+	mv "$1/bnd.tmp" "$1/bnd.bnd"
 }
 
 fixbnds() {
 	echo path 1
 
-	for file in $(git ls-files modules | grep build.gradle | xargs grep -l 'version: "\['); do
-		fixbnd $MODULE_PATH
+	for folder in $(git ls-files modules | grep build.gradle | xargs grep -l 'version: "\[' | xargs -I {} dirname {}); do
+		fixbnd "$folder"
 	done
 }
 
