@@ -10,7 +10,7 @@ with open(tmp_file, 'w') as outfile:
 		is_import = False
 
 		for line in infile.readlines():
-			if line.startswith('Import-Package: '):
+			if line.startswith('Import-Package:'):
 				is_import = True
 				continue
 
