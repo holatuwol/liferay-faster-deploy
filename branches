@@ -21,7 +21,7 @@ branch() {
 
 	BUILD_FOLDER_PREFIX="$BUILD_FOLDER_PREFIX" \
 		BUILD_FOLDER_SUFFIX="$TIMESTAMP" \
-		ARCHIVE_FOLDER="/var/www/html/builds" \
+		ARCHIVE_FOLDER="/var/www/html/builds/branches" \
 		TIMESTAMP="$TIMESTAMP" \
 			$(dirname $0)/prepare $@
 
@@ -37,6 +37,11 @@ branch() {
 }
 
 branches() {
+	if [ ! -d /var/www/html/builds/branches ]; then
+		echo "No archive folder for branches, skipping"
+		return 0
+	fi
+
 	# Start build
 
 	echo Started $(date)
@@ -89,7 +94,7 @@ fixpack() {
 
 	BUILD_FOLDER_PREFIX="$BUILD_FOLDER_PREFIX/temp" \
 		BUILD_FOLDER_SUFFIX="" \
-		ARCHIVE_FOLDER="/var/www/html/builds" \
+		ARCHIVE_FOLDER="/var/www/html/builds/fixpacks" \
 		TIMESTAMP="" \
 			$(dirname $0)/prepare $1 80
 
@@ -97,6 +102,11 @@ fixpack() {
 }
 
 fixpacks() {
+	if [ ! -d /var/www/html/builds/fixpacks ]; then
+		echo "No archive folder for fixpacks, skipping"
+		return 0
+	fi
+
 	counter=5
 	tag_id=fix-pack-de-5-7010
 
