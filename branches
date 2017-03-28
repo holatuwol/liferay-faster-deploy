@@ -3,17 +3,27 @@
 TIMESTAMP=$(date +%Y%m%d)
 
 branch() {
+	if [ -f "/var/www/html/builds/branches/${1}-${TIMESTAMP}.tar.gz" ]; then
+		return 0
+	fi
+
 	if [ ! -d "$BUILD_FOLDER_PREFIX/$1" ]; then
 		return 0
 	fi
 
-	checkout $1
+	if [ "master" == "$1" ]; then
+		BASE_BRANCH=$1
+	else
+		BASE_BRANCH=ee-$(echo $1 | sed 's/\([0-9]\)/\1./g')
+	fi
+
+	checkout $BASE_BRANCH
 
 	if [ "$1" != "$(git branch | grep -F '*' | cut -d' ' -f 2)" ]; then
 		return 1
 	fi
 
-	git rebase upstream/$1
+	git rebase upstream/$BASE_BRANCH
 
 	if [[ 0 -ne $? ]]; then
 		return 1
