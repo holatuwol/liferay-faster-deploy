@@ -67,7 +67,7 @@ checkout() {
 }
 
 fixpack() {
-	if [ -f "/var/www/html/builds/${1}.tar.gz" ]; then
+	if [ -f "/var/www/html/builds/fixpacks/${1}.tar.gz" ]; then
 		return 0
 	fi
 

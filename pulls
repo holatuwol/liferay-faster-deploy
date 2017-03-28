@@ -22,6 +22,12 @@ pull() {
 		return 1
 	fi
 
+	if [ -f /var/www/html/builds/${1}-${TIMESTAMP}.tar.gz ]; then
+		return 0
+	fi
+
+	echo "Started build for pull request $pull_id at $(date)"
+
 	if [ ! -d .git ]; then
 		cd "$PORTAL_SOURCE_ROOT"
 	fi
@@ -55,6 +61,8 @@ pull() {
 	echo $1 >> $HOME/builds.txt
 
 	prepare $1 80
+
+	echo "Completed build for pull request $1 at $(date)"
 }
 
 pulls() {
@@ -77,12 +85,7 @@ pulls() {
 
 	for line in $(cat $HOME/pulls.txt); do
 		pull_id=$(echo $line | cut -d':' -f 2 | grep -o '/pull/.*' | cut -d'/' -f 3)
-
-		if [ ! -f /var/www/html/builds/${pull_id}-${TIMESTAMP}.tar.gz ]; then
-			echo "Started build for pull request $pull_id at $(date)"
-			pull $pull_id
-			echo "Completed build for pull request $pull_id at $(date)"
-		fi
+		pull $pull_id
 	done
 
 	# Finished build
