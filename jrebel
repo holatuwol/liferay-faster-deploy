@@ -1,5 +1,9 @@
 #!/bin/bash
 
+dirnames() {
+	python $(dirname $0)/dirnames.py
+}
+
 jrebel() {
 	SCRIPT_FOLDER=$(dirname $0)
 	TARGET_BRANCH=$(git symbolic-ref --short HEAD)
@@ -34,7 +38,7 @@ jrebel() {
 		for file in $(ls -1 $BASE_PATH); do
 			BUNDLE_SYMBOLICNAME=$(echo $file | sed 's/.jar$//g')
 
-			BND_MATCHES=$(echo "$BND_LIST" | xargs grep -l ": .*${BUNDLE_SYMBOLICNAME}$" | xargs -I {} dirname {})
+			BND_MATCHES=$(echo "$BND_LIST" | xargs grep -l ": .*${BUNDLE_SYMBOLICNAME}$" | dirnames)
 
 			for bnd_match in $BND_MATCHES; do
 				JAR_PATH=$BASE_PATH/$file

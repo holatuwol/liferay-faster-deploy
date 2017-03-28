@@ -31,7 +31,7 @@ applychanges() {
 	# If any of the folders that are affected is one that has
 	# one of the version range macros, make sure to fix it
 
-	for folder in $(git ls-files modules | grep build.gradle | xargs grep -l 'version: "\[' | xargs -I {} dirname {}); do
+	for folder in $(git ls-files modules | grep build.gradle | xargs grep -l 'version: "\[' | dirnames); do
 		if [ "" != "$(grep -F "$folder" deploy_modules.txt)" ]; then
 			echo $(dirname $0)/fixbnd $folder
 		fi
@@ -99,6 +99,10 @@ cdroot() {
 	fi
 
 	builtin cd $GIT_ROOT
+}
+
+dirnames() {
+	python $(dirname $0)/dirnames.py
 }
 
 downloadbranch() {

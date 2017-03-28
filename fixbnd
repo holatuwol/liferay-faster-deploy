@@ -1,5 +1,9 @@
 #!/bin/bash
 
+dirnames() {
+	python $(dirname $0)/dirnames.py
+}
+
 fixbnd() {
 	sed -i.bak 's/version: "\[[^"]*\"/version: "default"/g' $1
 	python "$(dirname $0)/fixbnd.py" "$1"
@@ -10,7 +14,7 @@ fixbnd() {
 fixbnds() {
 	echo path 1
 
-	for folder in $(git ls-files modules | grep build.gradle | xargs grep -l 'version: "\[' | xargs -I {} dirname {}); do
+	for folder in $(git ls-files modules | grep build.gradle | xargs grep -l 'version: "\[' | dirnames); do
 		fixbnd "$folder"
 	done
 }

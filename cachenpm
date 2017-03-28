@@ -24,7 +24,7 @@ cachenpm() {
 
 	cat /dev/null > "${cache_home}/cachenpm.txt"
 
-	for folder in $(git ls-files modules | grep -F package.json | xargs -I {} dirname "{}"); do
+	for folder in $(git ls-files modules | grep -F package.json | dirnames); do
 		if [ ! -f "$folder/.lfrbuild-portal" ]; then
 			continue
 		fi
@@ -69,6 +69,10 @@ cachenpm() {
 	if [ "" != "$NPM_PRODUCTION" ] && [ "false" != "$NPM_PRODUCTION" ]; then
 		npm config set production $NPM_PRODUCTION
 	fi
+}
+
+dirnames() {
+	python $(dirname $0)/dirnames.py
 }
 
 disablegwnpm() {

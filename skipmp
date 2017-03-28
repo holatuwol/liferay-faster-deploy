@@ -1,5 +1,9 @@
 #!/bin/bash
 
+dirnames() {
+	python $(dirname $0)/dirnames.py
+}
+
 skipmp() {
 	git ls-files -v | grep '^h ' | cut -d' ' -f 2 | grep -F '.lfrbuild-portal' | xargs git update-index --no-assume-unchanged
 	git status | grep -F deleted | grep -F '.lfrbuild-portal' | cut -d':' -f 2 | xargs git checkout
@@ -10,8 +14,7 @@ skipmp() {
 		BUNDLE_APPS=$(echo -e 'Collaboration\nForms and Workflow\nFoundation\nStatic\nWeb Experience')
 	fi
 
-	rm -f .excludes
-	touch .excludes
+	cat /dev/null > .excludes
 
 	for file in $(git ls-files modules | grep -F app.bnd); do
 		app=$(grep Liferay-Releng-App-Title $file | cut -d' ' -f 3-)
@@ -30,7 +33,7 @@ skipmp() {
 	done
 
 	for file in $(git ls-files modules/private | grep -F .lfrbuild-portal | grep -F -- '-dxp'); do
-		public_app=$(echo $file | sed 's@/private/@/@g' | sed 's@-dxp@@g' | xargs -I {} dirname {})
+		public_app=$(echo $file | sed 's@/private/@/@g' | sed 's@-dxp@@g' | dirnames)
 
 		if [ -d $public_app ]; then
 			echo $public_app >> .excludes
@@ -49,11 +52,17 @@ skipmp() {
 			old_count=$new_count
 			old_excludes=$(cat .excludes_transitive)
 
-			project_dependencies='\('$(echo "$old_excludes" | sed 's@^modules/private@@g' | sed 's@^modules@@g' | tr '/' ':' | xargs echo | sed 's/ /\\|/g')'\)'
-			echo "$build_gradles" | xargs grep -l "$project_dependencies" | xargs -I {} dirname {} > .excludes_transitive
+			project_dependencies=$(echo "$old_excludes" | sed 's@^modules/private@@g' | sed 's@^modules@@g' | tr '/' ':' | xargs | tr ' ' '|')
 
-			library_dependencies='\('$(echo "$old_excludes" | xargs git ls-files | grep -F bnd.bnd | xargs grep Bundle-SymbolicName | cut -d' ' -f 2 | xargs echo | sed 's/ /\\|/g')'\)'
-			echo "$build_gradles" | xargs grep -l "\"$library_dependencies\"" | xargs -I {} dirname {} >> .excludes_transitive
+			if [ "" != "$project_dependencies" ]; then
+				echo -n "$build_gradles" | xargs grep -l "\($project_dependencies\)" | dirnames > .excludes_transitive
+			fi
+
+			library_dependencies=$(echo "$old_excludes" | xargs git ls-files | grep -F bnd.bnd | xargs grep Bundle-SymbolicName | grep -vF '{' | cut -d' ' -f 2 | xargs | tr ' ' '|')
+
+			if [ "" != "$library_dependencies" ]; then
+				echo -n "$build_gradles" | xargs grep -l "\"\($library_dependencies\)\"" | dirnames >> .excludes_transitive
+			fi
 
 			mv .excludes .excludes_old
 			cat .excludes_old .excludes_transitive | sort -u > .excludes
@@ -68,7 +77,7 @@ skipmp() {
 	if [[ 0 -ne $(cat .excludes | wc -l) ]]; then
 		exclude=$(cat .excludes | xargs git ls-files | grep -F .lfrbuild-portal | sort -u)
 
-		echo "$exclude" | xargs -I {} dirname {} | awk '{ print "Excluding " $1 }'
+		echo "$exclude" | dirnames | awk '{ print "Excluding " $1 }'
 		echo "$exclude" | xargs git update-index --assume-unchanged
 		echo "$exclude" | xargs rm -f
 	fi
