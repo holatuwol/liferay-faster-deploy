@@ -26,6 +26,12 @@ pull() {
 		return 0
 	fi
 
+	tokens
+
+	if [[ 0 -ne $? ]]; then
+		return 1
+	fi
+
 	echo "Started build for pull request $pull_id at $(date)"
 
 	if [ ! -d .git ]; then
@@ -45,7 +51,22 @@ pull() {
 
 	checkout pr-$1
 
-	BASE_BRANCH=ee-$(grep -F 'lp.version.major=' release.properties | cut -d'=' -f 2).x
+	BASE_BRANCH=$2
+
+	if [ "" == "$BASE_BRANCH" ]; then
+		curl -H "Authorization: token $AUTH_TOKEN" -s $PULL_API_URL | \
+			jq '.[] | {(.html_url):.base.ref}' | grep -v '[{}]' | tr -d '"' | tr -d ' ' > $HOME/pulls.txt.tmp
+
+		BASE_BRANCH=$(grep '/pull/$1:' $HOME/pulls.txt.tmp | cut -d':' -f 3)
+
+		rm -f $HOME/pulls.txt.tmp
+	fi
+
+	if [ "" == "$BASE_BRANCH" ]; then
+		BASE_BRANCH=ee-$(grep -F 'lp.version.major=' release.properties | cut -d'=' -f 2).x
+		echo "Pull $1 is not an open pull request, guessing base branch as $BASE_BRANCH"
+	fi
+
 	git rebase upstream/$BASE_BRANCH
 
 	if [[ $? -ne 0 ]]; then
@@ -85,7 +106,8 @@ pulls() {
 
 	for line in $(cat $HOME/pulls.txt); do
 		pull_id=$(echo $line | cut -d':' -f 2 | grep -o '/pull/.*' | cut -d'/' -f 3)
-		pull $pull_id
+		pull_branch=$(echo $line | cut -d':' -f 3)
+		pull $pull_id $pull_branch
 	done
 
 	# Finished build
@@ -132,4 +154,4 @@ if [ -z "${BUILD_FOLDER_PREFIX}" ]; then
 	exit 1
 fi
 
-tokens && pulls
+pulls
