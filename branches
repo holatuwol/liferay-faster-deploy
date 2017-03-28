@@ -19,7 +19,7 @@ branch() {
 
 	checkout $BASE_BRANCH
 
-	if [ "$1" != "$(git branch | grep -F '*' | cut -d' ' -f 2)" ]; then
+	if [ "$BASE_BRANCH" != "$(git branch | grep -F '*' | cut -d' ' -f 2)" ]; then
 		return 1
 	fi
 
