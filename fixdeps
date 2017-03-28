@@ -1,0 +1,36 @@
+#!/bin/bash
+
+fixdeps() {
+	cd $(git rev-parse --show-toplevel)
+
+	module=$1
+	package=$2
+	version=default
+
+	if [ "" != "$3" ]; then
+		version=$3
+	fi
+
+	folders=$(git ls-files modules | grep -F build.gradle | grep -vF 'modules/sdk/' | xargs grep -Fl $module | dirnames)
+
+	if [ "" != "$package" ]; then
+		folders=$(git ls-files modules | grep -F build.gradle | grep -vF 'modules/sdk/' | xargs grep -Fl $module | dirnames)
+
+		java_folders=$(echo "$folders" | awk '{ print $1 "/src/main/java" }' | xargs git ls-files | xargs grep -rFl "import $package." | grep -o '.*/src/main/' | sed 's@/src/main/@@g')
+		jsp_folders=$(echo "$folders" | awk '{ print $1 "/src/main/resources/META-INF/resources" }' | xargs git ls-files | xargs grep -rFl "import=\"$package." | grep -o '.*/src/main/' | sed 's@/src/main/@@g')
+
+		folders=$(echo -e "${java_folders}\n${jsp_folders}" | sort -u)
+	fi
+
+	if [ "project" == "$version" ]; then
+		project=$(git ls-files modules | grep -F bnd.bnd | xargs grep -Fl "Bundle-SymbolicName: $module" | xargs dirname | sed 's@[/\\]@:@g' | sed s/.*:apps/:apps/g)
+
+		for folder in $folders; do
+			sed -i.bak -e '/name: "'$module'"/ s/group: .*/project("'$project'")/' $folder/build.gradle
+		done
+	else
+		for folder in $folders; do
+			sed -i.bak -e '/name: "'$module'"/ s/version: "[^"]*"/version: "'$version'"/' $folder/build.gradle
+		done
+	fi
+}
