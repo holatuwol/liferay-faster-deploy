@@ -26,6 +26,7 @@ branch() {
 	git rebase upstream/$BASE_BRANCH
 
 	if [[ 0 -ne $? ]]; then
+		git rebase --abort
 		return 1
 	fi
 
