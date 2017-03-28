@@ -22,7 +22,7 @@ applychanges() {
 	fi
 
 	git diff ${COMPARE_HASH}..HEAD --name-only > deploy_changes.txt
-	git status -s | grep -vF '/rebel.xml' | grep -vF '.iml' | awk '{print $2}' >> deploy_changes.txt
+	git status -s | awk '{print $2}' >> deploy_changes.txt
 
 	# Identify the folders that need to be redeployed
 
