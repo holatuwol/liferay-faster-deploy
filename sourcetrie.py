@@ -135,3 +135,5 @@ class SourceTrie:
 
 		print('Unable to find sourcetrie.txt', file=sys.stderr)
 		sys.exit(1)
+
+	load=staticmethod(load)
