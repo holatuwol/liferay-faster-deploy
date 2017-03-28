@@ -2,6 +2,12 @@
 
 TIMESTAMP=$(date +%Y%m%d)
 
+checkout() {
+	git clean -xdf
+	git reset --hard
+	git checkout $1
+}
+
 prepare() {
 	BUILD_FOLDER_PREFIX="$BUILD_FOLDER_PREFIX" \
 		BUILD_FOLDER_SUFFIX="" \
@@ -31,7 +37,7 @@ pull() {
 		return 1
 	fi
 
-	git checkout pr-$1
+	checkout pr-$1
 
 	BASE_BRANCH=ee-$(grep -F 'lp.version.major=' release.properties | cut -d'=' -f 2).x
 	git rebase upstream/$BASE_BRANCH
@@ -81,7 +87,7 @@ pulls() {
 
 	# Finished build
 
-	git checkout master
+	checkout master
 
 	echo
 	echo Completed pull request builds at $(date)

@@ -9,7 +9,7 @@ branch() {
 
 	checkout $1
 
-	if [ "$1" != "$(git symbolic-ref --short HEAD)" ]; then
+	if [ "$1" != "$(git branch | grep -F '*' | cut -d' ' -f 2)" ]; then
 		return 1
 	fi
 
@@ -61,20 +61,9 @@ branches() {
 }
 
 checkout() {
-	cleanup
-	git checkout $1
-}
-
-cleanup() {
-	pushd $PORTAL_SOURCE_ROOT > /dev/null
-
 	git clean -xdf
 	git reset --hard
-
-	rm -rf $HOME/.gradle/caches/modules-2/files-2.1/com.liferay.portal
-	rm -rf $HOME/.m2/repository/com/liferay/portal
-
-	popd > /dev/null
+	git checkout $1
 }
 
 fixpack() {
