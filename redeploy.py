@@ -2,13 +2,14 @@
 
 from __future__ import print_function
 from sourcetrie import SourceTrie
+import os.path
 
-module_paths = SourceTrie.load()
+module_paths = SourceTrie.load('.redeploy')
 changed_modules = set()
 
 # Scan modules
 
-with open('deploy_changes.txt', 'r') as f:
+with open('.redeploy/deploy_changes.txt', 'r') as f:
 	for file_name in [line.strip() for line in f.readlines()]:
 		if file_name.endswith('.iml'):
 			continue
@@ -32,11 +33,11 @@ with open('deploy_changes.txt', 'r') as f:
 # Sort the modules
 
 def priority(x):
-	if x.endswith('registry-api'):
-		return (0, x)
-
 	if x.startswith('modules/'):
-		return (4, x)
+		if os.path.exists('%s/.lfrbuild-portal-pre'):
+			return (0, x)
+		else:
+			return (4, x)
 
 	if x == 'portal-kernel':
 		return (1, x)
@@ -46,7 +47,16 @@ def priority(x):
 
 	return (2, x)
 
-changed_modules = [x[1] for x in sorted([priority(x) for x in changed_modules])]
+changed_modules = sorted([priority(x) for x in changed_modules])
 
-for module in changed_modules:
-	print(module)
+with open('.redeploy/deploy_ant.txt', 'w') as f:
+	for module in [x[1] for x in changed_modules if not x[1].startswith('modules/')]:
+		f.write('%s\n' % module)
+
+with open('.redeploy/deploy_gradle_1.txt', 'w') as f:
+	for module in [x[1] for x in changed_modules if x[0] == 0]:
+		f.write('%s\n' % module)
+
+with open('.redeploy/deploy_gradle_2.txt', 'w') as f:
+	for module in [x[1] for x in changed_modules if x[0] == 4]:
+		f.write('%s\n' % module)

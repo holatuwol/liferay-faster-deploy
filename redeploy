@@ -9,8 +9,8 @@ applychanges() {
 
 	COMPARE_HASH=$NEW_BASELINE
 
-	if [ -f last_deploy.txt ]; then
-		LAST_DEPLOY_HASH=$(cat last_deploy.txt)
+	if [ -f .redeploy/last_deploy.txt ]; then
+		LAST_DEPLOY_HASH=$(cat .redeploy/last_deploy.txt)
 
 		if [ "" != "$LAST_DEPLOY_HASH" ]; then
 			git merge-base --is-ancestor $LAST_DEPLOY_HASH $CURRENT_HASH
@@ -21,25 +21,29 @@ applychanges() {
 		fi
 	fi
 
-	git diff ${COMPARE_HASH}..HEAD --name-only > deploy_changes.txt
-	git status -s | awk '{print $2}' >> deploy_changes.txt
+	git diff ${COMPARE_HASH}..HEAD --name-only > .redeploy/deploy_changes.txt
+	git status -s | awk '{print $2}' >> .redeploy/deploy_changes.txt
 
 	# Identify the folders that need to be redeployed
 
-	python $(dirname $0)/redeploy.py > deploy_modules.txt
+	python $(dirname $0)/redeploy.py
 
 	# If any of the folders that are affected is one that has
 	# one of the version range macros, make sure to fix it
 
 	for folder in $(git ls-files modules | grep build.gradle | xargs grep -l 'version: "\[' | dirnames); do
-		if [ "" != "$(grep -F "$folder" deploy_modules.txt)" ]; then
+		if [ "" != "$(grep -F "$folder" .redeploy/deploy_gradle_2.txt)" ]; then
 			echo $(dirname $0)/fixbnd $folder
 		fi
 	done
 
 	echo ""
+	echo "Deploying folders:"
+	cat .redeploy/deploy_ant.txt | awk '{ print " * " $1 }'
+
+	echo ""
 	echo "Deploying modules:"
-	cat deploy_modules.txt
+	cat .redeploy/deploy_gradle_1.txt .redeploy/deploy_gradle_2.txt | sed 's/:deploy$//g' | tr ':' '/' | awk '{ print " * modules" $1 }'
 	echo ""
 
 	# Check if we need to rerun cachenpm
@@ -48,54 +52,41 @@ applychanges() {
 		$(dirname $0)/cachenpm
 	fi
 
-	# In the future, the script will handle reordering of folders, so just
-	# iterate over the result without any fancy logic here.
+	# First, check to see if there are any modules we need to deploy early
 
-	if [ "" != "$(grep -v '^modules/' deploy_modules.txt)" ]; then
-		if [ ! -d tmp/lib-pre ]; then
-			cd modules
-			gw -Dbuild.profile=portal-pre -Pforced.deploy.dir=${PWD}/../tmp/lib-pre deploy
-			cd ..
+	if [[ 0 -ne $(wc -l .redeploy/deploy_gradle_1.txt | cut -d' ' -f 1) ]]; then
+		deployportalpre
+
+		if [[ 0 -ne $? ]]; then
+			return 1
 		fi
-
-		if [ "" != "$(grep setup-libs build.xml)" ]; then
-			ant setup-libs
-		fi
-
-		for folder in $(ls -1); do
-			if [ -d $folder/src ] && [ ! -f $folder/$folder.jar ]; then
-				if [ -f $TARGET_FOLDER/tomcat-*/webapps/ROOT/WEB-INF/lib/$folder.jar ]; then
-					cp $TARGET_FOLDER/tomcat-*/webapps/ROOT/WEB-INF/lib/$folder.jar $folder
-				elif [ -f $TARGET_FOLDER/tomcat-*/lib/ext/$folder.jar ]; then
-					cp $TARGET_FOLDER/tomcat-*/lib/ext/$folder.jar $folder
-				fi
-			fi
-		done
 	fi
 
-	for folder in $(cat deploy_modules.txt); do
-		echo -e "\nBuilding $folder"
+	# Next, check to see if there is anything we need to deploy with ant
 
-		pushd $folder > /dev/null
+	if [[ 0 -ne $(wc -l .redeploy/deploy_ant.txt | cut -d' ' -f 1) ]]; then
+		deployant
 
-		if [[ "$folder" == modules/* ]]; then
-			gw deploy
-		elif [ -f bnd.bnd ]; then
-			ant deploy install-portal-snapshot
-		else
-			ant deploy
+		if [[ 0 -ne $? ]]; then
+			return 1
 		fi
+	fi
 
-		EXIT_STATUS=$?
+	# Finally, check to see if there is anything we need to deploy with gradle
 
-		popd > /dev/null
+	if [[ 0 -ne $(wc -l .redeploy/deploy_gradle_2.txt | cut -d' ' -f 1) ]]; then
+		deploymodules
 
-		if [[ 0 -ne $EXIT_STATUS ]]; then
-			return $EXIT_STATUS
+		if [[ 0 -ne $? ]]; then
+			return 1
 		fi
-	done
+	fi
 
-	echo -n $CURRENT_HASH > last_deploy.txt
+	echo -n $CURRENT_HASH > .redeploy/last_deploy.txt
+
+	if [ -f .redeploy/deploy_ant.txt ] && [ "" != "$(grep util .redeploy/deploy_ant.txt)" ]; then
+		echo "Modified util-*.jar, must clear the osgi/state folder for WABs to be rebuilt"
+	fi
 }
 
 cdroot() {
@@ -116,6 +107,72 @@ cdroot() {
 	fi
 
 	builtin cd $GIT_ROOT
+}
+
+deployant() {
+	# Make sure that we have registry-api and anything else that is
+	# part of the portal-pre profile
+
+	if [ ! -d tmp/lib-pre ]; then
+		deployportalpre
+	fi
+
+	if [ "" != "$(grep setup-libs build.xml)" ] && [ ! -f .redeploy/setup_libs.txt ]; then
+		ant setup-libs
+		touch .redeploy/setup_libs.txt
+	fi
+
+	# Some of the builds (notably util-taglib) need the rest of the
+	# portal to have been built, so we can copy that from our bundle
+
+	for folder in $(ls -1); do
+		if [ -d $folder/src ] && [ ! -f $folder/$folder.jar ]; then
+			if [ -f $TARGET_FOLDER/tomcat-*/webapps/ROOT/WEB-INF/lib/$folder.jar ]; then
+				cp $TARGET_FOLDER/tomcat-*/webapps/ROOT/WEB-INF/lib/$folder.jar $folder
+			elif [ -f $TARGET_FOLDER/tomcat-*/lib/ext/$folder.jar ]; then
+				cp $TARGET_FOLDER/tomcat-*/lib/ext/$folder.jar $folder
+			fi
+
+			if [ -f $folder/$folder.jar ]; then
+				mkdir -p $folder/classes
+				unzip -qq $folder/$folder.jar -d $folder/classes
+			fi
+		fi
+	done
+
+	# Finally, iterate over the folders that are listed for deployment
+
+	for folder in $(cat .redeploy/deploy_ant.txt); do
+		echo -e "\nBuilding $folder"
+
+		pushd $folder > /dev/null
+
+		if [ -f bnd.bnd ]; then
+			ant deploy install-portal-snapshot
+		else
+			ant deploy
+		fi
+
+		EXIT_STATUS=$?
+
+		popd > /dev/null
+
+		if [[ 0 -ne $EXIT_STATUS ]]; then
+			return $EXIT_STATUS
+		fi
+	done
+}
+
+deploymodules() {
+	cd modules
+	cat ../.redeploy/deploy_gradle_2.txt | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":deploy" }' | xargs $(dirname $0)/gw
+	cd ..
+}
+
+deployportalpre() {
+	cd modules
+	gw -Dbuild.profile=portal-pre -Pforced.deploy.dir=${PWD}/../tmp/lib-pre deploy
+	cd ..
 }
 
 dirnames() {
@@ -228,7 +285,7 @@ extract() {
 		return 0
 	fi
 
-	rm -f last_deploy.txt
+	rm -f .redeploy/last_deploy.txt
 
 	pushd "$TARGET_FOLDER" > /dev/null
 
@@ -366,7 +423,7 @@ gw() {
 }
 
 isneedscachenpm() {
-	for folder in $(cat deploy_modules.txt); do
+	for folder in $(cat .redeploy/deploy_gradle_2.txt); do
 		if [ -f "$folder/package.json" ]; then
 			return 0
 		fi
@@ -406,7 +463,6 @@ rebasebranch() {
 
 redeploy() {
 	getparent && setopts && applychanges
-
 }
 
 setopts() {
@@ -423,6 +479,13 @@ setopts() {
 
 	if [ "" == "$GRADLE_OPTS" ]; then
 		export GRADLE_OPTS='-Xms3g -Xmx3g -Dorg.gradle.workers.max=1'
+	fi
+
+	mkdir -p .redeploy
+
+	if [ "" != "$(grep node_modules .gitignore)" ]; then
+		git update-index --assume-unchanged .gitignore
+		echo -e '\nnode_modules\n.redeploy' >> .gitignore
 	fi
 }
 

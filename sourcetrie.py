@@ -108,11 +108,13 @@ class SourceTrie:
 
 		return '%s/%s' % (parent_path, self.node_id)
 
-	def load():
+	def load(parent_folder):
 		# Use the pickled source trie from a previous run (if present)
 
-		if os.path.exists('sourcetrie.pickle'):
-			with open('sourcetrie.pickle', 'rb') as f:
+		pickle_file = '%s/sourcetrie.pickle' % parent_folder
+
+		if os.path.exists(pickle_file):
+			with open(pickle_file, 'rb') as f:
 				try:
 					return pickle.load(f)
 				except:
@@ -120,10 +122,12 @@ class SourceTrie:
 
 		# Generate the pickled data structure if the source file is present
 
-		if os.path.exists('sourcetrie.txt'):
+		source_file = '%s/sourcetrie.txt' % parent_folder
+
+		if os.path.exists(source_file):
 			root = SourceTrie()
 
-			with open('sourcetrie.txt', 'r') as f:
+			with open(source_file, 'r') as f:
 				for file_name in [line.strip() for line in f.readlines()]:
 					module_path = file_name[0:file_name.rfind('/')]
 
@@ -132,14 +136,14 @@ class SourceTrie:
 					else:
 						root.add_gradle(module_path)
 
-			with open('sourcetrie.pickle', 'wb') as f:
+			with open(pickle_file, 'wb') as f:
 				pickle.dump(root, f)
 
 			return root
 
 		# Otherwise, we have no idea what to do
 
-		print('Unable to find sourcetrie.txt', file=sys.stderr)
+		print('Unable to find %s' % source_file, file=sys.stderr)
 		sys.exit(1)
 
 	load=staticmethod(load)
