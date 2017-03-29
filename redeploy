@@ -129,8 +129,16 @@ downloadbranch() {
 	BUILD_NAME=$(getbuildname)
 
 	if [ "" == "$BUILD_NAME" ]; then
-		echo "Could not find build for $BASE_BRANCH"
-		return 1
+		BUILD_NAME=$(basename $(find "$HOME/.liferay/builds" -name ${SHORT_NAME}*.tar.gz | sort | tail -1))
+
+		if [ "" == "$BUILD_NAME" ]; then
+			echo "Could not find build for $BASE_BRANCH"
+			return 1
+		fi
+
+		NEW_BASELINE=$(cat "$HOME/.liferay/builds/${BUILD_NAME}.githash")
+		echo "Could not find build for $BASE_BRANCH, using ${BUILD_NAME}"
+		return 0
 	fi
 
 	# Acquire the hash and make sure we have it
@@ -172,16 +180,6 @@ downloadbranch() {
 		fi
 	fi
 
-	git merge-base --is-ancestor $NEW_BASELINE $CURRENT_HASH
-
-	if [[ 0 -ne $? ]]; then
-		echo "Rebasing against $SHORT_NAME ($NEW_BASELINE)"
-
-		git rebase $NEW_BASELINE
-	else
-		echo "$TARGET_BRANCH is already rebased against $SHORT_NAME ($NEW_BASELINE)"
-	fi
-
 	# Download the build if we haven't done so already, making
 	# sure to clean up past builds to not take up too much space
 
@@ -191,8 +189,6 @@ downloadbranch() {
 		echo "Downloading snapshot for $SHORT_NAME ($NEW_BASELINE)"
 		getbuild "${BRANCH_ARCHIVE_MIRROR}/${BUILD_NAME}"
 	fi
-
-	extract
 }
 
 downloadtag() {
@@ -290,7 +286,7 @@ getbuildname() {
 	if [[ "$BRANCH_ARCHIVE_MIRROR" == s3://* ]]; then
 		aws s3 ls $BRANCH_ARCHIVE_MIRROR/ | awk '{ print $4 }' | grep ${SHORT_NAME}'-[^"]*.tar.gz$' | sort | tail -1
 	else
-		curl -s $BRANCH_ARCHIVE_MIRROR/ | grep -o '<a href="'${SHORT_NAME}'-[^"]*.tar.gz">' | cut -d'"' -f 2 | sort | tail -1
+		curl -s --connect-timeout 2 $BRANCH_ARCHIVE_MIRROR/ | grep -o '<a href="'${SHORT_NAME}'-[^"]*.tar.gz">' | cut -d'"' -f 2 | sort | tail -1
 	fi
 }
 
@@ -361,7 +357,7 @@ getparent() {
 		return 1
 	fi
 
-	downloadbranch
+	downloadbranch && rebasebranch && extract
 	return $?
 }
 
@@ -395,8 +391,22 @@ isnotbuildbranch() {
 	fi
 }
 
+rebasebranch() {
+	git merge-base --is-ancestor $NEW_BASELINE $CURRENT_HASH
+
+	if [[ 0 -eq $? ]]; then
+		echo "$TARGET_BRANCH is already rebased against $SHORT_NAME ($NEW_BASELINE)"
+		return 0
+	fi
+
+	echo "Rebasing against $SHORT_NAME ($NEW_BASELINE)"
+	git rebase $NEW_BASELINE
+	return $?
+}
+
 redeploy() {
 	getparent && setopts && applychanges
+
 }
 
 setopts() {
