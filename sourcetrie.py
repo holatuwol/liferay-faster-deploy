@@ -27,6 +27,12 @@ class SourceTrie:
 		result.value = (group, name, version)
 
 	def add_ant(self, path):
+		# portal-web is an exception
+
+		if path == 'portal-web':
+			self.add(path, None, None, None)
+			return
+
 		# Load information from bnd.bnd
 
 		_, artifact_version = self.extract_bnd(path)
