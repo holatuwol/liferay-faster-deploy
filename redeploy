@@ -409,8 +409,6 @@ setopts() {
 
 	if [ "" == "$ANT_OPTS" ]; then
 		export ANT_OPTS='-Xms1g -Xmx1g'
-		sed -i 's/\${env.ANT_OPTS}/${env.GRADLE_OPTS}/g' build-common.xml
-		git update-index --assume-unchanged build-common.xml
 	fi
 
 	if [ "" == "$GRADLE_OPTS" ]; then
@@ -455,5 +453,3 @@ CURRENT_HASH=$(git log -1 --pretty='%H')
 mkdir -p "$HOME/.liferay/builds"
 
 time redeploy
-
-git checkout build-common.xml
