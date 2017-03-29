@@ -87,6 +87,12 @@ pull() {
 }
 
 pulls() {
+	tokens
+
+	if [[ 0 -ne $? ]]; then
+		return 1
+	fi
+
 	cd "$PORTAL_SOURCE_ROOT"
 
 	# Start build
