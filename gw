@@ -46,10 +46,15 @@ fixgradle() {
 	fi
 
 	if [ ! -f "$GRADLE_HOME/.gradle/gradle.properties" ] || [ "$ANT_LIFERAY_HOME" != "$GRADLE_LIFERAY_HOME" ]; then
+		if [ ! -f "$GRADLE_HOME/.gradle/gradle.properties" ]; then
+			echo "Missing .gradle/gradle.properties, generating via ant setup-sdk"
+		else
+			echo "$ANT_LIFERAY_HOME is not the same as $GRADLE_LIFERAY_HOME, fixing via ant setup-sdk"
+		fi
+
 		pushd $GRADLE_HOME > /dev/null
 
 		ant setup-sdk
-
 		GRADLE_LIFERAY_HOME=$ANT_LIFERAY_HOME
 
 		popd > /dev/null
