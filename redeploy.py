@@ -6,6 +6,8 @@ from sourcetrie import SourceTrie
 module_paths = SourceTrie.load()
 changed_modules = set()
 
+# Scan modules
+
 with open('deploy_changes.txt', 'r') as f:
 	for file_name in [line.strip() for line in f.readlines()]:
 		if file_name.endswith('.iml'):
@@ -26,6 +28,25 @@ with open('deploy_changes.txt', 'r') as f:
 
 		if node_path != 'modules':
 			changed_modules.add(node_path)
+
+# Sort the modules
+
+def priority(x):
+	if x.endswith('registry-api'):
+		return (0, x)
+
+	if x.startswith('modules/'):
+		return (4, x)
+
+	if x == 'portal-kernel':
+		return (1, x)
+
+	if x == 'portal-web':
+		return (3, x)
+
+	return (2, x)
+
+changed_modules = [x[1] for x in sorted([priority(x) for x in changed_modules])]
 
 for module in changed_modules:
 	print(module)
