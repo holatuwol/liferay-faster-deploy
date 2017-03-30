@@ -6,17 +6,19 @@ source $HOME/redeploy/crontab/aliases
 
 PULL_USER=$(git config github.pull-user)
 
+PUBLIC_HOSTNAME=$(hostname -s)
+PUBLIC_IP=$(ifconfig eth0 | grep -o 'inet addr:\S*' | cut -d':' -f 2)
+
 # Check if this is EC2
 
-PUBLIC_HOSTNAME=$(curl --connect-timeout 2 http://169.254.169.254/latest/meta-data/public-hostname)
+if [[ "$PUBLIC_HOSTNAME" == ip-* ]]; then
+	EC2_PUBLIC_HOSTNAME=$(curl --connect-timeout 2 http://169.254.169.254/latest/meta-data/public-hostname)
 
-# If not EC2, just use the hostname known by the operating system
-
-if [ "" == "$PUBLIC_HOSTNAME" ]; then
-	PUBLIC_HOSTNAME=$(hostname -s)
+	if [ "" != "$EC2_PUBLIC_HOSTNAME" ]; then
+		PUBLIC_HOSTNAME=$EC2_PUBLIC_HOSTNAME
+		PUBLIC_IP=$(echo "$PUBLIC_HOSTNAME" | cut -d'.' -f 1 | grep -o -- '-[0-9]*' | tr -d '-' | tr '\n' '.' | cut -d'.' -f 1-4)
+	fi
 fi
-
-PUBLIC_IP=$(echo "$PUBLIC_HOSTNAME" | cut -d'.' -f 1 | grep -o -- '-[0-9]*' | tr -d '-' | tr '\n' '.' | cut -d'.' -f 1-4)
 
 # Update portal properties
 
