@@ -1,0 +1,13 @@
+#!/bin/bash
+
+cd $HOME
+
+S3_BUCKET=$(cat bucket.txt)
+
+aws s3 cp s3://$S3_BUCKET/gh/source.tar .
+tar -xf source.tar
+rm source.tar
+
+cd source
+git checkout .
+git gc

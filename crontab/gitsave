@@ -1,0 +1,33 @@
+#!/bin/bash
+
+cd $HOME
+
+S3_BUCKET=$(cat bucket.txt)
+
+if [ ! -d source/.git ]; then
+
+	# Download from mirrors
+
+	wget http://mirrors/github.com/liferay/liferay-portal-ee.tar.gz
+	tar -zxf liferay-portal-ee.tar.gz
+	rm liferay-portal-ee.tar.gz
+
+	# Remove origin and tags to make the build smaller
+
+	mv liferay-portal-ee source
+	cd source
+
+	git remote rm origin
+	(git tag | xargs git tag -d) > /dev/null
+fi
+
+# Create a new archive
+
+cd source
+git clean -xdf
+git gc
+cd ..
+
+tar -cf source.tar source/.git
+aws s3 cp source.tar s3://$S3_BUCKET/gh/
+rm source.tar
