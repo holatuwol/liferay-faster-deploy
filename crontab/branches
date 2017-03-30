@@ -45,6 +45,20 @@ branch() {
 			rm -rf "$BUILD_FOLDER_PREFIX/$1/$BUILD_ID"
 		done
 	fi
+
+	# Clean up old logs as well
+
+	ACTIVE_BUILD=
+
+	for LOG_ID in $(ls -1 "$BUILD_FOLDER_PREFIX/$1" | grep -F '.log' | sort); do
+		BUILD_ARCHIVE=$(echo "$LOG_ID" | sed 's/\.log//g').tar.gz
+
+		if [ -f "$BUILD_FOLDER_PREFIX/$1/$BUILD_ARCHIVE" ]; then
+			ACTIVE_BUILD=$BUILD_ARCHIVE
+		elif [ "" == "$ACTIVE_BUILD" ]; then
+			rm -f $BUILD_FOLDER_PREFIX/$1/$LOG_ID
+		fi
+	done
 }
 
 branches() {
