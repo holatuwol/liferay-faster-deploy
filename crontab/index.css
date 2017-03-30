@@ -1,0 +1,33 @@
+body {
+	display: flex;
+	align-items: flex-start;
+	flex-direction: row;
+	flex-wrap: wrap;
+}
+
+#serverinfo,
+#linkframes {
+	display: flex;
+	align-items: flex-start;
+	flex-direction: column;
+}
+
+#serverinfo div,
+#linkframes div {
+	padding-bottom: 2em;
+	padding-right: 4em;
+}
+
+iframe {
+	min-height: 10vh;
+	width: 500px;
+	border: none;
+}
+
+td {
+	padding-right: 2em;
+}
+
+#pullrequest {
+	height: 4em;
+}

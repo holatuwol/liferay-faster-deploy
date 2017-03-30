@@ -1,0 +1,150 @@
+#!/bin/bash
+
+if [ "" == "$(which conda 2>/dev/null)" ]; then
+	PATH="$HOME/miniconda3/bin:$PATH"
+fi
+
+build() {
+	cd $HOME
+	rm -f nohup.out
+	nohup crontab/build.sh clean &
+	cd -
+}
+
+cr() {
+	if [ -f $HOME/pulls.txt ]; then
+		echo "Last scan occurred at $(stat -c %y "$HOME/pulls.txt")"
+	fi
+
+	if [ -d $HOME/$1 ]; then
+		BUILD_ID=$(ls -1 $HOME/$1 | grep -vF '.log' | sort | tail -1)
+
+		if [ "" == "$BUILD_ID" ]; then
+			echo "$1 failed to build"
+			return 1
+		fi
+
+		TOMCAT_FOLDER=$(ls -1 $HOME/$1/$BUILD_ID | grep -F 'tomcat-')
+		CATALINA_HOME=$HOME/$1/$BUILD_ID/$TOMCAT_FOLDER
+	elif [ -d $HOME/builds/$1 ]; then
+		TOMCAT_FOLDER=$(ls -1 $HOME/builds/$1 | grep -F 'tomcat-')
+		CATALINA_HOME=$HOME/builds/$1/$TOMCAT_FOLDER
+	elif [ -f /var/www/html/builds/$1-${TIMESTAMP}.tar.gz ]; then
+		mkdir -p $HOME/builds/$1
+		tar -zxf /var/www/html/builds/$1-${TIMESTAMP}.tar.gz -C $HOME/builds/$1/
+		cr $@
+		return $?
+	elif [ -f $HOME/fails.txt ] && [ "" != "$(grep "^${1}\$" $HOME/fails.txt)" ]; then
+		echo "Failed to rebase pull request $1"
+		return 1
+	elif [ -f $HOME/builds.txt ] && [ "" != "$(grep "^${1}\$" $HOME/builds.txt)" ]; then
+		echo "Failed 'ant all' for pull request $1, please see $HOME/builds/${1}.log"
+		return 1
+	elif [ -f $HOME/.pulls ]; then
+		echo "ERROR: Currently running pull request builds"
+		return 1
+	else
+		echo "Failed to find pull request $1"
+		return 1
+	fi
+
+	PORT=$(grep -o '"[0-9]*80"' $CATALINA_HOME/conf/server.xml | cut -d'"' -f 2 | sort -u)
+	PIDS=$(lsof -b -a -i :$PORT -t -c java)
+
+	if [ "" != "$PIDS" ]; then
+		RUNNING_CATALINA_HOME=$(ps --no-headers $PIDS | grep -o "catalina.base=[^ ]*" | cut -d '=' -f 2)
+
+		if [ "$CATALINA_HOME" == "$RUNNING_CATALINA_HOME" ]; then
+			echo "$1 is already running"
+			return 0
+		else
+			echo "$RUNNING_CATALINA_HOME is already running on port $PORT"
+			return 1
+		fi
+	fi
+
+	echo "Starting latest build of $1"
+
+	if [ "8080" == "$PORT" ]; then
+		setpull $1
+	fi
+
+	$CATALINA_HOME/bin/startup.sh
+}
+
+cs() {
+	cr $@
+}
+
+cx() {
+	if [ "" == "$1" ]; then
+		echo "Please specify which Tomcat process to kill"
+		return 1
+	fi
+
+	if [ "all" == "$1" ]; then
+		setpull
+		ps -ef | grep catalina.base | grep -v grep | awk '{ print $2 }' | xargs kill -9
+		return 0
+	fi
+
+	if [ "temp" == "$1" ] || [ -d $HOME/builds/$1 ]; then
+		setpull
+	fi
+
+	if [ -d $HOME/$1 ]; then
+		BUILD_ID=$(ls -1 $HOME/$1 | grep -vF '.log' | sort | tail -1)
+		TOMCAT_FOLDER=$(ls -1 $HOME/$1/$BUILD_ID | grep -F 'tomcat-')
+		CATALINA_HOME=$HOME/$1/$BUILD_ID/$TOMCAT_FOLDER
+	elif [ -d $HOME/builds/$1 ]; then
+		setpull
+		TOMCAT_FOLDER=$(ls -1 $HOME/builds/$1 | grep -F 'tomcat-')
+		CATALINA_HOME=$HOME/builds/$1/$TOMCAT_FOLDER
+	else
+		echo "Unable to identify which Tomcat to shutdown"
+		return 0
+	fi
+
+	ps -ef | grep $CATALINA_HOME | grep -v grep | awk '{ print $2 }' | xargs kill -9
+}
+
+ct() {
+	if [ -d $HOME/$1 ]; then
+		echo "Tailing logs for latest build of $1"
+		BUILD_ID=$(ls -1 $HOME/$1 | sort | tail -1)
+		/usr/bin/tail -f $HOME/$1/$BUILD_ID/tomcat-*/logs/catalina.out
+	elif [ -d $HOME/builds/$1 ]; then
+		echo "Tailing logs for build of pull request $1"
+		/usr/bin/tail -f $HOME/builds/$1/tomcat-*/logs/catalina.out
+	fi
+}
+
+setpull() {
+	PULL_USER=$(git config github.pull-user)
+
+	if [ "" == "$PULL_USER" ]; then
+		return 0
+	fi
+
+	echo -n '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">' > /var/www/html/builds/.pull.svg
+
+	if [ "" != "$1" ] && [ "temp" != "$1" ]; then
+		echo -n '<a xlink:href="https://github.com/'$PULL_USER'/liferay-portal-ee/pull/'$1'" target="_blank">' >> /var/www/html/builds/.pull.svg
+	fi
+
+	echo -n '<text x="0" y="32" font-size="32" fill="blue">' >> /var/www/html/builds/.pull.svg
+
+	if [ "" == "$1" ]; then
+		echo -n 'none started' >> /var/www/html/builds/.pull.svg
+	else
+		echo -n 'pull #'$1 >> /var/www/html/builds/.pull.svg
+	fi
+
+	echo -n '</text>' >> /var/www/html/builds/.pull.svg
+
+	if [ "" != "$1" ] && [ "temp" != "$1" ]; then
+		echo -n '</a>' >> /var/www/html/builds/.pull.svg
+	fi
+
+	echo -n '</svg>' >> /var/www/html/builds/.pull.svg
+}

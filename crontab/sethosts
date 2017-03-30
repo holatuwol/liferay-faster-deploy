@@ -1,0 +1,67 @@
+#!/bin/bash
+
+source $HOME/redeploy/crontab/aliases
+
+# Gather server information
+
+PULL_USER=$(git config github.pull-user)
+
+# Check if this is EC2
+
+PUBLIC_HOSTNAME=$(curl --connect-timeout 2 http://169.254.169.254/latest/meta-data/public-hostname)
+
+# If not EC2, just use the hostname known by the operating system
+
+if [ "" == "$PUBLIC_HOSTNAME" ]; then
+	PUBLIC_HOSTNAME=$(hostname -s)
+fi
+
+PUBLIC_IP=$(echo "$PUBLIC_HOSTNAME" | cut -d'.' -f 1 | grep -o -- '-[0-9]*' | tr -d '-' | tr '\n' '.' | cut -d'.' -f 1-4)
+
+# Update portal properties
+
+sed -i "s/PUBLIC_IP/$PUBLIC_IP/g" $HOME/portal-ext.properties
+sed -i "s/PUBLIC_HOSTNAME/$PUBLIC_HOSTNAME/g" $HOME/portal-ext.properties
+
+# Update the Apache index file
+
+sed -i "s/PULL_USER/$PULL_USER/g" index.html
+sed -i "s/PUBLIC_HOSTNAME/$PUBLIC_HOSTNAME/g" index.html
+sed -i "s/PUBLIC_IP/$PUBLIC_IP/g" index.html
+
+# Create CSS classes related to HTTPd folders
+
+if [ ! -f /var/www/html/builds/.pull.svg ]; then
+	echo -e "\n\n.pulls {\n\tdisplay: none;\n}" >> index.css
+fi
+
+if [ ! -d /var/www/html/builds ]; then
+	echo -e "\n\n.builds {\n\tdisplay: none;\n}" >> index.css
+fi
+
+if [ ! -d /var/www/html/logs ]; then
+	echo -e "\n\n.logs {\n\tdisplay: none;\n}" >> index.css
+fi
+
+if [ ! -d /var/www/html/sphinx ]; then
+	echo -e "\n\n.docs {\n\tdisplay: none;\n}" >> index.css
+	echo -e "\n\n.sphinx {\n\tdisplay: none;\n}" >> index.css
+fi
+
+# Create CSS classes related to home folders
+
+if [ ! -d $HOME/builds ]; then
+	echo -e "\n\n.debug {\n\tdisplay: none;\n}" >> index.css
+fi
+
+if [ ! -d $HOME/master ]; then
+	echo -e "\n\n.master {\n\tdisplay: none;\n}" >> index.css
+fi
+
+for folder in 70x 62x 61x; do
+	if [ ! -d $HOME/$folder ]; then
+		echo -e "\n\n.ee-$folder {\n\tdisplay: none;\n}" >> index.css
+	fi
+done
+
+cd ..

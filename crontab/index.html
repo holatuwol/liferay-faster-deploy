@@ -1,0 +1,72 @@
+<html><head>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"></script>
+<script src="/index.js"></script>
+<link rel="stylesheet" type="text/css" href="/index.css" />
+</head>
+
+<body onresize="resizeIframes();">
+
+<div id="serverinfo">
+	<div>
+		<h1>Via Hosts File</h1>
+
+		<p>Add the following to your <a href="https://en.wikipedia.org/wiki/Hosts_(file)#Location_in_the_file_system">hosts file</a> to access the running servers.</p>
+
+		<table>
+			<tr class="master"><td>PUBLIC_IP</td><td><a href="http://master.lrsupport.com/" target="_blank">master.lrsupport.com</a></td><td><a href="http://master/" target="_blank">master</a></td></tr>
+			<tr class="ee-70x"><td>PUBLIC_IP</td><td><a href="http://70x.lrsupport.com/" target="_blank">70x.lrsupport.com</a></td><td><a href="http://70x/" target="_blank">70x</a></td></tr>
+			<tr class="ee-62x"><td>PUBLIC_IP</td><td><a href="http://62x.lrsupport.com/" target="_blank">62x.lrsupport.com</a></td><td><a href="http://62x/" target="_blank">62x</a></td></tr>
+			<tr class="ee-61x"><td>PUBLIC_IP</td><td><a href="http://61x.lrsupport.com/" target="_blank">61x.lrsupport.com</a></td><td><a href="http://61x/" target="_blank">61x</a></td></tr>
+			<tr class="debug"><td>PUBLIC_IP</td><td><a href="http://debug.lrsupport.com/" target="_blank">debug.lrsupport.com</a></td><td><a href="http://debug/" target="_blank">debug</a></td></tr>
+		</table>
+	</div>
+
+	<div>
+		<h1>Via <code>group-server-room</code></h1>
+
+		<p>If you are connected to the VPN, you can access the running servers directly.</p>
+
+		<table>
+			<tr class="master"><td>master</td><td><a href="http://PUBLIC_HOSTNAME:6080/">http://PUBLIC_HOSTNAME:6080/</a></td></tr>
+			<tr class="ee-70x"><td>70x</td><td><a href="http://PUBLIC_HOSTNAME:7080/">http://PUBLIC_HOSTNAME:7080/</a></td></tr>
+			<tr class="ee-62x"><td>62x</td><td><a href="http://PUBLIC_HOSTNAME:6280/">http://PUBLIC_HOSTNAME:6280/</a></td></tr>
+			<tr class="ee-61x"><td>61x</td><td><a href="http://PUBLIC_HOSTNAME:6180/">http://PUBLIC_HOSTNAME:6180/</a></td></tr>
+			<tr class="debug"><td>debug</td><td><a href="http://PUBLIC_HOSTNAME:8080/">http://PUBLIC_HOSTNAME:8080/</a></td></tr>
+		</table>
+
+		<p>All servers are started with JPDA, so you can also attach your IDE debugger to the servers.</p>
+
+		<table>
+			<tr class="master"><td>master</td><td>PUBLIC_IP, port 6000</td></tr>
+			<tr class="ee-70x"><td>70x</td><td>PUBLIC_IP, port 7000</td></tr>
+			<tr class="ee-62x"><td>62x</td><td>PUBLIC_IP, port 6200</td></tr>
+			<tr class="ee-61x"><td>61x</td><td>PUBLIC_IP, port 6100</td></tr>
+			<tr class="debug"><td>debug</td><td>PUBLIC_IP, port 8000</td></tr>
+		</table>
+	</div>
+
+	<div class="docs">
+		<h1>Documentation</h1>
+
+		<p>There is also static documentation related to projects.</p>
+
+		<table>
+			<tr class="sphinx"><td><a href="http://www.sphinx-doc.org/en/stable/">sphinx</a></td><td><a href="http://PUBLIC_HOSTNAME/sphinx/">http://PUBLIC_HOSTNAME/sphinx/</a>
+		</table>
+	</div>
+</div>
+
+<div id="linkframes">
+	<div class="pulls">
+		<h1>PULL_USER/PULL_REPO</h1>
+
+		<embed id="pullrequest" src="/builds/.pull.svg" />
+	</div>
+
+	<iframe class="builds" src="/builds/" onload="resizeIframe(this);"></iframe>
+	<iframe class="logs" src="/logs/" onload="resizeIframe(this);"></iframe>
+</div>
+
+</body>
+
+</html>
