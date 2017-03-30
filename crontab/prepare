@@ -11,7 +11,7 @@ compile() {
 
 	ARCHIVE_HOME="$HOME/.liferay/tomcat" \
 		TARGET_FOLDER="$TARGET_FOLDER" \
-			$(dirname $0)/appserverprops
+			$(dirname $0)/../appserverprops
 
 	# Begin building
 
@@ -20,11 +20,11 @@ compile() {
 	echo '' | tee -a "${TARGET_FOLDER}.log"
 
 	if [ -f modules/build.gradle ]; then
-		$(dirname $0)/skipmp | tee -a "${TARGET_FOLDER}.log"
-		$(dirname $0)/cachenpm | tee -a "${TARGET_FOLDER}.log"
+		$(dirname $0)/../skipmp | tee -a "${TARGET_FOLDER}.log"
+		$(dirname $0)/../cachenpm | tee -a "${TARGET_FOLDER}.log"
 	fi
 
-	$(dirname $0)/fixbnd
+	$(dirname $0)/../fixbnd
 
 	set -o pipefail
 	ant all | tee -a "${TARGET_FOLDER}.log"
