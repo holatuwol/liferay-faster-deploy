@@ -7,7 +7,7 @@ fi
 build() {
 	cd $HOME
 	rm -f nohup.out
-	nohup crontab/build.sh clean &
+	nohup redeploy/crontab/cronbuild clean &
 	cd -
 }
 
