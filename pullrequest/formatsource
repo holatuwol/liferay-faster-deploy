@@ -1,0 +1,90 @@
+#!/bin/bash
+
+afs() {
+	if [ ! -d "$GIT_ROOT/tools/sdk" ]; then
+		pushd "$GIT_ROOT" > /dev/null
+		ant setup-sdk
+		popd > /dev/null
+	fi
+
+	ARGS=
+
+	if [ "" != "$1" ] && [ -f $1 ]; then
+		ARGS="-Dsource.files=$PWD/$1"
+	elif [ "" != "$1" ]; then
+		check $@
+
+		if [[ 0 -ne $? ]]; then
+			return 1
+		fi
+
+		ARGS="-Dformat.current.branch=true -Dgit.working.branch.name=$1"
+	else
+		ARGS="-Dformat.local.changes=true"
+	fi
+
+	cd $GIT_ROOT/portal-impl
+	echo ant $ARGS format-source
+	ant $ARGS format-source
+}
+
+check() {
+	BASE_COMMIT=$(git log -1 --pretty='%H' $1)
+
+	if [ "" == "$BASE_COMMIT" ]; then
+		echo "$1 is not a known branch, tag, or revision"
+		return 1
+	fi
+
+	git merge-base --is-ancestor $BASE_COMMIT HEAD
+
+	if [[ 0 -ne $? ]]; then
+		echo "You must rebase against $1 if you want to use it for source formatting"
+		return 1
+	fi
+
+	MAX_COMMITS=$2
+
+	if [ "" == "$MAX_COMMITS" ]; then
+		MAX_COMMITS=10
+	fi
+
+	ACTUAL_COMMITS=$(git log $1..HEAD | wc -l)
+
+	if [[ $MAX_COMMITS -lt $ACTUAL_COMMITS ]]; then
+		echo "There have been ${ACTUAL_COMMITS} commits on this branch compared to ${1}."
+		echo "If you're sure that $1 has been rebased against upstream,"
+		echo "please specify the above number as a second parameter."
+		return 1
+	fi
+}
+
+gfs() {
+	ARGS=
+
+	if [ "" != "$1" ] && [ -f $1 ]; then
+		ARGS="-DformatSource.source.files=$PWD/$1"
+	elif [ "local" == "$1" ]; then
+		ARGS="-DformatSource.format.local.changes=true"
+	fi
+
+	echo gradlew $ARGS formatSource
+	gradlew $ARGS formatSource
+}
+
+GIT_ROOT=$PWD
+
+while [ ! -e "$GIT_ROOT/.git" ] && [ "/" != "$GIT_ROOT" ]; do
+	GIT_ROOT=$(dirname $GIT_ROOT)
+done
+
+if [ ! -e "$GIT_ROOT/.git" ]; then
+	echo "Unable to find version control root"
+	exit 1
+fi
+
+if [ -f build.gradle ]; then
+	gfs $@
+else
+	afs $@
+fi
