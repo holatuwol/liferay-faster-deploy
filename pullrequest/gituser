@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# Adapted from https://gist.github.com/drewbrokke/6c8433d16aa90eb63f1e319211fc40e9
+
+curl -s "https://github.com/orgs/liferay/people?query=$(echo $@ | tr ' ' '+')" | \
+	tr '\n' ' ' | sed 's| member-info|\'$'\n&|g' | grep member-info | \
+	sed -E -e 's|^.*css-truncate-target f4" href="/||' -e 's|"> +|=|' -e 's| +</a>.*||'
