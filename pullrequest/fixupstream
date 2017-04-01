@@ -1,0 +1,37 @@
+#!/bin/bash
+
+checkremote() {
+	remote_url=$(git remote get-url $1)
+	remote_branches=$(remotebranches $1)
+
+	if [ "git@github.com:liferay/liferay-portal.git" == "$remote_url" ]; then
+		echo "$remote_branches" | grep -v '/master$'
+	elif [ "git@github.com:liferay/liferay-portal-ee.git" == "$remote_url" ]; then
+		echo "$remote_branches" | grep -v '/master-private$' | grep -v '/ee-[0-9]*\.[0-9]*\.x$'
+	elif [ "git@github.com:liferay/liferay-plugins.git" == "$remote_url" ]; then
+		echo "$remote_branches" | grep -v '/master$' | grep -v '/ee-[0-9]*\.[0-9]*\.x$'
+	elif [ "git@github.com:liferay/liferay-plugins-ee.git" == "$remote_url" ]; then
+		echo "$remote_branches" | grep -v '/ee-[0-9]*\.[0-9]*\.x$' | grep -v '/ee-[0-9]*\.[0-9]*\.[0-9]*$'
+	else
+		echo "$remote_branches" | grep -v '/master$'
+	fi
+}
+
+remotebranches() {
+	git branch -av | awk '{ print $1 }' | grep "^remotes/$1/" | cut -d'/' -f 2-
+}
+
+for remote in $(git remote | grep upstream); do
+	remove_branches=$(checkremote $remote | tr '\n' ' ')
+
+	if [ "" != "$remove_branches" ]; then
+		git branch -d -r $remove_branches
+	fi
+
+	retain_branches=$(remotebranches "$remote" | cut -d'/' -f 2 | tr '\n' ' ')
+
+	if [ "" != "$retain_branches" ]; then
+		git remote set-branches $remote $retain_branches
+		git fetch $remote --no-tags --prune
+	fi
+done
