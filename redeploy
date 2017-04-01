@@ -212,7 +212,7 @@ downloadbranch() {
 
 	# Rebase against the acquired hash if necessary
 
-	if [ "" == "$BASE_TAG" ] && [ "$TARGET_BRANCH" != "$BASE_BRANCH" ]; then
+	if [ "" == "$BASE_TAG" ] && [ "$CURRENT_BRANCH" != "$BASE_BRANCH" ]; then
 		BASE_HASH=$(git log -1 --pretty='%H' $BASE_BRANCH)
 
 		if [ "$BASE_HASH" != "$NEW_BASELINE" ]; then
@@ -222,7 +222,7 @@ downloadbranch() {
 				git stash
 			fi
 
-			git checkout -f $BASE_BRANCH && git rebase $NEW_BASELINE && git reset --hard $NEW_BASELINE && git checkout $TARGET_BRANCH
+			git checkout -f $BASE_BRANCH && git rebase $NEW_BASELINE && git reset --hard $NEW_BASELINE && git checkout $CURRENT_BRANCH
 
 			REBASE_STATUS=$?
 
@@ -246,6 +246,44 @@ downloadbranch() {
 		echo "Downloading snapshot for $SHORT_NAME ($NEW_BASELINE)"
 		getbuild "${BRANCH_ARCHIVE_MIRROR}/${BUILD_NAME}"
 	fi
+}
+
+downloadbuild() {
+	# Identify the folder we build into
+
+	CURRENT_BRANCH=$(git symbolic-ref --short HEAD)
+
+	if [ "" == "$CURRENT_BRANCH" ]; then
+		echo "Unable to build from detached head"
+		return 1
+	fi
+
+	if [ "" != "$BUILD_FOLDER_SUFFIX" ]; then
+		TARGET_FOLDER=${BUILD_FOLDER_PREFIX}/${CURRENT_BRANCH}/${BUILD_FOLDER_SUFFIX}
+	else
+		TARGET_FOLDER=${BUILD_FOLDER_PREFIX}/${CURRENT_BRANCH}
+	fi
+
+	# Update app.server.$USER.properties
+
+	TARGET_FOLDER="$TARGET_FOLDER" \
+		$(dirname $0)/appserverprops
+
+	# Identify the base branch so we know what to fetch
+
+	. $(dirname $0)/getparent
+
+	# If we're using a tag, shortcut
+
+	if [ "" != "$BASE_TAG" ]; then
+		downloadtag
+		return $?
+	fi
+
+	# If we have a known branch, we'll use it
+
+	downloadbranch && rebasebranch && extract
+	return $?
 }
 
 downloadtag() {
@@ -347,77 +385,6 @@ getbuildname() {
 	fi
 }
 
-getparent() {
-	# Identify the folder we build into
-
-	TARGET_BRANCH=$(git symbolic-ref --short HEAD)
-
-	if [ "" == "$TARGET_BRANCH" ]; then
-		echo "Unable to build from detached head"
-		return 1
-	fi
-
-	if [ "" != "$BUILD_FOLDER_SUFFIX" ]; then
-		TARGET_FOLDER=${BUILD_FOLDER_PREFIX}/${TARGET_BRANCH}/${BUILD_FOLDER_SUFFIX}
-	else
-		TARGET_FOLDER=${BUILD_FOLDER_PREFIX}/${TARGET_BRANCH}
-	fi
-
-	# Update app.server.$USER.properties
-
-	TARGET_FOLDER="$TARGET_FOLDER" \
-		$(dirname $0)/appserverprops
-
-	# Identify the base branch so we know what to fetch
-
-	BASE_TAG=
-	BASE_BRANCH=
-
-	if isnotbuildbranch $TARGET_BRANCH; then
-		FULL_VERSION=$(grep lp.version= release.properties | cut -d'=' -f 2)
-		MAJOR_VERSION=$(grep lp.version.major= release.properties | cut -d'=' -f 2)
-
-		if [ "6.1" == "$MAJOR_VERSION" ]; then
-			BASE_BRANCH=ee-6.1.x
-		elif [ "6.2" == "$MAJOR_VERSION" ]; then
-			BASE_BRANCH=ee-6.2.x
-		elif [ "7.0" == "$MAJOR_VERSION" ] && [ "7.0.10" == "$FULL_VERSION" ]; then
-			BASE_BRANCH=ee-7.0.x
-		elif [ "7.0" == "$MAJOR_VERSION" ]; then
-			BASE_BRANCH=master
-		fi
-
-		# If the branch isn't an ancestor, try to find a matching tag
-
-		git merge-base --is-ancestor $BASE_BRANCH HEAD
-
-		if [[ 0 -eq $? ]]; then
-			BASE_TAG=
-		else
-			BASE_TAG=$(git describe --tags HEAD --abbrev=0 2> /dev/null)
-		fi
-	else
-		BASE_BRANCH=$TARGET_BRANCH
-	fi
-
-	# If we're using a tag, shortcut
-
-	if [ "" != "$BASE_TAG" ]; then
-		downloadtag
-		return $?
-	fi
-
-	# If we have a known branch, we'll use it
-
-	if isnotbuildbranch $BASE_BRANCH; then
-		echo "Unable to identify base branch, please rebase"
-		return 1
-	fi
-
-	downloadbranch && rebasebranch && extract
-	return $?
-}
-
 gw() {
 	$(dirname $0)/gw $@
 }
@@ -432,27 +399,11 @@ isneedscachenpm() {
 	return 1
 }
 
-isnotbuildbranch() {
-	if [ "master" == "$1" ]; then
-		return 1
-	elif [ "ee-7.0.x" == "$1" ]; then
-		return 1
-	elif [ "ee-6.2.x" == "$1" ]; then
-		return 1
-	elif [ "ee-6.1.x" == "$1" ]; then
-		return 1
-	elif [ "" == "$1" ]; then
-		return 1
-	else
-		return 0
-	fi
-}
-
 rebasebranch() {
 	git merge-base --is-ancestor $NEW_BASELINE $CURRENT_HASH
 
 	if [[ 0 -eq $? ]]; then
-		echo "$TARGET_BRANCH is already rebased against $SHORT_NAME ($NEW_BASELINE)"
+		echo "$CURRENT_BRANCH is already rebased against $SHORT_NAME ($NEW_BASELINE)"
 		return 0
 	fi
 
@@ -462,7 +413,7 @@ rebasebranch() {
 }
 
 redeploy() {
-	getparent && setopts && applychanges
+	downloadbuild && setopts && applychanges
 }
 
 setopts() {

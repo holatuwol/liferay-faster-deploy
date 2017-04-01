@@ -1,0 +1,56 @@
+#!/bin/bash
+
+getparent() {
+	CURRENT_BRANCH=$(git symbolic-ref --short HEAD)
+
+	BASE_TAG=
+	BASE_BRANCH=
+
+	if isbuildbranch $CURRENT_BRANCH; then
+		BASE_BRANCH=$CURRENT_BRANCH
+		return 0
+	fi
+
+	local FULL_VERSION=$(grep lp.version= release.properties | cut -d'=' -f 2)
+	local MAJOR_VERSION=$(grep lp.version.major= release.properties | cut -d'=' -f 2)
+
+	if [ "6.1" == "$MAJOR_VERSION" ]; then
+		BASE_BRANCH=ee-6.1.x
+	elif [ "6.2" == "$MAJOR_VERSION" ]; then
+		BASE_BRANCH=ee-6.2.x
+	elif [ "7.0" == "$MAJOR_VERSION" ] && [ "7.0.10" == "$FULL_VERSION" ]; then
+		BASE_BRANCH=ee-7.0.x
+	elif [ "7.0" == "$MAJOR_VERSION" ]; then
+		BASE_BRANCH=master
+	else
+		return 1
+	fi
+
+	# If the branch isn't an ancestor, try to find a matching tag
+
+	git merge-base --is-ancestor $BASE_BRANCH HEAD
+
+	if [[ 0 -eq $? ]]; then
+		BASE_TAG=
+	else
+		BASE_TAG=$(git describe --tags HEAD --abbrev=0 2> /dev/null)
+	fi
+}
+
+isbuildbranch() {
+	if [ "master" == "$1" ]; then
+		return 0
+	elif [ "ee-7.0.x" == "$1" ]; then
+		return 0
+	elif [ "ee-6.2.x" == "$1" ]; then
+		return 0
+	elif [ "ee-6.1.x" == "$1" ]; then
+		return 0
+	elif [ "" == "$1" ]; then
+		return 0
+	else
+		return 1
+	fi
+}
+
+getparent $@
