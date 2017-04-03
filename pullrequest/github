@@ -1,0 +1,38 @@
+#!/bin/bash
+
+github() {
+	. "$(dirname "${BASH_SOURCE[0]}")/../gitcd/gitfind" $1
+
+	if [ "" == "$1" ]; then
+		FOLDER=$PWD
+	elif [ "" == "$FOLDER" ]; then
+		return 1
+	fi
+
+	if [ -f "$GIT_FOLDER/release.properties" ]; then
+		. "$(dirname "${BASH_SOURCE[0]}")/../getparent"
+	else
+		CURRENT_BRANCH=$(git symbolic-ref --short HEAD)
+		BASE_BRANCH=master
+	fi
+
+	local REMOTE_NAME=$(git branch -av | awk '{ print $1 }' | grep "remotes/upstream[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 2)
+	local REPO_NAME=$(git remote get-url "$REMOTE_NAME" | cut -d':' -f 2 | sed 's/\.git$//g')
+	local GIT_PATH=$(python -c "import os.path; print(os.path.relpath('$FOLDER', '$GIT_FOLDER'))")
+
+	if [ "" == "$BASE_TAG" ]; then
+		GIT_PATH="$BASE_BRANCH/$GIT_PATH"
+	else
+		GIT_PATH="$BASE_TAG/$GIT_PATH"
+	fi
+
+	if [ "" == "$FILE" ]; then
+		GIT_PATH="tree/$GIT_PATH"
+	else
+		GIT_PATH="blob/$GIT_PATH/$FILE"
+	fi
+
+	python -m webbrowser "https://github.com/$REPO_NAME/$GIT_PATH"
+}
+
+github $@
