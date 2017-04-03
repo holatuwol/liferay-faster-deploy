@@ -67,9 +67,12 @@ pull() {
 		echo "Pull $1 is not an open pull request, guessing base branch as $BASE_BRANCH"
 	fi
 
-	git rebase upstream/$BASE_BRANCH
+	set -o pipefail
+	git rebase upstream/$BASE_BRANCH | tee /var/www/html/builds/$1-${TIMESTAMP}.rebase
+	EXIT_CODE=$?
+	set +o pipefail
 
-	if [[ $? -ne 0 ]]; then
+	if [[ $EXIT_CODE -ne 0 ]]; then
 		git rebase --abort
 
 		touch $HOME/fails.txt
