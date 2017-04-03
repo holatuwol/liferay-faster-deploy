@@ -39,7 +39,7 @@ cachenpm() {
 
 	popd > /dev/null
 
-	cp -a $(dirname $0)/cachenpm.py ${cache_home}/cachenpm.py
+	cp -a $(dirname "${BASH_SOURCE[0]}")/cachenpm.py ${cache_home}/cachenpm.py
 
 	pushd "${cache_home}" > /dev/null
 
@@ -72,11 +72,11 @@ cachenpm() {
 }
 
 dirnames() {
-	python $(dirname $0)/dirnames.py
+	python $(dirname "${BASH_SOURCE[0]}")/dirnames.py
 }
 
 disablegwnpm() {
-	$(dirname $0)/disablegwnpm
+	$(dirname "${BASH_SOURCE[0]}")/disablegwnpm
 }
 
 softlink() {

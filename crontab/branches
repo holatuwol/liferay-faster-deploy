@@ -34,7 +34,7 @@ branch() {
 		BUILD_FOLDER_SUFFIX="$TIMESTAMP" \
 		ARCHIVE_FOLDER="/var/www/html/builds/branches" \
 		TIMESTAMP="$TIMESTAMP" \
-			$(dirname $0)/prepare $@
+			$(dirname "${BASH_SOURCE[0]}")/prepare $@
 
 	# Only retain last three builds
 
@@ -112,7 +112,7 @@ fixpack() {
 		BUILD_FOLDER_SUFFIX="" \
 		ARCHIVE_FOLDER="/var/www/html/builds/fixpacks" \
 		TIMESTAMP="" \
-			$(dirname $0)/prepare $1 80
+			$(dirname "${BASH_SOURCE[0]}")/prepare $1 80
 
 	rm -rf "$BUILD_FOLDER_PREFIX/temp/$1"
 }

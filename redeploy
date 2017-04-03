@@ -3,7 +3,7 @@
 applychanges() {
 	# Generate the source trie
 
-	$(dirname $0)/sourcetrie
+	$(dirname "${BASH_SOURCE[0]}")/sourcetrie
 
 	# Identify the changes
 
@@ -26,14 +26,14 @@ applychanges() {
 
 	# Identify the folders that need to be redeployed
 
-	python $(dirname $0)/redeploy.py
+	python $(dirname "${BASH_SOURCE[0]}")/redeploy.py
 
 	# If any of the folders that are affected is one that has
 	# one of the version range macros, make sure to fix it
 
 	for folder in $(git ls-files modules | grep build.gradle | xargs grep -l 'version: "\[' | dirnames); do
 		if [ "" != "$(grep -F "$folder" .redeploy/deploy_gradle_2.txt)" ]; then
-			echo $(dirname $0)/fixbnd $folder
+			echo $(dirname "${BASH_SOURCE[0]}")/fixbnd $folder
 		fi
 	done
 
@@ -49,7 +49,7 @@ applychanges() {
 	# Check if we need to rerun cachenpm
 
 	if isneedscachenpm; then
-		$(dirname $0)/cachenpm
+		$(dirname "${BASH_SOURCE[0]}")/cachenpm
 	fi
 
 	# First, check to see if there are any modules we need to deploy early
@@ -165,7 +165,7 @@ deployant() {
 
 deploymodules() {
 	cd modules
-	cat ../.redeploy/deploy_gradle_2.txt | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":deploy" }' | xargs $(dirname $0)/gw
+	cat ../.redeploy/deploy_gradle_2.txt | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":deploy" }' | xargs $(dirname "${BASH_SOURCE[0]}")/gw
 	cd ..
 }
 
@@ -176,7 +176,7 @@ deployportalpre() {
 }
 
 dirnames() {
-	python $(dirname $0)/dirnames.py
+	python $(dirname "${BASH_SOURCE[0]}")/dirnames.py
 }
 
 downloadbranch() {
@@ -267,11 +267,11 @@ downloadbuild() {
 	# Update app.server.$USER.properties
 
 	TARGET_FOLDER="$TARGET_FOLDER" \
-		$(dirname $0)/appserverprops
+		$(dirname "${BASH_SOURCE[0]}")/appserverprops
 
 	# Identify the base branch so we know what to fetch
 
-	. $(dirname $0)/getparent
+	. $(dirname "${BASH_SOURCE[0]}")/getparent
 
 	# If we're using a tag, shortcut
 
@@ -386,7 +386,7 @@ getbuildname() {
 }
 
 gw() {
-	$(dirname $0)/gw $@
+	$(dirname "${BASH_SOURCE[0]}")/gw $@
 }
 
 isneedscachenpm() {

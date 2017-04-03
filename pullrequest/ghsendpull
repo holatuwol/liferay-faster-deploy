@@ -62,7 +62,7 @@ findreviewer() {
 		search_key=$2
 	fi
 
-	reviewer=$($(dirname $0)/gituser "$search_key" | cut -d'=' -f 1)
+	reviewer=$($(dirname "${BASH_SOURCE[0]}")/gituser "$search_key" | cut -d'=' -f 1)
 
 	# Make sure it's relatively unique. Namely, if there is already
 	# a remote for the ambiguous matches, we'll accept that.
@@ -115,7 +115,7 @@ sendpull() {
 	# Figure out where we are pushing our branch
 
 	if [ -f "$GIT_ROOT/release.properties" ]; then
-		. $(dirname $0)/../getparent
+		. $(dirname "${BASH_SOURCE[0]}")/../getparent
 	else
 		CURRENT_BRANCH=$(git symbolic-ref --short HEAD)
 		BASE_BRANCH=master

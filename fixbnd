@@ -1,12 +1,12 @@
 #!/bin/bash
 
 dirnames() {
-	python $(dirname $0)/dirnames.py
+	python $(dirname "${BASH_SOURCE[0]}")/dirnames.py
 }
 
 fixbnd() {
 	sed -i.bak 's/version: "\[[^"]*\"/version: "default"/g' $1
-	python "$(dirname $0)/fixbnd.py" "$1"
+	python "$(dirname "${BASH_SOURCE[0]}")/fixbnd.py" "$1"
 	rm "$1/bnd.bnd"
 	mv "$1/bnd.tmp" "$1/bnd.bnd"
 }

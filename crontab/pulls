@@ -13,7 +13,7 @@ prepare() {
 		BUILD_FOLDER_SUFFIX="" \
 		ARCHIVE_FOLDER="/var/www/html/builds" \
 		TIMESTAMP="$TIMESTAMP" \
-			$(dirname $0)/prepare $@
+			$(dirname "${BASH_SOURCE[0]}")/prepare $@
 }
 
 pull() {

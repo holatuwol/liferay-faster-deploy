@@ -1,11 +1,11 @@
 #!/bin/bash
 
 dirnames() {
-	python $(dirname $0)/dirnames.py
+	python $(dirname "${BASH_SOURCE[0]}")/dirnames.py
 }
 
 jrebel() {
-	SCRIPT_FOLDER=$(dirname $0)
+	SCRIPT_FOLDER=$(dirname "${BASH_SOURCE[0]}")
 	TARGET_BRANCH=$(git symbolic-ref --short HEAD)
 
 	if [ "" == "$TARGET_BRANCH" ]; then
