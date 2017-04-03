@@ -1,58 +1,17 @@
 #!/bin/bash
 
 gitcd() {
-	# if the folder is already there, switch to it
 
-	if [ -d "$1" ]; then
-		builtin cd $1
+	. "$(dirname "${BASH_SOURCE[0]}")/gitfind" $@
+
+	if [ "" != "$FOLDER" ]; then
+		builtin cd "$FOLDER"
 		pwd
 		return 0
 	fi
 
-	# check if we can use git ls-files
-
-	local GIT_FOLDER=$PWD
-
-	while [ "/" != "$GIT_FOLDER" ] && [ ! -e "$GIT_FOLDER/.git" ]; do
-		GIT_FOLDER=$(dirname $GIT_FOLDER)
-	done
-
-	if [ ! -e $GIT_FOLDER/.git ]; then
-		echo "Unable to use git to locate $1"
-		return 1
-	fi
-
-	# in case someone says 'cd portal-impl'
-
-	if [ -d $GIT_FOLDER/$1 ]; then
-		builtin cd $GIT_FOLDER/$1
-		pwd
-		return 0
-	fi
-
-	# git ls-files wants a relative path, so let's generate it
-
-	local ROOT_FOLDER=$(python -c "from __future__ import print_function; import os.path; print(os.path.relpath('$GIT_FOLDER', '$PWD'))")
-
-	# use git ls-files to find a bnd.bnd or ivy.xml
-
-	local MATCHING_FOLDERS=$(git ls-files $ROOT_FOLDER | grep "$1/\(bnd.bnd\|ivy.xml\)$" | sed 's@/\(bnd.bnd\|ivy.xml\)$@@g' | sort -u)
-
-	if [ "" == "$MATCHING_FOLDERS" ]; then
-		echo "Unable to find a bnd.bnd or ivy.xml matching $1"
-		return 1
-	fi
-
-	# check to make sure that we didn't end up finding multiple folders
-
-	if [[ 1 -ne $(echo "$MATCHING_FOLDERS" | wc -l) ]]; then
-		echo "$1 is ambiguous"
-		echo "$MATCHING_FOLDERS"
-		return 1
-	fi
-
-	builtin cd "$MATCHING_FOLDERS"
-	pwd
+	echo "Falling back to builtin cd"
+	builtin cd $@
 }
 
 gitcd $@

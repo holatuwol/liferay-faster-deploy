@@ -1,0 +1,196 @@
+#!/bin/bash
+
+dirnames() {
+	python "$(dirname "${BASH_SOURCE[0]}")/../dirnames.py" $@
+}
+
+gitfile() {
+	FILE=
+	MATCHING_FILES=
+
+	local ROOT_FOLDER=$2
+
+	# if the folder already exists, don't bother with git ls-files
+
+	if [ -d $ROOT_FOLDER/$1 ]; then
+		FOLDER=$ROOT_FOLDER/$1
+		MATCHING_FOLDERS=$FOLDER
+		return 0
+	fi
+
+	# git ls-files likes to use relative folders instead of absolute paths, so
+	# compute the relative path first
+
+	ROOT_FOLDER=$(python -c "from __future__ import print_function; import os.path; print(os.path.relpath('$ROOT_FOLDER', '$PWD'))")
+
+	# Find the matching folder
+
+	if gitfilematch "$1" "$ROOT_FOLDER"; then
+		local TOP_FOLDER=$(echo "$MATCHING_FOLDERS" | head -1)
+
+		if [[ $(echo "$MATCHING_FOLDERS" | wc -l) -eq $(echo "$MATCHING_FOLDERS" | grep -F "$TOP_FOLDER" | wc -l) ]]; then
+			FOLDER=$TOP_FOLDER
+		fi
+
+		if [ "" != "$FOLDER" ] && [ "" != "$MATCHING_FILES" ] && [[ 1 -eq $(echo "$MATCHING_FILES" | wc -l) ]]; then
+			FILE=$(basename "$MATCHING_FILES")
+		fi
+	fi
+}
+
+gitfilematch() {
+	MATCHING_FILES=
+	MATCHING_FOLDERS=
+
+	mkdir -p $GIT_FOLDER/.redeploy
+	local SCRATCH_FILE=$GIT_FOLDER/.redeploy/lsfiles.txt
+	git ls-files $2 > "$SCRATCH_FILE"
+
+	# If the folder is empty, there's nothing for us to do
+
+	if [[ 0 -eq $(wc -l "$SCRATCH_FILE" | cut -d' ' -f 1) ]]; then
+		return 1
+	fi
+
+	# First, assume that we're looking for a module root, so check for
+	# bnd.bnd and ivy.xml
+
+	MATCHING_FOLDERS=$(grep "$1/bnd.bnd$" "$SCRATCH_FILE" | dirnames | sort -u)
+
+	if [ "" != "$MATCHING_FOLDERS" ]; then
+		return 0
+	fi
+
+	MATCHING_FOLDERS=$(grep "$1/ivy.xml$" "$SCRATCH_FILE" | dirnames | sort -u)
+
+	if [ "" != "$MATCHING_FOLDERS" ]; then
+		return 0
+	fi
+
+	# Next, check for a folder that isn't a module root, which can either be
+	# an exact match or a prefix/suffix match. Prefer in that order.
+
+	MATCHING_FOLDERS=$(grep -F "/$1/" "$SCRATCH_FILE" | sed "s@$1.*@$1@g" | sort -u)
+
+	if [ "" != "$MATCHING_FOLDERS" ]; then
+		return 0
+	fi
+
+	MATCHING_FOLDERS=$(grep "/$1.*/" "$SCRATCH_FILE" | sed "s@$1\([^/]*\).*@$1\1@g" | sort -u)
+
+	if [ "" != "$MATCHING_FOLDERS" ]; then
+		return 0
+	fi
+
+	MATCHING_FOLDERS=$(grep -F "$1/" "$SCRATCH_FILE" | sed "s@$1/.*@$1@g" | sort -u)
+
+	if [ "" != "$MATCHING_FOLDERS" ]; then
+		return 0
+	fi
+
+	# Finally, assume that maybe the person is looking for a folder containing
+	# a file and is using the file name as an abbreviated way at getting there.
+	# Choose a prefix match first, then an anywhere match.
+
+	MATCHING_FILES=$(grep -vF '..' "$SCRATCH_FILE" | grep -F "/$1")
+
+	if [ "" != "$MATCHING_FILES" ]; then
+		MATCHING_FOLDERS=$(echo "$MATCHING_FILES" | dirnames | sort -u)
+		return 0
+	fi
+
+	MATCHING_FILES=$(grep -vF '..' "$SCRATCH_FILE" | grep -F "$1")
+
+	if [ "" != "$MATCHING_FILES" ]; then
+		MATCHING_FOLDERS=$(echo "$MATCHING_FILES" | dirnames | sort -u)
+		return 0
+	fi
+
+	return 1
+}
+
+gitfind() {
+	GIT_FOLDER=$PWD
+
+	while [ "/" != "$GIT_FOLDER" ] && [ ! -e "$GIT_FOLDER/.git" ]; do
+		GIT_FOLDER=$(dirname $GIT_FOLDER)
+	done
+
+	# If you run gitfind with no arguments, then stop processing after
+	# setting the GIT_FOLDER
+
+	if [ "" == "$1" ]; then
+		return 0
+	fi
+
+	# If the folder or file already exists, skip all other processing
+
+	if [ -d "$1" ] || [ -h "$1" ]; then
+		FILE=
+		FOLDER=$1
+		MATCHING_FOLDERS=$FOLDER
+		return 0
+	fi
+
+	if [ -f "$1" ]; then
+		FILE=$(basename "$1")
+		FOLDER=$(dirname "$1")
+		MATCHING_FOLDERS=$FOLDER
+		return 0
+	fi
+
+	# Next, make sure that we can use git to find our files
+
+	if [ ! -e $GIT_FOLDER/.git ]; then
+		FILE=
+		FOLDER=
+		MATCHING_FOLDERS=
+		return 1
+	fi
+
+	# Shortcut in case anyone says "cd portal-impl" or similar
+
+	if [ -d $GIT_FOLDER/$1 ]; then
+		FILE=
+		FOLDER=$GIT_FOLDER/$1
+		MATCHING_FOLDERS=
+		return 0
+	fi
+
+	# Search the current folder, followed by the git root folder
+
+	gitfile $1 "$PWD"
+
+	if [ "" == "$MATCHING_FOLDERS" ] && [ "$PWD" != "$GIT_FOLDER" ]; then
+		gitfile $1 "$GIT_FOLDER"
+	fi
+
+	if [ "" == "$MATCHING_FOLDERS" ] || [[ 1 -ne $(echo "$MATCHING_FOLDERS" | wc -l) ]]; then
+		return 1
+	else
+		return 0
+	fi
+}
+
+gitfinderror() {
+	if [ "" == "$MATCHING_FOLDERS" ]; then
+		echo "Unable to find a file or folder matching $1"
+		return 1
+	fi
+
+	if [ "" != "$MATCHING_FILES" ] && [[ 1 -ne $(echo "$MATCHING_FILES" | wc -l) ]]; then
+		echo "$1 is ambiguous"
+		echo "$MATCHING_FILES"
+		return 1
+	fi
+
+	echo "$1 is ambiguous"
+	echo "$MATCHING_FOLDERS"
+	return 1
+}
+
+gitfind $1
+
+if [[ 0 -ne $? ]]; then
+	gitfinderror $1
+fi
