@@ -39,6 +39,13 @@ if [ "clean" == "$1" ]; then
 	PORTAL_SOURCE_ROOT=$HOME/source \
 		BUILD_FOLDER_PREFIX=$HOME \
 			$HOME/redeploy/crontab/branches
+
+	# Create a source archive in case we want to spin up an EC2
+	# instance using up to date source.
+
+	if [ -f $HOME/.snapshot ]; then
+		$HOME/redeploy/crontab/gitsave
+	fi
 fi
 
 # If this is a pull request build server, run our pull request builds
