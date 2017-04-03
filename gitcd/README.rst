@@ -9,15 +9,15 @@ After awhile, though, this would get pretty tedious. Did you know that you can m
 .. code-block:: bash
 
 	cd() {
-		/path/to/clone/location/gitcd/gitcd $@
+		. /path/to/clone/location/gitcd/gitcd $@
 	}
 
 	cdb() {
-		/path/to/clone/location/gitcd/gitcdb $@
+		. /path/to/clone/location/gitcd/gitcdb $@
 	}
 
 	cdp() {
-		/path/to/clone/location/gitcd/gitcdp $@
+		. /path/to/clone/location/gitcd/gitcdp $@
 	}
 
 CD to Module Root
@@ -65,4 +65,3 @@ Luckily, the path to a package is luckily very easy to find, because the package
 The main difference is that because we're searching for something that is nested at a level deeper than the module root, we'll need to figure out how to cut out (this cuts out src/main/resources for modules while also working for portal-impl and portal-kernel). Also, we might also just be curious what the packageinfo version number is, so we'd want to echo out the contents of the packageinfo file as well.
 
 * `gitcdp <gitcdp>`__
-
