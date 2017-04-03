@@ -34,12 +34,6 @@ cr() {
 		tar -zxf /var/www/html/builds/$1-${TIMESTAMP}.tar.gz -C $HOME/builds/$1/
 		cr $@
 		return $?
-	elif [ -f $HOME/fails.txt ] && [ "" != "$(grep "^${1}\$" $HOME/fails.txt)" ]; then
-		echo "Failed to rebase pull request $1"
-		return 1
-	elif [ -f $HOME/builds.txt ] && [ "" != "$(grep "^${1}\$" $HOME/builds.txt)" ]; then
-		echo "Failed 'ant all' for pull request $1, please see $HOME/builds/${1}.log"
-		return 1
 	elif [ -f $HOME/.pulls ]; then
 		echo "ERROR: Currently running pull request builds"
 		return 1

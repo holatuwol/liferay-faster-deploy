@@ -74,15 +74,8 @@ pull() {
 
 	if [[ $EXIT_CODE -ne 0 ]]; then
 		git rebase --abort
-
-		touch $HOME/fails.txt
-		echo $1 >> $HOME/fails.txt
-
 		return 0
 	fi
-
-	touch $HOME/builds.txt
-	echo $1 >> $HOME/builds.txt
 
 	prepare $1 80
 
@@ -109,9 +102,6 @@ pulls() {
 		jq '.[] | {(.html_url):.base.ref}' | grep -v '[{}]' | tr -d '"' | tr -d ' ' > $HOME/pulls.txt
 
 	# Checkout and build current pull requests
-
-	cat /dev/null > $HOME/fails.txt
-	cat /dev/null > $HOME/builds.txt
 
 	for line in $(cat $HOME/pulls.txt); do
 		pull_id=$(echo $line | cut -d':' -f 2 | grep -o '/pull/.*' | cut -d'/' -f 3)
