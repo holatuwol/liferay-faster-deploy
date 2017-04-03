@@ -1,0 +1,24 @@
+#!/bin/bash
+
+gitchanges() {
+	# Generate the source trie
+
+	$(dirname "${BASH_SOURCE[0]}")/sourcetrie
+
+	# Identify the changes
+
+	cat /dev/null > .redeploy/changes.txt
+
+	if [ "" != "$1" ] && [ "local" != "$1" ]; then
+		local COMPARE_HASH=$(git log -1 --pretty='%H' $1)
+		git diff ${COMPARE_HASH}..HEAD --name-only >> .redeploy/changes.txt
+	fi
+
+	git status -s | awk '{print $2}' >> .redeploy/changes.txt
+
+	# Identify the folders that changed
+
+	python $(dirname "${BASH_SOURCE[0]}")/gitchanges.py
+}
+
+gitchanges $@

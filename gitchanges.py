@@ -9,7 +9,7 @@ changed_modules = set()
 
 # Scan modules
 
-with open('.redeploy/deploy_changes.txt', 'r') as f:
+with open('.redeploy/changes.txt', 'r') as f:
 	for file_name in [line.strip() for line in f.readlines()]:
 		if file_name.endswith('.iml'):
 			continue
@@ -49,14 +49,14 @@ def priority(x):
 
 changed_modules = sorted([priority(x) for x in changed_modules])
 
-with open('.redeploy/deploy_ant.txt', 'w') as f:
+with open('.redeploy/changes_ant.txt', 'w') as f:
 	for module in [x[1] for x in changed_modules if not x[1].startswith('modules/')]:
 		f.write('%s\n' % module)
 
-with open('.redeploy/deploy_gradle_1.txt', 'w') as f:
+with open('.redeploy/changes_gradle_1.txt', 'w') as f:
 	for module in [x[1] for x in changed_modules if x[0] == 0]:
 		f.write('%s\n' % module)
 
-with open('.redeploy/deploy_gradle_2.txt', 'w') as f:
+with open('.redeploy/changes_gradle_2.txt', 'w') as f:
 	for module in [x[1] for x in changed_modules if x[0] == 4]:
 		f.write('%s\n' % module)
