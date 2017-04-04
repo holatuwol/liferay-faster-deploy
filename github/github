@@ -1,12 +1,20 @@
 #!/bin/bash
 
 github() {
-	. "$(dirname "${BASH_SOURCE[0]}")/../gitcd/gitfind" $1
+	local COMMIT=
 
-	if [ "" == "$1" ]; then
-		FOLDER=$PWD
-	elif [ "" == "$FOLDER" ]; then
-		return 1
+	if [ "$1" == "$(echo $1 | grep -o '[0-9a-f]*')" ]; then
+		COMMIT=$1
+	fi
+
+	if [ "" == "$COMMIT" ]; then
+		. "$(dirname "${BASH_SOURCE[0]}")/../gitcd/gitfind" $1
+
+		if [ "" == "$1" ]; then
+			FOLDER=$PWD
+		elif [ "" == "$FOLDER" ]; then
+			return 1
+		fi
 	fi
 
 	if [ -f "$GIT_FOLDER/release.properties" ]; then
@@ -18,18 +26,25 @@ github() {
 
 	local REMOTE_NAME=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
 	local REPO_NAME=$(git remote get-url "$REMOTE_NAME" | cut -d':' -f 2 | sed 's/\.git$//g')
-	local GIT_PATH=$(python -c "import os.path; print(os.path.relpath('$FOLDER', '$GIT_FOLDER'))")
 
-	if [ "" == "$BASE_TAG" ]; then
-		GIT_PATH="$BASE_BRANCH/$GIT_PATH"
-	else
-		GIT_PATH="$BASE_TAG/$GIT_PATH"
-	fi
+	local GIT_PATH=
 
-	if [ "" == "$FILE" ]; then
-		GIT_PATH="tree/$GIT_PATH"
+	if [ "" == "$COMMIT" ]; then
+		GIT_PATH=$(python -c "import os.path; print(os.path.relpath('$FOLDER', '$GIT_FOLDER'))")
+
+		if [ "" == "$BASE_TAG" ]; then
+			GIT_PATH="$BASE_BRANCH/$GIT_PATH"
+		else
+			GIT_PATH="$BASE_TAG/$GIT_PATH"
+		fi
+
+		if [ "" == "$FILE" ]; then
+			GIT_PATH="tree/$GIT_PATH"
+		else
+			GIT_PATH="blob/$GIT_PATH/$FILE"
+		fi
 	else
-		GIT_PATH="blob/$GIT_PATH/$FILE"
+		GIT_PATH=commit/$COMMIT
 	fi
 
 	python -m webbrowser "https://github.com/$REPO_NAME/$GIT_PATH"
