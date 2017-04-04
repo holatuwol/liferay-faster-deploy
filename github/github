@@ -25,6 +25,11 @@ github() {
 	fi
 
 	local REMOTE_NAME=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
+
+	if [ "" == "$REMOTE_NAME" ]; then
+		REMOTE_NAME=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/origin[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
+	fi
+
 	local REPO_NAME=$(git remote get-url "$REMOTE_NAME" | cut -d':' -f 2 | sed 's/\.git$//g')
 
 	local GIT_PATH=
