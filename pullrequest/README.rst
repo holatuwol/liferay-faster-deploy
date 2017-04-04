@@ -1,5 +1,9 @@
 .. code-block:: bash
 
+	fpr() {
+		/path/to/clone/location/pullrequest/ghfetchpull $@
+	}
+
 	github() {
 		/path/to/clone/location/pullrequest/github $@
 	}
@@ -7,6 +11,20 @@
 	gpr() {
 		/path/to/clone/location/pullrequest/ghsendpull $@
 	}
+
+Fetch Any Pull Request
+======================
+
+I often need to download a pull request that was sent against someone else's repository to diagnose what happened with it. However, if you don't do something like that very often, you may end up having to Google how to fetch a pull request from an arbitrary repository. Since I have a command for it, it saves me the trouble of having to do that lookup.
+
+.. code-block:: bash
+
+	fpr https://github.com/brianchandotcom/liferay-portal/pull/1
+	fpr https://github.com/brianchandotcom/liferay-portal/pull/1 LPS-18273
+
+I'm not sure how useful this particular command is to everyone else, since I imagine it's rare for you to look at pull requests sent to someone else unless it's sent to some shared repository, such as the main ``liferay/liferay-portal`` or ``liferay/liferay-portal-ee`` repositories, or if you have to take over reviews for someone who is on vacation.
+
+* `ghfetchpull <ghfetchpull>`__
 
 Open GitHub In Web Browser
 ==========================
