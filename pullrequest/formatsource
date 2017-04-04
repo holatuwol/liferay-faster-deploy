@@ -24,8 +24,8 @@ afs() {
 	fi
 
 	cd $GIT_ROOT/portal-impl
-	echo ant $ARGS format-source
-	ant $ARGS format-source
+	echo ant format-source $ARGS
+	ant format-source $ARGS
 }
 
 check() {
@@ -68,18 +68,21 @@ gfs() {
 		ARGS="-DformatSource.format.local.changes=true"
 	fi
 
-	echo gradlew $ARGS formatSource
-	gradlew $ARGS formatSource
+	echo gradlew formatSource $ARGS
+	gw formatSource $ARGS
 }
 
-GIT_ROOT=$PWD
+gw() {
+	$(dirname "${BASH_SOURCE[0]}")/../gw $@
+}
 
-while [ ! -e "$GIT_ROOT/.git" ] && [ "/" != "$GIT_ROOT" ]; do
-	GIT_ROOT=$(dirname $GIT_ROOT)
-done
+setopts() {
+	. $(dirname "${BASH_SOURCE[0]}")/../setopts
+}
 
-if [ ! -e "$GIT_ROOT/.git" ]; then
-	echo "Unable to find version control root"
+setopts
+
+if [[ 0 -ne $? ]]; then
 	exit 1
 fi
 
