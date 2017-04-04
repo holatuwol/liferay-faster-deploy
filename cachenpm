@@ -80,6 +80,8 @@ disablegwnpm() {
 }
 
 softlink() {
+	# Taken from http://stackoverflow.com/questions/18641864/git-bash-shell-fails-to-create-symbolic-links
+
 	if [[ -z "$2" ]]; then
 		# Link-checking mode.
 		if [[ -n "$WINDIR" ]]; then
