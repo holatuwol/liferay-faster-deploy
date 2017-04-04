@@ -1,8 +1,6 @@
 #!/bin/bash
 
-fixgradle() {
-	# locate the gradlew binary
-
+findgradle() {
 	GRADLE_HOME=$PWD
 
 	while [ ! -e $GRADLE_HOME/gradlew ] && [ "/" != "$GRADLE_HOME" ]; do
@@ -13,7 +11,9 @@ fixgradle() {
 		echo 'Unable to find the gradlew binary'
 		return 1
 	fi
+}
 
+fixgradle() {
 	# if this is a blade workspace, don't do anything
 
 	if [ -f $GRADLE_HOME/gradle.properties ]; then
@@ -37,12 +37,11 @@ fixgradle() {
 	# make sure we have a gradle.properties in the .gradle cache and
 	# that it matches app.server.$USER.properties
 
-	ANT_LIFERAY_HOME=$(grep -F app.server.parent.dir= $GRADLE_HOME/app.server.$USER.properties | cut -d'=' -f 2)
+	local ANT_LIFERAY_HOME=$(grep -F app.server.parent.dir= $GRADLE_HOME/app.server.$USER.properties | cut -d'=' -f 2)
+	local GRADLE_LIFERAY_HOME=
 
 	if [ -f "$GRADLE_HOME/.gradle/gradle.properties" ]; then
 		GRADLE_LIFERAY_HOME=$(grep -F liferay.home= $GRADLE_HOME/.gradle/gradle.properties | cut -d'=' -f 2)
-	else
-		GRADLE_LIFERAY_HOME=
 	fi
 
 	if [ ! -f "$GRADLE_HOME/.gradle/gradle.properties" ] || [ "$ANT_LIFERAY_HOME" != "$GRADLE_LIFERAY_HOME" ]; then
@@ -75,7 +74,7 @@ fixgradle() {
 
 	# if we have a "default" dependency, make sure we have the snapshot in the .m2 cache
 
-	NEEDED_ARTIFACTS=$(grep -F '"com.liferay.portal"' build.gradle | grep -F '"default"' | grep -o 'name: "[^"]*"' | cut -d'"' -f 2)
+	local NEEDED_ARTIFACTS=$(grep -F '"com.liferay.portal"' build.gradle | grep -F '"default"' | grep -o 'name: "[^"]*"' | cut -d'"' -f 2)
 
 	if [ "" != "$NEEDED_ARTIFACTS" ]; then
 		for artifact in $NEEDED_ARTIFACTS; do
@@ -91,24 +90,30 @@ fixgradle() {
 }
 
 gw() {
-	fixgradle
-
-	# if there was an error trying to fix gradle, abort
+	findgradle
 
 	if [[ 0 -ne $? ]]; then
 		return 1
+	fi
+
+	if [ "formatSource" != $1 ]; then
+		fixgradle
+
+		if [[ 0 -ne $? ]]; then
+			return 1
+		fi
 	fi
 
 	# run the gradlew binary, making sure to set GRADLE_OPTS if
 	# it is not yet set
 
 	if [ -f $GRADLE_HOME/gradlew ]; then
-		if [ "" == "$GRADLE_OPTS" ]; then
-			export GRADLE_OPTS='-Xms3g -Xmx3g -Dorg.gradle.workers.max=1'
-		fi
-
 		$GRADLE_HOME/gradlew $@
 	fi
 }
 
-gw $@
+setopts() {
+	. $(dirname "${BASH_SOURCE[0]}")/setopts
+}
+
+setopts && gw $@
