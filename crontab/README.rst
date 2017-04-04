@@ -55,4 +55,4 @@ The script assumes that there is a file ``/home/tomcat/lpkgs.txt`` which contain
 Automated Initialization
 ========================
 
-TODO
+Please see `server_setup.ipynb <server_setup.ipynb>`__ for a Jupyter notebook that can be used to setup the server. Note that this notebook assumes that you've run through the Amazon EC2 Basics notebooks to generate all of its different utility scripts.
