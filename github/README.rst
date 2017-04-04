@@ -32,6 +32,8 @@ Auto-Rebase Pull Request
 
 I often need to download a pull request that was sent against someone else's repository to diagnose what happened with it. However, if you don't do something like that very often, you may end up having to Google how to fetch a pull request from an arbitrary repository, only to either discover two extremes: the hard to remember ``git fetch git@github.com:liferay/liferay-portal.git pull/id/head:BRANCH_NAME``, or the easy to remember ``hub checkout``.
 
+* `ghfetchpull <ghfetchpull>`__
+
 The script used to do the former, but now does the latter. Given that, the only extra thing this script does is an auto-rebase against the base branch in the upstream repository after checking it out.
 
 .. code-block:: bash
