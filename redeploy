@@ -194,7 +194,7 @@ downloadbranch() {
 
 	# Rebase against the acquired hash if necessary
 
-	if [ "" == "$BASE_TAG" ] && [ "$CURRENT_BRANCH" != "$BASE_BRANCH" ]; then
+	if [ "$CURRENT_BRANCH" != "$BASE_BRANCH" ]; then
 		BASE_HASH=$(git log -1 --pretty='%H' $BASE_BRANCH)
 
 		if [ "$BASE_HASH" != "$NEW_BASELINE" ]; then
@@ -257,8 +257,23 @@ downloadbuild() {
 
 	# If we're using a tag, shortcut
 
-	if [ "" != "$BASE_TAG" ]; then
-		downloadtag
+	MAX_COMMITS=$1
+
+	if [ "" == "$MAX_COMMITS" ]; then
+		MAX_COMMITS=10
+	fi
+
+	if [[ 0 -ne $MAX_COMMITS ]] && [ "" != "$BASE_TAG" ]; then
+		ACTUAL_COMMITS=$(git log ${BASE_TAG}..HEAD | wc -l)
+
+		if [[ $MAX_COMMITS -lt $ACTUAL_COMMITS ]]; then
+			echo "There have been ${ACTUAL_COMMITS} commits on this branch compared to ${BASE_TAG}."
+			echo "If this is based on ${BASE_BRANCH}, please specify 0 as a parameter."
+			echo "If this is based on ${BASE_TAG}, please specify $ACTUAL_COMMITS as a parameter."
+			return 1
+		fi
+
+		downloadtag && extract
 		return $?
 	fi
 
@@ -281,8 +296,6 @@ downloadtag() {
 		echo "No build release archive available for $BASE_TAG"
 		return 1
 	fi
-
-	extract
 }
 
 extract() {
@@ -399,7 +412,7 @@ rebasebranch() {
 }
 
 redeploy() {
-	downloadbuild && applychanges
+	downloadbuild $1 && applychanges
 }
 
 setopts() {
@@ -442,4 +455,4 @@ CURRENT_HASH=$(git log -1 --pretty='%H')
 
 mkdir -p "$HOME/.liferay/builds"
 
-time redeploy
+time redeploy $1

@@ -16,7 +16,7 @@ Then, add a Bash function to `.bash_aliases` (or the equivalent on whichever she
 			BUILD_FOLDER_SUFFIX=bundles \
 			TAG_ARCHIVE_MIRROR='http://cloud-10-50-0-165/builds/fixpacks' \
 			BRANCH_ARCHIVE_MIRROR='http://cloud-10-50-0-165/builds/branches' \
-				/path/to/clone/location/redeploy
+				/path/to/clone/location/redeploy $@
 	}
 
 Building from a Daily Build
