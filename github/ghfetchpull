@@ -5,22 +5,24 @@ if [[ "$1" != https://github.com/* ]]; then
 	exit 1
 fi
 
+hub checkout $@
+
 endpoint=$(echo $1 | cut -d'/' -f 4,5)
 pull_id=$(echo $1 | cut -d'/' -f 7)
-target_branch=$2
 
-# Get the data on the original pull request
+curl -H "Authorization: token $(git config github.oauth-token)" -s https://api.github.com/repos/$endpoint/pulls/$pull_id | jq '.base.ref'
 
-repo_url=git@github.com:${endpoint}.git
+upstream_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
 
-if [ "" == "$target_branch" ]; then
-	target_branch=$(curl -H "Authorization: token $(git config github.oauth-token)" -s https://api.github.com/repos/$endpoint/pulls/$pull_id | jq '.head.ref' | tr -d '"')
+if [ "" == "$upstream_remote" ] && [ -f "$GIT_ROOT/release.properties" ]; then
+	. $(dirname "${BASH_SOURCE[0]}")/../getparent
+	upstream_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
 fi
 
-if [ "" != "$(git for-each-ref --format='%(refname)' refs/heads/ | cut -d'/' -f 3 | grep "^${target_branch}$")" ]; then
-	echo "Already have a branch named $target_branch"
-	return 1
+if [ "" == "$upstream_remote" ]; then
+	echo "Unable to identify upstream equivalent of $BASE_BRANCH"
+	exit 1
 fi
 
-git fetch --no-tags ${repo_url} pull/${pull_id}/head:${target_branch}
-git checkout $target_branch
+git fetch --no-tags ${upstream_remote}
+git rebase ${upstream_remote}/${BASE_BRANCH}
