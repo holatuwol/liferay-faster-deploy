@@ -1,30 +1,12 @@
 .. code-block:: bash
 
-	fpr() {
-		/path/to/clone/location/github/ghfetchpull $@
-	}
-
 	github() {
 		/path/to/clone/location/github/github $@
 	}
 
 	gpr() {
-		/path/to/clone/location/github/ghsendpull $@
+		/path/to/clone/location/github/pullrequest $@
 	}
-
-Fetch Any Pull Request
-======================
-
-I often need to download a pull request that was sent against someone else's repository to diagnose what happened with it. However, if you don't do something like that very often, you may end up having to Google how to fetch a pull request from an arbitrary repository. Since I have a command for it, it saves me the trouble of having to do that lookup.
-
-.. code-block:: bash
-
-	fpr https://github.com/brianchandotcom/liferay-portal/pull/1
-	fpr https://github.com/brianchandotcom/liferay-portal/pull/1 LPS-18273
-
-I'm not sure how useful this particular command is to everyone else, since I imagine it's rare for you to look at pull requests sent to someone else unless it's sent to some shared repository, such as the main ``liferay/liferay-portal`` or ``liferay/liferay-portal-ee`` repositories, or if you have to take over reviews for someone who is on vacation.
-
-* `ghfetchpull <ghfetchpull>`__
 
 Open GitHub In Web Browser
 ==========================
@@ -40,8 +22,25 @@ This function takes advantage of the fact that most of the logic is very similar
 
 * `github <github>`__
 
+Work with Pull Requests
+=======================
+
+There are a variety of tools for working with pull requests, such as `hub <https://github.com/github/hub>`__, `nodegh <https://github.com/node-gh/gh>`__, and `git-pull-request <https://github.com/liferay/git-tools/tree/master/git-pull-request>`__. This is just one more.
+
+Auto-Rebase Pull Request
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+I often need to download a pull request that was sent against someone else's repository to diagnose what happened with it. However, if you don't do something like that very often, you may end up having to Google how to fetch a pull request from an arbitrary repository.
+
+.. code-block:: bash
+
+	gpr https://github.com/brianchandotcom/liferay-portal/pull/1
+	gpr https://github.com/brianchandotcom/liferay-portal/pull/1 LPS-18273
+
+This command is built into ``hub``, so you could use ``hub checkout`` for this purpose. The only extra thing is an auto-rebase against the base branch in the upstream repository.
+
 Open GitHub Pull Request
-========================
+~~~~~~~~~~~~~~~~~~~~~~
 
 While opening a pull request is pretty trivial, but running all the checks that would cause an automatic close of that pull request isn't something that you're likely to remember after your excitement at having fixed a bug. What if a script automatically checked for the most common issues, so you could just remember who you need to send a pull request and the script would take care of the rest?
 

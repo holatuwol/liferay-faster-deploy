@@ -1,0 +1,7 @@
+#!/bin/bash
+
+if [[ "$1" == https://github.com/* ]]; then
+	"$(dirname "${BASH_SOURCE[0]}")/ghfetchpull" $@
+else
+	"$(dirname "${BASH_SOURCE[0]}")/ghsendpull" $@
+fi
