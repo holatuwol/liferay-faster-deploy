@@ -1,15 +1,15 @@
 .. code-block:: bash
 
 	fpr() {
-		/path/to/clone/location/pullrequest/ghfetchpull $@
+		/path/to/clone/location/github/ghfetchpull $@
 	}
 
 	github() {
-		/path/to/clone/location/pullrequest/github $@
+		/path/to/clone/location/github/github $@
 	}
 
 	gpr() {
-		/path/to/clone/location/pullrequest/ghsendpull $@
+		/path/to/clone/location/github/ghsendpull $@
 	}
 
 Fetch Any Pull Request
