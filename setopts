@@ -27,8 +27,3 @@ if [ "" == "$GRADLE_OPTS" ]; then
 fi
 
 mkdir -p $GIT_ROOT/.redeploy
-
-if [ "" == "$(grep node_modules $GIT_ROOT/.gitignore)" ]; then
-	git update-index --assume-unchanged $GIT_ROOT/.gitignore
-	echo -e '\nnode_modules\n.redeploy' >> $GIT_ROOT/.gitignore
-fi
