@@ -26,7 +26,7 @@ applychanges() {
 
 	for folder in $(git ls-files modules | grep build.gradle | xargs grep -l 'version: "\[' | dirnames); do
 		if [ "" != "$(grep -F "$folder" .redeploy/changes_gradle_2.txt)" ]; then
-			echo $(dirname "${BASH_SOURCE[0]}")/fixbnd $folder
+			$(dirname "${BASH_SOURCE[0]}")/fixbnd $folder
 		fi
 	done
 
@@ -83,17 +83,6 @@ applychanges() {
 }
 
 cdroot() {
-	GIT_ROOT=$PWD
-
-	while [ ! -e "$GIT_ROOT/.git" ] && [ "/" != "$GIT_ROOT" ]; do
-		GIT_ROOT=$(dirname $GIT_ROOT)
-	done
-
-	if [ ! -e "$GIT_ROOT/.git" ]; then
-		echo "Unable to find version control root"
-		return 1
-	fi
-
 	if [ ! -f "$GIT_ROOT/release.properties" ]; then
 		echo "Unable to find release.properties at version control root"
 		return 1
@@ -410,31 +399,11 @@ rebasebranch() {
 }
 
 redeploy() {
-	downloadbuild && setopts && applychanges
+	downloadbuild && applychanges
 }
 
 setopts() {
-	JAVA_VERSION=$(java -version 2>&1 | head -1 | cut -d'"' -f 2 | cut -d'.' -f 2)
-
-	if [[ 8 -ne $JAVA_VERSION ]]; then
-		echo "Please switch to JDK 8 before building"
-		return 1
-	fi
-
-	if [ "" == "$ANT_OPTS" ]; then
-		export ANT_OPTS='-Xms1g -Xmx1g'
-	fi
-
-	if [ "" == "$GRADLE_OPTS" ]; then
-		export GRADLE_OPTS='-Xms3g -Xmx3g -Dorg.gradle.workers.max=1'
-	fi
-
-	mkdir -p .redeploy
-
-	if [ "" == "$(grep node_modules .gitignore)" ]; then
-		git update-index --assume-unchanged .gitignore
-		echo -e '\nnode_modules\n.redeploy' >> .gitignore
-	fi
+	. $(dirname "${BASH_SOURCE[0]}")/setopts
 }
 
 if [ -z "${BUILD_FOLDER_PREFIX}" ]; then
@@ -463,7 +432,7 @@ if [ -z "${BRANCH_ARCHIVE_MIRROR}" ]; then
 	exit 1
 fi
 
-cdroot
+setopts && cdroot
 
 if [[ 0 -ne $? ]]; then
 	exit $?

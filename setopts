@@ -1,0 +1,34 @@
+#!/bin/bash
+
+GIT_ROOT=$PWD
+
+while [ ! -e "$GIT_ROOT/.git" ] && [ "/" != "$GIT_ROOT" ]; do
+	GIT_ROOT=$(dirname $GIT_ROOT)
+done
+
+if [ ! -e "$GIT_ROOT/.git" ]; then
+	echo "Unable to find version control root"
+	exit 1
+fi
+
+JAVA_VERSION=$(java -version 2>&1 | head -1 | cut -d'"' -f 2 | cut -d'.' -f 2)
+
+if [[ 8 -ne $JAVA_VERSION ]]; then
+	echo "Please switch to JDK 8 before building"
+	exit 1
+fi
+
+if [ "" == "$ANT_OPTS" ]; then
+	export ANT_OPTS='-Xms1g -Xmx1g'
+fi
+
+if [ "" == "$GRADLE_OPTS" ]; then
+	export GRADLE_OPTS='-Xms3g -Xmx3g -Dorg.gradle.workers.max=1'
+fi
+
+mkdir -p $GIT_ROOT/.redeploy
+
+if [ "" == "$(grep node_modules $GIT_ROOT/.gitignore)" ]; then
+	git update-index --assume-unchanged $GIT_ROOT/.gitignore
+	echo -e '\nnode_modules\n.redeploy' >> $GIT_ROOT/.gitignore
+fi
