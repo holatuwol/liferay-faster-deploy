@@ -1,0 +1,50 @@
+#!/bin/bash
+
+findreviewer() {
+	# Make sure that the remote does not already exist
+
+	local remote_name=$(git remote | grep "^$1$")
+
+	if [ "" != "$remote_name" ]; then
+		reviewer=$(git remote get-url $remote_name | cut -d':' -f 2 | cut -d'/' -f 1)
+		return 0
+	fi
+
+	# Search for the reviewer candidates based on the search string
+
+	local search_key="$*"
+
+	reviewer=$($(dirname "${BASH_SOURCE[0]}")/gituser "$search_key" | cut -d'=' -f 1)
+
+	# Make sure it's relatively unique. Namely, if there is already
+	# a remote for the ambiguous matches, we'll accept that.
+
+	for remote in $(git remote); do
+		remote_user=$(git remote get-url $remote | cut -d':' -f 2 | cut -d'/' -f 1)
+
+		if [ "" != "$(echo "$reviewer" | grep "^${remote_user}$")" ]; then
+			echo "Skipping user ${remote_user} as they are under remote ${remote}"
+			reviewer=$(echo "$reviewer" | grep -v "^${remote_user}$")
+
+			if [ "" == "$reviewer" ]; then
+				break
+			fi
+		elif [ "$remote_user" == "$search_key" ]; then
+			reviewer=$remote_user
+		fi
+	done
+
+	# Make sure we have a valid condition
+
+	if [ "" == "$reviewer" ]; then
+		echo "Unable to find reviewer $search_key"
+		return 1
+	fi
+
+	if [[ 1 -ne $(echo "$reviewer" | wc -l) ]]; then
+		echo -e "$search_key is ambiguous\n\n$reviewer"
+		return 1
+	fi
+}
+
+findreviewer $@

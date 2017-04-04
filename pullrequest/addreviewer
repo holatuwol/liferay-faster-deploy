@@ -1,0 +1,48 @@
+#!/bin/bash
+
+addreviewer() {
+	findreviewer $@
+
+	if [[ 0 -ne $? ]]; then
+		return 1
+	fi
+
+	reviewer_alias=$(echo "$1" | sed 's/[^a-zA-Z]//g')
+
+	for remote in $(git remote | grep upstream); do
+		local remote_url=$(git remote get-url $remote)
+
+		# Don't do anything if we already created the remote, since
+		# we can assume it's setup the way the user wants
+
+		local new_remote_url=$(echo $remote_url | sed "s@:[^/]*/@:${reviewer}/@g")
+		local new_remote=$(git remote -v | grep "${new_remote_url}" | awk '{ print $1 }' | sort -u)
+
+		if [ "" != "$new_remote" ]; then
+			continue
+		fi
+
+		# Add the new remote.
+
+		new_remote=$(echo $remote | sed "s/upstream/${reviewer_alias}/g")
+
+		echo "Adding remote $new_remote for $new_remote_url"
+		git remote add $new_remote $new_remote_url
+
+		# Set the proper tracking branches.
+
+		tracked_branches=$(git remote show $remote | grep ' tracked$' | awk '{ print $1 }' | tr '\n' ' ')
+
+		if [ "" != "$tracked_branches" ]; then
+			git remote set-branches $new_remote $tracked_branches
+		fi
+
+		git fetch $new_remote --no-tags --prune
+	done
+}
+
+findreviewer() {
+	. $(dirname "${BASH_SOURCE[0]}")/findreviewer $@
+}
+
+addreviewer $@
