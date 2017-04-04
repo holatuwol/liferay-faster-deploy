@@ -95,6 +95,63 @@ findreviewer() {
 	fi
 }
 
+gitchanges() {
+	. $(dirname "${BASH_SOURCE[0]}")/../gitchanges $@
+}
+
+reformat() {
+	for folder in $(cat .redeploy/changes_gradle_1.txt .redeploy/changes_gradle_2.txt); do
+		cd $folder
+		pwd
+
+		$(dirname "${BASH_SOURCE[0]}")/formatsource $BASE_BRANCH
+		EXIT_CODE=$?
+
+		cd -
+
+		if [[ 0 -ne $EXIT_CODE ]]; then
+			return $EXIT_CODE
+		fi
+	done
+
+	if [[ 0 -ne $(wc -l .redeploy/changes_ant.txt | cut -d' ' -f 1) ]]; then
+		cd portal-impl
+		pwd
+
+		$(dirname "${BASH_SOURCE[0]}")/formatsource $BASE_BRANCH
+		EXIT_CODE=$?
+		cd -
+
+		if [[ 0 -ne $EXIT_CODE ]]; then
+			return $EXIT_CODE
+		fi
+	fi
+}
+
+repmd() {
+	if [ ! -d "tools/sdk" ]; then
+		echo "Missing plugins SDK for PMD tool"
+		ant setup-sdk
+	fi
+
+	CHANGES="$(grep -F '.java' .redeploy/changes.txt)"
+
+	CHANGE_COUNT=0
+
+	if [ "" != "$CHANGES" ]; then
+		ant -Dpmd.output.type=text -Dpmd.java.includes="$(echo -n "$CHANGES" | tr '\n' ',')" run-pmd
+		CHANGE_COUNT=$(wc -c pmd-reports/pmd-report.text | cut -d' ' -f 1)
+	fi
+
+	if [[ 0 -eq $CHANGE_COUNT ]]; then
+		echo No violations detected.
+		return 0
+	fi
+
+	cat pmd-reports/pmd-report.text
+	return 1
+}
+
 sendpull() {
 	GIT_ROOT=$PWD
 
@@ -146,14 +203,33 @@ sendpull() {
 		return 1
 	fi
 
-	# Rebase against the remote repository
+	# Rebase against the upstream variant of the branch
 
-	reviewer_remote=$(git branch -av | awk '{ print $1 }' | grep "remotes/${reviewer_alias}[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 2)
+	upstream_remote=$(git branch -av | awk '{ print $1 }' | grep "remotes/upstream[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 2)
 
-	git rebase ${reviewer_remote}/${BASE_BRANCH}
+	if [ "" == "$upstream_remote" ]; then
+		echo "Unable to identify upstream equivalent of $BASE_BRANCH"
+		return 1
+	fi
+
+	git fetch --no-tags ${upstream_remote}
+	git rebase ${upstream_remote}/${BASE_BRANCH}
 
 	if [[ 0 -ne $? ]]; then
 		return 1
+	fi
+
+	if [ -f "$GIT_ROOT/release.properties" ]; then
+		pushd $GIT_ROOT > /dev/null
+
+		gitchanges ${upstream_remote}/$BASE_BRANCH && reformat && repmd
+		EXIT_CODE=$?
+
+		popd > /dev/null
+
+		if [[ 0 -ne $EXIT_CODE ]]; then
+			return 1
+		fi
 	fi
 
 	# Update our origin
@@ -167,9 +243,20 @@ sendpull() {
 	# Open a web browser so we can submit the pull request
 
 	current_user=$(git remote -v | grep origin | cut -d':' -f 2 | cut -d'/' -f 1 | sort -u)
+	reviewer_remote=$(git branch -av | awk '{ print $1 }' | grep "remotes/${reviewer_alias}[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 2)
 	reviewer_repository=$(git remote get-url $reviewer_remote | cut -d'/' -f 2 | sed 's/\.git$//g' | uniq)
 
 	python -m webbrowser "https://github.com/${reviewer}/${reviewer_repository}/compare/${BASE_BRANCH}...${current_user}:${CURRENT_BRANCH}"
 }
+
+setopts() {
+	. $(dirname "${BASH_SOURCE[0]}")/../setopts
+}
+
+setopts
+
+if [[ 0 -ne $? ]]; then
+	exit 1
+fi
 
 sendpull $@
