@@ -255,6 +255,15 @@ downloadbuild() {
 
 	. $(dirname "${BASH_SOURCE[0]}")/getparent
 
+	# If Tomcat is already running, we shouldn't proceed
+	# any further than identifying commit information.
+
+	if [ "" != "$(jps | grep Bootstrap)" ] && [ -f "$TARGET_FOLDER/baseline.txt" ]; then
+		echo "Tomcat is already running, skipping bundle update"
+		NEW_BASELINE=$(cat "$TARGET_FOLDER/baseline.txt")
+		return 0
+	fi
+
 	# If we're using a tag, shortcut
 
 	MAX_COMMITS=$1
