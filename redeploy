@@ -416,8 +416,29 @@ rebasebranch() {
 	fi
 
 	echo "Rebasing against $SHORT_NAME ($NEW_BASELINE)"
+
+	local STASH=$(git status -s | grep -v '??')
+
+	if [ "" != "$STASH" ]; then
+		git stash
+	fi
+
 	git rebase $NEW_BASELINE
-	return $?
+	EXIT_STATUS=$?
+
+	if [ "" != "$STASH" ]; then
+		echo "Failed to rebase against $NEW_BASELINE, restoring git stash"
+
+		if [[ 0 -ne $EXIT_STATUS ]]; then
+			git rebase --abort
+		fi
+
+		git stash pop
+
+		EXIT_STATUS=$?
+	fi
+
+	return $EXIT_STATUS
 }
 
 redeploy() {
