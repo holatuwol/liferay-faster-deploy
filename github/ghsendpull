@@ -13,7 +13,7 @@ reformat() {
 		cd $folder
 		pwd
 
-		$(dirname "${BASH_SOURCE[0]}")/formatsource $BASE_BRANCH
+		$(dirname "${BASH_SOURCE[0]}")/formatsource ${upstream_remote}/$BASE_BRANCH
 		EXIT_CODE=$?
 
 		cd -
@@ -27,7 +27,7 @@ reformat() {
 		cd portal-impl
 		pwd
 
-		$(dirname "${BASH_SOURCE[0]}")/formatsource $BASE_BRANCH
+		$(dirname "${BASH_SOURCE[0]}")/formatsource ${upstream_remote}/$BASE_BRANCH
 		EXIT_CODE=$?
 		cd -
 
