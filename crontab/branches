@@ -50,16 +50,18 @@ branch() {
 
 	rm -f $BUILD_FOLDER_PREFIX/$1/*.log
 
-	ACTIVE_BUILD=
+	for branch in master 70x 62x 61x; do
+		local ACTIVE_BUILD=
 
-	for LOG_ID in $(ls -1 "/var/www/html/builds/branches/" | grep -F '.log' | sort); do
-		BUILD_ARCHIVE=$(echo "$LOG_ID" | sed 's/\.log//g').tar.gz
+		for LOG_ID in $(ls -1 "/var/www/html/builds/branches/" | grep -F branch | grep -F '.log' | sort); do
+			BUILD_ARCHIVE=$(echo "$LOG_ID" | sed 's/\.log//g').tar.gz
 
-		if [ -f "/var/www/html/builds/branches/$BUILD_ARCHIVE" ]; then
-			ACTIVE_BUILD=$BUILD_ARCHIVE
-		elif [ "" == "$ACTIVE_BUILD" ]; then
-			rm -f /var/www/html/builds/branches/$LOG_ID
-		fi
+			if [ -f "/var/www/html/builds/branches/$BUILD_ARCHIVE" ]; then
+				ACTIVE_BUILD=$BUILD_ARCHIVE
+			elif [ "" == "$ACTIVE_BUILD" ]; then
+				rm -f /var/www/html/builds/branches/$LOG_ID
+			fi
+		done
 	done
 }
 
