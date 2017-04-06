@@ -22,7 +22,7 @@ gradle.beforeProject {
 	Project project ->
 
 	configure(project) {
-		pluginManager.withPlugin("com.liferay.node") {
+		pluginManager.withPlugin('com.liferay.node') {
 			node {
 				nodeDir = ['$HOME', '.liferay', 'node', 'node-$NODE_VERSION'].join(File.separator)
 			}
