@@ -16,7 +16,7 @@ disablegwnpm() {
 	git checkout $MODULES_HOME/build.gradle
 	git update-index --assume-unchanged $MODULES_HOME/build.gradle
 
-	echo '
+	echo "
 
 gradle.beforeProject {
 	Project project ->
@@ -24,7 +24,7 @@ gradle.beforeProject {
 	configure(project) {
 		pluginManager.withPlugin("com.liferay.node") {
 			node {
-				nodeDir = [System.getProperty("user.home"), ".liferay", "node", "node"].join(File.separator)
+				nodeDir = ['$HOME', '.liferay', 'node', 'node-$NODE_VERSION'].join(File.separator)
 			}
 
 			cleanDownloadNode.enabled = false
@@ -32,8 +32,44 @@ gradle.beforeProject {
 		}
 	}
 }
-' >> $MODULES_HOME/build.gradle
+" >> $MODULES_HOME/build.gradle
 
 }
 
-disablegwnpm
+getglobalnode() {
+	NODE_VERSION=$(node --version)
+
+	if [ "" == "$NODE_VERSION" ]; then
+		echo "node is not present in the path"
+		return 1
+	fi
+
+	if [ -d $HOME/.liferay/node/node-${NODE_VERSION} ]; then
+		return 0
+	fi
+
+	mkdir -p $HOME/.liferay/node/
+
+	pushd $HOME/.liferay/node/ > /dev/null
+
+	echo "Downloading global node.js for Gradle"
+
+	if [ "Darwin" == "$(uname -s)" ]; then
+		wget -qq https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-darwin-x64.tar.gz
+		tar -zxf node-${NODE_VERSION}-darwin-x64.tar.gz
+		rm node-${NODE_VERSION}-darwin-x64.tar.gz
+	else
+		wget -qq https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-linux-x64.tar.gz
+		tar -zxf node-${NODE_VERSION}-linux-x64.tar.gz
+		rm node-${NODE_VERSION}-linux-x64.tar.gz
+	fi
+
+	mv node-${NODE_VERSION}-linux-x64 node-${NODE_VERSION}
+
+	wget -qq https://nodejs.org/dist/${NODE_VERSION}/win-x64/node.exe
+	mv node.exe node-${NODE_VERSION}/bin/
+
+	popd > /dev/null
+}
+
+getglobalnode && disablegwnpm
