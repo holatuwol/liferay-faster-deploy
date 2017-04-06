@@ -1,0 +1,291 @@
+#!/bin/bash
+
+downloadbranch() {
+	# Make sure there is a build on the archive mirror for our branch
+
+	SHORT_NAME=$(echo $BASE_BRANCH | sed 's/ee-//g' | sed 's/\.//g')
+	BUILD_NAME=$(getbuildname)
+
+	if [ "" == "$BUILD_NAME" ]; then
+		LOCATED_BUILD=$(find "$HOME/.liferay/builds" -name ${SHORT_NAME}*.tar.gz | sort | tail -1)
+
+		if [ "" == "$LOCATED_BUILD" ]; then
+			echo "Could not find build for $BASE_BRANCH"
+			return 1
+		fi
+
+		BUILD_NAME=$(basename $LOCATED_BUILD)
+		NEW_BASELINE=$(cat "$HOME/.liferay/builds/${BUILD_NAME}.githash")
+		echo "Could not find build for $BASE_BRANCH, using ${BUILD_NAME}"
+		return 0
+	fi
+
+	# Acquire the hash and make sure we have it
+
+	NEW_BASELINE=$(getbuildhash)
+
+	if [ "" == "$(git log -1 $NEW_BASELINE 2> /dev/null)" ]; then
+		echo "Checking remotes for updates"
+
+		for remote in $(git remote); do
+			git fetch $remote --no-tags
+		done
+	fi
+
+	# Rebase against the acquired hash if necessary
+
+	if [ "$CURRENT_BRANCH" != "$BASE_BRANCH" ]; then
+		BASE_HASH=$(git log -1 --pretty='%H' $BASE_BRANCH)
+
+		if [ "$BASE_HASH" != "$NEW_BASELINE" ]; then
+			rm -f .redeploy/last_deploy.txt
+
+			NEEDS_STASH=$(git status -s | grep -v '??')
+
+			if [ "" != "$NEEDS_STASH" ]; then
+				git stash
+			fi
+
+			git checkout -f $BASE_BRANCH && git rebase $NEW_BASELINE && git reset --hard $NEW_BASELINE && git checkout $CURRENT_BRANCH
+
+			REBASE_STATUS=$?
+
+			if [ "" != "$NEEDS_STASH" ]; then
+				git stash pop
+			fi
+
+			if [[ 0 -ne $REBASE_STATUS ]]; then
+				echo "Failed to update base branch"
+				return $REBASE_STATUS
+			fi
+		fi
+	else
+		rm -f .redeploy/last_deploy.txt
+	fi
+
+	# Download the build if we haven't done so already, making
+	# sure to clean up past builds to not take up too much space
+
+	if [ ! -f "$HOME/.liferay/builds/$BUILD_NAME" ]; then
+		find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.tar.gz" | xargs rm
+
+		echo "Downloading snapshot for $SHORT_NAME ($NEW_BASELINE)"
+		getbuild "${BRANCH_ARCHIVE_MIRROR}/${BUILD_NAME}"
+	fi
+}
+
+downloadbuild() {
+	# Identify the base branch so we know what to fetch
+
+	gettargetfolder
+
+	if [[ 0 -ne $? ]]; then
+		return 1
+	fi
+
+	# If Tomcat is already running, we shouldn't proceed
+	# any further than identifying commit information.
+
+	if [ "" != "$(jps | grep Bootstrap)" ] && [ -f "$TARGET_FOLDER/baseline.txt" ]; then
+		echo "Tomcat is already running, skipping bundle update"
+		NEW_BASELINE=$(cat "$TARGET_FOLDER/baseline.txt")
+		return 0
+	fi
+
+	if [ "" != "$BASE_TAG" ]; then
+		downloadtag && extract
+		return $?
+	else
+		downloadbranch && rebasebranch && extract
+		return $?
+	fi
+}
+
+downloadtag() {
+	NEW_BASELINE=$BASE_TAG
+	BUILD_NAME=${BASE_TAG}.tar.gz
+
+	if [ ! -f "$HOME/.liferay/builds/$BUILD_NAME" ]; then
+		echo "Downloading snapshot for $BASE_TAG"
+		getbuild "${TAG_ARCHIVE_MIRROR}/${BUILD_NAME}"
+	fi
+
+	if [ ! -f "$HOME/.liferay/builds/$BUILD_NAME" ]; then
+		echo "No build release archive available for $BASE_TAG"
+		return 1
+	fi
+}
+
+extract() {
+	# Figure out if we need to untar the build, based on whether the
+	# baseline hash has changed
+
+	mkdir -p "$TARGET_FOLDER"
+
+	OLD_BASELINE=
+
+	if [ -f "$TARGET_FOLDER/baseline.txt" ]; then
+		OLD_BASELINE=$(cat "$TARGET_FOLDER/baseline.txt")
+	fi
+
+	# Cleanup the folders before we untar. Only file we exclude is
+	# the Hypersonic data files if we already have them.
+
+	if [ "$OLD_BASELINE" == "$NEW_BASELINE" ]; then
+		echo "$TARGET_FOLDER is already up to date"
+		return 0
+	fi
+
+	rm -f .redeploy/last_deploy.txt
+
+	pushd "$TARGET_FOLDER" > /dev/null
+
+	rm -rf tomcat* osgi tools work
+
+	EXCLUDES=
+
+	if [ -d data ]; then
+		EXCLUDES="--exclude='data/hypersonic/lportal.script' --exclude='data/hypersonic/lportal.properties'"
+	fi
+
+	tar -zxf "$HOME/.liferay/builds/${BUILD_NAME}" $EXCLUDES
+
+	echo -n "$NEW_BASELINE" > "baseline.txt"
+
+	popd > /dev/null
+}
+
+getbuild() {
+	builtin cd "$HOME/.liferay/builds/"
+
+	if [[ "$1" == s3://* ]]; then
+		aws s3 cp "$1" .
+	else
+		wget "$1"
+	fi
+
+	builtin cd -
+}
+
+getbuildhash() {
+	if [ -f "$HOME/.liferay/builds/${BUILD_NAME}.githash" ]; then
+		cat "$HOME/.liferay/builds/${BUILD_NAME}.githash"
+		return 0
+	fi
+
+	BUILD_LOG=$(echo $BUILD_NAME | cut -d'.' -f 1).log
+	UPDATE_TIME=$(echo $BUILD_NAME | cut -d'.' -f 1 | cut -d'-' -f 2)
+
+	if [[ "$BRANCH_ARCHIVE_MIRROR" == s3://* ]]; then
+		local BUCKET_NAME=$(echo $BRANCH_ARCHIVE_MIRROR | cut -d '/' -f 3)
+		local KEY_NAME=$(echo $BRANCH_ARCHIVE_MIRROR | cut -d '/' -f 4-)
+
+		aws s3api get-object --bucket $BUCKET_NAME --key $KEY_NAME/${BUILD_LOG} --range bytes=0-49 githash.txt > /dev/null
+		tail -1 githash.txt | tee "$HOME/.liferay/builds/${BUILD_NAME}.githash"
+		rm githash.txt
+	else
+		curl -r 0-49 -s ${BRANCH_ARCHIVE_MIRROR}/${BUILD_LOG} | tail -1 | tee "$HOME/.liferay/builds/${BUILD_NAME}.githash"
+	fi
+
+	exit 0
+}
+
+getbuildname() {
+	if [[ "$BRANCH_ARCHIVE_MIRROR" == s3://* ]]; then
+		aws s3 ls $BRANCH_ARCHIVE_MIRROR/ | awk '{ print $4 }' | grep ${SHORT_NAME}'-[^"]*.tar.gz$' | sort | tail -1
+	else
+		curl -s --connect-timeout 2 $BRANCH_ARCHIVE_MIRROR/ | grep -o '<a href="'${SHORT_NAME}'-[^"]*.tar.gz">' | cut -d'"' -f 2 | sort | tail -1
+	fi
+}
+
+gettargetfolder() {
+	# Identify the folder we build into
+
+	CURRENT_BRANCH=$(git symbolic-ref --short HEAD)
+
+	if [ "" == "$CURRENT_BRANCH" ]; then
+		echo "Unable to build from detached head"
+		return 1
+	fi
+
+	TARGET_FOLDER=
+
+	if [ -f app.server.$USER.properties ]; then
+		TARGET_FOLDER=$(grep '^\s*app.server.parent.dir=' app.server.$USER.properties | cut -d'=' -f 2)
+	fi
+
+	if [ "" == "$TARGET_FOLDER" ]; then
+		if [ "" != "$BUILD_FOLDER_SUFFIX" ]; then
+			TARGET_FOLDER=${BUILD_FOLDER_PREFIX}/${CURRENT_BRANCH}/${BUILD_FOLDER_SUFFIX}
+		else
+			TARGET_FOLDER=${BUILD_FOLDER_PREFIX}/${CURRENT_BRANCH}
+		fi
+	fi
+
+	# Update app.server.$USER.properties
+
+	TARGET_FOLDER="$TARGET_FOLDER" $(dirname "${BASH_SOURCE[0]}")/appserverprops
+
+	if isbuildbranch $1; then
+		BASE_BRANCH=$1
+		BASE_TAG=
+		return 0
+	elif isbuildbranch $CURRENT_BRANCH; then
+		BASE_BRANCH=$CURRENT_BRANCH
+		BASE_TAG=
+		return 0
+	fi
+
+	. $(dirname "${BASH_SOURCE[0]}")/getparent
+
+	# If we're using a tag, make sure that we actually want to use that tag, given that
+	# every commit on ee-7.0.x corresponds to some tag.
+
+	if [ "" == "$BASE_TAG" ]; then
+		return 0
+	fi
+
+	local MAX_COMMITS=$1
+
+	if [ "" == "$MAX_COMMITS" ]; then
+		MAX_COMMITS=10
+	fi
+
+	# If they disabled tags by specifying 0, then blank out the matching tag and assume
+	# the best matching branch.
+
+	if [[ 0 -eq $MAX_COMMITS ]]; then
+		BASE_TAG=
+		return 0
+	fi
+
+	# If they didn't say, we'll try to guess based on how far away this commit is from
+	# the last tag. If it exceeds the specified threshold, we error out.
+
+	ACTUAL_COMMITS=$(git log ${BASE_TAG}..HEAD | wc -l)
+
+	if [[ $MAX_COMMITS -ge $ACTUAL_COMMITS ]]; then
+		return 0
+	fi
+
+	echo "There have been ${ACTUAL_COMMITS} commits on this branch compared to ${BASE_TAG}."
+	echo "If this is based on ${BASE_BRANCH}, please specify 0 as a parameter."
+	echo "If this is based on ${BASE_TAG}, please specify $ACTUAL_COMMITS as a parameter."
+	return 1
+}
+
+isbuildbranch() {
+	if [ "master" == "$1" ]; then
+		return 0
+	elif [ "ee-7.0.x" == "$1" ]; then
+		return 0
+	elif [ "ee-6.2.x" == "$1" ]; then
+		return 0
+	elif [ "ee-6.1.x" == "$1" ]; then
+		return 0
+	else
+		return 1
+	fi
+}
+
+downloadbuild $@

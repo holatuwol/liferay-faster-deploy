@@ -46,8 +46,6 @@ isbuildbranch() {
 		return 0
 	elif [ "ee-6.1.x" == "$1" ]; then
 		return 0
-	elif [ "" == "$1" ]; then
-		return 0
 	else
 		return 1
 	fi
