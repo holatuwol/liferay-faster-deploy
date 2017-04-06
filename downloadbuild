@@ -95,9 +95,12 @@ downloadbuild() {
 	if [ "" != "$BASE_TAG" ]; then
 		downloadtag && extract
 		return $?
-	else
+	elif [ "" != "$BASE_BRANCH" ]; then
 		downloadbranch && rebasebranch && extract
 		return $?
+	else
+		echo "Unable to identify base branch or tag"
+		return 1
 	fi
 }
 
@@ -287,5 +290,66 @@ isbuildbranch() {
 		return 1
 	fi
 }
+
+rebasebranch() {
+	git merge-base --is-ancestor $NEW_BASELINE $CURRENT_HASH
+
+	if [[ 0 -eq $? ]]; then
+		echo "$CURRENT_BRANCH is already rebased against $SHORT_NAME ($NEW_BASELINE)"
+		return 0
+	fi
+
+	echo "Rebasing against $SHORT_NAME ($NEW_BASELINE)"
+
+	local STASH=$(git status -s | grep -v '??')
+
+	if [ "" != "$STASH" ]; then
+		git stash
+	fi
+
+	git rebase $NEW_BASELINE
+	EXIT_STATUS=$?
+
+	if [ "" != "$STASH" ]; then
+		if [[ 0 -ne $EXIT_STATUS ]]; then
+			echo "Failed to rebase against $NEW_BASELINE, restoring git stash"
+			git rebase --abort
+			git stash pop
+		else
+			git stash pop
+			EXIT_STATUS=$?
+		fi
+	fi
+
+	return $EXIT_STATUS
+}
+
+if [ -z "${BUILD_FOLDER_PREFIX}" ]; then
+	echo "Please set a BUILD_FOLDER_PREFIX for the build"
+	exit 1
+fi
+
+echo "Using $BUILD_FOLDER_PREFIX as the root folder"
+
+mkdir -p "$BUILD_FOLDER_PREFIX/.test"
+
+if [ ! -d "$BUILD_FOLDER_PREFIX/.test" ]; then
+	echo "${USER} does not have permission to create folders in ${BUILD_FOLDER_PREFIX}"
+	exit 1
+fi
+
+rmdir "$BUILD_FOLDER_PREFIX/.test"
+
+if [ -z "${TAG_ARCHIVE_MIRROR}" ]; then
+	echo "Please set a TAG_ARCHIVE_MIRROR for the build"
+	exit 1
+fi
+
+if [ -z "${BRANCH_ARCHIVE_MIRROR}" ]; then
+	echo "Please set a BRANCH_ARCHIVE_MIRROR for the build"
+	exit 1
+fi
+
+CURRENT_HASH=$(git log -1 --pretty='%H')
 
 downloadbuild $@

@@ -183,39 +183,6 @@ isneedscachenpm() {
 	return 1
 }
 
-rebasebranch() {
-	git merge-base --is-ancestor $NEW_BASELINE $CURRENT_HASH
-
-	if [[ 0 -eq $? ]]; then
-		echo "$CURRENT_BRANCH is already rebased against $SHORT_NAME ($NEW_BASELINE)"
-		return 0
-	fi
-
-	echo "Rebasing against $SHORT_NAME ($NEW_BASELINE)"
-
-	local STASH=$(git status -s | grep -v '??')
-
-	if [ "" != "$STASH" ]; then
-		git stash
-	fi
-
-	git rebase $NEW_BASELINE
-	EXIT_STATUS=$?
-
-	if [ "" != "$STASH" ]; then
-		if [[ 0 -ne $EXIT_STATUS ]]; then
-			echo "Failed to rebase against $NEW_BASELINE, restoring git stash"
-			git rebase --abort
-			git stash pop
-		else
-			git stash pop
-			EXIT_STATUS=$?
-		fi
-	fi
-
-	return $EXIT_STATUS
-}
-
 redeploy() {
 	downloadbuild $1 && applychanges
 }
@@ -250,13 +217,13 @@ if [ -z "${BRANCH_ARCHIVE_MIRROR}" ]; then
 	exit 1
 fi
 
+CURRENT_HASH=$(git log -1 --pretty='%H')
+
 setopts && cdroot
 
 if [[ 0 -ne $? ]]; then
 	exit $?
 fi
-
-CURRENT_HASH=$(git log -1 --pretty='%H')
 
 mkdir -p "$HOME/.liferay/builds"
 
