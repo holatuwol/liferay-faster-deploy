@@ -227,7 +227,7 @@ gettargetfolder() {
 
 	# Update app.server.$USER.properties
 
-	TARGET_FOLDER="$TARGET_FOLDER" $(dirname "${BASH_SOURCE[0]}")/appserverprops
+	. $(dirname "${BASH_SOURCE[0]}")/appserverprops
 
 	if isbuildbranch $1; then
 		BASE_BRANCH=$1
