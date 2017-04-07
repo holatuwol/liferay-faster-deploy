@@ -1,44 +1,51 @@
 #!/bin/bash
 
 appserverprops() {
-	touch app.server.$USER.properties
+	if [ "" == "$TARGET_FOLDER" ]; then
+		return 0
+	fi
+
+	touch $GIT_ROOT/app.server.$USER.properties
 
 	# Make sure the parent directory is set to the parameter we pass
 
-	if [ "" == "$(grep "app.server.parent.dir=${TARGET_FOLDER}" app.server.$USER.properties)" ]; then
-		echo -e "\n#app.server.parent.dir=${TARGET_FOLDER}" >> app.server.$USER.properties
+
+	if [ "" == "$(grep "app.server.parent.dir=${TARGET_FOLDER}" $GIT_ROOT/app.server.$USER.properties)" ]; then
+		echo -e "\n#app.server.parent.dir=${TARGET_FOLDER}" >> $GIT_ROOT/app.server.$USER.properties
 	fi
 
-	sed -i 's/^app.server.parent.dir=/#app.server.parent.dir=/g' app.server.$USER.properties
-	sed -i "s@#\(app.server.parent.dir=${TARGET_FOLDER}\)@\1@g" app.server.$USER.properties
+	sed -i 's/^app.server.parent.dir=/#app.server.parent.dir=/g' $GIT_ROOT/app.server.$USER.properties
+	sed -i "s@#\(app.server.parent.dir=${TARGET_FOLDER}\)@\1@g" $GIT_ROOT/app.server.$USER.properties
 
 	# Make sure we have the right version of Tomcat
 
 	if [ "" != "$ARCHIVE_HOME" ]; then
 		cleanappserver
 	fi
+}
 
+buildprops() {
 	# Disable the baseline report unless it's explicitly requested
 
-	echo 'baseline.jar.report.level=off' > build.$USER.properties
-	echo "build.repository.local.dir=$HOME/.m2/repository" >> build.$USER.properties
+	echo 'baseline.jar.report.level=off' > $GIT_ROOT/build.$USER.properties
+	echo "build.repository.local.dir=$HOME/.m2/repository" >> $GIT_ROOT/build.$USER.properties
 
 	# If we're on an older CentOS server, we can't use the node.js SASS compiler
 
 	if [ "" != "$(which rpm)" ]; then
-		echo 'sass.compiler.class.name=ruby' >> build.$USER.properties
+		echo 'sass.compiler.class.name=ruby' >> $GIT_ROOT/build.$USER.properties
 	fi
 
 	# Avoid using ECJ for compilation
 
-	echo 'javac.compiler=modern' >> build.$USER.properties
+	echo 'javac.compiler=modern' >> $GIT_ROOT/build.$USER.properties
 }
 
 cleanappserver() {
 	mkdir -p $ARCHIVE_HOME
 
-	TOMCAT_VERSION=$(grep -F app.server.tomcat.version= app.server.properties | cut -d'=' -f 2)
-	TOMCAT_MAJOR_VERSION=$(echo $TOMCAT_VERSION | cut -d'.' -f 1)
+	local TOMCAT_VERSION=$(grep -F app.server.tomcat.version= $GIT_ROOT/app.server.properties | cut -d'=' -f 2)
+	local TOMCAT_MAJOR_VERSION=$(echo $TOMCAT_VERSION | cut -d'.' -f 1)
 
 	# make sure we have an archive file
 
@@ -52,12 +59,12 @@ cleanappserver() {
 
 	# cleanup the existing folder so that we can have a clean slate
 
-	TOMCAT_FOLDER=tomcat-${TOMCAT_VERSION}
+	local TOMCAT_FOLDER=tomcat-${TOMCAT_VERSION}
 
-	rm -rf "$TARGET_FOLDER/$TOMCAT_FOLDER"
-	mkdir -p "$TARGET_FOLDER"
+	rm -rf "$LIFERAY_HOME/$TOMCAT_FOLDER"
+	mkdir -p "$LIFERAY_HOME"
 
-	pushd "$TARGET_FOLDER" > /dev/null
+	pushd "$LIFERAY_HOME" > /dev/null
 
 	tar -zxf "$ARCHIVE_FILE"
 	mv apache-tomcat-${TOMCAT_VERSION} $TOMCAT_FOLDER
@@ -72,12 +79,71 @@ cleanappserver() {
 	fi
 
 	popd > /dev/null
-
 }
 
-if [ "" == "$TARGET_FOLDER" ]; then
-	echo "Please set a target folder"
-	exit 1
-fi
+gradleprops() {
+	# Find gradle root
 
-appserverprops $@
+	GRADLE_HOME=$PWD
+
+	while [ ! -e $GRADLE_HOME/gradlew ] && [ "/" != "$GRADLE_HOME" ]; do
+		GRADLE_HOME=$(dirname $GRADLE_HOME)
+	done
+
+	if [ ! -e $GRADLE_HOME/gradlew ]; then
+		echo 'Unable to find the gradlew binary'
+		return 1
+	fi
+
+	# If this is a blade workspace, don't do anything
+
+	if [ -f $GRADLE_HOME/gradle.properties ]; then
+		return 0
+	fi
+
+	# Make sure that we've run ant setup-sdk
+
+	local ANT_LIFERAY_HOME=
+	local GRADLE_LIFERAY_HOME=
+
+	if [ -f "$GRADLE_HOME/.gradle/gradle.properties" ]; then
+		GRADLE_LIFERAY_HOME=$(grep -F liferay.home= $GRADLE_HOME/.gradle/gradle.properties | cut -d'=' -f 2)
+	fi
+
+	if [ -f "$GIT_ROOT/app.server.$USER.properties" ]; then
+		ANT_LIFERAY_HOME=$(grep -F app.server.parent.dir= "$GIT_ROOT/app.server.$USER.properties" | cut -d'=' -f 2)
+	else
+		if [ "" == "$GRADLE_LIFERAY_HOME" ]; then
+			echo "Missing app.server.$USER.properties"
+			return 1
+		fi
+
+		echo "app.server.parent.dir=$GRADLE_LIFERAY_HOME" >> $GIT_ROOT/app.server.$USER.properties
+		ANT_LIFERAY_HOME=$ANT_LIFERAY_HOME
+	fi
+
+	if [ "$ANT_LIFERAY_HOME" != "$GRADLE_LIFERAY_HOME" ]; then
+		if [ "" == "$GRADLE_LIFERAY_HOME" ]; then
+			echo "Missing .gradle/gradle.properties, generating via ant setup-sdk"
+		else
+			echo "Fixing mismatch between app.server.$USER.properties and .gradle/gradle.properties via ant setup-sdk"
+		fi
+
+		pushd $GIT_ROOT > /dev/null
+
+		ant setup-sdk
+		GRADLE_LIFERAY_HOME=$ANT_LIFERAY_HOME
+
+		popd > /dev/null
+	fi
+
+	# Update the environment variable for other scripts
+
+	LIFERAY_HOME=$GRADLE_LIFERAY_HOME
+}
+
+setopts() {
+	. $(dirname "${BASH_SOURCE[0]}")/setopts
+}
+
+setopts && appserverprops && buildprops && gradleprops
