@@ -68,6 +68,7 @@ downloadbranch() {
 
 	if [ ! -f "$HOME/.liferay/builds/$BUILD_NAME" ]; then
 		find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.tar.gz" | xargs rm
+		find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.tar.gz.githash" | xargs rm
 
 		echo "Downloading snapshot for $SHORT_NAME ($NEW_BASELINE)"
 		getbuild "${BRANCH_ARCHIVE_MIRROR}/${BUILD_NAME}"
