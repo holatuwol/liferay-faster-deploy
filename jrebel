@@ -5,35 +5,42 @@ dirnames() {
 }
 
 jrebel() {
-	SCRIPT_FOLDER=$(dirname "${BASH_SOURCE[0]}")
-	TARGET_BRANCH=$(git symbolic-ref --short HEAD)
+	local SCRIPT_FOLDER=$(dirname "${BASH_SOURCE[0]}")
 
-	if [ "" == "$TARGET_BRANCH" ]; then
-		echo "Unable to build from detached head"
+	. $(dirname "${BASH_SOURCE[0]}")/appserverprops
+
+	if [ "" == "$LIFERAY_HOME" ]; then
 		return 1
 	fi
 
-	local GIT_FOLDER=$PWD
+	pushd $GIT_ROOT > /dev/null
 
-	while [ "/" != "$GIT_FOLDER" ] && [ ! -e "$GIT_FOLDER/.git" ]; do
-		GIT_FOLDER=$(dirname $GIT_FOLDER)
-	done
+	local TOMCAT_VERSION=
 
-	if [ ! -e $GIT_FOLDER/.git ]; then
-		echo "Unable to use git to locate $1"
-		return 1
+	if [ -f app.server.$USER.properties ]; then
+		TOMCAT_VERSION=$(grep -F app.server.tomcat.version= app.server.$USER.properties | cut -d'=' -f 2)
 	fi
 
-	# git ls-files wants a relative path, so let's generate it
+	if [ "" == "$TOMCAT_VERSION" ]; then
+		TOMCAT_VERSION=$(grep -F app.server.tomcat.version= app.server.properties | cut -d'=' -f 2)
+	fi
 
-	local ROOT_FOLDER=$(python -c "from __future__ import print_function; import os.path; print(os.path.relpath('$GIT_FOLDER', '$PWD'))")
+	local TOMCAT_FOLDER=tomcat-${TOMCAT_VERSION}
 
-	# use git ls-files to find bnd.bnd files, then use grep -l to list matching files
+	echo "Considering ant setup-jrebel..."
 
-	local BND_LIST=$(git ls-files $ROOT_FOLDER | grep bnd.bnd)
+	if [ ! -f $LIFERAY_HOME/$TOMCAT_FOLDER/webapps/ROOT/WEB-INF/classes/rebel.xml ] || [ ! -f $LIFERAY_HOME/$TOMCAT_FOLDER/lib/ext/rebel.xml ]; then
+		echo $LIFERAY_HOME/$TOMCAT_FOLDER/webapps/ROOT/WEB-INF/classes/rebel.xml
+		echo $LIFERAY_HOME/$TOMCAT_FOLDER/lib/ext/rebel.xml
+		ant setup-jrebel
+	fi
+
+	local BND_LIST=$(git ls-files modules | grep bnd.bnd)
+
+	echo "Processing static and core modules..."
 
 	for folder in core static; do
-		BASE_PATH=/opt/liferay/$TARGET_BRANCH/bundles/osgi/$folder
+		BASE_PATH=$LIFERAY_HOME/osgi/$folder
 
 		for file in $(ls -1 $BASE_PATH); do
 			BUNDLE_SYMBOLICNAME=$(echo $file | sed 's/.jar$//g')
@@ -43,10 +50,22 @@ jrebel() {
 			for bnd_match in $BND_MATCHES; do
 				JAR_PATH=$BASE_PATH/$file
 				MODULE_PATH="$PWD/$bnd_match"
+
+				old_timestamp=
+
+				if [ -d $MODULE_PATH/classes ]; then
+					old_timestamp=$(perl -MPOSIX -e 'print POSIX::strftime "%Y%m%d%H%M.%S", localtime((stat $ARGV[0])[9])' "$MODULE_PATH/classes")
+				fi
+
+				new_timestamp=$(perl -MPOSIX -e 'print POSIX::strftime "%Y%m%d%H%M.%S", localtime((stat $ARGV[0])[9])' "$JAR_PATH")
+
+				if [ "$old_timestamp" == "$new_timestamp" ]; then
+					continue
+				fi
+
 				RESOURCE_PATH="$MODULE_PATH/src/main/resources"
 
 				mkdir -p $RESOURCE_PATH
-				mkdir -p $MODULE_PATH/classes
 
 				if [ -d "$RESOURCE_PATH/META-INF/resources" ]; then
 					cp -f "$SCRIPT_FOLDER/jrebel-web.xml" "$RESOURCE_PATH/rebel.xml"
@@ -59,14 +78,25 @@ jrebel() {
 
 				rm -f "$RESOURCE_PATH/rebel.xml.bak"
 
-				zip -ujq "${JAR_PATH}" "${RESOURCE_PATH}/rebel.xml"
+				zip -ujqq "${JAR_PATH}" "${RESOURCE_PATH}/rebel.xml"
+
+				rm -rf $MODULE_PATH/classes
+				mkdir -p $MODULE_PATH/classes
 
 				pushd $MODULE_PATH/classes > /dev/null
-				unzip -q "${JAR_PATH}"
+				unzip -qq "${JAR_PATH}"
 				popd > /dev/null
+
+				touch -t $new_timestamp "$MODULE_PATH/classes"
 			done
 		done
 	done
+
+	popd > /dev/null
 }
 
-jrebel
+setopts() {
+	. $(dirname "${BASH_SOURCE[0]}")/setopts
+}
+
+setopts && jrebel
