@@ -1,0 +1,21 @@
+#!/bin/bash
+
+lwatch() {
+	if [[ 0 -ne $? ]]; then
+		return 1
+	fi
+
+	if [ "" == "$LWATCH_PATH" ]; then
+		if [ "" == "$(which lwatch)" ]; then
+			echo 'Please clone the https://github.com/brunobasto/liferay-watch repository'
+			echo 'and specify the path to the local directory where you cloned it'
+			return 1
+		fi
+
+		$(which lwatch) $@
+	else
+		node "${LWATCH_PATH}/bin/cli.js" $@
+	fi
+}
+
+lwatch $@
