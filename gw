@@ -18,12 +18,6 @@ findgradle() {
 }
 
 fixgradle() {
-	# if this is a blade workspace, don't do anything
-
-	if [ -f $GRADLE_HOME/gradle.properties ]; then
-		return 0
-	fi
-
 	# a settings.gradle in the parent folder can mess us up
 
 	if [ -f ../settings.gradle ] && [ ! -f ../gradlew ]; then
@@ -31,42 +25,12 @@ fixgradle() {
 		git update-index --assume-unchanged ../settings.gradle
 	fi
 
-	# make sure we remembered to create an app.server.$USER.properties
-
-	if [ ! -f "$GRADLE_HOME/app.server.$USER.properties" ]; then
-		echo "Missing app.server.$USER.properties"
-		return 1
-	fi
-
-	# make sure we have a gradle.properties in the .gradle cache and
-	# that it matches app.server.$USER.properties
-
-	local ANT_LIFERAY_HOME=$(grep -F app.server.parent.dir= $GRADLE_HOME/app.server.$USER.properties | cut -d'=' -f 2)
-	local GRADLE_LIFERAY_HOME=
-
-	if [ -f "$GRADLE_HOME/.gradle/gradle.properties" ]; then
-		GRADLE_LIFERAY_HOME=$(grep -F liferay.home= $GRADLE_HOME/.gradle/gradle.properties | cut -d'=' -f 2)
-	fi
-
-	if [ ! -f "$GRADLE_HOME/.gradle/gradle.properties" ] || [ "$ANT_LIFERAY_HOME" != "$GRADLE_LIFERAY_HOME" ]; then
-		if [ ! -f "$GRADLE_HOME/.gradle/gradle.properties" ]; then
-			echo "Missing .gradle/gradle.properties, generating via ant setup-sdk"
-		else
-			echo "$ANT_LIFERAY_HOME is not the same as $GRADLE_LIFERAY_HOME, fixing via ant setup-sdk"
-		fi
-
-		pushd $GRADLE_HOME > /dev/null
-
-		ant setup-sdk
-		GRADLE_LIFERAY_HOME=$ANT_LIFERAY_HOME
-
-		popd > /dev/null
-	fi
+	. $(dirname "${BASH_SOURCE[0]}")/appserverprops
 
 	# if you appear to be building to a Liferay downloaded bundle rather
 	# than a built bundle, tell the user to use the override folder
 
-	if [ -d "$GRADLE_LIFERAY_HOME/osgi/marketplace" ] && [[ 0 -ne $(ls -1 $GRADLE_LIFERAY_HOME/osgi/marketplace | grep -F .lpkg | wc -l) ]]; then
+	if [ -d "$LIFERAY_HOME/osgi/marketplace" ] && [[ 0 -ne $(ls -1 $LIFERAY_HOME/osgi/marketplace | grep -F .lpkg | wc -l) ]]; then
 		if [ "" == "$(grep -F "$OVERRIDE" build.gradle)" ]; then
 			echo "If you are absolutely sure you want to deploy to a release bundle with .lpkg files"
 			echo "(not recommended, because this may require a server restart after every deploy)"
