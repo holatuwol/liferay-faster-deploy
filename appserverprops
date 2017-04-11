@@ -9,7 +9,6 @@ appserverprops() {
 
 	# Make sure the parent directory is set to the parameter we pass
 
-
 	if [ "" == "$(grep "app.server.parent.dir=${TARGET_FOLDER}" $GIT_ROOT/app.server.$USER.properties)" ]; then
 		echo -e "\n#app.server.parent.dir=${TARGET_FOLDER}" >> $GIT_ROOT/app.server.$USER.properties
 	fi
@@ -97,7 +96,7 @@ gradleprops() {
 
 	# If this is a blade workspace, don't do anything
 
-	if [ -f $GRADLE_HOME/gradle.properties ]; then
+	if [ -f $GRADLE_HOME/build.gradle ]; then
 		return 0
 	fi
 
