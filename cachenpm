@@ -7,37 +7,54 @@ cachenpm() {
 		rm -rf "${cache_home}"
 	fi
 
-	mkdir -p "${cache_home}/node_modules"
-
-	GIT_FOLDER=$PWD
-
-	while [ "/" != "$GIT_FOLDER" ] && [ ! -e "$GIT_FOLDER/.git" ]; do
-		GIT_FOLDER=$(dirname "$GIT_FOLDER")
-	done
-
-	if [ ! -e "$GIT_FOLDER/.git" ]; then
-		echo "Unable to find portal source root"
-		return 1
-	fi
-
-	pushd "$GIT_FOLDER" > /dev/null
-
+	mkdir -p "${cache_home}"
 	cat /dev/null > "${cache_home}/cachenpm.txt"
+
+	pushd "$GIT_ROOT" > /dev/null
 
 	for folder in $(git ls-files modules | grep -F package.json | dirnames); do
 		if [ ! -f "$folder/.lfrbuild-portal" ]; then
 			continue
 		fi
 
+		echo "$PWD/$folder/package.json" >> "${cache_home}/cachenpm.txt"
+	done
+
+	if [ "" != "$(which yarn)" ]; then
+		NPM_INSTALL='yarn'
+	else
+		NPM_INSTALL='npm install'
+	fi
+
+	#globalcache
+	#modulecache
+	modulerun
+
+	NPM_PRODUCTION=$(npm config get production)
+	npm config set production false
+
+	if [ "" != "$NPM_PRODUCTION" ] && [ "false" != "$NPM_PRODUCTION" ]; then
+		npm config set production $NPM_PRODUCTION
+	fi
+}
+
+dirnames() {
+	python $(dirname "${BASH_SOURCE[0]}")/dirnames.py
+}
+
+disablegwnpm() {
+	$(dirname "${BASH_SOURCE[0]}")/disablegwnpm
+}
+
+globalcache() {
+	mkdir -p "${cache_home}/node_modules"
+
+	for package_json in $(cat ${cache_home}/cachenpm.txt | dirnames); do
 		if [ ! -h "$folder/node_modules" ]; then
 			rm -rf "$folder/node_modules"
 			softlink "$folder/node_modules" "${cache_home}/node_modules"
 		fi
-
-		echo "$PWD/$folder/package.json" >> "${cache_home}/cachenpm.txt"
 	done
-
-	popd > /dev/null
 
 	cp -a $(dirname "${BASH_SOURCE[0]}")/cachenpm.py ${cache_home}/cachenpm.py
 
@@ -52,31 +69,80 @@ cachenpm() {
 	if [ -f package.json.old ] && [ "" == "$(diff package.json package.json.old)" ]; then
 		echo 'package.json has no changes'
 	else
-		NPM_PRODUCTION=$(npm config get production)
-		npm config set production false
-
-		if [ "" != "$(which yarn)" ]; then
-			yarn
-		else
-			npm install
-		fi
+		$NPM_INSTALL
 	fi
 
 	rm package.json.old
 
 	popd > /dev/null
+}
 
-	if [ "" != "$NPM_PRODUCTION" ] && [ "false" != "$NPM_PRODUCTION" ]; then
-		npm config set production $NPM_PRODUCTION
+modulecache() {
+	if [ -f /usr/bin/md5sum ]; then
+		MD5SUM=/usr/bin/md5sum
+	elif [ -f /sbin/md5 ]; then
+		MD5SUM="/sbin/md5 -r"
+	else
+		echo "Unable to compute MD5 checksums"
+		return 1
 	fi
+
+	for folder in $(cat ${cache_home}/cachenpm.txt | dirnames); do
+		cache_hash=$(jq '.dependencies, .devDependencies' $folder/package.json | $MD5SUM | cut -d' ' -f 1)
+		cache_file="${cache_home}/${cache_hash}.tar.gz"
+
+		pushd $folder > /dev/null
+
+		if [ -f "$cache_file" ]; then
+			cache_time=$(perl -MPOSIX -e 'print POSIX::strftime "%Y%m%d%H%M.%S", localtime((stat $ARGV[0])[9])' "${cache_file}")
+			folder_time=
+
+			if [ -d "node_modules" ]; then
+				folder_time=$(perl -MPOSIX -e 'print POSIX::strftime "%Y%m%d%H%M.%S", localtime((stat $ARGV[0])[9])' node_modules)
+			fi
+
+			if [ "$cache_time" != "$folder_time" ]; then
+				echo "Restoring cache for $folder"
+
+				rm -rf node_modules
+				tar -zxf "${cache_file}"
+				touch -t $cache_time node_modules
+			fi
+
+			popd > /dev/null
+			continue
+		fi
+
+		echo "Caching build for $folder"
+		rm -rf node_modules
+
+		if [ -d "$folder/node_modules" ] && [ ! -f "$folder/yarn.lock" ]; then
+			npm install && tar -zcf "$cache_file" node_modules
+		else
+			$NPM_INSTALL && tar -zcf "$cache_file" node_modules
+		fi
+
+		if [ -f "$cache_file" ]; then
+			cache_time=$(perl -MPOSIX -e 'print POSIX::strftime "%Y%m%d%H%M.%S", localtime((stat $ARGV[0])[9])' "$cache_file")
+			touch -t $cache_time node_modules
+		fi
+
+		popd > /dev/null
+	done
 }
 
-dirnames() {
-	python $(dirname "${BASH_SOURCE[0]}")/dirnames.py
-}
+modulerun() {
+	for folder in $(cat ${cache_home}/cachenpm.txt | dirnames); do
+		pushd $folder > /dev/null
 
-disablegwnpm() {
-	$(dirname "${BASH_SOURCE[0]}")/disablegwnpm
+		if [ -d "$folder/node_modules" ] && [ ! -f "$folder/yarn.lock" ]; then
+			npm install
+		else
+			$NPM_INSTALL
+		fi
+
+		popd > /dev/null
+	done
 }
 
 softlink() {
