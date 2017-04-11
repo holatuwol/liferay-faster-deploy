@@ -1,22 +1,10 @@
 #!/bin/bash
 
 appserverprops() {
-	if [ "" == "$TARGET_FOLDER" ]; then
-		return 0
+	if [ ! -f $GIT_ROOT/app.server.$USER.properties ]; then
+		echo "Missing app.server.$USER.properties"
+		return 1
 	fi
-
-	touch $GIT_ROOT/app.server.$USER.properties
-
-	# Make sure the parent directory is set to the parameter we pass
-
-	if [ "" == "$(grep "app.server.parent.dir=${TARGET_FOLDER}" $GIT_ROOT/app.server.$USER.properties)" ]; then
-		echo -e "\n#app.server.parent.dir=${TARGET_FOLDER}" >> $GIT_ROOT/app.server.$USER.properties
-	fi
-
-	sed -i 's/^app.server.parent.dir=/#app.server.parent.dir=/g' $GIT_ROOT/app.server.$USER.properties
-	sed -i "s@#\(app.server.parent.dir=${TARGET_FOLDER}\)@\1@g" $GIT_ROOT/app.server.$USER.properties
-
-	# Make sure we have the right version of Tomcat
 
 	if [ "" != "$ARCHIVE_HOME" ]; then
 		cleanappserver

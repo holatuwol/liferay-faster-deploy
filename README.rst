@@ -12,9 +12,7 @@ Then, add a Bash function to `.bash_aliases` (or the equivalent on whichever she
 .. code-block:: bash
 
 	rd() {
-		BUILD_FOLDER_PREFIX=/opt/liferay \
-			BUILD_FOLDER_SUFFIX=bundles \
-			TAG_ARCHIVE_MIRROR='http://cloud-10-50-0-165/builds/fixpacks' \
+		TAG_ARCHIVE_MIRROR='http://cloud-10-50-0-165/builds/fixpacks' \
 			BRANCH_ARCHIVE_MIRROR='http://cloud-10-50-0-165/builds/branches' \
 				/path/to/clone/location/redeploy $@
 	}
@@ -24,7 +22,7 @@ Building from a Daily Build
 
 Running ``ant all`` can be a time consuming ordeal on some operating systems. What if you could use a binary from some time earlier in the day (so you have at least some sense that things are up to date) and then only deploy the changes that you made without having to run ``ant all``?
 
-Specify where you want the builds to go by setting the ``BUILD_FOLDER_PREFIX`` variable. Use whatever shorthand you think makes sense, with the example here being ``rd``. Navigate to the root of the portal repository and invoke the function you created.
+Use whatever shorthand you think makes sense, with the example here being ``rd``. Navigate to the root of the portal repository and invoke the function you created.
 
 .. code-block:: bash
 

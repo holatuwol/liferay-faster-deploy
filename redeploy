@@ -114,10 +114,10 @@ deployant() {
 
 	for folder in $(ls -1); do
 		if [ -d $folder/src ] && [ ! -f $folder/$folder.jar ]; then
-			if [ -f $TARGET_FOLDER/tomcat-*/webapps/ROOT/WEB-INF/lib/$folder.jar ]; then
-				cp $TARGET_FOLDER/tomcat-*/webapps/ROOT/WEB-INF/lib/$folder.jar $folder
-			elif [ -f $TARGET_FOLDER/tomcat-*/lib/ext/$folder.jar ]; then
-				cp $TARGET_FOLDER/tomcat-*/lib/ext/$folder.jar $folder
+			if [ -f $LIFERAY_HOME/tomcat-*/webapps/ROOT/WEB-INF/lib/$folder.jar ]; then
+				cp $LIFERAY_HOME/tomcat-*/webapps/ROOT/WEB-INF/lib/$folder.jar $folder
+			elif [ -f $LIFERAY_HOME/tomcat-*/lib/ext/$folder.jar ]; then
+				cp $LIFERAY_HOME/tomcat-*/lib/ext/$folder.jar $folder
 			fi
 
 			if [ -f $folder/$folder.jar ]; then
@@ -195,22 +195,6 @@ redeploy() {
 setopts() {
 	. $(dirname "${BASH_SOURCE[0]}")/setopts
 }
-
-if [ -z "${BUILD_FOLDER_PREFIX}" ]; then
-	echo "Please set a BUILD_FOLDER_PREFIX for the build"
-	exit 1
-fi
-
-echo "Using $BUILD_FOLDER_PREFIX as the root folder"
-
-mkdir -p "$BUILD_FOLDER_PREFIX/.test"
-
-if [ ! -d "$BUILD_FOLDER_PREFIX/.test" ]; then
-	echo "${USER} does not have permission to create folders in ${BUILD_FOLDER_PREFIX}"
-	exit 1
-fi
-
-rmdir "$BUILD_FOLDER_PREFIX/.test"
 
 if [ -z "${TAG_ARCHIVE_MIRROR}" ]; then
 	echo "Please set a TAG_ARCHIVE_MIRROR for the build"

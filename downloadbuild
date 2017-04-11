@@ -91,9 +91,9 @@ downloadbuild() {
 	# If Tomcat is already running, we shouldn't proceed
 	# any further than identifying commit information.
 
-	if [ "" != "$(jps | grep Bootstrap)" ] && [ -f "$TARGET_FOLDER/baseline.txt" ]; then
+	if [ "" != "$(jps | grep Bootstrap)" ] && [ -f "$LIFERAY_HOME/baseline.txt" ]; then
 		echo "Tomcat is already running, skipping bundle update"
-		NEW_BASELINE=$(cat "$TARGET_FOLDER/baseline.txt")
+		NEW_BASELINE=$(cat "$LIFERAY_HOME/baseline.txt")
 		return 0
 	fi
 
@@ -128,25 +128,29 @@ extract() {
 	# Figure out if we need to untar the build, based on whether the
 	# baseline hash has changed
 
-	mkdir -p "$TARGET_FOLDER"
+	mkdir -p "$LIFERAY_HOME"
+
+	if [[ 0 -ne $? ]]; then
+		return 1
+	fi
 
 	OLD_BASELINE=
 
-	if [ -f "$TARGET_FOLDER/baseline.txt" ]; then
-		OLD_BASELINE=$(cat "$TARGET_FOLDER/baseline.txt")
+	if [ -f "$LIFERAY_HOME/baseline.txt" ]; then
+		OLD_BASELINE=$(cat "$LIFERAY_HOME/baseline.txt")
 	fi
 
 	# Cleanup the folders before we untar. Only file we exclude is
 	# the Hypersonic data files if we already have them.
 
 	if [ "$OLD_BASELINE" == "$NEW_BASELINE" ]; then
-		echo "$TARGET_FOLDER is already up to date"
+		echo "$LIFERAY_HOME is already up to date"
 		return 0
 	fi
 
 	rm -f .redeploy/last_deploy.txt
 
-	pushd "$TARGET_FOLDER" > /dev/null
+	pushd "$LIFERAY_HOME" > /dev/null
 
 	rm -rf tomcat* osgi tools work
 
@@ -216,23 +220,13 @@ gettargetfolder() {
 		return 1
 	fi
 
-	TARGET_FOLDER=
-
-	if [ -f app.server.$USER.properties ]; then
-		TARGET_FOLDER=$(grep '^\s*app.server.parent.dir=' app.server.$USER.properties | cut -d'=' -f 2)
-	fi
-
-	if [ "" == "$TARGET_FOLDER" ]; then
-		if [ "" != "$BUILD_FOLDER_SUFFIX" ]; then
-			TARGET_FOLDER=${BUILD_FOLDER_PREFIX}/${CURRENT_BRANCH}/${BUILD_FOLDER_SUFFIX}
-		else
-			TARGET_FOLDER=${BUILD_FOLDER_PREFIX}/${CURRENT_BRANCH}
-		fi
-	fi
-
-	# Update app.server.$USER.properties
+	# Check for app.server.$USER.properties
 
 	. $(dirname "${BASH_SOURCE[0]}")/appserverprops
+
+	if [[ 0 -ne $? ]]; then
+		return 1
+	fi
 
 	if isbuildbranch $1; then
 		BASE_BRANCH=$1
@@ -328,22 +322,6 @@ rebasebranch() {
 
 	return $EXIT_STATUS
 }
-
-if [ -z "${BUILD_FOLDER_PREFIX}" ]; then
-	echo "Please set a BUILD_FOLDER_PREFIX for the build"
-	exit 1
-fi
-
-echo "Using $BUILD_FOLDER_PREFIX as the root folder"
-
-mkdir -p "$BUILD_FOLDER_PREFIX/.test"
-
-if [ ! -d "$BUILD_FOLDER_PREFIX/.test" ]; then
-	echo "${USER} does not have permission to create folders in ${BUILD_FOLDER_PREFIX}"
-	exit 1
-fi
-
-rmdir "$BUILD_FOLDER_PREFIX/.test"
 
 if [ -z "${TAG_ARCHIVE_MIRROR}" ]; then
 	echo "Please set a TAG_ARCHIVE_MIRROR for the build"
