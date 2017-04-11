@@ -80,6 +80,11 @@ applychanges() {
 	if [ -f .redeploy/changes_ant.txt ] && [ "" != "$(grep util .redeploy/changes_ant.txt)" ]; then
 		echo "Modified util-*.jar, must clear the osgi/state folder for WABs to be rebuilt"
 	fi
+
+	# Undo changes to build-common.xml and modules/build.gradle
+
+	git checkout build-common.xml
+	git checkout modules/build.gradle
 }
 
 cdroot() {

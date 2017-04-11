@@ -14,7 +14,6 @@ disablegwnpm() {
 	fi
 
 	git checkout $MODULES_HOME/build.gradle
-	git update-index --assume-unchanged $MODULES_HOME/build.gradle
 
 	echo "
 
