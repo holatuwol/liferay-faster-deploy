@@ -20,6 +20,13 @@ downloadbranch() {
 		return 0
 	fi
 
+	# If we're going to download the new build, then delete older builds
+
+	if [ ! -f "$HOME/.liferay/builds/$BUILD_NAME" ]; then
+		find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.tar.gz" | xargs rm
+		find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.tar.gz.githash" | xargs rm
+	fi
+
 	# Acquire the hash and make sure we have it
 
 	NEW_BASELINE=$(getbuildhash)
@@ -67,9 +74,6 @@ downloadbranch() {
 	# sure to clean up past builds to not take up too much space
 
 	if [ ! -f "$HOME/.liferay/builds/$BUILD_NAME" ]; then
-		find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.tar.gz" | xargs rm
-		find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.tar.gz.githash" | xargs rm
-
 		echo "Downloading snapshot for $SHORT_NAME ($NEW_BASELINE)"
 		getbuild "${BRANCH_ARCHIVE_MIRROR}/${BUILD_NAME}"
 	fi
