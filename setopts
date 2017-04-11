@@ -1,29 +1,43 @@
 #!/bin/bash
 
-GIT_ROOT=$PWD
+buildopts() {
+	if [ "" == "$ANT_OPTS" ]; then
+		export ANT_OPTS='-Xms1g -Xmx1g'
+	fi
 
-while [ ! -e "$GIT_ROOT/.git" ] && [ "/" != "$GIT_ROOT" ]; do
-	GIT_ROOT=$(dirname $GIT_ROOT)
-done
+	if [ "" == "$GRADLE_OPTS" ]; then
+		export GRADLE_OPTS='-Xms3g -Xmx3g -Dorg.gradle.workers.max=1'
+	fi
+}
 
-if [ ! -e "$GIT_ROOT/.git" ]; then
-	echo "Unable to find version control root"
-	exit 1
-fi
+checkjava() {
+	local MINIMUM_JAVA_VERSION=8
 
-JAVA_VERSION=$(java -version 2>&1 | head -1 | cut -d'"' -f 2 | cut -d'.' -f 2)
+	if [ -f "$GIT_ROOT/build.properties" ]; then
+		MINIMUM_JAVA_VERSION=$(grep javac.source build.properties | cut -d'=' -f 2 | cut -d'.' -f 2)
+	fi
 
-if [[ 8 -ne $JAVA_VERSION ]]; then
-	echo "Please switch to JDK 8 before building"
-	exit 1
-fi
+	JAVA_VERSION=$(java -version 2>&1 | head -1 | cut -d'"' -f 2 | cut -d'.' -f 2)
 
-if [ "" == "$ANT_OPTS" ]; then
-	export ANT_OPTS='-Xms1g -Xmx1g'
-fi
+	if [[ $MINIMUM_JAVA_VERSION -gt $JAVA_VERSION ]]; then
+		echo "Please switch to JDK $MINIMUM_JAVA_VERSION or higher before building"
+		return 1
+	fi
+}
 
-if [ "" == "$GRADLE_OPTS" ]; then
-	export GRADLE_OPTS='-Xms3g -Xmx3g -Dorg.gradle.workers.max=1'
-fi
+gitroot() {
+	GIT_ROOT=$PWD
+
+	while [ ! -e "$GIT_ROOT/.git" ] && [ "/" != "$GIT_ROOT" ]; do
+		GIT_ROOT=$(dirname $GIT_ROOT)
+	done
+
+	if [ ! -e "$GIT_ROOT/.git" ]; then
+		echo "Unable to find version control root"
+		exit 1
+	fi
+}
 
 mkdir -p $GIT_ROOT/.redeploy
+
+gitroot && checkjava && buildopts
