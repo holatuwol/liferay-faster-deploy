@@ -19,7 +19,10 @@ applychanges() {
 		COMPARE_HASH=$NEW_BASELINE
 	fi
 
-	gitchanges $COMPARE_HASH
+	# cachenpm also determines if there are any changes if
+	# you give it a parameter, so use it instead
+
+	$(dirname "${BASH_SOURCE[0]}")/cachenpm $COMPARE_HASH
 
 	# If any of the folders that are affected is one that has
 	# one of the version range macros, make sure to fix it
@@ -38,12 +41,6 @@ applychanges() {
 	echo "Deploying modules:"
 	cat .redeploy/changes_gradle_1.txt .redeploy/changes_gradle_2.txt | awk '{ print " * " $1 }'
 	echo ""
-
-	# Check if we need to rerun cachenpm
-
-	if isneedscachenpm; then
-		$(dirname "${BASH_SOURCE[0]}")/cachenpm
-	fi
 
 	# First, check to see if there are any modules we need to deploy early
 
@@ -176,16 +173,6 @@ gitchanges() {
 
 gw() {
 	$(dirname "${BASH_SOURCE[0]}")/gw $@
-}
-
-isneedscachenpm() {
-	for folder in $(cat .redeploy/changes_gradle_2.txt); do
-		if [ -f "$folder/package.json" ]; then
-			return 0
-		fi
-	done
-
-	return 1
 }
 
 redeploy() {
