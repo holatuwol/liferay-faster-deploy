@@ -98,15 +98,17 @@ gradleprops() {
 	fi
 
 	if [ -f "$GIT_ROOT/app.server.$USER.properties" ]; then
-		ANT_LIFERAY_HOME=$(grep -F app.server.parent.dir= "$GIT_ROOT/app.server.$USER.properties" | cut -d'=' -f 2)
-	else
+		ANT_LIFERAY_HOME=$(grep '^\s*app.server.parent.dir=' "$GIT_ROOT/app.server.$USER.properties" | cut -d'=' -f 2)
+	fi
+
+	if [ "" == "$ANT_LIFERAY_HOME" ]; then
 		if [ "" == "$GRADLE_LIFERAY_HOME" ]; then
 			echo "Missing app.server.$USER.properties"
 			return 1
 		fi
 
-		echo "app.server.parent.dir=$GRADLE_LIFERAY_HOME" >> $GIT_ROOT/app.server.$USER.properties
-		ANT_LIFERAY_HOME=$ANT_LIFERAY_HOME
+		echo -e "\napp.server.parent.dir=$GRADLE_LIFERAY_HOME" >> $GIT_ROOT/app.server.$USER.properties
+		ANT_LIFERAY_HOME=$GRADLE_LIFERAY_HOME
 	fi
 
 	if [ "$ANT_LIFERAY_HOME" != "$GRADLE_LIFERAY_HOME" ]; then
