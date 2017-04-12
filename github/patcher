@@ -1,0 +1,49 @@
+#!/bin/bash
+
+patcher() {
+	. $(dirname "${BASH_SOURCE[0]}")/../getparent
+
+	if [ "" == "$BASE_TAG" ]; then
+		echo Could not identify baseline.
+		return 1
+	fi
+
+	local BASELINE_IDS=$(curl -s https://s3-us-west-2.amazonaws.com/mdang.grow/patcher.json)
+	local BASELINE_ID=$(echo $BASELINE_IDS | jq '.["'$BASE_TAG'"]')
+
+	if [ "" == "$BASELINE_ID" ]; then
+		echo $BASE_TAG does not correspond to a known patcher portal baseline
+		return 1
+	fi
+
+	local UPSTREAM=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/ee-${BASE_BRANCH}$" | cut -d'/' -f 3)
+
+	for TAG in $(echo $BASELINE_IDS | jq 'keys | .[]' | cut -d'"' -f 2); do
+		if [ "" == "$(git for-each-ref --format='%(refname)' refs/tags/$TAG)" ]; then
+			echo git fetch --no-tags $UPSTREAM tags/$TAG:refs/tags/$TAG
+		fi
+	done
+
+	local BASE_URL=https://patcher.liferay.com/group/guest/patching/-/osb_patcher/fixes/create
+	local BRANCH=$(git symbolic-ref --short HEAD)
+	local PATCHER_FIX_NAME=$(echo $BRANCH | grep -o "LP[EPS]-[0-9]*")
+	local ORIGIN=$(git remote -v | grep liferay-portal-ee | grep -vF ':liferay/' | cut -f 2 | cut -d' ' -f 1 | uniq)
+
+	if [ "" == "$(git for-each-ref --format='%(refname)' refs/$ORIGIN/$BRANCH)" ]; then
+		git push $ORIGIN $BRANCH
+	elif [ "" != "$(git log $ORIGIN/$BRANCH..$BRANCH)" ]; then
+		git push -f $ORIGIN $BRANCH
+	fi
+
+	NS=_1_WAR_osbpatcherportlet_
+
+	if [[ "$BASE_TAG" == fix-pack-base-6130* ]] || [[ "$BASE_TAG" == fix-pack-base-6210* ]]; then
+		PRODUCT_VERSION=1
+	else
+		PRODUCT_VERSION=2
+	fi
+
+	python -m webbrowser "${BASE_URL}?${NS}productVersion=${PRODUCT_VERSION}&${NS}patcherProjectVersionId=${BASELINE_ID}&${NS}committish=${BRANCH}&${NS}patcherFixName=${PATCHER_FIX_NAME}&${NS}gitRemoteURL=$ORIGIN" &
+}
+
+patcher
