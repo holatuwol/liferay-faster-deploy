@@ -19,10 +19,13 @@ applychanges() {
 		COMPARE_HASH=$NEW_BASELINE
 	fi
 
-	# cachenpm also determines if there are any changes if
-	# you give it a parameter, so use it instead
+	# Run cachenpm if needed
 
 	$(dirname "${BASH_SOURCE[0]}")/cachenpm $COMPARE_HASH
+
+	# Compute all changes, not just the ones in modules (which is what cachenpm does)
+
+	$(dirname "${BASH_SOURCE[0]}")/gitchanges $COMPARE_HASH
 
 	# If any of the folders that are affected is one that has
 	# one of the version range macros, make sure to fix it
