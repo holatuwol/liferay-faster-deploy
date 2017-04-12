@@ -14,7 +14,7 @@ checkjava() {
 	local MINIMUM_JAVA_VERSION=8
 
 	if [ -f "$GIT_ROOT/build.properties" ]; then
-		MINIMUM_JAVA_VERSION=$(grep javac.source build.properties | cut -d'=' -f 2 | cut -d'.' -f 2)
+		MINIMUM_JAVA_VERSION=$(grep javac.source "$GIT_ROOT/build.properties" | cut -d'=' -f 2 | cut -d'.' -f 2)
 	fi
 
 	JAVA_VERSION=$(java -version 2>&1 | head -1 | cut -d'"' -f 2 | cut -d'.' -f 2)
