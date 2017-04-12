@@ -115,12 +115,12 @@ deployant() {
 	for folder in $(ls -1); do
 		if [ -d $folder/src ] && [ ! -f $folder/$folder.jar ]; then
 			if [ -f $LIFERAY_HOME/tomcat-*/webapps/ROOT/WEB-INF/lib/$folder.jar ]; then
-				cp $LIFERAY_HOME/tomcat-*/webapps/ROOT/WEB-INF/lib/$folder.jar $folder
+				cp -a $LIFERAY_HOME/tomcat-*/webapps/ROOT/WEB-INF/lib/$folder.jar $folder
 			elif [ -f $LIFERAY_HOME/tomcat-*/lib/ext/$folder.jar ]; then
-				cp $LIFERAY_HOME/tomcat-*/lib/ext/$folder.jar $folder
+				cp -a $LIFERAY_HOME/tomcat-*/lib/ext/$folder.jar $folder
 			fi
 
-			if [ -f $folder/$folder.jar ]; then
+			if [ -f $folder/$folder.jar ] && [ ! -d $folder/classes ]; then
 				mkdir -p $folder/classes
 				unzip -qq $folder/$folder.jar -d $folder/classes
 			fi
