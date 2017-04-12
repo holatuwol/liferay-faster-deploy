@@ -1,9 +1,5 @@
 #!/bin/bash
 
-cachenpm() {
-	$(dirname "${BASH_SOURCE[0]}")/cachenpm
-}
-
 findgradle() {
 	GRADLE_HOME=$PWD
 
@@ -82,7 +78,9 @@ gw() {
 	# node_modules for all the dependency modules.
 
 	pushd $GIT_ROOT > /dev/null
-	cachenpm
+
+	$(dirname "${BASH_SOURCE[0]}")/cachenpm $@
+
 	popd > /dev/null
 
 	# run the gradlew binary, making sure to set GRADLE_OPTS if
