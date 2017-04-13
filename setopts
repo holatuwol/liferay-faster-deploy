@@ -38,6 +38,10 @@ gitroot() {
 	fi
 }
 
+if [ "" == "$USER" ]; then
+	USER=$USERNAME
+fi
+
 gitroot && checkjava && buildopts
 
 if [[ 0 -ne $? ]]; then
