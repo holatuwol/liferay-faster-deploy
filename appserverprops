@@ -5,10 +5,6 @@ appserverprops() {
 		echo "Missing app.server.$USER.properties"
 		return 1
 	fi
-
-	if [ "" != "$ARCHIVE_HOME" ]; then
-		cleanappserver
-	fi
 }
 
 buildprops() {
@@ -68,6 +64,15 @@ cleanappserver() {
 }
 
 gradleprops() {
+	if [ -f "$GIT_ROOT/app.server.$USER.properties" ]; then
+		ANT_LIFERAY_HOME=$(grep '^\s*app.server.parent.dir=' "$GIT_ROOT/app.server.$USER.properties" | cut -d'=' -f 2)
+	fi
+
+	if [ ! -d "$GIT_ROOT/modules" ]; then
+		LIFERAY_HOME=$ANT_LIFERAY_HOME
+		return 0
+	fi
+
 	# Find gradle root
 
 	GRADLE_HOME=$PWD
@@ -94,10 +99,6 @@ gradleprops() {
 
 	if [ -f "$GRADLE_HOME/.gradle/gradle.properties" ]; then
 		GRADLE_LIFERAY_HOME=$(grep -F liferay.home= $GRADLE_HOME/.gradle/gradle.properties | cut -d'=' -f 2)
-	fi
-
-	if [ -f "$GIT_ROOT/app.server.$USER.properties" ]; then
-		ANT_LIFERAY_HOME=$(grep '^\s*app.server.parent.dir=' "$GIT_ROOT/app.server.$USER.properties" | cut -d'=' -f 2)
 	fi
 
 	if [ "" == "$ANT_LIFERAY_HOME" ]; then
@@ -135,3 +136,9 @@ setopts() {
 }
 
 setopts && appserverprops && buildprops && gradleprops
+
+if [[ 0 -eq $? ]]; then
+	if [ "" != "$ARCHIVE_HOME" ]; then
+		cleanappserver
+	fi
+fi
