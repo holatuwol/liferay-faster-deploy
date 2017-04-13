@@ -15,7 +15,6 @@ buildprops() {
 	# Disable the baseline report unless it's explicitly requested
 
 	echo 'baseline.jar.report.level=off' > $GIT_ROOT/build.$USER.properties
-	echo "build.repository.local.dir=$HOME/.m2/repository" >> $GIT_ROOT/build.$USER.properties
 
 	# If we're on an older CentOS server, we can't use the node.js SASS compiler
 
