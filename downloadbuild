@@ -173,7 +173,7 @@ getbuild() {
 	if [[ "$1" == s3://* ]]; then
 		aws s3 cp "$1" .
 	else
-		wget "$1"
+		curl -O "$1"
 	fi
 
 	builtin cd -

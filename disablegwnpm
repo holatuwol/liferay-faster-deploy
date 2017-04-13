@@ -54,18 +54,18 @@ getglobalnode() {
 	echo "Downloading global node.js for Gradle"
 
 	if [ "Darwin" == "$(uname -s)" ]; then
-		wget -qq https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-darwin-x64.tar.gz
+		curl -O https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-darwin-x64.tar.gz
 		tar -zxf node-${NODE_VERSION}-darwin-x64.tar.gz
 		rm node-${NODE_VERSION}-darwin-x64.tar.gz
 	else
-		wget -qq https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-linux-x64.tar.gz
+		curl -O https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-linux-x64.tar.gz
 		tar -zxf node-${NODE_VERSION}-linux-x64.tar.gz
 		rm node-${NODE_VERSION}-linux-x64.tar.gz
 	fi
 
 	mv node-${NODE_VERSION}-linux-x64 node-${NODE_VERSION}
 
-	wget -qq https://nodejs.org/dist/${NODE_VERSION}/win-x64/node.exe
+	curl -O https://nodejs.org/dist/${NODE_VERSION}/win-x64/node.exe
 	mv node.exe node-${NODE_VERSION}/bin/
 
 	popd > /dev/null
