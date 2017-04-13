@@ -1,7 +1,17 @@
 #!/bin/bash
 
+. "$(dirname "${BASH_SOURCE[0]}")/../setopts"
+
+if [[ 0 -ne $? ]]; then
+	exit 1
+fi
+
+pushd $GIT_ROOT > /dev/null
+
 if [[ "$1" == https://github.com/* ]]; then
 	"$(dirname "${BASH_SOURCE[0]}")/ghfetchpull" $@
 else
 	"$(dirname "${BASH_SOURCE[0]}")/ghsendpull" $@
 fi
+
+popd > /dev/null
