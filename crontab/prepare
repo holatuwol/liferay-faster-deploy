@@ -9,25 +9,26 @@ compile() {
 
 	# Setup properties
 
+	echo "app.server.parent.dir=$LIFERAY_HOME" > app.server.$USER.properties
+
 	ARCHIVE_HOME="$HOME/.liferay/tomcat" \
-		TARGET_FOLDER="$TARGET_FOLDER" \
-			$(dirname "${BASH_SOURCE[0]}")/../appserverprops
+		$(dirname "${BASH_SOURCE[0]}")/../appserverprops
 
 	# Begin building
 
-	echo 'Git Hash:' | tee "${TARGET_FOLDER}.log"
-	echo "$GIT_HASH" | tee -a "${TARGET_FOLDER}.log"
-	echo '' | tee -a "${TARGET_FOLDER}.log"
+	echo 'Git Hash:' | tee "${LIFERAY_HOME}.log"
+	echo "$GIT_HASH" | tee -a "${LIFERAY_HOME}.log"
+	echo '' | tee -a "${LIFERAY_HOME}.log"
 
 	if [ -f modules/build.gradle ]; then
-		$(dirname "${BASH_SOURCE[0]}")/../skipmp | tee -a "${TARGET_FOLDER}.log"
-		$(dirname "${BASH_SOURCE[0]}")/../cachenpm | tee -a "${TARGET_FOLDER}.log"
+		$(dirname "${BASH_SOURCE[0]}")/../skipmp | tee -a "${LIFERAY_HOME}.log"
+		$(dirname "${BASH_SOURCE[0]}")/../cachenpm | tee -a "${LIFERAY_HOME}.log"
 	fi
 
 	$(dirname "${BASH_SOURCE[0]}")/../fixbnd
 
 	set -o pipefail
-	ant all | tee -a "${TARGET_FOLDER}.log"
+	ant all | tee -a "${LIFERAY_HOME}.log"
 	EXIT_CODE=$?
 	set +o pipefail
 
@@ -37,7 +38,8 @@ compile() {
 }
 
 finish() {
-	TOMCAT_FOLDER=$TARGET_FOLDER/$(ls -1 $TARGET_FOLDER | grep -F 'tomcat-')
+	local TOMCAT_VERSION=$(grep -F app.server.tomcat.version= app.server.properties | cut -d'=' -f 2)
+	TOMCAT_FOLDER=$LIFERAY_HOME/tomcat-${TOMCAT_VERSION}
 
 	cp tools/servers/tomcat/bin/setenv.* $TOMCAT_FOLDER/bin
 	sed -i 's/@.*@ //g' $TOMCAT_FOLDER/bin/setenv.sh
@@ -68,7 +70,7 @@ finish() {
 
 	chmod u+x $TOMCAT_FOLDER/bin/*.sh
 
-	pushd $TARGET_FOLDER
+	pushd $LIFERAY_HOME
 
 	dos2unix $TOMCAT_FOLDER/bin/setenv.sh
 	dos2unix $TOMCAT_FOLDER/bin/startup.sh
@@ -88,7 +90,7 @@ finish() {
 
 	if [ -d /var/www/html/logs ] && [ "" != "$TIMESTAMP" ]; then
 		rm /var/www/html/logs/$1
-		ln -s "$TARGET_FOLDER" /var/www/html/logs/$1
+		ln -s "$LIFERAY_HOME" /var/www/html/logs/$1
 	fi
 
 	popd
@@ -151,9 +153,9 @@ prepare() {
 
 	if [ -d "${ARCHIVE_FOLDER}" ]; then
 		if [ "" != "$TIMESTAMP" ]; then
-			cp "${TARGET_FOLDER}.log" ${ARCHIVE_FOLDER}/$1-${TIMESTAMP}.log
+			cp "${LIFERAY_HOME}.log" ${ARCHIVE_FOLDER}/$1-${TIMESTAMP}.log
 		else
-			cp "${TARGET_FOLDER}.log" ${ARCHIVE_FOLDER}/$1.log
+			cp "${LIFERAY_HOME}.log" ${ARCHIVE_FOLDER}/$1.log
 		fi
 	fi
 }
@@ -180,9 +182,9 @@ if [ -z "${ARCHIVE_FOLDER}" ]; then
 fi
 
 if [ ! -z "${BUILD_FOLDER_SUFFIX}" ] && [ "/" != "$BUILD_FOLDER_SUFFIX" ]; then
-	TARGET_FOLDER="$BUILD_FOLDER_PREFIX/$1/$BUILD_FOLDER_SUFFIX"
+	LIFERAY_HOME="$BUILD_FOLDER_PREFIX/$1/$BUILD_FOLDER_SUFFIX"
 else
-	TARGET_FOLDER="$BUILD_FOLDER_PREFIX/$1"
+	LIFERAY_HOME="$BUILD_FOLDER_PREFIX/$1"
 fi
 
 prepare $@
