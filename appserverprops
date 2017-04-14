@@ -24,6 +24,10 @@ buildprops() {
 }
 
 cleanappserver() {
+	if [ "" == "$ARCHIVE_HOME" ]; then
+		return 0
+	fi
+
 	mkdir -p $ARCHIVE_HOME
 
 	local TOMCAT_VERSION=$(grep -F app.server.tomcat.version= $GIT_ROOT/app.server.properties | cut -d'=' -f 2)
@@ -135,10 +139,4 @@ setopts() {
 	. $(dirname "${BASH_SOURCE[0]}")/setopts
 }
 
-setopts && appserverprops && buildprops && gradleprops
-
-if [[ 0 -eq $? ]]; then
-	if [ "" != "$ARCHIVE_HOME" ]; then
-		cleanappserver
-	fi
-fi
+setopts && appserverprops && buildprops && gradleprops && cleanappserver
