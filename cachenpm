@@ -54,7 +54,6 @@ findmodules() {
 			echo "$1/package.json" >> "${cache_home}/cachenpm.txt"
 		fi
 	else
-		exit 0
 		$(dirname "${BASH_SOURCE[0]}")/gitchanges $@
 
 		for folder in $(cat .redeploy/changes_gradle_2.txt); do

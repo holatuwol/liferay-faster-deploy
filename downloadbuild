@@ -198,8 +198,6 @@ getbuildhash() {
 	else
 		curl -r 0-49 -s ${BRANCH_ARCHIVE_MIRROR}/${BUILD_LOG} | tail -1 | tee "$HOME/.liferay/builds/${BUILD_NAME}.githash"
 	fi
-
-	exit 0
 }
 
 getbuildname() {
