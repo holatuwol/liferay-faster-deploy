@@ -209,14 +209,7 @@ getbuildname() {
 }
 
 gettargetfolder() {
-	# Identify the folder we build into
-
-	CURRENT_BRANCH=$(git symbolic-ref --short HEAD)
-
-	if [ "" == "$CURRENT_BRANCH" ]; then
-		echo "Unable to build from detached head"
-		return 1
-	fi
+	CURRENT_BRANCH=$(git symbolic-ref --short HEAD 2> /dev/null)
 
 	# Check for app.server.$USER.properties
 

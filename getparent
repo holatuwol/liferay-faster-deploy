@@ -1,7 +1,7 @@
 #!/bin/bash
 
 getparent() {
-	CURRENT_BRANCH=$(git symbolic-ref --short HEAD)
+	CURRENT_BRANCH=$(git symbolic-ref --short HEAD 2> /dev/null)
 
 	BASE_TAG=
 	BASE_BRANCH=
