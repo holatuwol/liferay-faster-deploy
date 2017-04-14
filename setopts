@@ -20,7 +20,11 @@ checkjava() {
 	JAVA_VERSION=$(java -version 2>&1 | head -1 | cut -d'"' -f 2 | cut -d'.' -f 2)
 
 	if [[ $MINIMUM_JAVA_VERSION -gt $JAVA_VERSION ]]; then
+		java -version
+
+		echo
 		echo "Please switch to JDK $MINIMUM_JAVA_VERSION or higher before building"
+
 		return 1
 	fi
 }
@@ -33,19 +37,20 @@ gitroot() {
 	done
 
 	if [ ! -e "$GIT_ROOT/.git" ]; then
+		GIT_ROOT=
 		echo "Unable to find version control root"
-		exit 1
+		return 1
 	fi
+}
+
+initfolder() {
+	mkdir -p $GIT_ROOT/.redeploy
 }
 
 if [ "" == "$USER" ]; then
 	USER=$USERNAME
 fi
 
-gitroot && checkjava && buildopts
-
-if [[ 0 -ne $? ]]; then
-	exit 1
+if [ "" == "$GIT_ROOT" ]; then
+	gitroot && checkjava && buildopts && initfolder
 fi
-
-mkdir -p $GIT_ROOT/.redeploy
