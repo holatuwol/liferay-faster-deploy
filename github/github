@@ -17,7 +17,7 @@ github() {
 		fi
 	fi
 
-	if [ -f "$GIT_FOLDER/release.properties" ]; then
+	if [ -f "$GIT_FOLDER/ci.properties" ]; then
 		. "$(dirname "${BASH_SOURCE[0]}")/../getparent"
 	else
 		CURRENT_BRANCH=$(git symbolic-ref --short HEAD)

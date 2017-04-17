@@ -11,10 +11,24 @@ getparent() {
 		return 0
 	fi
 
-	local FULL_VERSION=$(grep lp.version= release.properties | cut -d'=' -f 2)
-	local MAJOR_VERSION=$(grep lp.version.major= release.properties | cut -d'=' -f 2)
+	if [ ! -f "$GIT_ROOT/ci.properties" ]; then
+		return 1
+	fi
 
-	if [ "6.1" == "$MAJOR_VERSION" ]; then
+	local FULL_VERSION=
+	local MAJOR_VERSION=
+
+	if [ -f "$GIT_ROOT/release.properties" ]; then
+		FULL_VERSION=$(grep lp.version= "$GIT_ROOT/release.properties" | cut -d'=' -f 2)
+		MAJOR_VERSION=$(grep lp.version.major= "$GIT_ROOT/release.properties" | cut -d'=' -f 2)
+	elif [ -f "$GIT_ROOT/build.properties" ]; then
+		FULL_VERSION=$(grep lp.version= "$GIT_ROOT/build.properties" | cut -d'=' -f 2)
+		MAJOR_VERSION=$(grep lp.version= "$GIT_ROOT/build.properties" | cut -d'=' -f 2 | cut -d'.' -f 1,2)
+	fi
+
+	if [ "6.0" == "$MAJOR_VERSION" ]; then
+		BASE_BRANCH=ee-6.0.x
+	elif [ "6.1" == "$MAJOR_VERSION" ]; then
 		BASE_BRANCH=ee-6.1.x
 	elif [ "6.2" == "$MAJOR_VERSION" ]; then
 		BASE_BRANCH=ee-6.2.x
@@ -51,4 +65,8 @@ isbuildbranch() {
 	fi
 }
 
-getparent $@
+setopts() {
+	. $(dirname "${BASH_SOURCE[0]}")/setopts
+}
+
+setopts && getparent $@
