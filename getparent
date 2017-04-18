@@ -11,7 +11,7 @@ getparent() {
 		return 0
 	fi
 
-	if [ ! -f "$GIT_ROOT/ci.properties" ]; then
+	if [ ! -f "$GIT_ROOT/build.properties" ]; then
 		return 1
 	fi
 
