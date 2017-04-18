@@ -1,12 +1,22 @@
 #!/bin/bash
 
 buildopts() {
+	JAVA_VERSION=$(java -version 2>&1 | head -1 | cut -d'"' -f 2 | cut -d'.' -f 2)
+
 	if [ "" == "$ANT_OPTS" ]; then
-		export ANT_OPTS='-Xms1g -Xmx1g'
+		ANT_OPTS='-Xms2g -Xmx2g'
+
+		if [[ 8 -gt $JAVA_VERSION ]]; then
+			ANT_OPTS="$ANT_OPTS -XX:MaxPermSize=512m"
+		fi
 	fi
 
 	if [ "" == "$GRADLE_OPTS" ]; then
-		export GRADLE_OPTS='-Xms3g -Xmx3g -Dorg.gradle.workers.max=1'
+		GRADLE_OPTS='-Xms3g -Xmx3g -Dorg.gradle.workers.max=1'
+
+		if [[ 8 -gt $JAVA_VERSION ]]; then
+			GRADLE_OPTS="$GRADLE_OPTS -XX:MaxPermSize=512m"
+		fi
 	fi
 }
 
@@ -16,8 +26,6 @@ checkjava() {
 	if [ -f "$GIT_ROOT/build.properties" ]; then
 		MINIMUM_JAVA_VERSION=$(grep javac.source "$GIT_ROOT/build.properties" | cut -d'=' -f 2 | cut -d'.' -f 2)
 	fi
-
-	JAVA_VERSION=$(java -version 2>&1 | head -1 | cut -d'"' -f 2 | cut -d'.' -f 2)
 
 	if [[ $MINIMUM_JAVA_VERSION -gt $JAVA_VERSION ]]; then
 		java -version
