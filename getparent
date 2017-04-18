@@ -69,4 +69,8 @@ setopts() {
 	. $(dirname "${BASH_SOURCE[0]}")/setopts
 }
 
-setopts && getparent $@
+setopts
+
+if [ "" != "$GIT_ROOT" ]; then
+	getparent $@
+fi
