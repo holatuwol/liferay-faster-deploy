@@ -51,6 +51,8 @@ if [ "" == "$USER" ]; then
 	USER=$USERNAME
 fi
 
+buildopts
+
 if [ "" == "$GIT_ROOT" ]; then
-	gitroot && checkjava && buildopts && initfolder
+	gitroot && initfolder && checkjava
 fi
