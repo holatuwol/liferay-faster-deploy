@@ -42,8 +42,8 @@ gitfilematch() {
 	MATCHING_FILES=
 	MATCHING_FOLDERS=
 
-	mkdir -p $GIT_FOLDER/.redeploy
-	local SCRATCH_FILE=$GIT_FOLDER/.redeploy/lsfiles.txt
+	mkdir -p $GIT_ROOT/.redeploy
+	local SCRATCH_FILE=$GIT_ROOT/.redeploy/lsfiles.txt
 	git ls-files $2 > "$SCRATCH_FILE"
 
 	# If the folder is empty, there's nothing for us to do
@@ -110,15 +110,6 @@ gitfilematch() {
 }
 
 gitfind() {
-	GIT_FOLDER=$PWD
-
-	while [ "/" != "$GIT_FOLDER" ] && [ ! -e "$GIT_FOLDER/.git" ]; do
-		GIT_FOLDER=$(dirname $GIT_FOLDER)
-	done
-
-	# If you run gitfind with no arguments, then stop processing after
-	# setting the GIT_FOLDER
-
 	if [ "" == "$1" ]; then
 		return 0
 	fi
@@ -141,7 +132,7 @@ gitfind() {
 
 	# Next, make sure that we can use git to find our files
 
-	if [ ! -e $GIT_FOLDER/.git ]; then
+	if [ ! -e $GIT_ROOT/.git ]; then
 		FILE=
 		FOLDER=
 		MATCHING_FOLDERS=
@@ -150,9 +141,9 @@ gitfind() {
 
 	# Shortcut in case anyone says "cd portal-impl" or similar
 
-	if [ -d $GIT_FOLDER/$1 ]; then
+	if [ -d $GIT_ROOT/$1 ]; then
 		FILE=
-		FOLDER=$GIT_FOLDER/$1
+		FOLDER=$GIT_ROOT/$1
 		MATCHING_FOLDERS=
 		return 0
 	fi
@@ -161,8 +152,8 @@ gitfind() {
 
 	gitfile $1 "$PWD"
 
-	if [ "" == "$MATCHING_FOLDERS" ] && [ "$PWD" != "$GIT_FOLDER" ]; then
-		gitfile $1 "$GIT_FOLDER"
+	if [ "" == "$MATCHING_FOLDERS" ] && [ "$PWD" != "$GIT_ROOT" ]; then
+		gitfile $1 "$GIT_ROOT"
 	fi
 
 	if [ "" == "$MATCHING_FOLDERS" ] || [[ 1 -ne $(echo "$MATCHING_FOLDERS" | wc -l) ]]; then
@@ -189,8 +180,12 @@ gitfinderror() {
 	return 1
 }
 
-gitfind $1
+. "$(dirname "${BASH_SOURCE[0]}")/../setopts"
 
-if [[ 0 -ne $? ]]; then
-	gitfinderror $1
+if [ "" != "$GIT_ROOT" ]; then
+	gitfind $1
+
+	if [[ 0 -ne $? ]]; then
+		gitfinderror $1
+	fi
 fi

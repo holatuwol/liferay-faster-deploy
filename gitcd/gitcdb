@@ -6,22 +6,9 @@ gitcdb() {
 		return 1
 	fi
 
-	# check if we can use git ls-files
-
-	local GIT_FOLDER=$PWD
-
-	while [ "/" != "$GIT_FOLDER" ] && [ ! -e "$GIT_FOLDER/.git" ]; do
-		GIT_FOLDER=$(dirname $GIT_FOLDER)
-	done
-
-	if [ ! -e $GIT_FOLDER/.git ]; then
-		echo "Unable to use git to locate $1"
-		return 1
-	fi
-
 	# git ls-files wants a relative path, so let's generate it
 
-	local ROOT_FOLDER=$(python -c "from __future__ import print_function; import os.path; print(os.path.relpath('$GIT_FOLDER', '$PWD'))")
+	local ROOT_FOLDER=$(python -c "from __future__ import print_function; import os.path; print(os.path.relpath('$GIT_ROOT', '$PWD'))")
 
 	# use git ls-files to find bnd.bnd files, then use grep -l to list matching files
 
@@ -36,4 +23,8 @@ gitcdb() {
 	pwd
 }
 
-gitcdb $@
+. "$(dirname "${BASH_SOURCE[0]}")/../setopts"
+
+if [ "" != "$GIT_ROOT" ]; then
+	gitcdb $@
+fi
