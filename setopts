@@ -11,6 +11,8 @@ buildopts() {
 		fi
 	fi
 
+	export ANT_OPTS
+
 	if [ "" == "$GRADLE_OPTS" ]; then
 		GRADLE_OPTS='-Xms3g -Xmx3g -Dorg.gradle.workers.max=1'
 
@@ -18,6 +20,8 @@ buildopts() {
 			GRADLE_OPTS="$GRADLE_OPTS -XX:MaxPermSize=512m"
 		fi
 	fi
+
+	export GRADLE_OPTS
 }
 
 checkjava() {
