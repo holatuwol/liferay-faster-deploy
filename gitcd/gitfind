@@ -184,6 +184,8 @@ nongitfind() {
 		MATCHING_FOLDERS=$FOLDER
 		return 0
 	fi
+
+	return 1
 }
 
 . "$(dirname "${BASH_SOURCE[0]}")/../setopts"
