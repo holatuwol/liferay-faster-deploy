@@ -1,6 +1,8 @@
 #!/bin/bash
 
 github() {
+	. "$(dirname "${BASH_SOURCE[0]}")/../setopts"
+
 	local COMMIT=
 
 	if [ "$1" == "$(echo $1 | grep -o '[0-9a-f]*')" ]; then
@@ -35,7 +37,7 @@ github() {
 	local GIT_PATH=
 
 	if [ "" == "$COMMIT" ]; then
-		GIT_PATH=$(python -c "import os.path; print(os.path.relpath('$FOLDER', '$GIT_FOLDER'))")
+		GIT_PATH=$(python -c "import os.path; print(os.path.relpath('$FOLDER', '$GIT_ROOT'))")
 
 		if [ "" == "$BASE_TAG" ]; then
 			GIT_PATH="$BASE_BRANCH/$GIT_PATH"
