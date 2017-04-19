@@ -21,6 +21,12 @@ buildprops() {
 	# Avoid using ECJ for compilation
 
 	echo 'javac.compiler=modern' >> $GIT_ROOT/build.$USER.properties
+
+	# Make sure the repository password is up to date
+
+	local UPSTREAM_BRANCH=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/ee-7.0.x$" | cut -d'/' -f 3,4)
+
+	git show ${UPSTREAM_BRANCH}:build.properties | grep repository.private.password= >> $GIT_ROOT/build.$USER.properties
 }
 
 cleanappserver() {
