@@ -116,17 +116,7 @@ gitfind() {
 
 	# If the folder or file already exists, skip all other processing
 
-	if [ -d "$1" ] || [ -h "$1" ]; then
-		FILE=
-		FOLDER=$1
-		MATCHING_FOLDERS=$FOLDER
-		return 0
-	fi
-
-	if [ -f "$1" ]; then
-		FILE=$(basename "$1")
-		FOLDER=$(dirname "$1")
-		MATCHING_FOLDERS=$FOLDER
+	if nongitfind "$1"; then
 		return 0
 	fi
 
@@ -180,12 +170,30 @@ gitfinderror() {
 	return 1
 }
 
+nongitfind() {
+	if [ -d "$1" ] || [ -h "$1" ]; then
+		FILE=
+		FOLDER=$1
+		MATCHING_FOLDERS=$FOLDER
+		return 0
+	fi
+
+	if [ -f "$1" ]; then
+		FILE=$(basename "$1")
+		FOLDER=$(dirname "$1")
+		MATCHING_FOLDERS=$FOLDER
+		return 0
+	fi
+}
+
 . "$(dirname "${BASH_SOURCE[0]}")/../setopts"
 
 if [ "" != "$GIT_ROOT" ]; then
-	gitfind $1
+	gitfind "$1"
 
 	if [[ 0 -ne $? ]]; then
-		gitfinderror $1
+		gitfinderror "$1"
 	fi
+else
+	nongitfind "$1"
 fi
