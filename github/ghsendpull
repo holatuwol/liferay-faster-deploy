@@ -38,7 +38,7 @@ reformat() {
 }
 
 repmd() {
-	if [ ! -d "tools/sdk" ]; then
+	if [ -d "$GIT_ROOT/modules" ] && [ ! -d "tools/sdk" ]; then
 		echo "Missing plugins SDK for PMD tool"
 		ant setup-sdk
 	fi
