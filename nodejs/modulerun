@@ -1,0 +1,17 @@
+#!/bin/bash
+
+modulerun() {
+	for folder in $(cat ${cache_home}/cachenpm.txt | dirnames); do
+		pushd $folder > /dev/null
+
+		if [ -d "$folder/node_modules" ] && [ ! -f "$folder/yarn.lock" ]; then
+			npm install
+		else
+			$NPM_INSTALL
+		fi
+
+		popd > /dev/null
+	done
+}
+
+modulerun

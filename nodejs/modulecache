@@ -1,0 +1,57 @@
+#!/bin/bash
+
+modulecache() {
+	if [ -f /usr/bin/md5sum ]; then
+		MD5SUM=/usr/bin/md5sum
+	elif [ -f /sbin/md5 ]; then
+		MD5SUM="/sbin/md5 -r"
+	else
+		echo "Unable to compute MD5 checksums"
+		return 1
+	fi
+
+	for folder in $(cat ${cache_home}/cachenpm.txt | dirnames); do
+		cache_hash=$(jq '.dependencies, .devDependencies' $folder/package.json | $MD5SUM | cut -d' ' -f 1)
+		cache_file="${cache_home}/${cache_hash}.tar.gz"
+
+		pushd $folder > /dev/null
+
+		if [ -f "$cache_file" ]; then
+			cache_time=$(perl -MPOSIX -e 'print POSIX::strftime "%Y%m%d%H%M.%S", localtime((stat $ARGV[0])[9])' "${cache_file}")
+			folder_time=
+
+			if [ -d "node_modules" ]; then
+				folder_time=$(perl -MPOSIX -e 'print POSIX::strftime "%Y%m%d%H%M.%S", localtime((stat $ARGV[0])[9])' node_modules)
+			fi
+
+			if [ "$cache_time" != "$folder_time" ]; then
+				echo "Restoring cache for $folder"
+
+				rm -rf node_modules
+				tar -zxf "${cache_file}"
+				touch -t $cache_time node_modules
+			fi
+
+			popd > /dev/null
+			continue
+		fi
+
+		echo "Caching build for $folder"
+		rm -rf node_modules
+
+		if [ -d "$folder/node_modules" ] && [ ! -f "$folder/yarn.lock" ]; then
+			npm install && tar -zcf "$cache_file" node_modules
+		else
+			$NPM_INSTALL && tar -zcf "$cache_file" node_modules
+		fi
+
+		if [ -f "$cache_file" ]; then
+			cache_time=$(perl -MPOSIX -e 'print POSIX::strftime "%Y%m%d%H%M.%S", localtime((stat $ARGV[0])[9])' "$cache_file")
+			touch -t $cache_time node_modules
+		fi
+
+		popd > /dev/null
+	done
+}
+
+modulecache

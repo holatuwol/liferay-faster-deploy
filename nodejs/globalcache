@@ -1,0 +1,61 @@
+#!/bin/bash
+
+globalcache() {
+	mkdir -p "${cache_home}/node_modules"
+
+	for package_json in $(cat ${cache_home}/cachenpm.txt | dirnames); do
+		if [ ! -h "$folder/node_modules" ]; then
+			rm -rf "$folder/node_modules"
+			softlink "$folder/node_modules" "${cache_home}/node_modules"
+		fi
+	done
+
+	cp -a $(dirname "${BASH_SOURCE[0]}")/cachenpm.py ${cache_home}/cachenpm.py
+
+	pushd "${cache_home}" > /dev/null
+
+	if [ -f package.json ]; then
+		mv package.json package.json.old
+	fi
+
+	python cachenpm.py
+
+	if [ -f package.json.old ] && [ "" == "$(diff package.json package.json.old)" ]; then
+		echo 'package.json has no changes'
+	else
+		$NPM_INSTALL
+	fi
+
+	rm package.json.old
+
+	popd > /dev/null
+}
+
+softlink() {
+	# Taken from http://stackoverflow.com/questions/18641864/git-bash-shell-fails-to-create-symbolic-links
+
+	if [[ -z "$2" ]]; then
+		# Link-checking mode.
+		if [[ -n "$WINDIR" ]]; then
+			fsutil reparsepoint query "$1" > /dev/null
+		else
+			[[ -h "$1" ]]
+		fi
+	else
+		# Link-creation mode.
+		if [[ -n "$WINDIR" ]]; then
+			# Windows needs to be told if it's a directory or not. Infer that.
+			# Also: note that we convert `/` to `\`. In this case it's necessary.
+			if [[ -d "$2" ]]; then
+				cmd <<< "mklink /D \"$1\" \"${2//\//\\}\"" > /dev/null
+			else
+				cmd <<< "mklink \"$1\" \"${2//\//\\}\"" > /dev/null
+			fi
+		else
+			# You know what? I think ln's parameters are backwards.
+			ln -s "$2" "$1"
+		fi
+	fi
+}
+
+globalcache
