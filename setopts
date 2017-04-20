@@ -7,7 +7,7 @@ buildopts() {
 		ANT_OPTS='-Xms2g -Xmx2g'
 
 		if [[ 8 -gt $JAVA_VERSION ]]; then
-			ANT_OPTS="$ANT_OPTS -XX:MaxPermSize=512m"
+			ANT_OPTS="$ANT_OPTS -XX:MaxPermSize=1g"
 		fi
 	fi
 
