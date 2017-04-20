@@ -22,7 +22,7 @@ compile() {
 
 	if [ -f modules/build.gradle ]; then
 		$(dirname "${BASH_SOURCE[0]}")/../skipmp | tee -a "${LIFERAY_HOME}.log"
-		$(dirname "${BASH_SOURCE[0]}")/../cachenpm | tee -a "${LIFERAY_HOME}.log"
+		$(dirname "${BASH_SOURCE[0]}")/../nodejs/cachenpm | tee -a "${LIFERAY_HOME}.log"
 	fi
 
 	$(dirname "${BASH_SOURCE[0]}")/../fixbnd

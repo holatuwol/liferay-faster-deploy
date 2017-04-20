@@ -79,7 +79,7 @@ gw() {
 
 	pushd $GIT_ROOT > /dev/null
 
-	$(dirname "${BASH_SOURCE[0]}")/cachenpm $@
+	$(dirname "${BASH_SOURCE[0]}")/nodejs/cachenpm $@
 
 	popd > /dev/null
 

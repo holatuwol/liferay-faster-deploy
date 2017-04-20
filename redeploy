@@ -21,7 +21,7 @@ applychanges() {
 
 	# Run cachenpm if needed
 
-	$(dirname "${BASH_SOURCE[0]}")/cachenpm $COMPARE_HASH
+	$(dirname "${BASH_SOURCE[0]}")/nodejs/cachenpm $COMPARE_HASH
 
 	# Compute all changes, not just the ones in modules (which is what cachenpm does)
 
