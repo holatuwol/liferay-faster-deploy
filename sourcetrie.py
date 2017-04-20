@@ -76,7 +76,7 @@ class SourceTrie:
 		version_lines = [line for line in lines if line.startswith('Bundle-Version:')]
 
 		if len(name_lines) != 1 or len(version_lines) != 1:
-			return None
+			return None, None
 
 		artifact_name = name_lines[0][20:].strip()
 		artifact_version = version_lines[0][15:].strip()
