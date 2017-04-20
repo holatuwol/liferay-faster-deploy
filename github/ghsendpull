@@ -27,7 +27,7 @@ reformat() {
 		cd portal-impl
 		pwd
 
-		$(dirname "${BASH_SOURCE[0]}")/formatsource ${upstream_remote}/$BASE_BRANCH
+		$(dirname "${BASH_SOURCE[0]}")/formatsource ${upstream_remote}/$BASE_BRANCH $(git log ${upstream_remote}/$BASE_BRANCH..HEAD | wc -l)
 		EXIT_CODE=$?
 		cd -
 
