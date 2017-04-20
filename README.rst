@@ -20,7 +20,7 @@ Then, add a Bash function to `.bash_aliases` (or the equivalent on whichever she
 Building from a Daily Build
 ===========================
 
-**Note**: Unlike the scripts in the subfolders, this script is currently experimental!
+**Note**: Unlike the scripts in the subfolders, this script is currently experimental! It also only works if you are inside the Liferay LAX office!
 
 Running ``ant all`` can be a time consuming ordeal on some operating systems. What if you could use a binary from some time earlier in the day (so you have at least some sense that things are up to date) and then only deploy the changes that you made without having to run ``ant all``?
 
@@ -31,6 +31,6 @@ Use whatever shorthand you think makes sense, with the example here being ``rd``
 	cd /path/to/portal/source
 	rd
 
-This script currently downloads the latest daily build from a local mirror and relies on there being a high speed connection between your local computer and that daily build host machine (so don't do this over WiFi!).  Update the mirror to be whatever internal server is available in your local office. The plan is for these builds to be automatically distributed via  ``files.liferay.com``, but it's also possible to create the build server via the provided scripts.
+This script currently downloads the latest daily build from a local mirror and relies on there being a high speed connection between your local computer and that daily build host machine (so don't do this over WiFi!).  Update the mirror to be whatever internal server is available in your local office. The plan is for these builds to be automatically distributed via  ``files.liferay.com`` (because many Liferay offices have a mirror), but it's also possible to create the build server via the provided scripts.
 
 Essentially, the script uses the build as a base, attempts to compute the changed modules and folders, runs ``install-portal-snapshots`` on any root level dependencies (in the case of ``default`` dependencies), and then asks Gradle to mass deploy the changed modules.
