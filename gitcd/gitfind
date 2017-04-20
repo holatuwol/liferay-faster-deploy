@@ -188,14 +188,16 @@ nongitfind() {
 	return 1
 }
 
-. "$(dirname "${BASH_SOURCE[0]}")/../setopts"
+nongitfind "$1"
 
-if [ "" != "$GIT_ROOT" ]; then
-	gitfind "$1"
+if [[ 0 -ne $? ]]; then
+	. "$(dirname "${BASH_SOURCE[0]}")/../setopts"
 
-	if [[ 0 -ne $? ]]; then
-		gitfinderror "$1"
+	if [ "" != "$GIT_ROOT" ]; then
+		gitfind "$1"
+
+		if [[ 0 -ne $? ]]; then
+			gitfinderror "$1"
+		fi
 	fi
-else
-	nongitfind "$1"
 fi
