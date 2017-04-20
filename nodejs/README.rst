@@ -61,4 +61,4 @@ Unfortunately, over time we've discovered that changes do happen very often, and
 
 Therefore, a more ideal solution is to limit the number of ``package.json`` files we process to keep the number of inodes low. What if you could merge ``package.json`` files together and have a single master folder that you symlink to in order to reduce the number of inodes?
 
-* `globalcache <modulecache>`__
+* `globalcache <globalcache>`__
