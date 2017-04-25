@@ -12,15 +12,24 @@ gitcdb() {
 
 	# use git ls-files to find bnd.bnd files, then use grep -l to list matching files
 
-	local BND=$(git ls-files $ROOT_FOLDER | grep bnd.bnd | xargs grep -l ": .*${1}$")
+	local SCRATCH_FILE=$GIT_ROOT/.redeploy/lsfiles.txt
+	git ls-files $ROOT_FOLDER | grep bnd.bnd > "$SCRATCH_FILE"
+
+	local BND=$(cat "$SCRATCH_FILE" | xargs grep -l "Bundle-SymbolicName: .*${1}.*$")
 
 	if [ "" == "$BND" ]; then
 		echo "Could not find Bundle-SymbolicName $1"
 		return 1
 	fi
 
-	builtin cd $(dirname $BND)
-	pwd
+	if [[ 1 -ne $(echo "$BND" | wc -l) ]]; then
+		echo "$1 is ambiguous:"
+		cat "$SCRATCH_FILE" | xargs grep -oh "Bundle-SymbolicName: .*${1}.*$" | cut -d' ' -f 2
+		return 1
+	fi
+
+	#builtin cd $(dirname $BND)
+	#pwd
 }
 
 . "$(dirname "${BASH_SOURCE[0]}")/../setopts"
