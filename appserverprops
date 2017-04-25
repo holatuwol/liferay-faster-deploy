@@ -36,7 +36,12 @@ cleanappserver() {
 
 	mkdir -p $ARCHIVE_HOME
 
-	local TOMCAT_VERSION=$(grep -F app.server.tomcat.version= $GIT_ROOT/app.server.properties | cut -d'=' -f 2)
+	local TOMCAT_VERSION=$(grep -F app.server.tomcat.version= $GIT_ROOT/app.server.$USER.properties | cut -d'=' -f 2)
+
+	if [ "" == "$TOMCAT_VERSION" ]; then
+		TOMCAT_VERSION=$(grep -F app.server.tomcat.version= $GIT_ROOT/app.server.properties | cut -d'=' -f 2)
+	fi
+
 	local TOMCAT_MAJOR_VERSION=$(echo $TOMCAT_VERSION | cut -d'.' -f 1)
 
 	# make sure we have an archive file
