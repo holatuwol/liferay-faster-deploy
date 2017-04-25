@@ -8,6 +8,10 @@ gitchanges() {
 	. $(dirname "${BASH_SOURCE[0]}")/../gitchanges $@
 }
 
+rebaseline() {
+	ant start baseline-current-branch -Dgit.working.branch.name=${upstream_remote}/$BASE_BRANCH
+}
+
 reformat() {
 	for folder in $(cat "$GIT_ROOT/.redeploy/changes_gradle_1.txt" "$GIT_ROOT/.redeploy/changes_gradle_2.txt"); do
 		cd $folder
@@ -133,7 +137,7 @@ sendpull() {
 	if [ -f "$GIT_ROOT/release.properties" ]; then
 		pushd $GIT_ROOT > /dev/null
 
-		gitchanges ${upstream_remote}/$BASE_BRANCH && reformat && repmd
+		gitchanges ${upstream_remote}/$BASE_BRANCH && rebaseline && reformat && repmd
 		EXIT_CODE=$?
 
 		popd > /dev/null
