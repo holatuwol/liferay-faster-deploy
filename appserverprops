@@ -2,7 +2,7 @@
 
 appserverprops() {
 	if [ ! -f $GIT_ROOT/app.server.$USER.properties ]; then
-		echo "Missing app.server.$USER.properties"
+		echo "Missing $GIT_ROOT/app.server.$USER.properties"
 		return 1
 	fi
 }
@@ -79,6 +79,8 @@ cleanappserver() {
 }
 
 gradleprops() {
+	local ANT_LIFERAY_HOME=
+
 	if [ -f "$GIT_ROOT/app.server.$USER.properties" ]; then
 		ANT_LIFERAY_HOME=$(grep '^\s*app.server.parent.dir=' "$GIT_ROOT/app.server.$USER.properties" | cut -d'=' -f 2)
 	fi
@@ -109,7 +111,6 @@ gradleprops() {
 
 	# Make sure that we've run ant setup-sdk
 
-	local ANT_LIFERAY_HOME=
 	local GRADLE_LIFERAY_HOME=
 
 	if [ -f "$GRADLE_HOME/.gradle/gradle.properties" ]; then
@@ -118,7 +119,7 @@ gradleprops() {
 
 	if [ "" == "$ANT_LIFERAY_HOME" ]; then
 		if [ "" == "$GRADLE_LIFERAY_HOME" ]; then
-			echo "Missing app.server.$USER.properties"
+			echo "Missing app.server.$USER.properties and gradle.properties"
 			return 1
 		fi
 
