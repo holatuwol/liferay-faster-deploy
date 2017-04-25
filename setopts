@@ -3,22 +3,18 @@
 buildopts() {
 	JAVA_VERSION=$(java -version 2>&1 | head -1 | cut -d'"' -f 2 | cut -d'.' -f 2)
 
-	if [ "" == "$ANT_OPTS" ]; then
-		ANT_OPTS='-Xms2g -Xmx2g'
+	ANT_OPTS='-Xms2g -Xmx2g'
 
-		if [[ 8 -gt $JAVA_VERSION ]]; then
-			ANT_OPTS="$ANT_OPTS -XX:MaxPermSize=1g"
-		fi
+	if [[ 8 -gt $JAVA_VERSION ]]; then
+		ANT_OPTS="$ANT_OPTS -XX:MaxPermSize=1g"
 	fi
 
 	export ANT_OPTS
 
-	if [ "" == "$GRADLE_OPTS" ]; then
-		GRADLE_OPTS='-Xms3g -Xmx3g -Dorg.gradle.workers.max=1'
+	GRADLE_OPTS='-Xms3g -Xmx3g -Dorg.gradle.workers.max=1'
 
-		if [[ 8 -gt $JAVA_VERSION ]]; then
-			GRADLE_OPTS="$GRADLE_OPTS -XX:MaxPermSize=512m"
-		fi
+	if [[ 8 -gt $JAVA_VERSION ]]; then
+		GRADLE_OPTS="$GRADLE_OPTS -XX:MaxPermSize=512m"
 	fi
 
 	export GRADLE_OPTS
