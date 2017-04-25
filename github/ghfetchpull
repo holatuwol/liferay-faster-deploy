@@ -1,28 +1,48 @@
 #!/bin/bash
 
+fetchpr() {
+	local SCRATCH_FILE="$GIT_ROOT/.redeploy/pr.txt"
+
+	local endpoint=$(echo $1 | cut -d'/' -f 4,5)
+	local repo_url=git@github.com:${endpoint}.git
+	local pull_id=$(echo $1 | cut -d'/' -f 7)
+
+	curl -H "Authorization: token $(git config github.oauth-token)" -s https://api.github.com/repos/$endpoint/pulls/$pull_id > "$SCRATCH_FILE"
+
+	BASE_BRANCH=$(cat "$SCRATCH_FILE" | jq '.base.ref' | cut -d'"' -f 2)
+
+	local target_branch=$(cat "$SCRATCH_FILE" | jq '.head.ref' | tr -d '"')
+	local upstream_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
+
+	if [ "" == "$upstream_remote" ] && [ -f "$GIT_ROOT/release.properties" ]; then
+		. $(dirname "${BASH_SOURCE[0]}")/../getparent
+		upstream_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
+	fi
+
+	if [ "" == "$upstream_remote" ]; then
+		echo "Unable to identify upstream equivalent of $BASE_BRANCH"
+		exit 1
+	fi
+
+	if [ "" != "$(git for-each-ref --format='%(refname)' refs/heads/${target_branch})" ]; then
+		git branch -D ${target_branch}
+	fi
+
+	git fetch --no-tags ${repo_url} pull/${pull_id}/head:${target_branch}
+	git checkout ${target_branch}
+
+	if [[ 0 -eq $? ]]; then
+		git rebase ${upstream_remote}/${BASE_BRANCH}
+	fi
+}
+
+setopts() {
+	. $(dirname "${BASH_SOURCE[0]}")/../setopts
+}
+
 if [[ "$1" != https://github.com/* ]]; then
 	echo "$1 does not look like a pull request URL"
 	exit 1
 fi
 
-hub checkout $@
-
-endpoint=$(echo $1 | cut -d'/' -f 4,5)
-pull_id=$(echo $1 | cut -d'/' -f 7)
-
-curl -H "Authorization: token $(git config github.oauth-token)" -s https://api.github.com/repos/$endpoint/pulls/$pull_id | jq '.base.ref'
-
-upstream_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
-
-if [ "" == "$upstream_remote" ] && [ -f "$GIT_ROOT/release.properties" ]; then
-	. $(dirname "${BASH_SOURCE[0]}")/../getparent
-	upstream_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
-fi
-
-if [ "" == "$upstream_remote" ]; then
-	echo "Unable to identify upstream equivalent of $BASE_BRANCH"
-	exit 1
-fi
-
-git fetch --no-tags ${upstream_remote}
-git rebase ${upstream_remote}/${BASE_BRANCH}
+setopts && fetchpr $1
