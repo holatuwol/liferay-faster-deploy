@@ -186,16 +186,6 @@ setopts() {
 	. $(dirname "${BASH_SOURCE[0]}")/setopts
 }
 
-if [ -z "${TAG_ARCHIVE_MIRROR}" ]; then
-	echo "Please set a TAG_ARCHIVE_MIRROR for the build"
-	exit 1
-fi
-
-if [ -z "${BRANCH_ARCHIVE_MIRROR}" ]; then
-	echo "Please set a BRANCH_ARCHIVE_MIRROR for the build"
-	exit 1
-fi
-
 CURRENT_HASH=$(git log -1 --pretty='%H')
 
 setopts && cdroot

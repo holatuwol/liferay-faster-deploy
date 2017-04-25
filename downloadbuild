@@ -73,7 +73,9 @@ downloadbranch() {
 	# Download the build if we haven't done so already, making
 	# sure to clean up past builds to not take up too much space
 
-	if [ ! -f "$HOME/.liferay/builds/$BUILD_NAME" ]; then
+	if [ -z "${BRANCH_ARCHIVE_MIRROR}" ]; then
+		echo "Please set a BRANCH_ARCHIVE_MIRROR for the build to download updated snapshots"
+	elif [ ! -f "$HOME/.liferay/builds/$BUILD_NAME" ]; then
 		echo "Downloading snapshot for $SHORT_NAME ($NEW_BASELINE)"
 		getbuild "${BRANCH_ARCHIVE_MIRROR}/${BUILD_NAME}"
 	fi
@@ -113,8 +115,11 @@ downloadtag() {
 	NEW_BASELINE=$BASE_TAG
 	BUILD_NAME=${BASE_TAG}.tar.gz
 
-	if [ ! -f "$HOME/.liferay/builds/$BUILD_NAME" ]; then
+	if [ -z "${TAG_ARCHIVE_MIRROR}" ]; then
+		echo "Please set a TAG_ARCHIVE_MIRROR for the build to download updated snapshots"
+	elif [ ! -f "$HOME/.liferay/builds/$BUILD_NAME" ]; then
 		echo "Downloading snapshot for $BASE_TAG"
+
 		getbuild "${TAG_ARCHIVE_MIRROR}/${BUILD_NAME}"
 	fi
 
@@ -314,15 +319,6 @@ rebasebranch() {
 	return $EXIT_STATUS
 }
 
-if [ -z "${TAG_ARCHIVE_MIRROR}" ]; then
-	echo "Please set a TAG_ARCHIVE_MIRROR for the build"
-	exit 1
-fi
-
-if [ -z "${BRANCH_ARCHIVE_MIRROR}" ]; then
-	echo "Please set a BRANCH_ARCHIVE_MIRROR for the build"
-	exit 1
-fi
 
 CURRENT_HASH=$(git log -1 --pretty='%H')
 
