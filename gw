@@ -66,7 +66,7 @@ gw() {
 		return 1
 	fi
 
-	if [ "formatSource" != $1 ]; then
+	if [ "formatSource" != "$1" ]; then
 		fixgradle
 
 		if [[ 0 -ne $? ]]; then
@@ -74,20 +74,11 @@ gw() {
 		fi
 	fi
 
-	# run cachenpm first so that it doesn't spend time building and downloading
-	# node_modules for all the dependency modules.
-
-	pushd $GIT_ROOT > /dev/null
-
-	$(dirname "${BASH_SOURCE[0]}")/nodejs/cachenpm $@
-
-	popd > /dev/null
-
 	# run the gradlew binary, making sure to set GRADLE_OPTS if
 	# it is not yet set
 
 	if [ -f $GRADLE_HOME/gradlew ]; then
-		$GRADLE_HOME/gradlew -a $@
+		$GRADLE_HOME/gradlew a $@
 	fi
 }
 
