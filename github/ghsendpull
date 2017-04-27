@@ -8,8 +8,37 @@ gitchanges() {
 	. $(dirname "${BASH_SOURCE[0]}")/../gitchanges $@
 }
 
+gw() {
+	$(dirname "${BASH_SOURCE[0]}")/../gw $@
+}
+
 rebaseline() {
-	ant start baseline-current-branch -Dgit.working.branch.name=${upstream_remote}/$BASE_BRANCH
+	for folder in $(cat "$GIT_ROOT/.redeploy/changes_gradle_1.txt" "$GIT_ROOT/.redeploy/changes_gradle_2.txt"); do
+		cd $folder
+		pwd
+
+		gw baseline
+		EXIT_CODE=$?
+
+		cd -
+
+		if [[ 0 -ne $EXIT_CODE ]]; then
+			return $EXIT_CODE
+		fi
+	done
+
+	for folder in $(cat "$GIT_ROOT/.redeploy/changes_ant.txt"); do
+		cd portal-impl
+		pwd
+
+		ant baseline
+		EXIT_CODE=$?
+		cd -
+
+		if [[ 0 -ne $EXIT_CODE ]]; then
+			return $EXIT_CODE
+		fi
+	fi
 }
 
 reformat() {
@@ -149,7 +178,7 @@ sendpull() {
 
 	# Update our origin
 
-	git push $remote_name $CURRENT_BRANCH
+	git push -f $remote_name $CURRENT_BRANCH
 
 	if [[ 0 -ne $? ]]; then
 		return 1
