@@ -13,7 +13,17 @@ gw() {
 }
 
 rebaseline() {
+	if [ ! -d modules ]; then
+		return 0
+	fi
+
+	ant setup-sdk compile
+
 	for folder in $(cat "$GIT_ROOT/.redeploy/changes_gradle_1.txt" "$GIT_ROOT/.redeploy/changes_gradle_2.txt"); do
+		if [ "" == "$(grep -F "$folder" $GIT_ROOT/.redeploy/changes.txt | grep -F '.java')" ]; then
+			continue
+		fi
+
 		cd $folder
 		pwd
 
@@ -27,18 +37,24 @@ rebaseline() {
 		fi
 	done
 
-	for folder in $(cat "$GIT_ROOT/.redeploy/changes_ant.txt"); do
-		cd portal-impl
-		pwd
+	if [[ 0 -ne $(grep -v modules "$GIT_ROOT/.redeploy/changes_ant.txt" | grep -F '.java' | wc -l) ]]; then
+		for folder in $(cat "$GIT_ROOT/.redeploy/changes_ant.txt"); do
+			if [ "" == "$(grep -F "$folder" $GIT_ROOT/.redeploy/changes.txt | grep -F '.java')" ]; then
+				continue
+			fi
 
-		ant baseline
-		EXIT_CODE=$?
-		cd -
+			cd $folder
+			pwd
 
-		if [[ 0 -ne $EXIT_CODE ]]; then
-			return $EXIT_CODE
-		fi
-	done
+			ant -Dbaseline.jar.report.level=persist jar
+			EXIT_CODE=$?
+			cd -
+
+			if [[ 0 -ne $EXIT_CODE ]]; then
+				return $EXIT_CODE
+			fi
+		done
+	fi
 }
 
 reformat() {
@@ -71,11 +87,6 @@ reformat() {
 }
 
 repmd() {
-	if [ -d "$GIT_ROOT/modules" ] && [ ! -d "tools/sdk" ]; then
-		echo "Missing plugins SDK for PMD tool"
-		ant setup-sdk
-	fi
-
 	CHANGES="$(grep -F '.java' .redeploy/changes.txt)"
 
 	CHANGE_COUNT=0
