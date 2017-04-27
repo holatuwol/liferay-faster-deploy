@@ -5,15 +5,13 @@ dirnames() {
 }
 
 fixbnd() {
-	sed -i.bak 's/version: "\[[^"]*\"/version: "default"/g' $1
+	sed -i.bak 's/version: "\[[^"]*\"/version: "default"/g' $1/build.gradle
 	python "$(dirname "${BASH_SOURCE[0]}")/fixbnd.py" "$1"
 	rm "$1/bnd.bnd"
 	mv "$1/bnd.tmp" "$1/bnd.bnd"
 }
 
 fixbnds() {
-	echo path 1
-
 	for folder in $(git ls-files modules | grep build.gradle | xargs grep -l 'version: "\[' | dirnames); do
 		fixbnd "$folder"
 	done
