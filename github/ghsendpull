@@ -38,7 +38,7 @@ rebaseline() {
 		if [[ 0 -ne $EXIT_CODE ]]; then
 			return $EXIT_CODE
 		fi
-	fi
+	done
 }
 
 reformat() {
