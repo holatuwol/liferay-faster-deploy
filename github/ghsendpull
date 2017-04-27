@@ -17,8 +17,6 @@ rebaseline() {
 		return 0
 	fi
 
-	ant setup-sdk compile
-
 	for folder in $(cat "$GIT_ROOT/.redeploy/changes_gradle_1.txt" "$GIT_ROOT/.redeploy/changes_gradle_2.txt"); do
 		if [ "" == "$(grep -F "$folder" $GIT_ROOT/.redeploy/changes.txt | grep -F '.java')" ]; then
 			continue
