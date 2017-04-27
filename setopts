@@ -61,6 +61,4 @@ fi
 
 buildopts
 
-if [ "" == "$GIT_ROOT" ]; then
-	gitroot && initfolder && checkjava
-fi
+gitroot && initfolder && checkjava
