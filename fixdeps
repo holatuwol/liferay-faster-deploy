@@ -1,36 +1,89 @@
 #!/bin/bash
 
+dirnames() {
+	python $(dirname "${BASH_SOURCE[0]}")/dirnames.py
+}
+
+checkfiles() {
+	local module=$1
+	local package=$2
+
+	cat .redeploy/java.txt | xargs grep -rFl "import $package." | grep -o '.*/src/main/' | sed 's@/src/main/@@g' > .redeploy/fixdeps.txt
+	cat .redeploy/jsp.txt | xargs grep -rFl "import=\"$package." | grep -o '.*/src/main/' | sed 's@/src/main/@@g' >> .redeploy/fixdeps.txt
+}
+
 fixdeps() {
-	cd $(git rev-parse --show-toplevel)
+	cd "$GIT_ROOT"
 
-	module=$1
-	package=$2
-	version=default
+	# Identify the base branch
 
-	if [ "" != "$3" ]; then
-		version=$3
+	. $(dirname "${BASH_SOURCE[0]}")/getparent
+
+	if [ "" == "$BASE_BRANCH" ]; then
+		echo Unable to identify base branch
+		return 1
 	fi
 
-	git ls-files modules | grep -F build.gradle | grep -vF 'modules/sdk/' | xargs grep -Fl $module | dirnames > .redeploy/fixdeps.txt
+	# Find the closest ancestor based on which one has the fewest commits
 
-	if [ "" != "$package" ]; then
-		java_folders=$(cat .redeploy/fixdeps.txt | awk '{ print $1 "/src/main/java" }' | xargs git ls-files | xargs grep -rFl "import $package." | grep -o '.*/src/main/' | sed 's@/src/main/@@g')
-		jsp_folders=$(cat .redeploy/fixdeps.txt | awk '{ print $1 "/src/main/resources/META-INF/resources" }' | xargs git ls-files | xargs grep -rFl "import=\"$package." | grep -o '.*/src/main/' | sed 's@/src/main/@@g')
+	local origin_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/origin[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
+	local upstream_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
+	local base_remote=
 
-		echo -e "${java_folders}\n${jsp_folders}" | sort -u > .redeploy/fixdeps.txt
+	if [[ $(git log --pretty='%H' ${origin_remote}/${BASE_BRANCH}..HEAD | wc -l) -gt $(git log --pretty='%H' ${upstream_remote}/${BASE_BRANCH}..HEAD | wc -l) ]]; then
+		base_remote=$upstream_remote
+	else
+		base_remote=$origin_remote
 	fi
 
-	if [ "project" == "$version" ]; then
-		project=$(git ls-files modules | grep -F bnd.bnd | xargs grep -Fl "Bundle-SymbolicName: $module" | xargs dirname | sed 's@[/\\]@:@g' | sed s/.*:apps/:apps/g)
+	# Record all the possible module locations that we have to evaluate
+
+	git ls-files modules | grep -vF 'modules/sdk/' > .redeploy/lsfiles.txt
+
+	grep -F build.gradle .redeploy/lsfiles.txt | dirnames > .redeploy/gradle.txt
+	grep -F bnd.bnd .redeploy/lsfiles.txt > .redeploy/bnd.txt
+
+	cat .redeploy/gradle.txt | awk '{ print $1 "/src/main/java" }' | xargs git ls-files | grep -F .java > .redeploy/java.txt
+	cat .redeploy/gradle.txt | awk '{ print $1 "/src/main/resources/META-INF/resources" }' | xargs git ls-files | grep -F .jsp > .redeploy/jsp.txt
+
+	# Generate the source trie
+
+	$(dirname "${BASH_SOURCE[0]}")/sourcetrie
+
+	# Identify the package info files that changed since the latest branch
+
+	git diff --name-only $base_remote/$BASE_BRANCH..HEAD | grep -F packageinfo > .redeploy/changes.txt
+	python $(dirname "${BASH_SOURCE[0]}")/gitchanges.py
+
+	for folder in $(cat .redeploy/changes_ant.txt); do
+		local module=$(grep -F '"manifest.bundle.symbolic.name"' $folder/build.xml | grep -o 'value="[^";]*' | cut -d'"' -f 2)
+		local package=$(grep -F "$folder" .redeploy/changes.txt | sed "s@$folder/src/@@g" | dirnames | tr '/' '.')
+
+		echo $module $package
+		checkfiles $module $package
+
+		for folder in $(cat .redeploy/fixdeps.txt); do
+			sed -i.bak -e '/name: "'$module'"/ s/version: "[^"]*"/version: "default"/' $folder/build.gradle
+		done
+	done
+
+	for folder in $(cat .redeploy/changes_gradle_1.txt .redeploy/changes_gradle_2.txt); do
+		local module=$(grep -F 'Bundle-SymbolicName:' "$folder/bnd.bnd" | cut -d' ' -f 2)
+		local package=$(grep -F "$folder" .redeploy/changes.txt | sed "s@$folder/src/main/java/@@g" | sed "s@$folder/src/main/resources/@@g" | dirnames | tr '/' '.')
+
+		echo $module $package
+		checkfiles $module $package
+
+		local project=$(echo $folder | cut -d'/' -f 2- | sed 's@[/\\]@:@g' | sed s/.*:apps/:apps/g)
 
 		for folder in $(cat .redeploy/fixdeps.txt); do
 			sed -i.bak -e '/name: "'$module'"/ s/group: .*/project("'$project'")/' $folder/build.gradle
 		done
-	else
-		for folder in $(cat .redeploy/fixdeps.txt); do
-			sed -i.bak -e '/name: "'$module'"/ s/version: "[^"]*"/version: "'$version'"/' $folder/build.gradle
-		done
-	fi
-
-	rm .redeploy/fixdeps.txt
+	done
 }
+
+setopts() {
+	. $(dirname "${BASH_SOURCE[0]}")/setopts
+}
+
+setopts && fixdeps
