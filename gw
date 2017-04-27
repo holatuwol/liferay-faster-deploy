@@ -78,7 +78,7 @@ gw() {
 	# it is not yet set
 
 	if [ -f $GRADLE_HOME/gradlew ]; then
-		$GRADLE_HOME/gradlew -a $@
+		$GRADLE_HOME/gradlew $@
 
 		local EXIT_CODE=$?
 
