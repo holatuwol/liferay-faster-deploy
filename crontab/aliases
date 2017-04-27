@@ -24,10 +24,10 @@ cr() {
 			return 1
 		fi
 
-		TOMCAT_FOLDER=$(ls -1 $HOME/$1/$BUILD_ID | grep -F 'tomcat-')
+		TOMCAT_FOLDER=$(ls -1 $HOME/$1/$BUILD_ID | grep '^tomcat-')
 		CATALINA_HOME=$HOME/$1/$BUILD_ID/$TOMCAT_FOLDER
 	elif [ -d $HOME/builds/$1 ]; then
-		TOMCAT_FOLDER=$(ls -1 $HOME/builds/$1 | grep -F 'tomcat-')
+		TOMCAT_FOLDER=$(ls -1 $HOME/builds/$1 | grep '^tomcat-')
 		CATALINA_HOME=$HOME/builds/$1/$TOMCAT_FOLDER
 	elif [ -f /var/www/html/builds/$1-${TIMESTAMP}.tar.gz ]; then
 		mkdir -p $HOME/builds/$1
@@ -88,11 +88,11 @@ cx() {
 
 	if [ -d $HOME/$1 ]; then
 		BUILD_ID=$(ls -1 $HOME/$1 | grep -vF '.log' | sort | tail -1)
-		TOMCAT_FOLDER=$(ls -1 $HOME/$1/$BUILD_ID | grep -F 'tomcat-')
+		TOMCAT_FOLDER=$(ls -1 $HOME/$1/$BUILD_ID | grep '^tomcat-')
 		CATALINA_HOME=$HOME/$1/$BUILD_ID/$TOMCAT_FOLDER
 	elif [ -d $HOME/builds/$1 ]; then
 		setpull
-		TOMCAT_FOLDER=$(ls -1 $HOME/builds/$1 | grep -F 'tomcat-')
+		TOMCAT_FOLDER=$(ls -1 $HOME/builds/$1 | grep '^tomcat-')
 		CATALINA_HOME=$HOME/builds/$1/$TOMCAT_FOLDER
 	else
 		echo "Unable to identify which Tomcat to shutdown"
