@@ -2,8 +2,8 @@
 
 import sys
 
-bnd_file = '%s/bnd.bnd' % sys.argv[1]
-tmp_file = '%s/bnd.tmp' % sys.argv[1]
+bnd_file = '%s/bnd.bnd' % sys.argv[1].strip()
+tmp_file = '%s/bnd.tmp' % sys.argv[1].strip()
 
 with open(tmp_file, 'w') as outfile:
 	with open(bnd_file, 'r') as infile:
