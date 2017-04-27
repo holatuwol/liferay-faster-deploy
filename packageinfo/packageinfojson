@@ -1,0 +1,38 @@
+#!/bin/bash
+
+cd /tmp
+
+if [ -z "${PORTAL_SOURCE_ROOT}" ]; then
+	echo "Please set a PORTAL_SOURCE_ROOT for the build"
+	exit 1
+fi
+
+if [ -z "${S3_BUCKET}" ]; then
+	echo "Please set a S3_BUCKET for the build"
+	exit 1
+fi
+
+if [ -z "${AWS_PROFILE}" ]; then
+	AWS_PROFILE=default
+fi
+
+# Make sure the packageinfo files are up to date
+
+PORTAL_SOURCE_ROOT="$PORTAL_SOURCE_ROOT" \
+	$(dirname $0)/packageinfo
+
+pushd "$PORTAL_SOURCE_ROOT" > /dev/null
+RELEASE_COUNT=$(git tag | grep 'fix-pack-de-[0-9]*-7010' | wc -l)
+popd > /dev/null
+
+# Generate the JSON files
+
+python $(dirname $0)/packageinfojson.py $(dirname $PORTAL_SOURCE_ROOT) $RELEASE_COUNT
+
+# Upload the JSON files to the designated bucket
+
+for file in dxppackages.json dxpmodules.json; do
+	rm -f $file.gz
+	gzip -k $file
+	aws s3 --profile $AWS_PROFILE cp $file.gz s3://$S3_BUCKET/$file --acl public-read --metadata-directive REPLACE --content-encoding gzip
+done

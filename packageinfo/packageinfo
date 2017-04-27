@@ -1,0 +1,68 @@
+#!/bin/bash
+
+dirnames() {
+	python $(dirname $0)/../dirnames.py
+}
+
+packageinfo() {
+	OUTPUT_FILE=$(dirname $PWD)/packageinfo-$(echo "$1" | cut -d'-' -f 3-).txt
+
+	if [ -f $OUTPUT_FILE ]; then
+		echo "${OUTPUT_FILE} has already been generated"
+		return 0
+	fi
+
+	echo "Generating bundle packageinfo for $1"
+
+	if [ "" == "$(git tag | grep -F "$1")" ]; then
+		git fetch --no-tags git@github.com:liferay/liferay-portal-ee.git tags/$1:refs/tags/$1
+
+		if [ "" == "$(git tag | grep -F "$1")" ]; then
+			return 1
+		fi
+	fi
+
+	git clean -xdf
+	git reset --hard
+	git checkout $1
+
+	# Generate the source trie
+
+	mkdir -p .metadata
+
+	$(dirname $0)/sourcetrie
+
+	cat /dev/null > .metadata/packageinfo.txt
+
+	# Handle root projects, which might not have packageinfo files
+
+	for folder in $(ls -1 . | sort -u); do
+		if [ -f $folder/bnd.bnd ]; then
+			find "$folder/src" -type f -printf '%h\n' | sort -u >> .metadata/packageinfo.txt
+		fi
+	done
+
+	# Handle modules, which always have packageinfo files
+
+	git ls-files modules | grep -F '/packageinfo' | grep -vF '/sdk/' | dirnames | sort >> .metadata/packageinfo.txt
+
+	$(dirname $0)/sourcetrie
+	python $(dirname $0)/packageinfo.py $OUTPUT_FILE
+}
+
+if [ -z "${PORTAL_SOURCE_ROOT}" ]; then
+	echo "Please set a PORTAL_SOURCE_ROOT for the build"
+	exit 1
+fi
+
+pushd "$PORTAL_SOURCE_ROOT" > /dev/null
+
+counter=0
+tag_id=fix-pack-base-7010
+
+while packageinfo $tag_id; do
+	counter=$(expr $counter '+' 1)
+	tag_id=fix-pack-de-$counter-7010
+done
+
+popd > /dev/null
