@@ -50,7 +50,7 @@ fixgradle() {
 		for artifact in $NEEDED_ARTIFACTS; do
 			artifact_version=$(grep -F "${artifact}.version" $GRADLE_HOME/.gradle/gradle.properties | cut -d'=' -f 2)
 
-			if [ ! -d "${HOME}/.m2/repository/com/liferay/portal/${artifact}/${artifact_version}" ]; then
+			if [ ! -d "${HOME}/.m2/repository/com/liferay/portal/${artifact}/${artifact_version}-SNAPSHOT" ]; then
 				pushd $GRADLE_HOME > /dev/null
 				ant start install-portal-snapshots
 				popd > /dev/null
