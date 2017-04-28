@@ -17,15 +17,39 @@ rebaseline() {
 		return 0
 	fi
 
+	cat /dev/null > $GIT_ROOT/.redeploy/baseline.txt
+
 	for folder in $(cat "$GIT_ROOT/.redeploy/changes_gradle_1.txt" "$GIT_ROOT/.redeploy/changes_gradle_2.txt"); do
-		if [ "" == "$(grep -F "$folder" $GIT_ROOT/.redeploy/changes.txt | grep -F '.java')" ]; then
-			continue
+		if [ "" != "$(grep -F "$folder" $GIT_ROOT/.redeploy/changes.txt | grep -F '.java')" ]; then
+			echo $folder | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":baseline" }' >> $GIT_ROOT/.redeploy/baseline.txt
+		fi
+	done
+
+	if [[ 0 -ne $(wc -l $GIT_ROOT/.redeploy/baseline.txt | cut -d' ' -f 1) ]]; then
+		for artifact in $(grep -F version $GIT_ROOT/.gradle/gradle.properties | grep -F 'com.liferay' | cut -d'=' -f 1 | sed 's/\.version$//g'); do
+			local artifact_version=$(grep -F "${artifact}.version" $GIT_ROOT/.gradle/gradle.properties | cut -d'=' -f 2)
+			local artifact_path=com/liferay/portal/${artifact}/${artifact_version}
+
+			if [ ! -d "${HOME}/.m2/repository/${artifact_path}" ] && [ ! -d "${GIT_ROOT}/.m2/${artifact_path}" ]; then
+				echo "Checked ${HOME}/.m2/repository/${artifact_path}"
+				echo "Checked ${GIT_ROOT}/.m2/${artifact_path}"
+				echo "Missing snapshot for $artifact (${artifact_version})"
+
+				missing_artifact="$missing_artifact $artifact"
+			fi
+		done
+
+		if [ "" != "$missing_artifact" ]; then
+			echo "Running install-portal-snapshots to ensure all snapshots are available"
+
+			pushd $GRADLE_HOME > /dev/null
+			ant setup-sdk compile install-portal-snapshots
+			popd > /dev/null
 		fi
 
-		cd $folder
-		pwd
+		cd modules
 
-		gw baseline
+		cat $GIT_ROOT/.redeploy/baseline.txt | xargs $(dirname "${BASH_SOURCE[0]}")/../gw
 		EXIT_CODE=$?
 
 		cd -
@@ -33,7 +57,6 @@ rebaseline() {
 		if [[ 0 -ne $EXIT_CODE ]]; then
 			return $EXIT_CODE
 		fi
-	done
 
 	if [[ 0 -ne $(grep -v modules "$GIT_ROOT/.redeploy/changes_ant.txt" | grep -F '.java' | wc -l) ]]; then
 		for folder in $(cat "$GIT_ROOT/.redeploy/changes_ant.txt"); do
@@ -56,11 +79,18 @@ rebaseline() {
 }
 
 reformat() {
-	for folder in $(cat "$GIT_ROOT/.redeploy/changes_gradle_1.txt" "$GIT_ROOT/.redeploy/changes_gradle_2.txt"); do
-		cd $folder
-		pwd
+	cat /dev/null > $GIT_ROOT/.redeploy/format.txt
 
-		$(dirname "${BASH_SOURCE[0]}")/formatsource ${upstream_remote}/$BASE_BRANCH
+	for folder in $(cat "$GIT_ROOT/.redeploy/changes_gradle_1.txt" "$GIT_ROOT/.redeploy/changes_gradle_2.txt"); do
+		if [ "" != "$(grep -F "$folder" $GIT_ROOT/.redeploy/changes.txt | grep -F 'src')" ]; then
+			echo $folder | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":formatSource" }' >> $GIT_ROOT/.redeploy/format.txt
+		fi
+	done
+
+	if [[ 0 -ne $(wc -l $GIT_ROOT/.redeploy/format.txt | cut -d' ' -f 1) ]]; then
+		cd modules
+
+		cat $GIT_ROOT/.redeploy/format.txt | xargs $(dirname "${BASH_SOURCE[0]}")/../gw
 		EXIT_CODE=$?
 
 		cd -
@@ -68,7 +98,7 @@ reformat() {
 		if [[ 0 -ne $EXIT_CODE ]]; then
 			return $EXIT_CODE
 		fi
-	done
+	fi
 
 	if [[ 0 -ne $(wc -l "$GIT_ROOT/.redeploy/changes_ant.txt" | cut -d' ' -f 1) ]]; then
 		cd portal-impl
