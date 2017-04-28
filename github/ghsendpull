@@ -4,12 +4,12 @@ findreviewer() {
 	. $(dirname "${BASH_SOURCE[0]}")/findreviewer "$*"
 }
 
-gitchanges() {
-	. $(dirname "${BASH_SOURCE[0]}")/../gitchanges $@
+fixdeps() {
+	. $(dirname "${BASH_SOURCE[0]}")/../packageinfo/fixdeps
 }
 
-gw() {
-	$(dirname "${BASH_SOURCE[0]}")/../gw $@
+gitchanges() {
+	. $(dirname "${BASH_SOURCE[0]}")/../gitchanges $@
 }
 
 rebaseline() {
@@ -57,6 +57,7 @@ rebaseline() {
 		if [[ 0 -ne $EXIT_CODE ]]; then
 			return $EXIT_CODE
 		fi
+	fi
 
 	if [[ 0 -ne $(grep -v modules "$GIT_ROOT/.redeploy/changes_ant.txt" | grep -F '.java' | wc -l) ]]; then
 		for folder in $(cat "$GIT_ROOT/.redeploy/changes_ant.txt"); do
@@ -139,8 +140,10 @@ sendpull() {
 		return 1
 	fi
 
-	if [ "" == "$1" ]; then
-		echo Please specify a reviewer
+	local HAS_CHANGES=$(git status -s | grep -vF '??')
+
+	if [ "" != "$HAS_CHANGES" ]; then
+		echo "Please commit local modifications before sending a pull request"
 		return 1
 	fi
 
@@ -199,12 +202,19 @@ sendpull() {
 	if [ -f "$GIT_ROOT/release.properties" ]; then
 		pushd $GIT_ROOT > /dev/null
 
-		gitchanges ${upstream_remote}/$BASE_BRANCH && rebaseline && reformat && repmd
+		gitchanges ${upstream_remote}/$BASE_BRANCH && fixdeps && rebaseline && reformat && repmd
 		EXIT_CODE=$?
 
 		popd > /dev/null
 
 		if [[ 0 -ne $EXIT_CODE ]]; then
+			return 1
+		fi
+
+		HAS_CHANGES=$(git status -s | grep -vF '??')
+
+		if [ "" != "$HAS_CHANGES" ]; then
+			echo "Detected files modified during sanity check, please commit them before sending a pull request"
 			return 1
 		fi
 	fi
