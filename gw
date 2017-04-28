@@ -79,12 +79,15 @@ gw() {
 		return 1
 	fi
 
-	if [ "formatSource" != "$1" ]; then
-		fixgradle
+	local fixed_gradle=
 
-		if [[ 0 -ne $? ]]; then
-			return 1
-		fi
+	if [ -f ../settings.gradle ] && [ ! -f ../gradlew ]; then
+		fixed_gradle=true
+		fixgradle
+	fi
+
+	if [[ 0 -ne $? ]]; then
+		return 1
 	fi
 
 	# run the gradlew binary, making sure to set GRADLE_OPTS if
@@ -95,7 +98,9 @@ gw() {
 
 		local EXIT_CODE=$?
 
-		git checkout ../settings.gradle
+		if [ "" != "$fixed_gradle" ]; then
+			git checkout ../settings.gradle
+		fi
 
 		return $EXIT_CODE
 	fi
