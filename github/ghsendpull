@@ -8,6 +8,10 @@ fixdeps() {
 	. $(dirname "${BASH_SOURCE[0]}")/../packageinfo/fixdeps
 }
 
+formatsource() {
+	. $(dirname "${BASH_SOURCE[0]}")/formatsource
+}
+
 gitchanges() {
 	. $(dirname "${BASH_SOURCE[0]}")/../gitchanges $@
 }
@@ -76,42 +80,6 @@ rebaseline() {
 				return $EXIT_CODE
 			fi
 		done
-	fi
-}
-
-reformat() {
-	cat /dev/null > $GIT_ROOT/.redeploy/format.txt
-
-	for folder in $(cat "$GIT_ROOT/.redeploy/changes_gradle_1.txt" "$GIT_ROOT/.redeploy/changes_gradle_2.txt"); do
-		if [ "" != "$(grep -F "$folder" $GIT_ROOT/.redeploy/changes.txt | grep -F 'src')" ]; then
-			echo $folder | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":formatSource" }' >> $GIT_ROOT/.redeploy/format.txt
-		fi
-	done
-
-	if [[ 0 -ne $(wc -l $GIT_ROOT/.redeploy/format.txt | cut -d' ' -f 1) ]]; then
-		cd modules
-
-		cat $GIT_ROOT/.redeploy/format.txt | xargs $(dirname "${BASH_SOURCE[0]}")/../gw
-		EXIT_CODE=$?
-
-		cd -
-
-		if [[ 0 -ne $EXIT_CODE ]]; then
-			return $EXIT_CODE
-		fi
-	fi
-
-	if [[ 0 -ne $(wc -l "$GIT_ROOT/.redeploy/changes_ant.txt" | cut -d' ' -f 1) ]]; then
-		cd portal-impl
-		pwd
-
-		$(dirname "${BASH_SOURCE[0]}")/formatsource ${upstream_remote}/$BASE_BRANCH $(git log ${upstream_remote}/$BASE_BRANCH..HEAD | wc -l)
-		EXIT_CODE=$?
-		cd -
-
-		if [[ 0 -ne $EXIT_CODE ]]; then
-			return $EXIT_CODE
-		fi
 	fi
 }
 
@@ -202,7 +170,7 @@ sendpull() {
 	if [ -f "$GIT_ROOT/release.properties" ]; then
 		pushd $GIT_ROOT > /dev/null
 
-		gitchanges ${upstream_remote}/$BASE_BRANCH && fixdeps && rebaseline && reformat && repmd
+		gitchanges ${upstream_remote}/$BASE_BRANCH && fixdeps && rebaseline && formatsource && repmd
 		EXIT_CODE=$?
 
 		popd > /dev/null

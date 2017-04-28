@@ -1,6 +1,6 @@
 #!/bin/bash
 
-afs() {
+antformatsource() {
 	if [ -d "$GIT_ROOT/modules" ] && [ ! -d "$GIT_ROOT/tools/sdk" ]; then
 		pushd "$GIT_ROOT" > /dev/null
 		ant setup-sdk
@@ -24,6 +24,8 @@ afs() {
 	fi
 
 	cd $GIT_ROOT/portal-impl
+	pwd
+
 	echo ant format-source $ARGS
 	ant format-source $ARGS
 }
@@ -59,7 +61,67 @@ check() {
 	fi
 }
 
-gfs() {
+formatbranch() {
+	# Identify the base branch
+
+	. $(dirname "${BASH_SOURCE[0]}")/../getparent
+
+	if [ "" == "$BASE_BRANCH" ]; then
+		echo Unable to identify base branch
+		return 1
+	fi
+
+	# Find the closest ancestor based on which one has the fewest commits
+
+	local origin_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/origin[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
+	local upstream_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
+	local base_remote=
+
+	if [[ $(git log --pretty='%H' ${origin_remote}/${BASE_BRANCH}..HEAD | wc -l) -gt $(git log --pretty='%H' ${upstream_remote}/${BASE_BRANCH}..HEAD | wc -l) ]]; then
+		base_remote=$upstream_remote
+	else
+		base_remote=$origin_remote
+	fi
+
+	# Compute the changes
+
+	$(dirname "${BASH_SOURCE[0]}")/../gitchanges ${base_remote}/${BASE_BRANCH}
+
+	# Scan the Gradle changes to build one large command
+
+	cat /dev/null > $GIT_ROOT/.redeploy/format.txt
+
+	for folder in $(cat "$GIT_ROOT/.redeploy/changes_gradle_1.txt" "$GIT_ROOT/.redeploy/changes_gradle_2.txt"); do
+		if [ "" != "$(grep -F "$folder" $GIT_ROOT/.redeploy/changes.txt | grep -F 'src')" ]; then
+			echo $folder | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":formatSource" }' >> $GIT_ROOT/.redeploy/format.txt
+		fi
+	done
+
+	if [[ 0 -ne $(wc -l $GIT_ROOT/.redeploy/format.txt | cut -d' ' -f 1) ]]; then
+		cd modules
+
+		cat $GIT_ROOT/.redeploy/format.txt | xargs $(dirname "${BASH_SOURCE[0]}")/../gw
+		EXIT_CODE=$?
+
+		cd -
+
+		if [[ 0 -ne $EXIT_CODE ]]; then
+			return $EXIT_CODE
+		fi
+	fi
+
+	if [[ 0 -ne $(wc -l "$GIT_ROOT/.redeploy/changes_ant.txt" | cut -d' ' -f 1) ]]; then
+		antformatsource ${upstream_remote}/$BASE_BRANCH $(git log ${upstream_remote}/$BASE_BRANCH..HEAD | wc -l)
+
+		EXIT_CODE=$?
+
+		if [[ 0 -ne $EXIT_CODE ]]; then
+			return $EXIT_CODE
+		fi
+	fi
+}
+
+gradleformatsource() {
 	ARGS=
 
 	if [ "" != "$1" ] && [ -f $1 ]; then
@@ -69,11 +131,7 @@ gfs() {
 	fi
 
 	echo gradlew formatSource $ARGS
-	gw formatSource $ARGS
-}
-
-gw() {
-	$(dirname "${BASH_SOURCE[0]}")/../gw $@
+	$(dirname "${BASH_SOURCE[0]}")/../gw formatSource $ARGS
 }
 
 setopts() {
@@ -86,8 +144,10 @@ if [[ 0 -ne $? ]]; then
 	exit 1
 fi
 
-if [ -f build.gradle ]; then
-	gfs $@
+if [ "" == "$1" ]; then
+	formatbranch
+elif [ -f build.gradle ]; then
+	gradleformatsource $@
 else
-	afs $@
+	antformatsource $@
 fi
