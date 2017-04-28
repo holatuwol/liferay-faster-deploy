@@ -28,8 +28,8 @@ gitcdb() {
 		return 1
 	fi
 
-	#builtin cd $(dirname $BND)
-	#pwd
+	builtin cd $(dirname $BND)
+	pwd
 }
 
 . "$(dirname "${BASH_SOURCE[0]}")/../setopts"
