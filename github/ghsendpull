@@ -134,14 +134,8 @@ repmd() {
 }
 
 sendpull() {
-	GIT_ROOT=$PWD
-
-	while [ ! -e "$GIT_ROOT/.git" ] && [ "/" != "$GIT_ROOT" ]; do
-		GIT_ROOT=$(dirname $GIT_ROOT)
-	done
-
-	if [ ! -e "$GIT_ROOT/.git" ]; then
-		echo "Unable to find version control root"
+	if [ "" == "$1" ]; then
+		echo Please specify a reviewer
 		return 1
 	fi
 
