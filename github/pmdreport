@@ -1,0 +1,55 @@
+#!/bin/bash
+
+pmdreport() {
+	local CHANGE_ID=$1
+
+	if [ "" == "$CHANGE_ID" ]; then
+		# Identify the base branch
+
+		. $(dirname "${BASH_SOURCE[0]}")/../getparent
+
+		if [ "" == "$BASE_BRANCH" ]; then
+			echo Unable to identify base branch
+			return 1
+		fi
+
+		# Find the closest ancestor based on which one has the fewest commits
+
+		local origin_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/origin[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
+		local upstream_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
+		local base_remote=
+
+		if [[ $(git log --pretty='%H' ${origin_remote}/${BASE_BRANCH}..HEAD | wc -l) -gt $(git log --pretty='%H' ${upstream_remote}/${BASE_BRANCH}..HEAD | wc -l) ]]; then
+			base_remote=$upstream_remote
+		else
+			base_remote=$origin_remote
+		fi
+
+		CHANGE_ID=${base_remote}/${BASE_BRANCH}
+	fi
+
+	# Compute the changes
+
+	$(dirname "${BASH_SOURCE[0]}")/../gitchanges $CHANGE_ID
+
+	# Make sure there are changes that we need to scan
+
+	CHANGES="$(grep -F '.java' .redeploy/changes.txt)"
+
+	CHANGE_COUNT=0
+
+	if [ "" != "$CHANGES" ]; then
+		ant -Dpmd.output.type=text -Dpmd.java.includes="$(echo -n "$CHANGES" | tr '\n' ',')" run-pmd
+		CHANGE_COUNT=$(wc -c pmd-reports/pmd-report.text | cut -d' ' -f 1)
+	fi
+
+	if [[ 0 -eq $CHANGE_COUNT ]]; then
+		echo No violations detected.
+		return 0
+	fi
+
+	cat pmd-reports/pmd-report.text
+	return 1
+}
+
+pmdreport $@

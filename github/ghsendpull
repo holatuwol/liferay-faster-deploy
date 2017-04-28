@@ -1,105 +1,27 @@
 #!/bin/bash
 
+baseline() {
+	$(dirname "${BASH_SOURCE[0]}")/baseline
+}
+
 findreviewer() {
 	. $(dirname "${BASH_SOURCE[0]}")/findreviewer "$*"
 }
 
 fixdeps() {
-	. $(dirname "${BASH_SOURCE[0]}")/../packageinfo/fixdeps
+	$(dirname "${BASH_SOURCE[0]}")/../packageinfo/fixdeps
 }
 
 formatsource() {
-	. $(dirname "${BASH_SOURCE[0]}")/formatsource
+	$(dirname "${BASH_SOURCE[0]}")/formatsource
 }
 
 gitchanges() {
 	. $(dirname "${BASH_SOURCE[0]}")/../gitchanges $@
 }
 
-rebaseline() {
-	if [ ! -d modules ]; then
-		return 0
-	fi
-
-	cat /dev/null > $GIT_ROOT/.redeploy/baseline.txt
-
-	for folder in $(cat "$GIT_ROOT/.redeploy/changes_gradle_1.txt" "$GIT_ROOT/.redeploy/changes_gradle_2.txt"); do
-		if [ "" != "$(grep -F "$folder" $GIT_ROOT/.redeploy/changes.txt | grep -F '.java')" ]; then
-			echo $folder | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":baseline" }' >> $GIT_ROOT/.redeploy/baseline.txt
-		fi
-	done
-
-	if [[ 0 -ne $(wc -l $GIT_ROOT/.redeploy/baseline.txt | cut -d' ' -f 1) ]]; then
-		for artifact in $(grep -F version $GIT_ROOT/.gradle/gradle.properties | grep -F 'com.liferay' | cut -d'=' -f 1 | sed 's/\.version$//g'); do
-			local artifact_version=$(grep -F "${artifact}.version" $GIT_ROOT/.gradle/gradle.properties | cut -d'=' -f 2)
-			local artifact_path=com/liferay/portal/${artifact}/${artifact_version}
-
-			if [ ! -d "${HOME}/.m2/repository/${artifact_path}" ] && [ ! -d "${GIT_ROOT}/.m2/${artifact_path}" ]; then
-				echo "Checked ${HOME}/.m2/repository/${artifact_path}"
-				echo "Checked ${GIT_ROOT}/.m2/${artifact_path}"
-				echo "Missing snapshot for $artifact (${artifact_version})"
-
-				missing_artifact="$missing_artifact $artifact"
-			fi
-		done
-
-		if [ "" != "$missing_artifact" ]; then
-			echo "Running install-portal-snapshots to ensure all snapshots are available"
-
-			pushd $GRADLE_HOME > /dev/null
-			ant setup-sdk compile install-portal-snapshots
-			popd > /dev/null
-		fi
-
-		cd modules
-
-		cat $GIT_ROOT/.redeploy/baseline.txt | xargs $(dirname "${BASH_SOURCE[0]}")/../gw
-		EXIT_CODE=$?
-
-		cd -
-
-		if [[ 0 -ne $EXIT_CODE ]]; then
-			return $EXIT_CODE
-		fi
-	fi
-
-	if [[ 0 -ne $(grep -v modules "$GIT_ROOT/.redeploy/changes_ant.txt" | grep -F '.java' | wc -l) ]]; then
-		for folder in $(cat "$GIT_ROOT/.redeploy/changes_ant.txt"); do
-			if [ "" == "$(grep -F "$folder" $GIT_ROOT/.redeploy/changes.txt | grep -F '.java')" ]; then
-				continue
-			fi
-
-			cd $folder
-			pwd
-
-			ant -Dbaseline.jar.report.level=persist jar
-			EXIT_CODE=$?
-			cd -
-
-			if [[ 0 -ne $EXIT_CODE ]]; then
-				return $EXIT_CODE
-			fi
-		done
-	fi
-}
-
-repmd() {
-	CHANGES="$(grep -F '.java' .redeploy/changes.txt)"
-
-	CHANGE_COUNT=0
-
-	if [ "" != "$CHANGES" ]; then
-		ant -Dpmd.output.type=text -Dpmd.java.includes="$(echo -n "$CHANGES" | tr '\n' ',')" run-pmd
-		CHANGE_COUNT=$(wc -c pmd-reports/pmd-report.text | cut -d' ' -f 1)
-	fi
-
-	if [[ 0 -eq $CHANGE_COUNT ]]; then
-		echo No violations detected.
-		return 0
-	fi
-
-	cat pmd-reports/pmd-report.text
-	return 1
+pmdreport() {
+	$(dirname "${BASH_SOURCE[0]}")/pmdreport
 }
 
 sendpull() {
@@ -170,7 +92,7 @@ sendpull() {
 	if [ -f "$GIT_ROOT/release.properties" ]; then
 		pushd $GIT_ROOT > /dev/null
 
-		gitchanges ${upstream_remote}/$BASE_BRANCH && fixdeps && rebaseline && formatsource && repmd
+		gitchanges ${upstream_remote}/$BASE_BRANCH && fixdeps && baseline && formatsource && pmdreport
 		EXIT_CODE=$?
 
 		popd > /dev/null
