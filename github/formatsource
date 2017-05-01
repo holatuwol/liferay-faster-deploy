@@ -1,10 +1,18 @@
 #!/bin/bash
 
 antformatsource() {
-	if [ -d "$GIT_ROOT/modules" ] && [ ! -d "$GIT_ROOT/tools/sdk" ]; then
-		pushd "$GIT_ROOT" > /dev/null
-		ant setup-sdk
-		popd > /dev/null
+	if [ -d "$GIT_ROOT/modules" ]; then
+		if [ ! -d "$GIT_ROOT/tools/sdk" ]; then
+			pushd "$GIT_ROOT" > /dev/null
+			ant setup-sdk
+			popd > /dev/null
+		fi
+
+		if [ ! -d tools/sdk/dependencies/com.liferay.source.formatter/lib ]; then
+			. $(dirname "${BASH_SOURCE[0]}")/../gitcd/gitcdb com.liferay.source.formatter
+			$(dirname "${BASH_SOURCE[0]}")/../gw deploy
+			cd -
+		fi
 	fi
 
 	ARGS=
