@@ -125,7 +125,28 @@ fixpacks() {
 		return 0
 	fi
 
-	counter=5
+	# Fix packs baselines we stopped incrementing
+
+	local tag_id=
+
+	for version_name in 6120; do
+		tag_id=fix-pack-base-$version_name
+		fixpack $tag_id
+	done
+
+	for version_name in 6130 6130-sp3 6130-sp4; do
+		tag_id=fix-pack-base-$version_name
+		fixpack $tag_id
+	done
+
+	for version_name in 6210 6210-sp7 6210-sp10 6210-sp13 6210-sp15; do
+		tag_id=fix-pack-base-$version_name
+		fixpack $tag_id
+	done
+
+	# Fix pack baselines we are still incrementing
+
+	local counter=5
 	tag_id=fix-pack-de-5-7010
 
 	while fixpack $tag_id; do
