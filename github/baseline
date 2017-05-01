@@ -77,7 +77,7 @@ baseline() {
 		if [ "" != "$missing_artifact" ]; then
 			echo "Running install-portal-snapshots to ensure all snapshots are available"
 
-			pushd $GRADLE_HOME > /dev/null
+			pushd $GIT_ROOT > /dev/null
 			ant compile install-portal-snapshots
 			popd > /dev/null
 		fi
