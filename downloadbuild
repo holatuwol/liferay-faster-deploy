@@ -223,6 +223,13 @@ gettargetfolder() {
 		return 1
 	fi
 
+	LIFERAY_HOME=$(grep '^\s*app.server.parent.dir=' "$GIT_ROOT/app.server.$USER.properties" | cut -d'=' -f 2)
+
+	if [ "" == "$LIFERAY_HOME" ]; then
+		echo "Did not set LIFERAY_HOME in app.server.$USER.properties"
+		return 1
+	fi
+
 	if isbuildbranch $1; then
 		BASE_BRANCH=$1
 		BASE_TAG=
