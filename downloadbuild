@@ -218,9 +218,8 @@ gettargetfolder() {
 
 	# Check for app.server.$USER.properties
 
-	. $(dirname "${BASH_SOURCE[0]}")/appserverprops
-
-	if [[ 0 -ne $? ]]; then
+	if [ ! -f $GIT_ROOT/app.server.$USER.properties ]; then
+		echo "Missing $GIT_ROOT/app.server.$USER.properties"
 		return 1
 	fi
 
