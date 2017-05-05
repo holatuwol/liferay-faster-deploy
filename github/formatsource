@@ -1,16 +1,6 @@
 #!/bin/bash
 
 antformatsource() {
-	if [ -d "$GIT_ROOT/modules" ]; then
-		checksnapshots
-
-		if [ ! -d tools/sdk/dependencies/com.liferay.source.formatter/lib ]; then
-			. $(dirname "${BASH_SOURCE[0]}")/../gitcd/gitcdb com.liferay.source.formatter
-			$(dirname "${BASH_SOURCE[0]}")/../gw deploy
-			cd -
-		fi
-	fi
-
 	ARGS=
 
 	if [ "" != "$1" ] && [ -f $1 ]; then
@@ -153,6 +143,14 @@ setopts
 
 if [[ 0 -ne $? ]]; then
 	exit 1
+fi
+
+if [ -d "$GIT_ROOT/modules" ]; then
+	checksnapshots
+
+	pushd $GIT_ROOT/modules > /dev/null
+	ls -1 util/ | grep 'formatter$' | awk '{ print ":util:" $1 ":deploy" }' | xargs $(dirname "${BASH_SOURCE[0]}")/../gw
+	popd > /dev/null
 fi
 
 if [ "" == "$1" ]; then
