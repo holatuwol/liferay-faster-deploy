@@ -1,0 +1,14 @@
+#!/bin/bash
+
+csvmanifest() {
+	if [ ! -f "$2" ]; then
+		echo $2 could not be found
+		return 1
+	fi
+
+	sed -n "/${1}-Package/,/^[^ ]/p" ${2} | sed '$d' | sed "1s/${1}-Package://" | tr -d '[:space:]' | \
+		sed 's/",/"\n/g' | sed 's/;uses:="[^"]*"//g' | sed 's/;version=/,/g' | sed 's/,\([^"0-9]\)/\n\1/g' | \
+		sort > "$2.csv"
+}
+
+csvmanifest $@
