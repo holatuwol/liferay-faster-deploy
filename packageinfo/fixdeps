@@ -1,5 +1,9 @@
 #!/bin/bash
 
+csvmanifest() {
+	. $(dirname "${BASH_SOURCE[0]}")/csvmanifest $@
+}
+
 dirnames() {
 	python $(dirname "${BASH_SOURCE[0]}")/../dirnames.py
 }
@@ -9,11 +13,12 @@ checkfiles() {
 	local module=$2
 	local package=$3
 
-	local package_folder=$(echo $package | tr '.' '/')
+	local expression=$(cat .redeploy/gradle.txt | awk '{ print $1 "/build.gradle" }' | xargs grep -Fl '"'$module'"' | dirnames | tr '\n' '|' | sed 's@|$@@g' | sed 's@|@\\|@g' | awk '{ print "\\(" $1 "\\)" }')
+	grep -h "$expression" .redeploy/java.txt .redeploy/jsp.txt | xargs grep -Fl "$package" | grep -o '.*/src/main/' | sed 's@/src/main/@@g' | sort -u | awk '{ print $1 ",'$module','$package'" }' >> .redeploy/checkdeps.txt
+}
 
-	expression=$(grep -F $folder .redeploy/classes.txt | grep -F $package_folder | sed "s@.*$package_folder/@@g" | sed 's@\.java$@@g' | tr '\n' '|' | sed 's@|$@@g' | sed 's@|@\\|@g' | awk '{ print "\\(" $1 "\\)" }')
-
-	cat .redeploy/java.txt .redeploy/jsp.txt | xargs grep -rl "$package.$expression" | grep -o '.*/src/main/' | sed 's@/src/main/@@g' >> .redeploy/fixdeps.txt
+checksnapshots() {
+	. $(dirname "${BASH_SOURCE[0]}")/../checksnapshots
 }
 
 fixdeps() {
@@ -60,44 +65,59 @@ fixdeps() {
 	grep -F packageinfo .redeploy/diff.txt > .redeploy/changes.txt
 	python $(dirname "${BASH_SOURCE[0]}")/../gitchanges.py
 
-	# Find the classes corresponding to those changed packageinfo files
+	# Loop over the modules and packages that changed to identify where the packages are used
 
-	expression=$(cat .redeploy/changes.txt | dirnames | sed 's@src/main/resources@src/main/java@g' | tr '\n' '|' | sed 's@|$@@g' | sed 's@|@\\|@g' | awk '{ print "\\(" $1 "\\)" }')
-
-	grep "$expression" .redeploy/diff.txt | grep -F '.java' > .redeploy/classes.txt
-
-	# Loop over the modules and packages that changed and update anything that depends on them
+	cat /dev/null > .redeploy/checkdeps.txt
 
 	for folder in $(cat .redeploy/changes_ant.txt); do
 		local module=$(grep -F '"manifest.bundle.symbolic.name"' $folder/build.xml | grep -o 'value="[^";]*' | cut -d'"' -f 2)
 
-		cat /dev/null > .redeploy/fixdeps.txt
-
 		for package in $(grep -F "$folder" .redeploy/changes.txt | sed "s@$folder/src/@@g" | dirnames | tr '/' '.'); do
 			echo $module $package
 			checkfiles $folder $module $package
-		done
-
-		for folder in $(cat .redeploy/fixdeps.txt | sort -u); do
-			sed -i.bak -e '/name: "'$module'"/ s/version: "[^"]*"/version: "default"/' $folder/build.gradle
 		done
 	done
 
 	for folder in $(cat .redeploy/changes_gradle_1.txt .redeploy/changes_gradle_2.txt); do
 		local module=$(grep -F 'Bundle-SymbolicName:' "$folder/bnd.bnd" | cut -d' ' -f 2)
 
-		cat /dev/null > .redeploy/fixdeps.txt
-
 		for package in $(grep -F "$folder" .redeploy/changes.txt | sed "s@$folder/src/main/java/@@g" | sed "s@$folder/src/main/resources/@@g" | dirnames | tr '/' '.'); do
 			echo $module $package
 			checkfiles $folder $module $package
 		done
+	done
 
-		local project=$(echo $folder | cut -d'/' -f 2- | sed 's@[/\\]@:@g' | sed s/.*:apps/:apps/g)
+	checksnapshots
 
-		for folder in $(cat .redeploy/fixdeps.txt | sort -u); do
+	cd modules
+	cat ../.redeploy/checkdeps.txt | cut -d',' -f 1 | sort -u | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":jar" }' | xargs $(dirname "${BASH_SOURCE[0]}")/../gw --continue
+	cd -
+
+	# Convert the manifest to a CSV file that we can parse
+
+	for folder in $(cat .redeploy/checkdeps.txt | cut -d',' -f 1 | sort -u); do
+		local INPUT_FILE=$folder/build/tmp/jar/MANIFEST.MF
+
+		if [ -f "$INPUT_FILE" ]; then
+			csvmanifest Import $INPUT_FILE
+		fi
+	done
+
+	# Process the parsed CSVs in Python
+
+	python $(dirname "${BASH_SOURCE[0]}")/fixdeps.py
+
+	# Modify the build.gradle that needed to change
+
+	for line in $(cat .redeploy/fixdeps.txt | sort -u); do
+		local folder=$(echo "$line" | cut -d',' -f 1)
+		local module=$(echo "$line" | cut -d',' -f 2)
+
+		if [[ $module == com.liferay.portal* ]]; then
+			sed -i.bak -e '/name: "'$module'"/ s/version: "[^"]*"/version: "default"/' $folder/build.gradle
+		else
 			sed -i.bak -e '/name: "'$module'"/ s/group: .*/project("'$project'")/' $folder/build.gradle
-		done
+		fi
 	done
 }
 
