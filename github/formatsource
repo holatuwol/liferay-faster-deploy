@@ -2,11 +2,7 @@
 
 antformatsource() {
 	if [ -d "$GIT_ROOT/modules" ]; then
-		if [ ! -d "$GIT_ROOT/tools/sdk" ]; then
-			pushd "$GIT_ROOT" > /dev/null
-			ant setup-sdk
-			popd > /dev/null
-		fi
+		checksnapshots
 
 		if [ ! -d tools/sdk/dependencies/com.liferay.source.formatter/lib ]; then
 			. $(dirname "${BASH_SOURCE[0]}")/../gitcd/gitcdb com.liferay.source.formatter
@@ -20,7 +16,7 @@ antformatsource() {
 	if [ "" != "$1" ] && [ -f $1 ]; then
 		ARGS="-Dsource.files=$PWD/$1"
 	elif [ "" != "$1" ]; then
-		check $@
+		checkvalidrebase $@
 
 		if [[ 0 -ne $? ]]; then
 			return 1
@@ -38,7 +34,11 @@ antformatsource() {
 	ant format-source $ARGS
 }
 
-check() {
+checksnapshots() {
+	. $(dirname "${BASH_SOURCE[0]}")/../checksnapshots
+}
+
+checkvalidrebase() {
 	BASE_COMMIT=$(git log -1 --pretty='%H' $1)
 
 	if [ "" == "$BASE_COMMIT" ]; then

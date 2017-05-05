@@ -47,46 +47,13 @@ baseline() {
 	done
 
 	if [[ 0 -ne $(wc -l $GIT_ROOT/.redeploy/baseline.txt | cut -d' ' -f 1) ]]; then
-		ant setup-sdk
-
-		# Identify the Maven repository where we are installing artifacts
-
-		local repository_root=$(grep -F 'build.repository.local.dir=' build.$USER.properties | cut -d'=' -f 2 | sed 's@${project.dir}/@'$GIT_ROOT'/@g')
-
-		if [ "" == "$repository_root" ]; then
-			repository_root=$(grep -F 'build.repository.local.dir=' build.properties | cut -d'=' -f 2 | sed 's@${project.dir}/@'$GIT_ROOT'/@g')
-		fi
-
-		if [ "" == "$repository_root" ]; then
-			repository_root="${HOME}/.m2/repository"
-		fi
-
-		echo "Checking ${repository_root} for Maven artifacts"
-
-		# Check for missing artifacts
-
-		for artifact in $(grep -F version $GIT_ROOT/.gradle/gradle.properties | grep -F 'com.liferay' | cut -d'=' -f 1 | sed 's/\.version$//g'); do
-			local artifact_version=$(grep -F "${artifact}.version" $GIT_ROOT/.gradle/gradle.properties | cut -d'=' -f 2)
-
-			if [ ! -d "${repository_root}/com/liferay/portal/${artifact}/${artifact_version}" ]; then
-				echo "Missing snapshot for $artifact (${artifact_version})"
-				missing_artifact="$missing_artifact $artifact"
-			fi
-		done
-
-		if [ "" != "$missing_artifact" ]; then
-			echo "Running install-portal-snapshots to ensure all snapshots are available"
-
-			pushd $GIT_ROOT > /dev/null
-			ant compile install-portal-snapshots
-			popd > /dev/null
-		fi
+		checksnapshots
 
 		# Execute the one large command we built before
 
 		cd modules
 
-		cat $GIT_ROOT/.redeploy/baseline.txt | xargs $(dirname "${BASH_SOURCE[0]}")/../gw
+		cat $GIT_ROOT/.redeploy/baseline.txt | xargs $(dirname "${BASH_SOURCE[0]}")/../gw --continue
 		EXIT_CODE=$?
 
 		cd -
@@ -114,6 +81,10 @@ baseline() {
 			fi
 		done
 	fi
+}
+
+checksnapshots() {
+	. $(dirname "${BASH_SOURCE[0]}")/../checksnapshots
 }
 
 setopts() {
