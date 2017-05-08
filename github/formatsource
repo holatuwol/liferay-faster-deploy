@@ -49,7 +49,7 @@ checkvalidrebase() {
 		MAX_COMMITS=10
 	fi
 
-	ACTUAL_COMMITS=$(git log $1..HEAD | wc -l)
+	ACTUAL_COMMITS=$(git log --pretty='%H' $1..HEAD | wc -l)
 
 	if [[ $MAX_COMMITS -lt $ACTUAL_COMMITS ]]; then
 		echo "There have been ${ACTUAL_COMMITS} commits on this branch compared to ${1}."
@@ -112,7 +112,7 @@ formatbranch() {
 	fi
 
 	if [[ 0 -ne $(wc -l "$GIT_ROOT/.redeploy/changes_ant.txt" | cut -d' ' -f 1) ]]; then
-		antformatsource ${compare_branch} $(git log ${compare_branch}..HEAD | wc -l)
+		antformatsource ${compare_branch} $(git log --pretty='%H' ${compare_branch}..HEAD | wc -l)
 
 		EXIT_CODE=$?
 

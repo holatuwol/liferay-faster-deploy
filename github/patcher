@@ -31,7 +31,7 @@ patcher() {
 
 	if [ "" == "$(git for-each-ref --format='%(refname)' refs/$ORIGIN/$BRANCH)" ]; then
 		git push $ORIGIN $BRANCH
-	elif [ "" != "$(git log $ORIGIN/$BRANCH..$BRANCH)" ]; then
+	elif [ "" != "$(git log --pretty='%H' $ORIGIN/$BRANCH..$BRANCH)" ]; then
 		git push -f $ORIGIN $BRANCH
 	fi
 
