@@ -81,19 +81,19 @@ Right now, patcher has a defect where it doesn’t know what to do with the URL 
 
 * http://mrcoles.com/bookmarklet/
 
-``` .js
-var selectName = '_1_WAR_osbpatcherportlet_patcherProjectVersionId';
-var select = AUI().one('#' + selectName);
+.. code-block:: javascript
 
-var re = new RegExp(selectName + '=(\\d+)');
-var match = re.exec(document.location.search);
+	var selectName = '_1_WAR_osbpatcherportlet_patcherProjectVersionId';
+	var select = AUI().one('#' + selectName);
 
-if (match) {
-	var id = match[1];
-	var option = select.one('option[value="' + id + '"]');
+	var re = new RegExp(selectName + '=(\\d+)');
+	var match = re.exec(document.location.search);
 
-	if (option) {
-		option.set('selected', true);
+	if (match) {
+		var id = match[1];
+		var option = select.one('option[value="' + id + '"]');
+
+		if (option) {
+			option.set('selected', true);
+		}
 	}
-}
-```
