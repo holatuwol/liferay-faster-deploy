@@ -87,10 +87,14 @@ fixdeps() {
 		done
 	done
 
+	# Make sure that we have the right libraries in place
+
 	checksnapshots
 
+	# Mass compile check
+
 	cd modules
-	cat ../.redeploy/checkdeps.txt | cut -d',' -f 1 | sort -u | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":jar" }' | xargs $(dirname "${BASH_SOURCE[0]}")/../gw --continue
+	cat ../.redeploy/checkdeps.txt | cut -d',' -f 1 | sort -u | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":compileJSP :" $1 ":jar" }' | xargs $(dirname "${BASH_SOURCE[0]}")/../gw --continue | tee ../.redeploy/compile.txt
 	cd -
 
 	# Convert the manifest to a CSV file that we can parse
@@ -119,6 +123,15 @@ fixdeps() {
 			sed -i.bak -e '/name: "'$module'"/ s/group: .*/project("'$project'")/' $folder/build.gradle
 		fi
 	done
+
+	# For anything that fails to compile, report
+
+	local FAILED_COMPILE=$(grep 'compile\(JSP\|Java\) FAILED' .redeploy/compile.txt | sort)
+
+	if [ "" != "$FAILED_COMPILE" ]; then
+		echo "$FAILED_COMPILE"
+		return 1
+	fi
 }
 
 setopts() {

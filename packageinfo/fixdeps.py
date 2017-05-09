@@ -88,18 +88,13 @@ with open('.redeploy/checkdeps.txt') as f:
 
 with open('.redeploy/fixdeps.txt', 'w') as f:
 	for folder, manifest in manifests.items():
-		if manifest is None:
-			for package in packageinfos.keys():
-				if package not in packages:
-					continue
+		for package, version in packageinfos.items():
+			if manifest is None:
+				continue
 
-				print('%s failed to compile, so assuming it needs to update to %s version %s' % (folder, package, version))
+			if package not in manifest or package not in packages:
+				continue
+
+			if not all(semver.match(version, limiter) for limiter in manifest[package]):
+				print('%s requires %s version %s, which does not match %s' % (folder, package, version, ','.join(manifest[package])))
 				f.write('%s,%s\n' % (folder, packages[package]))
-		else:
-			for package, version in packageinfos.items():
-				if package not in manifest or package not in packages:
-					continue
-
-				if not all(semver.match(version, limiter) for limiter in manifest[package]):
-					print('%s requires %s version %s, which does not match %s' % (folder, package, version, ','.join(manifest[package])))
-					f.write('%s,%s\n' % (folder, packages[package]))
