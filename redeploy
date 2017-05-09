@@ -136,7 +136,7 @@ deployant() {
 
 		pushd $folder > /dev/null
 
-		if [ -f bnd.bnd ]; then
+		if [ -f bnd.bnd ] && [ "" != "$(grep -F 'Bundle-Name' bnd.bnd)" ]; then
 			ant deploy install-portal-snapshot
 		else
 			ant deploy
@@ -159,9 +159,11 @@ deploymodules() {
 }
 
 deployportalpre() {
-	cd modules
-	gw -Dbuild.profile=portal-pre -Pforced.deploy.dir=${PWD}/../tmp/lib-pre deploy
-	cd ..
+	if [ -d modules ]; then
+		cd modules
+		gw -Dbuild.profile=portal-pre -Pforced.deploy.dir=${PWD}/../tmp/lib-pre deploy
+		cd ..
+	fi
 }
 
 downloadbuild() {

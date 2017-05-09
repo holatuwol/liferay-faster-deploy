@@ -37,12 +37,16 @@ class SourceTrie:
 
 		_, artifact_version = self.extract_bnd(path)
 
+		build_xml = '%s/build.xml' % path
+
 		if artifact_version is None:
+			if os.path.isfile(build_xml):
+				self.add(path, None, None, None)
+
 			return
 
 		# Load the artifact name from build.xml
 
-		build_xml = '%s/build.xml' % path
 
 		with open(build_xml, 'r') as f:
 			lines = [line for line in f.readlines() if line.find('"manifest.bundle.symbolic.name"') > 0]
