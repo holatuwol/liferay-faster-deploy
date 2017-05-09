@@ -8,6 +8,10 @@ appserverprops() {
 }
 
 buildprops() {
+	if [ -f $GIT_ROOT/build.$USER.properties ]; then
+		return 0
+	fi
+
 	# Disable the baseline report unless it's explicitly requested
 
 	echo 'baseline.jar.report.level=off' > $GIT_ROOT/build.$USER.properties

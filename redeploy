@@ -196,6 +196,12 @@ if [[ 0 -ne $? ]]; then
 	exit $?
 fi
 
+. $(dirname "${BASH_SOURCE[0]}")/appserverprops
+
+if [[ 0 -ne $? ]]; then
+	exit $?
+fi
+
 mkdir -p "$HOME/.liferay/builds"
 
 time redeploy $1
