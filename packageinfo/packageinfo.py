@@ -4,9 +4,10 @@ from __future__ import print_function
 import csv
 import os.path
 import pandas as pd
+import sys
+
 sys.path.insert(1, os.path.join(sys.path[0], '..'))
 from sourcetrie import SourceTrie
-import sys
 
 # Identify excluded packages
 
@@ -59,10 +60,10 @@ def is_excluded_package(package_name):
 
 # Process the packageinfo.txt
 
-module_paths = SourceTrie.load('.metadata')
+module_paths = SourceTrie.load('.redeploy')
 module_versions = []
 
-with open('.metadata/packageinfo.txt', 'r') as f:
+with open('.redeploy/packageinfo.txt', 'r') as f:
 	for folder_name in [line.strip() for line in f.readlines()]:
 		node = module_paths.find_leaf(folder_name)
 
@@ -71,7 +72,11 @@ with open('.metadata/packageinfo.txt', 'r') as f:
 			continue
 
 		path = node.get_path()
+
 		relative_path = folder_name[len(path) + 1:]
+
+		if relative_path == 'src':
+			continue
 
 		if relative_path.find('src/main/resources/') == 0:
 			package_name = relative_path[19:].replace('/', '.')

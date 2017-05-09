@@ -28,25 +28,25 @@ packageinfo() {
 
 	# Generate the source trie
 
-	mkdir -p .metadata
+	mkdir -p .redeploy
 
-	$(dirname $0)/sourcetrie
+	$(dirname $0)/../sourcetrie
 
-	cat /dev/null > .metadata/packageinfo.txt
+	cat /dev/null > .redeploy/packageinfo.txt
 
 	# Handle root projects, which might not have packageinfo files
 
 	for folder in $(ls -1 . | sort -u); do
 		if [ -f $folder/bnd.bnd ]; then
-			find "$folder/src" -type f -printf '%h\n' | sort -u >> .metadata/packageinfo.txt
+			find "$folder/src" -type f -printf '%h\n' | sort -u >> .redeploy/packageinfo.txt
 		fi
 	done
 
 	# Handle modules, which always have packageinfo files
 
-	git ls-files modules | grep -F '/packageinfo' | grep -vF '/sdk/' | dirnames | sort >> .metadata/packageinfo.txt
+	git ls-files modules | grep -F '/packageinfo' | grep -vF '/sdk/' | dirnames | sort >> .redeploy/packageinfo.txt
 
-	$(dirname $0)/sourcetrie
+	$(dirname $0)/../sourcetrie
 	python $(dirname $0)/packageinfo.py $OUTPUT_FILE
 }
 
