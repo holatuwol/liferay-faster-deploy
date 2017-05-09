@@ -83,8 +83,10 @@ applychanges() {
 
 	# Undo changes to build-common.xml and modules/build.gradle
 
-	git checkout build-common.xml
-	git checkout modules/build.gradle
+	if [ -d modules ]; then
+		git checkout build-common.xml
+		git checkout modules/build.gradle
+	fi
 }
 
 cdroot() {
