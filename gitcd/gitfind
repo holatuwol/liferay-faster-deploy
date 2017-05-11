@@ -48,7 +48,7 @@ gitfilematch() {
 
 	# If the folder is empty, there's nothing for us to do
 
-	if [[ 0 -eq $(wc -l "$SCRATCH_FILE" | cut -d' ' -f 1) ]]; then
+	if [[ 0 -eq $(cat "$SCRATCH_FILE" | wc -l) ]]; then
 		return 1
 	fi
 

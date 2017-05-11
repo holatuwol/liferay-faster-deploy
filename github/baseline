@@ -46,7 +46,7 @@ baseline() {
 		fi
 	done
 
-	if [[ 0 -ne $(wc -l $GIT_ROOT/.redeploy/baseline.txt | cut -d' ' -f 1) ]]; then
+	if [[ 0 -ne $(cat $GIT_ROOT/.redeploy/baseline.txt | wc -l) ]]; then
 		checksnapshots
 
 		# Execute the one large command we built before

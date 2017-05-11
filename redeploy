@@ -47,7 +47,7 @@ applychanges() {
 
 	# First, check to see if there are any modules we need to deploy early
 
-	if [[ 0 -ne $(wc -l .redeploy/changes_gradle_1.txt | cut -d' ' -f 1) ]]; then
+	if [[ 0 -ne $(cat .redeploy/changes_gradle_1.txt | wc -l) ]]; then
 		deployportalpre
 
 		if [[ 0 -ne $? ]]; then
@@ -57,7 +57,7 @@ applychanges() {
 
 	# Next, check to see if there is anything we need to deploy with ant
 
-	if [[ 0 -ne $(wc -l .redeploy/changes_ant.txt | cut -d' ' -f 1) ]]; then
+	if [[ 0 -ne $(cat .redeploy/changes_ant.txt | wc -l) ]]; then
 		deployant
 
 		if [[ 0 -ne $? ]]; then
@@ -67,7 +67,7 @@ applychanges() {
 
 	# Finally, check to see if there is anything we need to deploy with gradle
 
-	if [[ 0 -ne $(wc -l .redeploy/changes_gradle_2.txt | cut -d' ' -f 1) ]]; then
+	if [[ 0 -ne $(cat .redeploy/changes_gradle_2.txt | wc -l) ]]; then
 		deploymodules
 
 		if [[ 0 -ne $? ]]; then

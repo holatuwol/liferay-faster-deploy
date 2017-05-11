@@ -98,7 +98,7 @@ formatbranch() {
 		fi
 	done
 
-	if [[ 0 -ne $(wc -l $GIT_ROOT/.redeploy/format.txt | cut -d' ' -f 1) ]]; then
+	if [[ 0 -ne $(cat $GIT_ROOT/.redeploy/format.txt | wc -l) ]]; then
 		cd modules
 
 		cat $GIT_ROOT/.redeploy/format.txt | xargs $(dirname "${BASH_SOURCE[0]}")/../gw
@@ -111,7 +111,7 @@ formatbranch() {
 		fi
 	fi
 
-	if [[ 0 -ne $(wc -l "$GIT_ROOT/.redeploy/changes_ant.txt" | cut -d' ' -f 1) ]]; then
+	if [[ 0 -ne $(cat"$GIT_ROOT/.redeploy/changes_ant.txt" | wc -l) ]]; then
 		antformatsource ${compare_branch} $(git log --pretty='%H' ${compare_branch}..HEAD | wc -l)
 
 		EXIT_CODE=$?
