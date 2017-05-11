@@ -55,6 +55,26 @@ gitfilematch() {
 	# First, assume that we're looking for a module root, so check for
 	# bnd.bnd, ivy.xml, and package.json
 
+	MATCHING_FOLDERS=$(grep "/$1/bnd.bnd$" "$SCRATCH_FILE" | dirnames | sort -u)
+
+	if [ "" != "$MATCHING_FOLDERS" ]; then
+		return 0
+	fi
+
+	MATCHING_FOLDERS=$(grep "/$1/ivy.xml$" "$SCRATCH_FILE" | dirnames | sort -u)
+
+	if [ "" != "$MATCHING_FOLDERS" ]; then
+		return 0
+	fi
+
+	MATCHING_FOLDERS=$(grep "/$1/package.json$" "$SCRATCH_FILE" | dirnames | sort -u)
+
+	if [ "" != "$MATCHING_FOLDERS" ]; then
+		return 0
+	fi
+
+	# Same thing as above, but suffix matches instead of exact folder matches
+
 	MATCHING_FOLDERS=$(grep "$1/bnd.bnd$" "$SCRATCH_FILE" | dirnames | sort -u)
 
 	if [ "" != "$MATCHING_FOLDERS" ]; then
