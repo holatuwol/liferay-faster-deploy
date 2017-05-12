@@ -4,6 +4,26 @@ baseline() {
 	$(dirname "${BASH_SOURCE[0]}")/baseline
 }
 
+checkrepomode() {
+	local SUBREPO_CHANGES=
+
+	for subrepo_folder in $(git ls-files modules | grep -F '.gitrepo' | xargs grep -Fl 'mode = pull' | dirnames); do
+		if [ "" != "$(grep -F $subrepo_folder .redeploy/changes_gradle_2.txt)" ]; then
+			SUBREPO_CHANGES="$SUBREPO_CHANGES\n * $subrepo_folder =>$(grep 'remote =' $subrepo_folder/.gitrepo | cut -d'=' -f 2)"
+		fi
+	done
+
+	if [ "" != "$SUBREPO_CHANGES" ]; then
+		echo "Detected changes in subrepo folders"
+		echo -e "$SUBREPO_CHANGES"
+		return 1
+	fi
+}
+
+dirnames() {
+	python $(dirname "${BASH_SOURCE[0]}")/../dirnames.py
+}
+
 findreviewer() {
 	. $(dirname "${BASH_SOURCE[0]}")/findreviewer "$*"
 }
@@ -92,7 +112,7 @@ sendpull() {
 	if [ -f "$GIT_ROOT/release.properties" ]; then
 		pushd $GIT_ROOT > /dev/null
 
-		gitchanges ${upstream_remote}/$BASE_BRANCH && fixdeps && baseline && formatsource && pmdreport
+		gitchanges ${upstream_remote}/$BASE_BRANCH && checkrepomode && fixdeps && baseline && formatsource && pmdreport
 		EXIT_CODE=$?
 
 		popd > /dev/null
