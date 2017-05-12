@@ -1,0 +1,64 @@
+#!/bin/bash
+
+subrepo() {
+	source_folder=$(readlink -f $1)
+	target_folder=$(readlink -f $2)
+	central_project=$3
+	remote_location=$4
+	remote_project=$5
+
+	# Create parent folder
+	mkdir -p $target_folder/$(dirname $central_project)
+
+	# Clone into correct directory and switch into it
+	git clone $remote_location $target_folder/$remote_project
+	pushd $target_folder/$remote_project > /dev/null
+
+	# Use hub to fork the repository
+	hub fork
+
+	# Rename the remotes to origin and upstream
+	git remote rename origin upstream
+	git remote rename $(git remote | grep -v upstream) origin
+
+	# Switch out of the directory we switched into
+	popd > /dev/null
+}
+
+subrepos() {
+	pushd $GIT_ROOT > /dev/null
+
+	source_folder=$PWD
+	target_folder=$(dirname $PWD)/subrepos
+
+	for repo_file in $(git ls-files modules | grep -F '.gitrepo' | xargs grep -Fl 'mode = pull'); do
+		central_project=$(dirname $repo_file)
+		remote_location=$(grep -F remote $repo_file | cut -d'=' -f 2)
+		remote_project=$(echo "$remote_location" | cut -d'/' -f 2 | cut -d'.' -f 1)
+
+		if [ ! -d $target_folder/$remote_project ]; then
+			subrepo $source_folder $target_folder $central_project $remote_location $remote_project
+		fi
+	done
+
+	popd > /dev/null
+}
+
+setopts() {
+	. $(dirname "${BASH_SOURCE[0]}")/../setopts
+}
+
+setopts
+
+if [ ! -d $GIT_ROOT/modules ]; then
+	echo Please run this from the portal source
+	exit 1
+fi
+
+if [ "" == "$(which hub)" ]; then
+	echo 'Please make sure hub is available on the path'
+	echo 'https://github.com/github/hub'
+	exit 1
+fi
+
+subrepos
