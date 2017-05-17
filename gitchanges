@@ -3,9 +3,13 @@
 gitchanges() {
 	# Generate the source trie
 
+	echo "Identifying module structure..."
+
 	$(dirname "${BASH_SOURCE[0]}")/sourcetrie
 
 	# Identify the changes
+
+	echo "Computing changes between HEAD and $1..."
 
 	cat /dev/null > .redeploy/changes.txt
 
@@ -14,11 +18,27 @@ gitchanges() {
 		git diff ${COMPARE_HASH}..HEAD --name-only >> .redeploy/changes.txt
 	fi
 
-	git status -s | awk '{print $2}' >> .redeploy/changes.txt
+	echo "Computing local changes..."
+
+	git status -s | grep -vF '.redeploy' | awk '{print $2}' >> .redeploy/changes.txt
+
+	if [[ 0 -eq $(cat .redeploy/changes.txt | wc -l) ]]; then
+		echo 'No changes detected.'
+
+		cat /dev/null > .redeploy/changes_ant.txt
+		cat /dev/null > .redeploy/changes_gradle_1.txt
+		cat /dev/null > .redeploy/changes_gradle_2.txt
+
+		return 0
+	fi
 
 	# Identify the folders that changed
 
+	echo "Comparing changes to module structure..."
+
 	python $(dirname "${BASH_SOURCE[0]}")/gitchanges.py
+
+	echo "Change detection completed."
 }
 
 gitchanges $@
