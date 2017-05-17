@@ -1,7 +1,9 @@
 .. code-block:: bash
 
+	MCD_RD_CLONE_PATH=/path/to/clone/location
+
 	cachenpm() {
-		/path/to/clone/location/nodejs/cachenpm $@
+		${MCD_RD_CLONE_PATH}/nodejs/cachenpm $@
 	}
 
 Motivation

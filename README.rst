@@ -1,5 +1,5 @@
-Repository Overview
-===================
+Installation
+============
 
 Clone this repository.
 
@@ -7,14 +7,16 @@ Clone this repository.
 
 	git clone git@github.com:holatuwol/liferay-faster-deploy.git
 
-Then, add a Bash function to `.bash_aliases` (or the equivalent on whichever shell you're using) which calls the script. Each group has a set of aliases and some descriptions that describe what the executable you've aliased actually does. The aliases located in this root folder are as follows.
+Then, add this section to `.bash_aliases` (or the equivalent on whichever shell you're using) which calls the script.
 
 .. code-block:: bash
+
+	MCD_RD_CLONE_PATH=/path/to/clone/location
 
 	rd() {
 		TAG_ARCHIVE_MIRROR='http://cloud-10-50-0-165/builds/fixpacks' \
 			BRANCH_ARCHIVE_MIRROR='http://cloud-10-50-0-165/builds/branches' \
-				/path/to/clone/location/redeploy $@
+				${MCD_RD_CLONE_PATH}/redeploy $@
 	}
 
 Building from a Daily Build

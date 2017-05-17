@@ -1,3 +1,33 @@
+Installation
+============
+
+Clone this repository.
+
+.. code-block:: bash
+
+	git clone git@github.com:holatuwol/liferay-faster-deploy.git
+
+Then, add this section to `.bash_aliases` (or the equivalent on whichever shell you're using) which calls the script.
+
+.. code-block:: bash
+
+	MCD_RD_CLONE_PATH=/path/to/clone/location
+
+	cd() {
+		. ${MCD_RD_CLONE_PATH}/gitcd/gitcd $@
+	}
+
+	cdb() {
+		. ${MCD_RD_CLONE_PATH}/gitcd/gitcdb $@
+	}
+
+	cdp() {
+		. ${MCD_RD_CLONE_PATH}/gitcd/gitcdp $@
+	}
+
+Folder Overview
+===============
+
 Imagine that you are in ``modules/apps/foundation/portal-search/portal-search`` and you wanted to switch to the directory ``modules/apps/static/portal-osgi-web/portal-osgi-web-wab-generator``. How would you do it? Maybe you'd do something like this.
 
 .. code-block:: bash
@@ -5,20 +35,6 @@ Imagine that you are in ``modules/apps/foundation/portal-search/portal-search`` 
 	cd ../../../static/portal-osgi-web/portal-osgi-web-wab-generator
 
 After awhile, though, this would get pretty tedious. Did you know that you can make ``cd`` type commands that change directories by using ``git ls-files`` as an intermediate step? The following are some of the things that I use in my day-to-day work. You can add all of them with the following.
-
-.. code-block:: bash
-
-	cd() {
-		. /path/to/clone/location/gitcd/gitcd $@
-	}
-
-	cdb() {
-		. /path/to/clone/location/gitcd/gitcdb $@
-	}
-
-	cdp() {
-		. /path/to/clone/location/gitcd/gitcdp $@
-	}
 
 CD to Module Root
 =================

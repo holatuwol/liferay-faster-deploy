@@ -1,11 +1,24 @@
+Installation
+============
+
+Clone this repository.
+
 .. code-block:: bash
 
+	git clone git@github.com:holatuwol/liferay-faster-deploy.git
+
+Then, add this section to `.bash_aliases` (or the equivalent on whichever shell you're using) which calls the script.
+
+.. code-block:: bash
+
+	MCD_RD_CLONE_PATH=/path/to/clone/location
+
 	fixdeps() {
-		/path/to/clone/location/packageinfo/fixdeps
+		${MCD_RD_CLONE_PATH}/packageinfo/fixdeps
 	}
 
 Update Gradle Dependencies
---------------------------
+==========================
 
 Manual Update
 ~~~~~~~~~~~~~
