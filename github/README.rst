@@ -56,7 +56,7 @@ While opening a pull request is pretty trivial, but running all the checks that 
 	gpr dustin
 	gpr brian chan
 
-For now, the script doesn't automatically do a ``-f`` when pushing to your origin repository to avoid accidental bad things happening, and it also enforces the convention of always submitting from a new branch, so ``master`` is not allowed.
+For now, the script enforces the convention of always submitting from a new branch, so ``master`` is not allowed.
 
 * `ghsendpull <ghsendpull>`__
 
