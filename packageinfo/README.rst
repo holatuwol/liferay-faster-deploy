@@ -7,7 +7,7 @@ Clone this repository.
 
 	git clone git@github.com:holatuwol/liferay-faster-deploy.git
 
-Then, add this section to `.bash_aliases` (or the equivalent on whichever shell you're using) which calls the script.
+Then, add this section to `.bash_aliases` (or the equivalent on whichever shell you're using) which calls the script, making sure to change `/path/to/clone/location` to wherever you cloned the repository.
 
 .. code-block:: bash
 
