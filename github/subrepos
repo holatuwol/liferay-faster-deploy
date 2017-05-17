@@ -3,12 +3,8 @@
 subrepo() {
 	source_folder=$(readlink -f $1)
 	target_folder=$(readlink -f $2)
-	central_project=$3
-	remote_location=$4
-	remote_project=$5
-
-	# Create parent folder
-	mkdir -p $target_folder/$(dirname $central_project)
+	remote_location=$3
+	remote_project=$4
 
 	# Clone into correct directory and switch into it
 	git clone $remote_location $target_folder/$remote_project
@@ -32,12 +28,11 @@ subrepos() {
 	target_folder=$(dirname $PWD)/subrepos
 
 	for repo_file in $(git ls-files modules | grep -F '.gitrepo' | xargs grep -Fl 'mode = pull'); do
-		central_project=$(dirname $repo_file)
-		remote_location=$(grep -F remote $repo_file | cut -d'=' -f 2)
+		remote_location=$(grep -F 'remote = ' $repo_file | cut -d'=' -f 2)
 		remote_project=$(echo "$remote_location" | cut -d'/' -f 2 | cut -d'.' -f 1)
 
 		if [ ! -d $target_folder/$remote_project ]; then
-			subrepo $source_folder $target_folder $central_project $remote_location $remote_project
+			subrepo $source_folder $target_folder $remote_location $remote_project
 		fi
 	done
 
