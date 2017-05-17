@@ -60,7 +60,7 @@ sendpull() {
 		return 1
 	fi
 
-	local HAS_CHANGES=$(git status -s | grep -vF '??')
+	local HAS_CHANGES=$(git status -s | grep -vF '??' | grep -vF gradle.properties)
 
 	if [ "" != "$HAS_CHANGES" ]; then
 		echo "Please commit local modifications before sending a pull request"
@@ -113,9 +113,29 @@ sendpull() {
 	fi
 
 	git fetch --no-tags ${upstream_remote}
-	git rebase ${upstream_remote}/${BASE_BRANCH}
 
-	if [[ 0 -ne $? ]]; then
+	HAS_CHANGES=$(git status -s | grep -vF '??')
+
+	if [ "" != "$HAS_CHANGES" ]; then
+		git stash
+	fi
+
+	git rebase ${upstream_remote}/${BASE_BRANCH}
+	local EXIT_CODE=$?
+
+	if [[ 0 -ne $EXIT_CODE ]]; then
+		if [ "" != "$HAS_CHANGES" ]; then
+			git rebase --abort
+			git stash pop
+		fi
+
+		return 1
+	elif [ "" != "$HAS_CHANGES" ]; then
+		git stash pop
+		EXIT_CODE=$?
+	fi
+
+	if [[ 0 -ne $EXIT_CODE ]]; then
 		return 1
 	fi
 
@@ -141,7 +161,33 @@ sendpull() {
 			return 1
 		fi
 
-		HAS_CHANGES=$(git status -s | grep -vF '??')
+		HAS_CHANGES=$(git status -s | grep -vF '??' | grep -vF gradle.properties)
+
+		if [ "" != "$HAS_CHANGES" ]; then
+			echo "Detected files modified during sanity check, please commit them before sending a pull request"
+			return 1
+		fi
+	else
+		pushd $GIT_ROOT > /dev/null
+
+		. $(dirname "${BASH_SOURCE[0]}")/../gitchanges ${upstream_remote}/$BASE_BRANCH
+
+		if [[ 0 -eq $(cat .redeploy/changes.txt | wc -l) ]]; then
+			echo No changes detected.
+			return 0
+		fi
+
+		fixdeps && baseline && formatsource && pmdreport
+
+		EXIT_CODE=$?
+
+		popd > /dev/null
+
+		if [[ 0 -ne $EXIT_CODE ]]; then
+			return 1
+		fi
+
+		HAS_CHANGES=$(git status -s | grep -vF '??' | grep -vF gradle.properties)
 
 		if [ "" != "$HAS_CHANGES" ]; then
 			echo "Detected files modified during sanity check, please commit them before sending a pull request"

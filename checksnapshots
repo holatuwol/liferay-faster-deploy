@@ -1,6 +1,10 @@
 #!/bin/bash
 
 checksnapshots() {
+	if [ ! -f "$GIT_ROOT/build.properties" ]; then
+		return 0
+	fi
+
 	# Run the pre-checks for ant
 
 	if [ -f "$GIT_ROOT/lib/portal/dependencies.properties" ] && [[ $(ls -1 "$GIT_ROOT/lib/portal" | wc -l) -lt $(cat "$GIT_ROOT/lib/portal/dependencies.properties" | wc -l) ]]; then

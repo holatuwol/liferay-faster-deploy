@@ -5,16 +5,28 @@ checksnapshots() {
 }
 
 findgradle() {
+	if [ -e $GRADLE_HOME/gradlew ]; then
+		return 0
+	fi
+
 	GRADLE_HOME=$PWD
 
 	while [ ! -e $GRADLE_HOME/gradlew ] && [ "/" != "$GRADLE_HOME" ]; do
 		GRADLE_HOME=$(dirname $GRADLE_HOME)
 	done
 
-	if [ ! -e $GRADLE_HOME/gradlew ]; then
-		echo 'Unable to find the gradlew binary'
-		return 1
+	if [ -e $GRADLE_HOME/gradlew ]; then
+		return 0
 	fi
+
+	echo 'Unable to find the gradlew binary'
+
+	if [ "" != "$(which gradle)" ]; then
+		echo "Falling back to gradle on the path: $(which gradle)"
+		return 0
+	fi
+
+	return 1
 }
 
 fixgradle() {
@@ -30,8 +42,6 @@ fixgradle() {
 		rm ../settings.gradle
 		git update-index --assume-unchanged ../settings.gradle
 	fi
-
-	. $(dirname "${BASH_SOURCE[0]}")/appserverprops
 
 	# if you appear to be building to a Liferay downloaded bundle rather
 	# than a built bundle, tell the user to use the override folder
@@ -82,6 +92,12 @@ gw() {
 		return 1
 	fi
 
+	. $(dirname "${BASH_SOURCE[0]}")/appserverprops
+
+	if [[ 0 -ne $? ]]; then
+		return 1
+	fi
+
 	local fixed_gradle=
 
 	if [ -f ../settings.gradle ] && [ ! -f ../gradlew ]; then
@@ -106,6 +122,10 @@ gw() {
 		fi
 
 		return $EXIT_CODE
+	else
+		gradle $@
+
+		return $?
 	fi
 }
 
@@ -113,4 +133,6 @@ setopts() {
 	. $(dirname "${BASH_SOURCE[0]}")/setopts
 }
 
-setopts && gw $@
+setopts
+
+gw $@

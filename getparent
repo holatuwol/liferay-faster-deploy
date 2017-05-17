@@ -11,10 +11,6 @@ getparent() {
 		return 0
 	fi
 
-	if [ ! -f "$GIT_ROOT/build.properties" ]; then
-		return 1
-	fi
-
 	local FULL_VERSION=
 	local MAJOR_VERSION=
 
@@ -35,6 +31,8 @@ getparent() {
 	elif [ "7.0" == "$MAJOR_VERSION" ] && [ "7.0.10" == "$FULL_VERSION" ]; then
 		BASE_BRANCH=ee-7.0.x
 	elif [ "7.0" == "$MAJOR_VERSION" ]; then
+		BASE_BRANCH=master
+	elif [ -f "$GIT_ROOT/settings.gradle" ] && [ "" != "$(grep -F com.liferay settings.gradle)" ]; then
 		BASE_BRANCH=master
 	else
 		return 1

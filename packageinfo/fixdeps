@@ -47,7 +47,11 @@ fixdeps() {
 
 	# Record all the possible module locations that we have to evaluate
 
-	git ls-files modules | grep -vF 'modules/sdk/' > .redeploy/lsfiles.txt
+	if [ -d modules ]; then
+		git ls-files modules | grep -vF 'modules/sdk/' > .redeploy/lsfiles.txt
+	else
+		git ls-files . > .redeploy/lsfiles.txt
+	fi
 
 	grep -F build.gradle .redeploy/lsfiles.txt | dirnames > .redeploy/gradle.txt
 	grep -F bnd.bnd .redeploy/lsfiles.txt > .redeploy/bnd.txt
@@ -99,9 +103,14 @@ fixdeps() {
 
 	# Mass compile check
 
-	cd modules
-	cat ../.redeploy/checkdeps.txt | cut -d',' -f 1 | sort -u | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":compileJSP :" $1 ":jar" }' | xargs $(dirname "${BASH_SOURCE[0]}")/../gw --continue | tee ../.redeploy/compile.txt
-	cd -
+	if [ -d modules ]; then
+		cd modules
+		cat ../.redeploy/checkdeps.txt | cut -d',' -f 1 | sort -u | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":compileJSP :" $1 ":jar" }' | xargs $(dirname "${BASH_SOURCE[0]}")/../gw --continue | tee ../.redeploy/compile.txt
+		cd -
+	else
+		local project_prefix=$(grep -F 'project.path.prefix=' gradle.properties | cut -d'=' -f 2)
+		cat .redeploy/checkdeps.txt | cut -d',' -f 1 | sort -u | cut -d'/' -f 2- | tr '/' ':' | awk '{ print "'${project_prefix}':" $1 ":compileJSP '${project_prefix}':" $1 ":jar" }' | xargs $(dirname "${BASH_SOURCE[0]}")/../gw --continue | tee .redeploy/compile.txt
+	fi
 
 	# Convert the manifest to a CSV file that we can parse
 

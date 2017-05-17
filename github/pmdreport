@@ -1,6 +1,10 @@
 #!/bin/bash
 
 pmdreport() {
+	if [ ! -f build.xml ]; then
+		return 0
+	fi
+
 	local CHANGE_ID=$1
 
 	if [ "" == "$CHANGE_ID" ]; then

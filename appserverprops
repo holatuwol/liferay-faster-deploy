@@ -1,7 +1,7 @@
 #!/bin/bash
 
 appserverprops() {
-	if [ ! -f $GIT_ROOT/app.server.$USER.properties ]; then
+	if [ -f $GIT_ROOT/app.server.properties ] && [ ! -f $GIT_ROOT/app.server.$USER.properties ]; then
 		echo "Missing $GIT_ROOT/app.server.$USER.properties"
 		return 1
 	fi
@@ -30,7 +30,9 @@ buildprops() {
 
 	local UPSTREAM_BRANCH=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/ee-7.0.x$" | cut -d'/' -f 3,4)
 
-	git show ${UPSTREAM_BRANCH}:build.properties | grep repository.private.password= >> $GIT_ROOT/build.$USER.properties
+	if [ -f $GIT_ROOT/build.properties ]; then
+		git show ${UPSTREAM_BRANCH}:build.properties | grep repository.private.password= >> $GIT_ROOT/build.$USER.properties
+	fi
 }
 
 cleanappserver() {
@@ -88,14 +90,14 @@ cleanappserver() {
 
 gradleprops() {
 	local ANT_LIFERAY_HOME=
+	local GRADLE_LIFERAY_HOME=
 
-	if [ -f "$GIT_ROOT/app.server.$USER.properties" ]; then
-		ANT_LIFERAY_HOME=$(grep '^\s*app.server.parent.dir=' "$GIT_ROOT/app.server.$USER.properties" | cut -d'=' -f 2)
-	fi
-
-	if [ ! -d "$GIT_ROOT/modules" ]; then
-		LIFERAY_HOME=$ANT_LIFERAY_HOME
-		return 0
+	if [ -f "$GIT_ROOT/app.server.properties" ]; then
+		if [ -f "$GIT_ROOT/app.server.$USER.properties" ]; then
+			ANT_LIFERAY_HOME=$(grep '^\s*app.server.parent.dir=' "$GIT_ROOT/app.server.$USER.properties" | cut -d'=' -f 2)
+		else
+			ANT_LIFERAY_HOME=$(grep '^\s*app.server.parent.dir=' "$GIT_ROOT/app.server.properties" | cut -d'=' -f 2)
+		fi
 	fi
 
 	# Find gradle root
@@ -106,14 +108,9 @@ gradleprops() {
 		GRADLE_HOME=$(dirname $GRADLE_HOME)
 	done
 
-	if [ ! -e $GRADLE_HOME/gradlew ]; then
-		echo 'Unable to find the gradlew binary'
-		return 1
-	fi
-
 	# If this is a blade workspace, don't do anything
 
-	if [ -f $GRADLE_HOME/build.gradle ]; then
+	if [ "/" != "$GRADLE_HOME" ] && [ -f $GRADLE_HOME/build.gradle ]; then
 		return 0
 	fi
 
@@ -123,6 +120,20 @@ gradleprops() {
 
 	if [ -f "$GRADLE_HOME/.gradle/gradle.properties" ]; then
 		GRADLE_LIFERAY_HOME=$(grep -F liferay.home= $GRADLE_HOME/.gradle/gradle.properties | cut -d'=' -f 2)
+	elif [ -f "$GIT_ROOT/gradle.properties" ]; then
+		GRADLE_LIFERAY_HOME=$(grep '^\s*liferay.home=' "$GIT_ROOT/gradle.properties" | cut -d'=' -f 2)
+		local TOMCAT_FOLDER=$(grep '^\s*app.server.parent.dir=' "$GIT_ROOT/gradle.properties" | cut -d'=' -f 2)
+
+		if [ "" == "$GRADLE_LIFERAY_HOME" ] && [ "" == "$TOMCAT_FOLDER" ]; then
+			echo "Missing liferay.home and app.server.parent.dir in gradle.properties"
+			return 1
+		elif [ "" == "$GRADLE_LIFERAY_HOME" ]; then
+			echo "Missing liferay.home in gradle.properties"
+			return 1
+		elif [ "" == "$TOMCAT_FOLDER" ]; then
+			echo "Missing app.server.parent.dir in gradle.properties"
+			return 1
+		fi
 	fi
 
 	if [ "" == "$ANT_LIFERAY_HOME" ]; then
@@ -131,7 +142,10 @@ gradleprops() {
 			return 1
 		fi
 
-		echo -e "\napp.server.parent.dir=$GRADLE_LIFERAY_HOME" >> $GIT_ROOT/app.server.$USER.properties
+		if [ ! -f "$GIT_ROOT/gradle.properties" ]; then
+			echo -e "\napp.server.parent.dir=$GRADLE_LIFERAY_HOME" >> $GIT_ROOT/app.server.$USER.properties
+		fi
+
 		ANT_LIFERAY_HOME=$GRADLE_LIFERAY_HOME
 	fi
 
@@ -159,4 +173,8 @@ setopts() {
 	. $(dirname "${BASH_SOURCE[0]}")/setopts
 }
 
-setopts && appserverprops && buildprops && gradleprops && cleanappserver
+setopts
+
+if [[ 0 -eq $? ]]; then
+	appserverprops && buildprops && gradleprops && cleanappserver
+fi

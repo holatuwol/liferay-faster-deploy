@@ -34,9 +34,19 @@ with open('.redeploy/changes.txt', 'r') as f:
 
 # Sort the modules
 
+global is_subrepo
+
+is_subrepo = False
+
+if os.path.isfile('settings.gradle'):
+	with open('settings.gradle') as f:
+		is_subrepo = len([line for line in f.readlines() if line.find('com.liferay') != -1]) > 0
+
 def priority(x):
-	if x.startswith('modules/'):
-		if os.path.exists('%s/.lfrbuild-portal-pre'):
+	global is_subrepo
+
+	if x.startswith('modules/') or is_subrepo:
+		if os.path.exists('%s/.lfrbuild-portal-pre' % x):
 			return (0, x)
 		else:
 			return (4, x)
@@ -52,7 +62,7 @@ def priority(x):
 changed_modules = sorted([priority(x) for x in changed_modules])
 
 with open('.redeploy/changes_ant.txt', 'w') as f:
-	for module in [x[1] for x in changed_modules if not x[1].startswith('modules/')]:
+	for module in [x[1] for x in changed_modules if x[0] != 0 and x[0] != 4]:
 		f.write('%s\n' % module)
 
 with open('.redeploy/changes_gradle_1.txt', 'w') as f:

@@ -1,10 +1,6 @@
 #!/bin/bash
 
 baseline() {
-	if [ ! -d modules ]; then
-		return 0
-	fi
-
 	local CHANGE_ID=$1
 
 	if [ "" == "$CHANGE_ID" ]; then
@@ -47,7 +43,12 @@ baseline() {
 
 	for folder in $(cat "$GIT_ROOT/.redeploy/changes_gradle_1.txt" "$GIT_ROOT/.redeploy/changes_gradle_2.txt"); do
 		if [ "" != "$(grep -F "$folder" $GIT_ROOT/.redeploy/changes.txt | grep -F '.java')" ]; then
-			echo $folder | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":baseline" }' >> $GIT_ROOT/.redeploy/baseline.txt
+			if [ -d modules ]; then
+				echo $folder | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":baseline" }' >> $GIT_ROOT/.redeploy/baseline.txt
+			else
+				local project_prefix=$(grep -F 'project.path.prefix=' gradle.properties | cut -d'=' -f 2)
+				echo $folder | cut -d'/' -f 2- | tr '/' ':' | awk '{ print "'${project_prefix}':" $1 ":baseline" }' >> $GIT_ROOT/.redeploy/baseline.txt
+			fi
 		fi
 	done
 
@@ -56,12 +57,17 @@ baseline() {
 
 		# Execute the one large command we built before
 
-		cd modules
+		if [ -d modules ]; then
+			cd modules
 
-		cat $GIT_ROOT/.redeploy/baseline.txt | xargs $(dirname "${BASH_SOURCE[0]}")/../gw --continue
-		EXIT_CODE=$?
+			cat $GIT_ROOT/.redeploy/baseline.txt | xargs $(dirname "${BASH_SOURCE[0]}")/../gw --continue
+			EXIT_CODE=$?
 
-		cd -
+			cd -
+		else
+			cat $GIT_ROOT/.redeploy/baseline.txt | xargs $(dirname "${BASH_SOURCE[0]}")/../gw --continue
+			EXIT_CODE=$?
+		fi
 
 		if [[ 0 -ne $EXIT_CODE ]]; then
 			return $EXIT_CODE
