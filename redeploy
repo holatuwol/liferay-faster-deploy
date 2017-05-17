@@ -174,10 +174,6 @@ dirnames() {
 	python $(dirname "${BASH_SOURCE[0]}")/dirnames.py
 }
 
-gitchanges() {
-	. $(dirname "${BASH_SOURCE[0]}")/gitchanges $@
-}
-
 gw() {
 	$(dirname "${BASH_SOURCE[0]}")/gw $@
 }

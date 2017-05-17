@@ -36,10 +36,6 @@ formatsource() {
 	$(dirname "${BASH_SOURCE[0]}")/formatsource
 }
 
-gitchanges() {
-	. $(dirname "${BASH_SOURCE[0]}")/../gitchanges $@
-}
-
 pmdreport() {
 	$(dirname "${BASH_SOURCE[0]}")/pmdreport
 }
@@ -112,7 +108,17 @@ sendpull() {
 	if [ -f "$GIT_ROOT/release.properties" ]; then
 		pushd $GIT_ROOT > /dev/null
 
-		gitchanges ${upstream_remote}/$BASE_BRANCH && checkrepomode && fixdeps && baseline && formatsource && pmdreport
+		$(dirname ${BASH_SOURCE})/subrepos
+
+		. $(dirname "${BASH_SOURCE[0]}")/../gitchanges ${upstream_remote}/$BASE_BRANCH
+
+		if [[ 0 -eq $(cat .redeploy/changes.txt | wc -l) ]]; then
+			echo No changes detected.
+			return 0
+		fi
+
+		checkrepomode && fixdeps && baseline && formatsource && pmdreport
+
 		EXIT_CODE=$?
 
 		popd > /dev/null

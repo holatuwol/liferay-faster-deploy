@@ -63,6 +63,12 @@ fixdeps() {
 
 	git diff --name-only $base_remote/$BASE_BRANCH..HEAD > .redeploy/diff.txt
 	grep -F packageinfo .redeploy/diff.txt > .redeploy/changes.txt
+
+	if [[ 0 -eq $(cat .redeploy/changes.txt | wc -l) ]]; then
+		echo No changes detected.
+		return 0
+	fi
+
 	python $(dirname "${BASH_SOURCE[0]}")/../gitchanges.py
 
 	# Loop over the modules and packages that changed to identify where the packages are used

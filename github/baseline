@@ -36,6 +36,11 @@ baseline() {
 
 	$(dirname "${BASH_SOURCE[0]}")/../gitchanges $CHANGE_ID
 
+	if [[ 0 -eq $(cat .redeploy/changes.txt | wc -l) ]]; then
+		echo No changes detected.
+		return 0
+	fi
+
 	# Scan the Gradle changes to build one large command
 
 	cat /dev/null > $GIT_ROOT/.redeploy/baseline.txt
