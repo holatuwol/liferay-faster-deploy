@@ -9,13 +9,27 @@ checkrepomode() {
 
 	for subrepo_folder in $(git ls-files modules | grep -F '.gitrepo' | xargs grep -Fl 'mode = pull' | dirnames); do
 		if [ "" != "$(grep -F $subrepo_folder .redeploy/changes_gradle_2.txt)" ]; then
-			SUBREPO_CHANGES="$SUBREPO_CHANGES\n * $subrepo_folder =>$(grep 'remote =' $subrepo_folder/.gitrepo | cut -d'=' -f 2)"
+			local remote_location=$(grep -F 'remote = ' $subrepo_folder/.gitrepo | cut -d'=' -f 2)
+			local remote_project=$(echo "$remote_location" | cut -d'/' -f 2 | cut -d'.' -f 1)
+
+			SUBREPO_CHANGES="${SUBREPO_CHANGES}* ${subrepo_folder} =>${remote_location}\n"
+			SUBREPO_CHANGES="${SUBREPO_CHANGES}  Patches have been generated, please apply to the subrepo using git am\n"
+
+			for patch_file in $(git format-patch ${upstream_remote}/$BASE_BRANCH -- "$subrepo_folder/*"); do
+				sed -i.bak "s@${subrepo_folder}/@@g" $patch_file
+				mv $patch_file ../subrepos/${remote_project}/
+				rm -f ${patch_file}.bak
+
+				SUBREPO_CHANGES="${SUBREPO_CHANGES}    ../subrepos/${remote_project}/${patch_file}\n"
+			done
 		fi
 	done
 
 	if [ "" != "$SUBREPO_CHANGES" ]; then
-		echo "Detected changes in subrepo folders"
+		echo -e "\nDetected changes in subrepo folders in central repo:"
 		echo -e "$SUBREPO_CHANGES"
+
+		echo "Please remove the subrepo folder changes from the central pull request and try again"
 		return 1
 	fi
 }
