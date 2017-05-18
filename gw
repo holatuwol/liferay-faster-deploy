@@ -32,13 +32,13 @@ findgradle() {
 fixgradle() {
 	# If this is a blade workspace, don't do anything
 
-	if [ -f $GRADLE_HOME/build.gradle ]; then
+	if [ -f $GRADLE_HOME/build.gradle ] || [ -f $GIT_ROOT/build.gradle ]; then
 		return 0
 	fi
 
 	# a settings.gradle in the parent folder can mess us up
 
-	if [ -f ../settings.gradle ] && [ ! -f ../gradlew ]; then
+	if [ -f ../settings.gradle ]; then
 		rm ../settings.gradle
 		git update-index --assume-unchanged ../settings.gradle
 	fi
