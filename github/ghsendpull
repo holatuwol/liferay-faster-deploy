@@ -7,32 +7,50 @@ baseline() {
 checkrepomode() {
 	local SUBREPO_CHANGES=
 
+	cat .redeploy/changes_ant.txt .redeploy/changes_gradle_1.txt .redeploy/changes_gradle_2.txt > .redeploy/central.txt
+
 	for subrepo_folder in $(git ls-files modules | grep -F '.gitrepo' | xargs grep -Fl 'mode = pull' | dirnames); do
 		if [ "" != "$(grep -F $subrepo_folder .redeploy/changes_gradle_2.txt)" ]; then
+			# Make sure to exclude it from the known changes in central
+
+			grep -vF $subrepo_folder .redeploy/central.txt > .redeploy/central.txt.tmp
+			rm .redeploy/central.txt
+			mv .redeploy/central.txt.tmp .redeploy/central.txt
+
+			# Generate patch files and remember what we generated
+
 			local remote_location=$(grep -F 'remote = ' $subrepo_folder/.gitrepo | cut -d'=' -f 2)
 			local remote_project=$(echo "$remote_location" | cut -d'/' -f 2 | cut -d'.' -f 1)
 
-			SUBREPO_CHANGES="${SUBREPO_CHANGES}* ${subrepo_folder} =>${remote_location}\n"
-			SUBREPO_CHANGES="${SUBREPO_CHANGES}  Patches have been generated in ../subrepos/${remote_project}\n"
+			SUBREPO_CHANGES="${SUBREPO_CHANGES}*${remote_location}\n"
 
-			for patch_file in $(git format-patch ${upstream_remote}/$BASE_BRANCH -- "$subrepo_folder/*"); do
+			for patch_file in $(git format-patch ${upstream_remote}/$BASE_BRANCH -- "$subrepo_folder/"); do
 				sed -i.bak "s@${subrepo_folder}/@@g" $patch_file
 				mv $patch_file ../subrepos/${remote_project}/
 				rm -f ${patch_file}.bak
 
-				SUBREPO_CHANGES="${SUBREPO_CHANGES}    ${patch_file}\n"
+				SUBREPO_CHANGES="${SUBREPO_CHANGES}    ../subrepos/${remote_project}/${patch_file}\n"
 			done
 		fi
 	done
 
-	if [ "" != "$SUBREPO_CHANGES" ]; then
-		echo -e "\nDetected changes in subrepo folders in central repo:"
-		echo -e "$SUBREPO_CHANGES"
-
-		echo -e "[HINT]: ls -1 *.patch | sort | xargs git am\n"
-		echo "Please remove the subrepo folder changes from the central pull request and try again"
-		return 1
+	if [ "" == "$SUBREPO_CHANGES" ]; then
+		return 0
 	fi
+
+	echo -e "\nThis pull request must be split between repositories\n"
+
+	echo "* $(git remote get-url $upstream_remote)"
+	cat .redeploy/central.txt | awk '{ print "'"'"'" $1 "/'"'"'" }' | xargs git format-patch ${upstream_remote}/$BASE_BRANCH -- | awk '{ print "    ./" $1 }'
+
+	echo -e "$SUBREPO_CHANGES"
+
+	echo "Switch create a new branch in each repository and run:"
+	echo ''
+	echo '    ls -1 *.patch | sort | xargs git am'
+	echo ''
+
+	return 1
 }
 
 dirnames() {
