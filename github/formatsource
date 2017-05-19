@@ -112,18 +112,20 @@ formatbranch() {
 		if [ -d modules ]; then
 			cd modules
 
-			cat $GIT_ROOT/.redeploy/format.txt | xargs $(dirname "${BASH_SOURCE[0]}")/../gw
+			cat $GIT_ROOT/.redeploy/format.txt | xargs $(dirname "${BASH_SOURCE[0]}")/../gw | tee $GIT_ROOT/.redeploy/formatsource.txt
 			EXIT_CODE=$?
 
 			cd -
 		else
-			cat $GIT_ROOT/.redeploy/format.txt | xargs $(dirname "${BASH_SOURCE[0]}")/../gw
+			cat $GIT_ROOT/.redeploy/format.txt | xargs $(dirname "${BASH_SOURCE[0]}")/../gw | tee $GIT_ROOT/.redeploy/formatsource.txt
 			EXIT_CODE=$?
 		fi
 
 		if [[ 0 -ne $EXIT_CODE ]]; then
 			return $EXIT_CODE
 		fi
+
+		python $(dirname ${BASH_SOURCE[0]})/formatsource.py "$GIT_ROOT/.redeploy/formatsource.txt"
 	fi
 
 	if [[ 0 -ne $(cat "$GIT_ROOT/.redeploy/changes_ant.txt" | wc -l) ]]; then
