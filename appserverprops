@@ -122,7 +122,20 @@ gradleprops() {
 		GRADLE_LIFERAY_HOME=$(grep -F liferay.home= $GRADLE_HOME/.gradle/gradle.properties | cut -d'=' -f 2)
 	elif [ -f "$GIT_ROOT/gradle.properties" ]; then
 		GRADLE_LIFERAY_HOME=$(grep '^\s*liferay.home=' "$GIT_ROOT/gradle.properties" | cut -d'=' -f 2)
+
+		if [ "" == "$GRADLE_USER_HOME" ] && [ -f $HOME/.gradle/gradle.properties ]; then
+			GRADLE_USER_HOME=$HOME/.gradle
+		fi
+
+		if [ "" == "$GRADLE_LIFERAY_HOME" ] && [ -f $GRADLE_USER_HOME/gradle.properties ]; then
+			GRADLE_LIFERAY_HOME=$(grep '^\s*liferay.home=' "$GRADLE_USER_HOME/gradle.properties" | cut -d'=' -f 2)
+		fi
+
 		local TOMCAT_FOLDER=$(grep '^\s*app.server.parent.dir=' "$GIT_ROOT/gradle.properties" | cut -d'=' -f 2)
+
+		if [ "" == "$TOMCAT_FOLDER" ] && [ -f $GRADLE_USER_HOME/gradle.properties ]; then
+			TOMCAT_FOLDER=$(grep '^\s*app.server.parent.dir=' "$GRADLE_USER_HOME/gradle.properties" | cut -d'=' -f 2)
+		fi
 
 		if [ "" == "$GRADLE_LIFERAY_HOME" ] && [ "" == "$TOMCAT_FOLDER" ]; then
 			echo "Missing liferay.home and app.server.parent.dir in gradle.properties"
