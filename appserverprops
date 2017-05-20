@@ -8,7 +8,7 @@ appserverprops() {
 }
 
 buildprops() {
-	if [ -f $GIT_ROOT/build.$USER.properties ]; then
+	if [ ! -f $GIT_ROOT/build.xml ] || [ -f $GIT_ROOT/build.$USER.properties ]; then
 		return 0
 	fi
 
@@ -162,7 +162,7 @@ gradleprops() {
 		ANT_LIFERAY_HOME=$GRADLE_LIFERAY_HOME
 	fi
 
-	if [ "$ANT_LIFERAY_HOME" != "$GRADLE_LIFERAY_HOME" ]; then
+	if [ "$ANT_LIFERAY_HOME" != "$GRADLE_LIFERAY_HOME" ] && [ -d "$GIT_ROOT/modules" ]; then
 		if [ "" == "$GRADLE_LIFERAY_HOME" ]; then
 			echo "Missing .gradle/gradle.properties, generating via ant setup-sdk"
 		else
