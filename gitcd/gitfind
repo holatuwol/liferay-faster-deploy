@@ -44,7 +44,7 @@ gitfilematch() {
 
 	mkdir -p $GIT_ROOT/.redeploy
 	local SCRATCH_FILE=$GIT_ROOT/.redeploy/lsfiles.txt
-	git ls-files $2 > "$SCRATCH_FILE"
+	git ls-files $2 | sort -u > "$SCRATCH_FILE"
 
 	# If the folder is empty, there's nothing for us to do
 
@@ -118,7 +118,7 @@ gitfilematch() {
 	# a file and is using the file name as an abbreviated way at getting there.
 	# Choose a prefix match first, then an anywhere match.
 
-	MATCHING_FILES=$(grep -vF '..' "$SCRATCH_FILE" | grep -F "/$1")
+	MATCHING_FILES=$(grep -vF '..' "$SCRATCH_FILE" | grep -F "/$1" | sort -u)
 
 	if [ "" != "$MATCHING_FILES" ]; then
 		MATCHING_FOLDERS=$(echo "$MATCHING_FILES" | dirnames | sort -u)
