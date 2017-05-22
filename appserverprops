@@ -11,7 +11,7 @@ appserverprops() {
 	fi
 
 	if [[ 0 -ne $(egrep -o $'\r\n'\$ "$GIT_ROOT/app.server.$USER.properties" | wc -c ) ]]; then
-		sed -i.bak -e 's/\r$//' "$GIT_ROOT/app.server.$USER.properties"
+		perl -pi -e 's/\r\n|\n|\r/\n/g' "$GIT_ROOT/app.server.$USER.properties"
 	fi
 }
 
@@ -21,7 +21,7 @@ buildprops() {
 	fi
 
 	if [[ 0 -ne $(egrep -o $'\r\n'\$ "$GIT_ROOT/build.$USER.properties" | wc -c ) ]]; then
-		sed -i.bak -e 's/\r$//' "$GIT_ROOT/build.$USER.properties"
+		perl -pi -e 's/\r\n|\n|\r/\n/g' "$GIT_ROOT/build.$USER.properties"
 	fi
 
 	# Disable the baseline report unless it's explicitly requested
