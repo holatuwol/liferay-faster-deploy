@@ -47,7 +47,6 @@ class SourceTrie:
 
 		# Load the artifact name from build.xml
 
-
 		with open(build_xml, 'r') as f:
 			lines = [line for line in f.readlines() if line.find('"manifest.bundle.symbolic.name"') > 0]
 
@@ -133,9 +132,14 @@ class SourceTrie:
 
 			with open(source_file, 'r') as f:
 				for file_name in [line.strip() for line in f.readlines()]:
-					module_path = file_name[0:file_name.rfind('/')]
+					pos = file_name.rfind('/')
 
-					if file_name.endswith('/build.xml'):
+					if pos == -1:
+						continue
+
+					module_path = file_name[0:pos]
+
+					if os.path.isfile('%s/build.xml' % module_path):
 						root.add_ant(module_path)
 					else:
 						root.add_gradle(module_path)

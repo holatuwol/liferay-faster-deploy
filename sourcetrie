@@ -3,6 +3,6 @@
 mkdir -p .redeploy
 
 if [ ! -f .redeploy/sourcetrie.pickle ]; then
-	git ls-files | grep '/\(build.xml\|build.gradle\)$' > .redeploy/sourcetrie.txt
+	git ls-files | grep '/\(bnd.bnd\|package.json\)$' > .redeploy/sourcetrie.txt
 	python $(dirname "${BASH_SOURCE[0]}")/sourcetrie.py
 fi
