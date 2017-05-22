@@ -4,7 +4,25 @@ dirnames() {
 	python $(dirname "${BASH_SOURCE[0]}")/dirnames.py
 }
 
+setopts() {
+	. $(dirname "${BASH_SOURCE[0]}")/setopts
+}
+
 skipmp() {
+	if [ -f build.$USER.properties ] && [ "" != "$(grep -F build.include.dirs build.properties)" ];
+		if [ "" != "$(grep -F build.include.dirs build.$USER.properties)" ]; then
+			echo "build.include.dirs has already been set in build.$USER.properties"
+			echo "Assuming that you do not want to use skipmp"
+			return 0
+		fi
+
+		if [ "" != "$(grep -F build.exclude.dirs build.$USER.properties)" ]; then
+			echo "build.exclude.dirs has already been set in build.$USER.properties"
+			echo "Assuming that you do not want to use skipmp"
+			return 0
+		fi
+	fi
+
 	git ls-files -v | grep '^h ' | cut -d' ' -f 2 | grep -F '.lfrbuild-portal' | xargs git update-index --no-assume-unchanged
 	git status | grep -F deleted | grep -F '.lfrbuild-portal' | cut -d':' -f 2 | xargs git checkout
 
@@ -84,5 +102,7 @@ skipmp() {
 
 	rm -f .excludes
 }
+
+setopts
 
 skipmp
