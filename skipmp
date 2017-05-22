@@ -9,7 +9,7 @@ setopts() {
 }
 
 skipmp() {
-	if [ -f build.$USER.properties ] && [ "" != "$(grep -F build.include.dirs build.properties)" ];
+	if [ -f build.$USER.properties ] && [ "" != "$(grep -F build.include.dirs build.properties)" ]; then
 		if [ "" != "$(grep -F build.include.dirs build.$USER.properties)" ]; then
 			echo "build.include.dirs has already been set in build.$USER.properties"
 			echo "Assuming that you do not want to use skipmp"
@@ -21,7 +21,18 @@ skipmp() {
 			echo "Assuming that you do not want to use skipmp"
 			return 0
 		fi
+
+		echo "Neither build.include.dirs nor build.exclude.dirs has been set"
+		echo "Restricting build to the following applications (app.bnd)"
+
+		if [ -f $HOME/lpkgs.txt ]; then
+			cat $HOME/lpkgs.txt | tr '\n' ',' | sed 's/,/, /g'
+		else
+			echo -en 'Collaboration\nForms and Workflow\nFoundation\nStatic\nWeb Experience' | tr '\n' ',' | sed 's/,/, /g'
+		fi
 	fi
+
+	echo -en "\n\n"
 
 	git ls-files -v | grep '^h ' | cut -d' ' -f 2 | grep -F '.lfrbuild-portal' | xargs git update-index --no-assume-unchanged
 	git status | grep -F deleted | grep -F '.lfrbuild-portal' | cut -d':' -f 2 | xargs git checkout
