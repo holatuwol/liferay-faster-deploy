@@ -2,9 +2,28 @@
 
 	MCD_RD_CLONE_PATH=/path/to/clone/location
 
-	cachenpm() {
-		${MCD_RD_CLONE_PATH}/nodejs/cachenpm $@
+	aa() {
+		time acd
 	}
+
+	acd() {
+		GIT_ROOT=
+
+		. ${MCD_RD_CLONE_PATH}/setopts
+		${MCD_RD_CLONE_PATH}/nodejs/cachenpm
+
+		ANT_OPTS="$ANT_OPTS" /usr/bin/ant all
+	}
+
+Separate Node.js from Main Build
+================================
+
+If you decide you want to use the scripts this folder in order to speed up your build, you can add an alias for ``ant all`` to do this automatically.
+
+Because Node.js technically will then have a time that is separate from the ``ant all`` time, it's useful to report the total time afterwards. Therefore, ``aa`` is a wrapper which calls ``time`` on ``acd``, which performs the actual work, in order to get a total build time at the end.
+
+Other Notes
+===========
 
 Motivation
 ----------

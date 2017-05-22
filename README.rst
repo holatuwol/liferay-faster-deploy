@@ -13,32 +13,11 @@ Then, add this section to `.bash_aliases` (or the equivalent on whichever shell 
 
 	MCD_RD_CLONE_PATH=/path/to/clone/location
 
-	aa() {
-		time acd
-	}
-
-	acd() {
-		GIT_ROOT=
-
-		. ${MCD_RD_CLONE_PATH}/setopts
-
-		# Execute the build
-
-		${MCD_RD_CLONE_PATH}/nodejs/cachenpm
-
-		ANT_OPTS="$ANT_OPTS" /usr/bin/ant all
-	}
-
 	rd() {
 		TAG_ARCHIVE_MIRROR='http://cloud-10-50-0-165/builds/fixpacks' \
 			BRANCH_ARCHIVE_MIRROR='http://cloud-10-50-0-165/builds/branches' \
 				${MCD_RD_CLONE_PATH}/redeploy $@
 	}
-
-Separate Node.js from Main Build
-================================
-
-If you decide you want to use the scripts inside the `nodejs <nodejs>`__ folder in order to speed up your build, you can add an alias for ``ant all`` to do this automatically.
 
 Building from a Daily Build
 ===========================
