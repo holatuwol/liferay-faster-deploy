@@ -1,15 +1,27 @@
 #!/bin/bash
 
 appserverprops() {
-	if [ -f $GIT_ROOT/app.server.properties ] && [ ! -f $GIT_ROOT/app.server.$USER.properties ]; then
+	if [ ! -f "$GIT_ROOT/app.server.properties" ]; then
+		return 0
+	fi
+
+	if [ ! -f "$GIT_ROOT/app.server.$USER.properties" ]; then
 		echo "Missing $GIT_ROOT/app.server.$USER.properties"
 		return 1
+	fi
+
+	if [[ 0 -ne $(egrep -o $'\r\n'\$ "$GIT_ROOT/app.server.$USER.properties" | wc -c ) ]]; then
+		sed -i.bak -e 's/\r$//' "$GIT_ROOT/app.server.$USER.properties"
 	fi
 }
 
 buildprops() {
 	if [ ! -f $GIT_ROOT/build.xml ] || [ -f $GIT_ROOT/build.$USER.properties ]; then
 		return 0
+	fi
+
+	if [[ 0 -ne $(egrep -o $'\r\n'\$ "$GIT_ROOT/build.$USER.properties" | wc -c ) ]]; then
+		sed -i.bak -e 's/\r$//' "$GIT_ROOT/build.$USER.properties"
 	fi
 
 	# Disable the baseline report unless it's explicitly requested
