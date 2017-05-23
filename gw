@@ -30,7 +30,7 @@ findgradle() {
 }
 
 fixgradle() {
-	# If this is a blade workspace, don't do anything
+	# if this is a blade workspace or a subrepo, don't do anything
 
 	if [ -f $GRADLE_HOME/build.gradle ] || [ -f $GIT_ROOT/build.gradle ]; then
 		return 0
@@ -47,6 +47,8 @@ fixgradle() {
 	# than a built bundle, tell the user to use the override folder
 
 	if [ -d "$LIFERAY_HOME/osgi/marketplace" ] && [[ 0 -ne $(ls -1 $LIFERAY_HOME/osgi/marketplace | grep -F .lpkg | wc -l) ]]; then
+		local OVERRIDE=$LIFERAY_HOME/osgi/marketplace/override
+
 		if [ "" == "$(grep -F "$OVERRIDE" build.gradle)" ]; then
 			echo "If you are absolutely sure you want to deploy to a release bundle with .lpkg files"
 			echo "(not recommended, because this may require a server restart after every deploy)"
@@ -100,7 +102,7 @@ gw() {
 
 	local fixed_gradle=
 
-	if [ -f ../settings.gradle ] && [ ! -f ../gradlew ]; then
+	if [ -f ../settings.gradle ]; then
 		fixed_gradle=true
 		fixgradle
 	fi
