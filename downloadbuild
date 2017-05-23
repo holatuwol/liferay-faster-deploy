@@ -240,6 +240,10 @@ gettargetfolder() {
 		return 0
 	fi
 
+	# Check for the best parent, making sure to update our tags first.
+
+	updatetags
+
 	. $(dirname "${BASH_SOURCE[0]}")/getparent
 
 	# If we're using a tag, make sure that we actually want to use that tag, given that
@@ -325,6 +329,17 @@ rebasebranch() {
 	return $EXIT_STATUS
 }
 
+updatetags() {
+	if [ -z "${TAG_ARCHIVE_MIRROR}" ]; then
+		return 0
+	fi
+
+	for tag_id in $(curl -s "${TAG_ARCHIVE_MIRROR}/tags.txt" | grep -F 'fix-pack'); do
+		if [ "" == "$(git tag | grep -F "$tag_id")" ]; then
+			git fetch --no-tags git@github.com:liferay/liferay-portal-ee.git tags/${tag_id}:refs/tags/${tag_id}
+		fi
+	done
+}
 
 CURRENT_HASH=$(git log -1 --pretty='%H')
 
