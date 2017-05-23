@@ -125,33 +125,12 @@ fixpacks() {
 		return 0
 	fi
 
-	# Fix packs baselines we stopped incrementing
+	git ls-remote -t git@github.com:liferay/liferay-portal-ee.git | \
+		awk '{ print $2 }' | grep 'fix-pack-\(base-61\|base-62\|base-70\|de-\)' | \
+		grep -v '\(test\|demo\)' | sort | cut -d'/' -f 3 > /var/www/html/builds/fixpacks/tags.txt
 
-	local tag_id=
-
-	for version_name in 6120; do
-		tag_id=fix-pack-base-$version_name
+	for tag_id in $(cat /var/www/html/builds/fixpacks/list.txt); do
 		fixpack $tag_id
-	done
-
-	for version_name in 6130 6130-sp3 6130-sp4; do
-		tag_id=fix-pack-base-$version_name
-		fixpack $tag_id
-	done
-
-	for version_name in 6210 6210-sp7 6210-sp10 6210-sp13 6210-sp15; do
-		tag_id=fix-pack-base-$version_name
-		fixpack $tag_id
-	done
-
-	# Fix pack baselines we are still incrementing
-
-	local counter=5
-	tag_id=fix-pack-de-5-7010
-
-	while fixpack $tag_id; do
-		counter=$(expr $counter '+' 1)
-		tag_id=fix-pack-de-$counter-7010
 	done
 }
 
