@@ -16,12 +16,16 @@ appserverprops() {
 }
 
 buildprops() {
-	if [ ! -f $GIT_ROOT/build.xml ] || [ -f $GIT_ROOT/build.$USER.properties ]; then
+	if [ ! -f $GIT_ROOT/build.xml ]; then
 		return 0
 	fi
 
-	if [[ 0 -ne $(egrep -o $'\r\n'\$ "$GIT_ROOT/build.$USER.properties" | wc -c ) ]]; then
-		perl -pi -e 's/\r\n|\n|\r/\n/g' "$GIT_ROOT/build.$USER.properties"
+	if [ -f $GIT_ROOT/build.$USER.properties ]; then
+		if [[ 0 -ne $(egrep -o $'\r\n'\$ "$GIT_ROOT/build.$USER.properties" | wc -c ) ]]; then
+			perl -pi -e 's/\r\n|\n|\r/\n/g' "$GIT_ROOT/build.$USER.properties"
+		fi
+
+		return 0
 	fi
 
 	# Disable the baseline report unless it's explicitly requested
