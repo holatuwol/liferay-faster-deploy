@@ -33,7 +33,10 @@ checkjava() {
 
 	if [[ $MINIMUM_JAVA_VERSION -gt $JAVA_VERSION ]]; then
 		javahome $MINIMUM_JAVA_VERSION
-		JAVA_VERSION=$(java -version 2>&1 | head -1 | cut -d'"' -f 2 | cut -d'.' -f 2)
+
+		if [ "" != "$(which java)" ]; then
+			buildopts
+		fi
 	fi
 
 	if [[ $MINIMUM_JAVA_VERSION -gt $JAVA_VERSION ]]; then
