@@ -1,7 +1,11 @@
 #!/bin/bash
 
 buildopts() {
-	JAVA_VERSION=$(java -version 2>&1 | head -1 | cut -d'"' -f 2 | cut -d'.' -f 2)
+	JAVA_VERSION=0
+
+	if [ "" != "$(which java)" ]; then
+		JAVA_VERSION=$(java -version 2>&1 | head -1 | cut -d'"' -f 2 | cut -d'.' -f 2)
+	fi
 
 	ANT_OPTS='-Xms2g -Xmx2g'
 
