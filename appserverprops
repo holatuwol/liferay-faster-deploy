@@ -58,8 +58,12 @@ cleanappserver() {
 		TOMCAT_VERSION=$(grep -F app.server.tomcat.version= $GIT_ROOT/app.server.$USER.properties | cut -d'=' -f 2)
 	fi
 
-	if [ "" == "$TOMCAT_VERSION" ]; then
+	if [ "" == "$TOMCAT_VERSION" ] && [ -f $GIT_ROOT/app.server.properties ]; then
 		TOMCAT_VERSION=$(grep -F app.server.tomcat.version= $GIT_ROOT/app.server.properties | cut -d'=' -f 2)
+	fi
+
+	if [ "" == "$TOMCAT_VERSION" ]; then
+		return 0
 	fi
 
 	local TOMCAT_FOLDER=tomcat-${TOMCAT_VERSION}
