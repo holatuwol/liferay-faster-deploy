@@ -101,7 +101,7 @@ finish() {
 }
 
 javahome() {
-	. ${BASH_SOURCE}/../javahome $@
+	. $(dirname ${BASH_SOURCE[0]})/javahome $@
 }
 
 prepare() {

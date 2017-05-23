@@ -61,7 +61,7 @@ initfolder() {
 }
 
 javahome() {
-	. ${BASH_SOURCE}/javahome $@
+	. $(dirname ${BASH_SOURCE[0]})/javahome $@
 }
 
 if [ "" == "$USER" ]; then
