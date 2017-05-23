@@ -13,16 +13,29 @@ Then, add this section to `.bash_aliases` (or the equivalent on whichever shell 
 
 	MCD_RD_CLONE_PATH=/path/to/clone/location
 
+	gw() {
+		${MCD_RD_CLONE_PATH}/gw $@
+	}
+
 	rd() {
 		TAG_ARCHIVE_MIRROR='http://cloud-10-50-0-165/builds/fixpacks' \
 			BRANCH_ARCHIVE_MIRROR='http://cloud-10-50-0-165/builds/branches' \
 				${MCD_RD_CLONE_PATH}/redeploy $@
 	}
 
+Robust Gradle Wrapper
+=====================
+
+When compiling from source, ``gradlew`` will fail for seemingly arbitrary reasons. After debugging the build system, you will ultimately discover that it's often related to a missing portal snapshot or the presence of a ``settings.gradle`` folder created for when compiling a subrepository.
+
+This script improves the consistency of ``gradlew`` by automatically looking for these and fixing them. It also provides the same functionality as other ``gradlew`` wrappers, such as `gdub <https://github.com/dougborg/gdub>`__, by searching for a ``gradlew`` binary somewhere in the current folder or in ancestor folders.
+
+* `gw <gw>`__
+
 Building from a Daily Build
 ===========================
 
-**Note**: Unlike the scripts in the subfolders, this script is currently experimental! It also only works if you are inside the Liferay LAX office!
+**Note**: Unlike the documented scripts in the subfolders, this script is currently experimental! It also only works if you are inside the Liferay LAX office!
 
 Running ``ant all`` can be a time consuming ordeal on some operating systems. What if you could use a binary from some time earlier in the day (so you have at least some sense that things are up to date) and then only deploy the changes that you made without having to run ``ant all``?
 
