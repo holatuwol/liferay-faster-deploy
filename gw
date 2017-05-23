@@ -148,6 +148,11 @@ setopts() {
 	. $(dirname "${BASH_SOURCE[0]}")/setopts
 }
 
+if [ ! -f build.gradle ]; then
+	echo "No build.gradle found"
+	exit 0
+fi
+
 setopts
 
 if [[ 8 -gt $JAVA_VERSION ]]; then
