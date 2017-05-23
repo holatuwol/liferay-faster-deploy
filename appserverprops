@@ -52,12 +52,6 @@ buildprops() {
 }
 
 cleanappserver() {
-	if [ "" == "$ARCHIVE_HOME" ]; then
-		return 0
-	fi
-
-	mkdir -p $ARCHIVE_HOME
-
 	local TOMCAT_VERSION=
 
 	if [ -f $GIT_ROOT/app.server.$USER.properties ]; then
@@ -67,6 +61,18 @@ cleanappserver() {
 	if [ "" == "$TOMCAT_VERSION" ]; then
 		TOMCAT_VERSION=$(grep -F app.server.tomcat.version= $GIT_ROOT/app.server.properties | cut -d'=' -f 2)
 	fi
+
+	local TOMCAT_FOLDER=tomcat-${TOMCAT_VERSION}
+
+	if [ "" == "$ARCHIVE_HOME" ]; then
+		if [ ! -d $LIFERAY_HOME/$TOMCAT_FOLDER ]; then
+			ant -f build-dist.xml unzip-tomcat
+		fi
+
+		return 0
+	fi
+
+	mkdir -p $ARCHIVE_HOME
 
 	local TOMCAT_MAJOR_VERSION=$(echo $TOMCAT_VERSION | cut -d'.' -f 1)
 
@@ -81,8 +87,6 @@ cleanappserver() {
 	fi
 
 	# cleanup the existing folder so that we can have a clean slate
-
-	local TOMCAT_FOLDER=tomcat-${TOMCAT_VERSION}
 
 	rm -rf "$LIFERAY_HOME/$TOMCAT_FOLDER"
 	mkdir -p "$LIFERAY_HOME"
