@@ -1,0 +1,43 @@
+#!/bin/bash
+
+safeant() {
+	GIT_ROOT=
+
+	. $(dirname ${BASH_SOURCE[0]})/../setopts
+
+	if [ "" == "$GIT_ROOT" ]; then
+		echo "Unable to detect git root"
+		return 1
+	fi
+
+	pushd $GIT_ROOT > /dev/null
+
+	# Record the start time
+
+	echo "Started $(date)" | tee $GIT_ROOT/.redeploy/compile.txt
+
+	# Building older tags might not work due to version range
+	# dependencies and the corresponding bnd.bnd
+
+	if [ -f modules/build.gradle ]; then
+		$(dirname ${BASH_SOURCE[0]})/../fixbnd
+	fi
+
+	# Improve build consistency by removing items that
+	# are not needed from the build
+
+	$(dirname ${BASH_SOURCE[0]})/../skipmp
+	$(dirname ${BASH_SOURCE[0]})/cachenpm
+
+	popd > /dev/null
+
+	# Execute the actual build
+
+	ANT_OPTS="$ANT_OPTS" /usr/bin/ant $@ | tee -a $GIT_ROOT/.redeploy/compile.txt
+
+	# Report the completion time
+
+	echo "Completed $(date)" | tee -a $GIT_ROOT/.redeploy/compile.txt
+}
+
+time safeant $@

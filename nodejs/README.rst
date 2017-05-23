@@ -3,16 +3,7 @@
 	MCD_RD_CLONE_PATH=/path/to/clone/location
 
 	aa() {
-		time acd
-	}
-
-	acd() {
-		GIT_ROOT=
-
-		. ${MCD_RD_CLONE_PATH}/setopts
-		${MCD_RD_CLONE_PATH}/nodejs/cachenpm
-
-		ANT_OPTS="$ANT_OPTS" /usr/bin/ant all
+		${MCD_RD_CLONE_PATH}/nodejs/safeant all
 	}
 
 Separate Node.js from Main Build
