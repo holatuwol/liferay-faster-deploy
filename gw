@@ -140,10 +140,19 @@ gw() {
 	fi
 }
 
+javahome() {
+	. $(dirname "${BASH_SOURCE[0]}")/javahome $@
+}
+
 setopts() {
 	. $(dirname "${BASH_SOURCE[0]}")/setopts
 }
 
 setopts
+
+if [[ 8 -gt $JAVA_VERSION ]]; then
+	javahome 8
+	setopts
+fi
 
 gw $@
