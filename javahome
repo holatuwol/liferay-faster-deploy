@@ -1,0 +1,73 @@
+#!/bin/bash
+
+javahome() {
+	# Check for a valid operating system
+
+	local BASE_JAVA=
+
+	if [ -d /usr/java ]; then
+		BASE_JAVA=/usr/java
+	elif [ -d /usr/lib/jvm ]; then
+		BASE_JAVA=/usr/lib/jvm
+	else
+		echo "Unable to change Java on your operating system"
+		return 0
+	fi
+
+	# If this is diagnostic, just report JAVA_HOME
+
+	if [ "" == "$1" ]; then
+		echo JAVA_HOME=$JAVA_HOME
+		return 0
+	fi
+
+	# Remove the existing JAVA_HOME from the path
+
+	if [ "" != "$JAVA_HOME" ]; then
+		export PATH=$(echo $PATH | sed -e "s;:$JAVA_HOME/bin;;g" | sed -e "s;$JAVA_HOME/bin:;;g")
+	fi
+
+	# Check for a valid /etc/alternatives value
+
+	local ALT_ID=
+
+	# Choose the closest matching version
+
+	for folder in $(ls -1 ${BASE_JAVA} | grep -F "jdk1.$1.0" | sort -t'_' -k2nr); do
+		if [ ! -f $BASE_JAVA/$folder/bin/java ]; then
+			continue
+		fi
+
+		export JAVA_HOME=$BASE_JAVA/$folder
+		ALT_ID=$(echo $JAVA_HOME | egrep -o '[0-9]' | perl -ne 'chomp and print')
+		break
+	done
+
+	# If we couldn't find one, maybe they installed it through a package manager
+
+	if [ "" == "$JAVA_HOME" ]; then
+		for folder in $(ls -1 ${BASE_JAVA} | grep -F java-$1-oracle); do
+			if [ ! -f $BASE_JAVA/$folder/bin/java ]; then
+				continue
+			fi
+
+			export JAVA_HOME=$BASE_JAVA/$folder
+			ALT_ID=$(echo $JAVA_HOME | egrep -o '18000')
+			break
+		done
+	fi
+
+	# If we still couldn't find it, report that Java could not be found
+
+	if [ "" == "$ALT_ID" ]; then
+		echo "Unable to find Java $1"
+		return 1
+	fi
+
+	# Prepend Java to the path
+
+	echo JAVA_HOME=$JAVA_HOME
+	export PATH=$JAVA_HOME/bin:$PATH
+}
+
+javahome $@

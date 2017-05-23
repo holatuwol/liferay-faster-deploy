@@ -101,34 +101,7 @@ finish() {
 }
 
 javahome() {
-	if [ "" == "$1" ]; then
-		echo JAVA_HOME=$JAVA_HOME
-		return 0
-	fi
-
-	JAVA_HOME=
-
-	if [ -d /usr/java ]; then
-		JAVA_FOLDER=$(ls -1 /usr/java | grep -F 1.$1.0)
-
-		if [ "" != "$JAVA_FOLDER" ]; then
-			JAVA_HOME=/usr/java/$JAVA_FOLDER
-		fi
-	elif [ -d /usr/lib/jvm ]; then
-		JAVA_FOLDER=$(ls -1 /usr/lib/jvm | grep -F 1.$1.0)
-
-		if [ "" == "$JAVA_FOLDER" ]; then
-			JAVA_FOLDER=$(ls -1 /usr/lib/jvm | grep -F java-$1-oracle)
-		fi
-
-		if [ "" != "$JAVA_FOLDER" ]; then
-			JAVA_HOME=/usr/lib/jvm/$JAVA_FOLDER
-		fi
-	fi
-
-	echo JAVA_HOME=$JAVA_HOME
-
-	export JAVA_HOME
+	. ${BASH_SOURCE}/../javahome $@
 }
 
 prepare() {
