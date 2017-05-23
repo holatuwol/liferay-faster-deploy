@@ -28,6 +28,11 @@ checkjava() {
 	fi
 
 	if [[ $MINIMUM_JAVA_VERSION -gt $JAVA_VERSION ]]; then
+		javahome $MINIMUM_JAVA_VERSION
+		JAVA_VERSION=$(java -version 2>&1 | head -1 | cut -d'"' -f 2 | cut -d'.' -f 2)
+	fi
+
+	if [[ $MINIMUM_JAVA_VERSION -gt $JAVA_VERSION ]]; then
 		java -version
 
 		echo
@@ -53,6 +58,10 @@ gitroot() {
 
 initfolder() {
 	mkdir -p $GIT_ROOT/.redeploy
+}
+
+javahome() {
+	. ${BASH_SOURCE}/javahome $@
 }
 
 if [ "" == "$USER" ]; then
