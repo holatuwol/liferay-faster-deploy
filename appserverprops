@@ -66,6 +66,7 @@ cleanappserver() {
 
 	if [ "" == "$ARCHIVE_HOME" ]; then
 		if [ ! -d $LIFERAY_HOME/$TOMCAT_FOLDER ]; then
+			echo "Missing $LIFERAY_HOME/$TOMCAT_FOLDER"
 			ant -f build-dist.xml unzip-tomcat
 		fi
 
@@ -199,7 +200,7 @@ gradleprops() {
 
 	# Update the environment variable for other scripts
 
-	LIFERAY_HOME=$GRADLE_LIFERAY_HOME
+	LIFERAY_HOME=$ANT_LIFERAY_HOME
 }
 
 setopts() {
