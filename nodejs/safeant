@@ -26,11 +26,23 @@ safeant() {
 	fi
 
 	# Improve build consistency by removing items that
-	# are not needed from the build
+	# are not needed from the build and not using the CDN
 
-	if [ "all" == "$1" ]; then
+	if [ "all" == "$1" ] && [ -d modules ]; then
 		$(dirname ${BASH_SOURCE[0]})/../skipmp
 		$(dirname ${BASH_SOURCE[0]})/cachenpm
+
+		git update-index --assume-unchanged build-common.xml
+		sed -i.bak 's@<arg value="--no-daemon" />$@<arg value="--no-daemon" /><arg value="-Drepository.url=http://repository.liferay.com/nexus/content/groups/public" />@' build-common.xml
+
+		if [ "" != "$(git ls-files | grep '.\(gradle\|properties\)$' | xargs grep -Fl cdn.lfrs.sl)" ]; then
+			GRADLE_ARGS="$GRADLE_ARGS --no-daemon -Drepository.url=http://repository.liferay.com/nexus/content/groups/public"
+
+			pushd $GIT_ROOT > /dev/null
+			git ls-files | grep '.\(gradle\|properties\)$' | xargs grep -Fl cdn.lfrs.sl | xargs git update-index --assume-unchanged
+			git ls-files | grep '.\(gradle\|properties\)$' | xargs grep -Fl cdn.lfrs.sl | xargs sed -i.bak 's@https://cdn.lfrs.sl/@http://@g'
+			popd > /dev/null
+		fi
 	fi
 
 	popd > /dev/null
