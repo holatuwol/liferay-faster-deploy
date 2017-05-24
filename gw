@@ -52,7 +52,7 @@ fixgradle() {
 
 	if [ -f ../settings.gradle ]; then
 		rm ../settings.gradle
-		python -c "from __future__ import print_function; import os.path; print('%s/settings.gradle' % os.path.relpath('$(dirname $PWD)', '$GIT_ROOT'))" > $GIT_ROOT/.redeploy/gwchanges.txt
+		xargs git update-index --assume-unchanged ../settings.gradle
 	fi
 
 	# if you appear to be building to a Liferay downloaded bundle rather
@@ -122,7 +122,8 @@ gw() {
 		GRADLE_ARGS="$GRADLE_ARGS --no-daemon -Drepository.url=http://repository.liferay.com/nexus/content/groups/public"
 
 		pushd $GIT_ROOT > /dev/null
-		git ls-files | grep '.\(gradle\|properties\)$' | xargs grep -Fl cdn.lfrs.sl | tee -a $GIT_ROOT/.redeploy/gwchanges.txt | xargs sed -i.bak 's@https://cdn.lfrs.sl/@http://@g'
+		git ls-files | grep '.\(gradle\|properties\)$' | xargs grep -Fl cdn.lfrs.sl | xargs git update-index --assume-unchanged
+		git ls-files | grep '.\(gradle\|properties\)$' | xargs grep -Fl cdn.lfrs.sl | xargs sed -i.bak 's@https://cdn.lfrs.sl/@http://@g'
 		popd > /dev/null
 	fi
 
@@ -169,14 +170,3 @@ mkdir -p $GIT_ROOT/.redeploy
 cat /dev/null > $GIT_ROOT/.redeploy/gwchanges.txt
 
 gw $@
-
-EXIT_CODE=$?
-
-if [[ 0 -ne $(cat $GIT_ROOT/.redeploy/gwchanges.txt | wc -l) ]]; then
-	pushd $GIT_ROOT > /dev/null
-	cat $GIT_ROOT/.redeploy/gwchanges.txt | xargs git checkout
-	popd > /dev/null
-fi
-
-
-exit $EXIT_CODE
