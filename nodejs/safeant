@@ -10,6 +10,8 @@ safeant() {
 		return 1
 	fi
 
+	. $(dirname ${BASH_SOURCE[0]})/../appserverprops
+
 	pushd $GIT_ROOT > /dev/null
 
 	# Record the start time
