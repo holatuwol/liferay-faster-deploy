@@ -26,8 +26,10 @@ safeant() {
 	# Improve build consistency by removing items that
 	# are not needed from the build
 
-	$(dirname ${BASH_SOURCE[0]})/../skipmp
-	$(dirname ${BASH_SOURCE[0]})/cachenpm
+	if [ "all" == "$1" ]; then
+		$(dirname ${BASH_SOURCE[0]})/../skipmp
+		$(dirname ${BASH_SOURCE[0]})/cachenpm
+	fi
 
 	popd > /dev/null
 
