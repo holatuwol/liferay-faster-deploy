@@ -71,6 +71,14 @@ branches() {
 		return 0
 	fi
 
+	# Clear out the data folder for all past builds
+
+	for folder in master 70x 62x 61x; do
+		for BUILD_ID in $(ls -1 "$BUILD_FOLDER_PREFIX/$folder" | grep -vF '.log'); do
+			rm -rf "$BUILD_FOLDER_PREFIX/$folder/$BUILD_ID/data"
+		done
+	done
+
 	# Start build
 
 	echo Started $(date)
