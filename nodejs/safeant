@@ -49,7 +49,7 @@ safeant() {
 
 	# Execute the actual build
 
-	ANT_OPTS="$ANT_OPTS" /usr/bin/ant $@ | tee -a $GIT_ROOT/.redeploy/compile.txt
+	ANT_OPTS="$ANT_OPTS" ant $@ | tee -a $GIT_ROOT/.redeploy/compile.txt
 
 	# Report the completion time
 
