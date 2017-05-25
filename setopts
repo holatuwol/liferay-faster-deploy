@@ -75,6 +75,10 @@ if [ "" == "$USER" ]; then
 	USER=$USERNAME
 fi
 
+if [ -d /usr/local/bin ] && [ "" == "$(echo $PATH | grep -F '/usr/local/bin')" ]; then
+	PATH="$PATH:/usr/local/bin"
+fi
+
 buildopts
 
 gitroot && initfolder && checkjava
