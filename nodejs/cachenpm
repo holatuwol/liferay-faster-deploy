@@ -68,4 +68,10 @@ findmodules() {
 	popd > /dev/null
 }
 
+setopts() {
+	. $(dirname ${BASH_SOURCE[0]})/../setopts
+}
+
+setopts
+
 cachenpm $@ && disablegwnpm

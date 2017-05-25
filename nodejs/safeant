@@ -3,7 +3,7 @@
 safeant() {
 	GIT_ROOT=
 
-	. $(dirname ${BASH_SOURCE[0]})/../setopts
+	setopts
 
 	if [ "" == "$GIT_ROOT" ]; then
 		echo "Unable to detect git root"
@@ -54,6 +54,10 @@ safeant() {
 	# Report the completion time
 
 	echo "Completed $(date)" | tee -a $GIT_ROOT/.redeploy/compile.txt
+}
+
+setopts() {
+	. $(dirname ${BASH_SOURCE[0]})/../setopts
 }
 
 time safeant $@
