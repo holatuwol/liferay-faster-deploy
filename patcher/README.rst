@@ -13,12 +13,32 @@ Then, add this section to `.bash_aliases` (or the equivalent on whichever shell 
 
 	MCD_RD_CLONE_PATH=/path/to/clone/location
 
+	findbuild() {
+		FILES_MIRROR=http://mirrors/files.liferay.com \
+			${MCD_RD_CLONE_PATH}/patcher/findbuild
+	}
+
 	patcher() {
 		${MCD_RD_CLONE_PATH}/patcher/patcher
 	}
 
-Open Browser to Patcher Portal
-==============================
+Find Build for Hotfix
+=====================
+
+If you have a hotfix, you might want to be able to find the build corresponding to that hotfix, whether for purposes of checking it out locally using the automatically generated tag or simply to see what fixes it included. This script opens a web browser to the build in patcher portal.
+
+* `findbuild <findbuild>`__
+
+You can use it by specifying the hotfix number followed by the version of Liferay. For example, if you want to load hotfix 1 for 7010, you would use any of the following commands.
+
+.. code-block:: bash
+
+	findbuild 1 7010
+	findbuild hotfix-1-7010
+	findbuild liferay-hotfix-1-7010
+
+Add New Fixes
+=============
 
 You might want to create a new fix inside of patcher portal. This script ensures that all the fix baselines used in patcher portal (or at least, the ones that I remember to update in an S3 bucket) are available out locally, and then opens your web browser to the fix creation page.
 
