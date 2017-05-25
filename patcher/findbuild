@@ -17,8 +17,9 @@ findbuild() {
 
 	if [ ! -f $FIX_NAME.zip ]; then
 		curl -O "$FILES_MIRROR/private/ee/fix-packs/$VERSION/hotfix/$FIX_NAME.zip"
-		local BUILD_ID=$(unzip -p $FIX_NAME.zip fixpack_documentation.xml | grep -F '<build-id>' | cut -d'>' -f 2 | cut -d'<' -f 1)
 	fi
+
+	local BUILD_ID=$(unzip -p $FIX_NAME.zip fixpack_documentation.xml | grep -F '<build-id>' | cut -d'>' -f 2 | cut -d'<' -f 1)
 
 	python -m webbrowser "https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/$BUILD_ID"
 }
