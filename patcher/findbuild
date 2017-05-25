@@ -1,22 +1,26 @@
 #!/bin/bash
 
-local VERSION=
-local FIX_NAME=
+findbuild() {
+	local VERSION=
+	local FIX_NAME=
 
-if [[ $1 == liferay* ]]; then
-	VERSION=$(echo $1 | cut -d'-' -f 3 | sed 's/\([0-9]\)\([0-9]\)\([0-9][0-9]\)/\1.\2.\3/')
-	FIX_NAME=$1
-elif [[ $1 == hotfix* ]]; then
-	VERSION=$(echo $1 | cut -d'-' -f 2 | sed 's/\([0-9]\)\([0-9]\)\([0-9][0-9]\)/\1.\2.\3/')
-	FIX_NAME="liferay-$1"
-else
-	VERSION=$(echo $2 | cut -d'-' -f 2 | sed 's/\([0-9]\)\([0-9]\)\([0-9][0-9]\)/\1.\2.\3/')
-	FIX_NAME="liferay-hotfix-$1-$2"
-fi
+	if [[ $1 == liferay* ]]; then
+		VERSION=$(echo $1 | cut -d'-' -f 3 | sed 's/\([0-9]\)\([0-9]\)\([0-9][0-9]\)/\1.\2.\3/')
+		FIX_NAME=$1
+	elif [[ $1 == hotfix* ]]; then
+		VERSION=$(echo $1 | cut -d'-' -f 2 | sed 's/\([0-9]\)\([0-9]\)\([0-9][0-9]\)/\1.\2.\3/')
+		FIX_NAME="liferay-$1"
+	else
+		VERSION=$(echo $2 | cut -d'-' -f 2 | sed 's/\([0-9]\)\([0-9]\)\([0-9][0-9]\)/\1.\2.\3/')
+		FIX_NAME="liferay-hotfix-$1-$2"
+	fi
 
-if [ ! -f $FIX_NAME.zip ]; then
-	curl -O "$FILES_MIRROR/private/ee/fix-packs/$VERSION/hotfix/$FIX_NAME.zip
-	local BUILD_ID=$(unzip -p $FIX_NAME.zip fixpack_documentation.xml | grep -F '<build-id>' | cut -d'>' -f 2 | cut -d'<' -f 1)
-fi
+	if [ ! -f $FIX_NAME.zip ]; then
+		curl -O "$FILES_MIRROR/private/ee/fix-packs/$VERSION/hotfix/$FIX_NAME.zip
+		local BUILD_ID=$(unzip -p $FIX_NAME.zip fixpack_documentation.xml | grep -F '<build-id>' | cut -d'>' -f 2 | cut -d'<' -f 1)
+	fi
 
-python -m webbrowser "https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/$BUILD_ID"
+	python -m webbrowser "https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/$BUILD_ID"
+}
+
+findbuild $@
