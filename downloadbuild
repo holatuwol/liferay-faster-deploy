@@ -84,7 +84,7 @@ downloadbranch() {
 downloadbuild() {
 	# Identify the base branch so we know what to fetch
 
-	gettargetfolder
+	gettargetfolder $@
 
 	if [[ 0 -ne $? ]]; then
 		return 1
