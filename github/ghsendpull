@@ -45,7 +45,7 @@ checkrepomode() {
 
 	echo -e "$SUBREPO_CHANGES"
 
-	echo "Switch create a new branch in each repository and run:"
+	echo "Create and switch to a new branch in each repository and run:"
 	echo ''
 	echo '    ls -1 *.patch | sort | xargs git am'
 	echo ''
