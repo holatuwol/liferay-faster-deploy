@@ -122,11 +122,11 @@ gw() {
 
 	pushd $GIT_ROOT > /dev/null
 
-	if [ "" != "$(git ls-files | grep '.\(gradle\|properties\)$' | xargs grep -Fl cdn.lfrs.sl)" ]; then
-		GRADLE_ARGS="$GRADLE_ARGS --no-daemon -Drepository.url=http://repository.liferay.com/nexus/content/groups/public"
+	git ls-files -v | grep -v '^h ' | cut -d' ' -f 2- | grep '.\(gradle\|properties\)$' | xargs grep -Fl cdn.lfrs.sl > $GIT_ROOT/.redeploy/usedcdn.txt
 
-		git ls-files | grep '.\(gradle\|properties\)$' | xargs grep -Fl cdn.lfrs.sl | xargs git update-index --assume-unchanged
-		git ls-files | grep '.\(gradle\|properties\)$' | xargs grep -Fl cdn.lfrs.sl | xargs sed -i.bak 's@https://cdn.lfrs.sl/@http://@g'
+	if [[ 0 -ne $(cat $GIT_ROOT/.redeploy/usedcdn.txt | wc -l) ]]; then
+		GRADLE_ARGS="$GRADLE_ARGS --no-daemon -Drepository.url=http://repository.liferay.com/nexus/content/groups/public"
+		cat $GIT_ROOT/.redeploy/usedcdn.txt | xargs sed -i.bak 's@https://cdn.lfrs.sl/@http://@g'
 	fi
 
 	popd > /dev/null
@@ -134,19 +134,25 @@ gw() {
 	# run the gradlew binary, making sure to set GRADLE_OPTS if
 	# it is not yet set
 
+	local EXIT_CODE=0
+
 	if [ -f $GRADLE_HOME/gradlew ]; then
 		fixgradle
 
 		$GRADLE_HOME/gradlew $GRADLE_ARGS $@
 
-		local EXIT_CODE=$?
-
-		return $EXIT_CODE
+		EXIT_CODE=$?
 	else
 		gradle $GRADLE_ARGS $@
 
-		return $?
+		EXIT_CODE=$?
 	fi
+
+	if [[ 0 -ne $(cat $GIT_ROOT/.redeploy/usedcdn.txt | wc -l) ]]; then
+		cat $GIT_ROOT/.redeploy/usedcdn.txt | xargs git checkout
+	fi
+
+	return $EXIT_CODE
 }
 
 javahome() {
