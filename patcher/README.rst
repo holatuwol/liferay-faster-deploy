@@ -49,6 +49,12 @@ You might want to create a new fix inside of patcher portal. This script ensures
 
 * `patcher <patcher>`__
 
+It doesn't accept any parameters, so you simply call it.
+
+.. code-block:: bash
+
+	patcher
+
 Right now, patcher has a defect where it doesn’t know what to do with the URL parameter for the baseline ID the version is 2 (in other words, 7.0.x and later fixes). In order to work around this defect, you can use a Bookmarklet. Just paste the Javascript into the Bookmarklet Creator and add the result as a bookmarklet in your Bookmarks bar and click on it after Patcher Portal loads.
 
 * http://mrcoles.com/bookmarklet/
@@ -78,3 +84,9 @@ Before adding a fix to patcher portal, it's desirable to first backport the fix 
 This script captures the commits within a subrepository where the log messages match a specific pattern, most likely an LPS ticket (``git log --grep``). It rewrites the patch files so that they can be applied to ``ee-7.0.x``, and as long as the portal source is currently at ``ee-7.0.x``, it then creates a new branch then attempts to apply the changes to ``ee-7.0.x`` using ``git am``.
 
 * `subrepobp <subrepobp>`__
+
+To use this script, list all of the tickets that you wish to backport from the subrepository. This does not yet search for dependencies; it simply searches the logs for the specified tickets and brings them in order.
+
+.. code-block:: bash
+
+	subrepobp LPS-1 LPS-2 LPS-3 LPS-4
