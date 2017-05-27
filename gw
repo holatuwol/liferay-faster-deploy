@@ -91,6 +91,8 @@ fixgradle() {
 	fi
 
 	if [ ! -f $LIFERAY_HOME/tomcat-$TOMCAT_VERSION/webapps/ROOT/WEB-INF/lib/util-taglib.jar ]; then
+		echo "Deploying util-taglib.jar, because it may be needed in Gradle tasks"
+
 		checksnapshots
 
 		cd $GIT_ROOT/util-taglib
