@@ -1,0 +1,99 @@
+#!/bin/bash
+
+subrepobpr() {
+	if [ "" == "$1" ]; then
+		echo "Please specify a branch"
+		return 1
+	fi
+
+	# Make sure we have the right folders and environment variables set
+
+	if [ ! -d $PORTAL_SOURCE_70X/modules ]; then
+		echo "$PORTAL_SOURCE_70X does not appear to be an ee-7.0.x repository"
+		return 1
+	fi
+
+	if [ ! -f $GIT_ROOT/gradle.properties ]; then
+		echo "$PWD does not appear to be a subrepository, missing gradle.properties"
+		return 1
+	fi
+
+	PROJECT_PATH_PREFIX=$(grep 'project.path.prefix=' $GIT_ROOT/gradle.properties)
+
+	if [ "" == "$PROJECT_PATH_PREFIX" ]; then
+		echo "$PWD does not appear to be a subrepository, invalid gradle.properties"
+		return 1
+	fi
+
+	# Determine the module path in the ee-7.0.x repository
+
+	pushd "$PORTAL_SOURCE_70X" > /dev/null
+	MODULE_PATH=$(dirname $(git ls-files modules | grep -F gradle.properties | xargs grep -Fl "$PROJECT_PATH_PREFIX"))
+	popd > /dev/null
+
+	# Generate the patch files
+
+	counter=0
+
+	pushd $GIT_ROOT > /dev/null
+
+	for commit in $(git log --pretty='%H' --grep $1 | tac); do
+		for patch in $(git format-patch $commit -1); do
+			counter=$(expr $counter '+' 1)
+			prefix=$(printf "%04d" $counter)
+
+			mv $patch $prefix-$1.patch
+		done
+
+		sed -i.bak "s@^--- a/@--- a/$MODULE_PATH/@g" $prefix-$1.patch
+		sed -i.bak "s@^+++ b/@+++ b/$MODULE_PATH/@g" $prefix-$1.patch
+	done
+
+	rm *.bak
+	mv *.patch "$PORTAL_SOURCE_70X"
+
+	popd > /dev/null
+
+	# Apply the patch files if possible
+
+	pushd "$PORTAL_SOURCE_70X" > /dev/null
+
+	local EXIT_CODE=1
+
+	if [ "ee-7.0.x" == "$(git rev-parse --abbrev-ref HEAD)" ]; then
+		git checkout -b $1-70x
+	fi
+
+	if [ "$1-70x" == "$(git rev-parse --abbrev-ref HEAD)" ]; then
+		set -o pipefail
+		ls -1 *.patch | sort | xargs git am
+		EXIT_CODE=$?
+		set +o pipefail
+
+		if [[ 0 -ne $EXIT_CODE ]]; then
+			git am --abort
+		else
+			rm *.patch
+		fi
+	fi
+
+	if [[ 0 -ne $EXIT_CODE ]]; then
+		echo ''
+		echo "Failed to automatically apply patches."
+		echo ''
+		echo "Create and switch to a new branch in $PORTAL_SOURCE_70X and run:"
+		echo ''
+		echo '    ls -1 *.patch | sort | xargs git am'
+		echo ''
+	fi
+
+	popd > /dev/null
+}
+
+setopts() {
+	. $(dirname "${BASH_SOURCE[0]}")/../setopts
+}
+
+setopts
+
+subrepobpr $@
