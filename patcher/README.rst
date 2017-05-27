@@ -23,7 +23,7 @@ Then, add this section to `.bash_aliases` (or the equivalent on whichever shell 
 	}
 
 	subrepobp() {
-		PORTAL_SOURCE_70X=/path/to/70x/source \
+		SUBREPO_ROOT=/path/to/subrepo/root \
 			${MCD_RD_CLONE_PATH}/github/subrepobp $@
 	}
 
@@ -81,11 +81,11 @@ Backport Subrepository Changes
 
 Before adding a fix to patcher portal, it's desirable to first backport the fix onto the ``ee-7.0.x`` branch so that you can cherry pick the commit into your main branch. While this is pretty easy for changes coming from the central repository using tools like `backport automator <https://github.com/jonathanmccann/backport-automator>`__, it's less easy for changes coming from subrepositories.
 
-This script captures the commits within a subrepository where the log messages match a specific pattern, most likely an LPS ticket (``git log --grep``). It rewrites the patch files so that they can be applied to ``ee-7.0.x``, and as long as the portal source is currently at ``ee-7.0.x``, it then creates a new branch then attempts to apply the changes to ``ee-7.0.x`` using ``git am``.
+This script captures the commits within each subrepository where the log messages match a specific pattern, most likely an LPS ticket (``git log --grep``). It rewrites the patch files so that they can be applied to ``ee-7.0.x``, and as long as the portal source is currently at ``ee-7.0.x``, it then creates a new branch then attempts to apply the changes to ``ee-7.0.x`` using ``git am``.
 
 * `subrepobp <subrepobp>`__
 
-To use this script, list all of the tickets that you wish to backport from the subrepository. This does not yet search for dependencies; it simply searches the logs for the specified tickets and brings them in order.
+To use this script, run it from a folder that currently has ``ee-7.0.x`` checked out. Then, list all of the tickets that you wish to backport from the subrepository. This does not yet search for dependencies; it simply searches the logs for the specified tickets and brings them in order.
 
 .. code-block:: bash
 

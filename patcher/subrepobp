@@ -1,70 +1,71 @@
 #!/bin/bash
 
-subrepobpr() {
+backport() {
 	if [ "" == "$1" ]; then
-		echo "Please specify a branch"
+		echo "Please specify a ticket to backport"
 		return 1
 	fi
 
 	# Make sure we have the right folders and environment variables set
 
-	if [ ! -d $PORTAL_SOURCE_70X/modules ]; then
-		echo "$PORTAL_SOURCE_70X does not appear to be an ee-7.0.x repository"
+	if [ ! -d $PWD/modules ]; then
+		echo "$PWD does not appear to be an ee-7.0.x repository"
 		return 1
 	fi
 
-	if [ ! -f $GIT_ROOT/gradle.properties ]; then
-		echo "$PWD does not appear to be a subrepository, missing gradle.properties"
-		return 1
-	fi
-
-	PROJECT_PATH_PREFIX=$(grep 'project.path.prefix=' $GIT_ROOT/gradle.properties)
-
-	if [ "" == "$PROJECT_PATH_PREFIX" ]; then
-		echo "$PWD does not appear to be a subrepository, invalid gradle.properties"
-		return 1
-	fi
-
-	# Determine the module path in the ee-7.0.x repository
-
-	pushd "$PORTAL_SOURCE_70X" > /dev/null
-	MODULE_PATH=$(dirname $(git ls-files modules | grep -F gradle.properties | xargs grep -Fl "$PROJECT_PATH_PREFIX"))
-	popd > /dev/null
-
-	# Generate the patch files
-
-	counter=0
-
-	pushd $GIT_ROOT > /dev/null
-
-	LOG_SEARCH=$(echo "$@" | sed 's@ @\\|@g' | awk '{ print "\\(" $1 "\\)\\( \\|$\\)" }')
-
-	for commit in $(git log --pretty='%H' --grep "$LOG_SEARCH" | tac); do
-		for patch in $(git format-patch $commit -1); do
-			counter=$(expr $counter '+' 1)
-			prefix=$(printf "%04d" $counter)
-
-			mv $patch $prefix-$1.patch
-		done
-
-		sed -i.bak "s@^--- a/@--- a/$MODULE_PATH/@g" $prefix-$1.patch
-		sed -i.bak "s@^+++ b/@+++ b/$MODULE_PATH/@g" $prefix-$1.patch
-	done
-
-	rm *.bak
-	mv *.patch "$PORTAL_SOURCE_70X"
-
-	popd > /dev/null
-
-	# Apply the patch files if possible
-
-	pushd "$PORTAL_SOURCE_70X" > /dev/null
-
-	local EXIT_CODE=1
+	PORTAL_SOURCE_70X=$PWD
 
 	if [ "ee-7.0.x" == "$(git rev-parse --abbrev-ref HEAD)" ]; then
 		git checkout -b $1-70x
+
+		if [[ 0 -ne $? ]]; then
+			return 1
+		fi
 	fi
+
+	git ls-files modules | grep -F gradle.properties > $GIT_ROOT/.redeploy/gradleprops.txt
+
+	counter=0
+
+	for folder in $(ls -1 $SUBREPO_ROOT); do
+		if [ ! -f $SUBREPO_ROOT/$folder/gradle.properties ]; then
+			continue
+		fi
+
+		# Determine the module path in the ee-7.0.x repository
+
+		local PROJECT_PATH_PREFIX=$(grep 'project.path.prefix=' $SUBREPO_ROOT/$folder/gradle.properties)
+
+		if [ "" == "$PROJECT_PATH_PREFIX" ]; then
+			echo "Unable to find project path for $folder"
+			continue
+		fi
+
+		local GRADLE_PROPS=$(cat $GIT_ROOT/.redeploy/gradleprops.txt | xargs grep -Fl "$PROJECT_PATH_PREFIX")
+
+		if [ "" == "$GRADLE_PROPS" ]; then
+			echo "Unable to find module path for $PROJECT_PATH_PREFIX"
+			continue
+		fi
+
+		local MODULE_PATH=$(dirname $GRADLE_PROPS)
+
+		if [ ! -f $MODULE_PATH/.gitrepo ] || [ "" != "$(grep 'mode = pull' $MODULE_PATH/.gitrepo)" ]; then
+			echo "$MODULE_PATH is not a subrepository in pull mode for ee-7.0.x"
+			continue
+		fi
+
+		pushd $SUBREPO_ROOT/$folder > /dev/null
+
+		echo "Checking for changes in $SUBREPO_ROOT/$folder"
+		subrepobpr $@
+
+		popd > /dev/null
+	done
+
+	# Apply the patch files if possible
+
+	local EXIT_CODE=1
 
 	if [ "$1-70x" == "$(git rev-parse --abbrev-ref HEAD)" ]; then
 		set -o pipefail
@@ -80,16 +81,36 @@ subrepobpr() {
 	fi
 
 	if [[ 0 -ne $EXIT_CODE ]]; then
-		echo ''
 		echo "Failed to automatically apply patches."
-		echo ''
-		echo "Create and switch to a new branch in $PORTAL_SOURCE_70X and run:"
-		echo ''
-		echo '    ls -1 *.patch | sort | xargs git am'
-		echo ''
 	fi
+}
 
-	popd > /dev/null
+subrepobpr() {
+	# Generate the patch files
+
+	local HAS_COMMITS=
+	LOG_SEARCH=$(echo "$@" | sed 's@ @\\|@g' | awk '{ print "\\(" $1 "\\)\\( \\|$\\)" }')
+
+	git fetch upstream --no-tags
+
+	for commit in $(git log master --pretty='%H' --grep "$LOG_SEARCH" | tac); do
+		HAS_COMMITS=true
+
+		for patch in $(git format-patch $commit -1); do
+			counter=$(expr $counter '+' 1)
+			prefix=$(printf "%04d" $counter)
+
+			mv $patch $prefix-$1.patch
+		done
+
+		sed -i.bak "s@^--- a/@--- a/$MODULE_PATH/@g" $prefix-$1.patch
+		sed -i.bak "s@^+++ b/@+++ b/$MODULE_PATH/@g" $prefix-$1.patch
+	done
+
+	if [ "" != "$HAS_COMMITS" ]; then
+		rm -f *.bak
+		mv *.patch "$PORTAL_SOURCE_70X"
+	fi
 }
 
 setopts() {
@@ -98,4 +119,4 @@ setopts() {
 
 setopts
 
-subrepobpr $@
+backport $@
