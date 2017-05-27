@@ -149,7 +149,9 @@ gw() {
 	fi
 
 	if [[ 0 -ne $(cat $GIT_ROOT/.redeploy/usedcdn.txt | wc -l) ]]; then
+		pushd $GIT_ROOT > /dev/null
 		cat $GIT_ROOT/.redeploy/usedcdn.txt | xargs git checkout
+		popd > /dev/null
 	fi
 
 	return $EXIT_CODE
