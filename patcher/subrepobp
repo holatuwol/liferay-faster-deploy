@@ -37,7 +37,9 @@ subrepobpr() {
 
 	pushd $GIT_ROOT > /dev/null
 
-	for commit in $(git log --pretty='%H' --grep $1 | tac); do
+	LOG_SEARCH=$(echo "$@" | sed 's@ @\\|@g' | awk '{ print "\\(" $1 "\\)\\( \\|$\\)" }')
+
+	for commit in $(git log --pretty='%H' --grep "$LOG_SEARCH" | tac); do
 		for patch in $(git format-patch $commit -1); do
 			counter=$(expr $counter '+' 1)
 			prefix=$(printf "%04d" $counter)
