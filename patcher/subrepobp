@@ -115,6 +115,14 @@ setopts() {
 	. $(dirname "${BASH_SOURCE[0]}")/../setopts
 }
 
+tac() {
+	if [ "" != "$(which tac)" ]; then
+		$(which tac) $@
+	else
+		tail -r $@
+	fi
+}
+
 setopts
 
 backport $@
