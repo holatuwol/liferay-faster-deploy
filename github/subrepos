@@ -30,8 +30,8 @@ subrepos() {
 		remote_location=$(grep -F 'remote = ' $repo_file | cut -d'=' -f 2)
 		remote_project=$(echo "$remote_location" | cut -d'/' -f 2 | cut -d'.' -f 1)
 
-		if [ ! -d $target_folder/$remote_project ]; then
-			subrepo $source_folder $SUBREPO_ROOT $remote_location $remote_project
+		if [ ! -d $SUBREPO_ROOT/$remote_project ]; then
+			echo subrepo $source_folder $SUBREPO_ROOT $remote_location $remote_project
 		fi
 	done
 
