@@ -1,8 +1,8 @@
 #!/bin/bash
 
 subrepo() {
-	source_folder=$(readlink -f $1)
-	target_folder=$(readlink -f $2)
+	source_folder=$1
+	target_folder=$2
 	remote_location=$3
 	remote_project=$4
 
