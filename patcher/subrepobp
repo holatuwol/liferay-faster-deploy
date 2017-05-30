@@ -13,19 +13,32 @@ backport() {
 		return 1
 	fi
 
-	PORTAL_SOURCE_70X=$PWD
+	# Make sure we're on the master branch to identify the subrepos
 
-	if [ "ee-7.0.x" == "$(git rev-parse --abbrev-ref HEAD)" ]; then
-		git checkout -b $1-70x
+	if [ "master" != "$(git rev-parse --abbrev-ref HEAD)" ]; then
+		git checkout master
 
 		if [[ 0 -ne $? ]]; then
 			return 1
 		fi
 	fi
 
+	$SUBREPO_ROOT $(dirname ${BASH_SOURCE[0]})/../github/subrepos
+
+	# Switch to ee-7.0.x so that we can see what repositories are in push mode
+	# for pulling in changes
+
+	git checkout ee-7.0.x
+
+	if [[ 0 -ne $? ]]; then
+		return 1
+	fi
+
 	git ls-files modules | grep -F gradle.properties > $GIT_ROOT/.redeploy/gradleprops.txt
 
 	counter=0
+
+	PORTAL_SOURCE_70X=$PWD
 
 	for folder in $(ls -1 $SUBREPO_ROOT); do
 		if [ ! -f $SUBREPO_ROOT/$folder/gradle.properties ]; then
@@ -64,6 +77,16 @@ backport() {
 	# Apply the patch files if possible
 
 	local EXIT_CODE=1
+
+	if git rev-parse --verify $1-70x; then
+		git checkout -b $1-70x
+
+		if [[ 0 -ne $? ]]; then
+			return 1
+		fi
+	else
+		git checkout $1-70x
+	fi
 
 	if [ "$1-70x" == "$(git rev-parse --abbrev-ref HEAD)" ]; then
 		set -o pipefail
