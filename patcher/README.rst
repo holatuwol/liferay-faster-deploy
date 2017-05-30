@@ -24,7 +24,7 @@ Then, add this section to `.bash_aliases` (or the equivalent on whichever shell 
 
 	subrepobp() {
 		SUBREPO_ROOT=/path/to/subrepo/root \
-			${MCD_RD_CLONE_PATH}/github/subrepobp $@
+			${MCD_RD_CLONE_PATH}/patcher/subrepobp $@
 	}
 
 Find Build for Hotfix
