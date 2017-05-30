@@ -15,9 +15,9 @@ backport() {
 
 	# Make sure we're on the master branch to identify the subrepos
 
-	git fetch upstream --no-tags
-
 	upstream_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/master$" | cut -d'/' -f 3)
+
+	git fetch ${upstream_remote} master --no-tags
 
 	git checkout $(git log -1 --pretty='%H' ${upstream_remote}/master)
 
@@ -35,6 +35,8 @@ backport() {
 	# for pulling in changes
 
 	upstream_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/ee-7.0.x$" | cut -d'/' -f 3)
+
+	git fetch ${upstream_remote} ee-7.0.x --no-tags
 
 	git checkout $(git log -1 --pretty='%H' ${upstream_remote}/ee-7.0.x)
 
@@ -115,7 +117,7 @@ subrepobpr() {
 	local HAS_COMMITS=
 	LOG_SEARCH=$(echo "$@" | sed 's@ @\\|@g' | awk '{ print "\\(" $1 "\\)\\( \\|$\\)" }')
 
-	git fetch upstream --no-tags
+	git fetch upstream master --no-tags
 
 	for commit in $(git log upstream/master --pretty='%H' --grep "$LOG_SEARCH" | tac); do
 		HAS_COMMITS=true
