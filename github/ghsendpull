@@ -131,7 +131,7 @@ sendpull() {
 		return 1
 	fi
 
-	git fetch --no-tags ${upstream_remote}
+	git fetch --no-tags ${upstream_remote} $BASE_BRANCH
 
 	HAS_CHANGES=$(git status -s | grep -vF '??')
 
