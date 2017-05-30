@@ -16,19 +16,23 @@ backport() {
 	# Make sure we're on the master branch to identify the subrepos
 
 	if [ "master" != "$(git rev-parse --abbrev-ref HEAD)" ]; then
-		git checkout master
+		git checkout $(git log -1 --pretty='%H' master)
 
 		if [[ 0 -ne $? ]]; then
 			return 1
 		fi
 	fi
 
-	$SUBREPO_ROOT $(dirname ${BASH_SOURCE[0]})/../github/subrepos
+	SUBREPO_ROOT=$SUBREPO_ROOT $(dirname ${BASH_SOURCE[0]})/../github/subrepos
+
+	if [[ 0 -ne $? ]]; then
+		return 1
+	fi
 
 	# Switch to ee-7.0.x so that we can see what repositories are in push mode
 	# for pulling in changes
 
-	git checkout ee-7.0.x
+	git checkout $(git log -1 --pretty='%H' ee-7.0.x)
 
 	if [[ 0 -ne $? ]]; then
 		return 1
@@ -78,31 +82,26 @@ backport() {
 
 	local EXIT_CODE=1
 
-	if git rev-parse --verify $1-70x; then
+	if [ "" != "$(git rev-parse --verify $1-70x 2> /dev/null)" ]; then
+		git checkout $1-70x
+	else
 		git checkout -b $1-70x
 
 		if [[ 0 -ne $? ]]; then
 			return 1
 		fi
-	else
-		git checkout $1-70x
 	fi
 
-	if [ "$1-70x" == "$(git rev-parse --abbrev-ref HEAD)" ]; then
-		set -o pipefail
-		ls -1 *.patch | sort | xargs git am
-		EXIT_CODE=$?
-		set +o pipefail
-
-		if [[ 0 -ne $EXIT_CODE ]]; then
-			git am --abort
-		else
-			rm *.patch
-		fi
-	fi
+	set -o pipefail
+	ls -1 *.patch | sort | xargs git am
+	EXIT_CODE=$?
+	set +o pipefail
 
 	if [[ 0 -ne $EXIT_CODE ]]; then
-		echo "Failed to automatically apply patches."
+		echo "Failed to automatically apply patches, aborting"
+		git am --abort
+	else
+		rm *.patch
 	fi
 }
 
