@@ -41,17 +41,15 @@ backport() {
 			continue
 		fi
 
-		local GRADLE_PROPS=$(cat $GIT_ROOT/.redeploy/gradleprops.txt | xargs grep -Fl "$PROJECT_PATH_PREFIX")
+		local GRADLE_PROPS=$(cat $GIT_ROOT/.redeploy/gradleprops.txt | xargs grep -l "$PROJECT_PATH_PREFIX$")
 
 		if [ "" == "$GRADLE_PROPS" ]; then
-			echo "Unable to find module path for $PROJECT_PATH_PREFIX"
 			continue
 		fi
 
 		local MODULE_PATH=$(dirname $GRADLE_PROPS)
 
 		if [ ! -f $MODULE_PATH/.gitrepo ] || [ "" != "$(grep 'mode = pull' $MODULE_PATH/.gitrepo)" ]; then
-			echo "$MODULE_PATH is not a subrepository in pull mode for ee-7.0.x"
 			continue
 		fi
 
@@ -93,7 +91,7 @@ subrepobpr() {
 
 	git fetch upstream --no-tags
 
-	for commit in $(git log master --pretty='%H' --grep "$LOG_SEARCH" | tac); do
+	for commit in $(git log upstream/master --pretty='%H' --grep "$LOG_SEARCH" | tac); do
 		HAS_COMMITS=true
 
 		for patch in $(git format-patch $commit -1); do
