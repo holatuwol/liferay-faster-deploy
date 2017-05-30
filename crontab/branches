@@ -71,12 +71,6 @@ branches() {
 		return 0
 	fi
 
-	local REBUILD="$@"
-
-	if [ "" == "$REBUILD" ]; then
-		REBUILD="master 70x 62x 61x"
-	fi
-
 	# Clear out the data folder for all past builds
 
 	for folder in $REBUILD; do
@@ -157,11 +151,18 @@ fixpacks() {
 
 update() {
 	for remote in $(git remote -v | cut -f 1 | sort -u); do
-		git fetch $remote --no-tags
+		for remote_branch in $(git for-each-ref --format='%(refname)' refs/remotes/${remote}/ | cut -d'/' -f 4); do
+			for local_branch in $(echo "$@" | sed 's/\([0-9]\)/\1./g'); do
+				if [ "$remote_branch" == "$local_branch" ] || [ "$remote_branch" == "ee-$local_branch" ]; then
+					git fetch $remote --no-tags $remote_branch
+				fi
+			done
+		done
 	done
 
 	git reflog expire --expire=now --all
 	git gc --prune
+	return 0
 }
 
 if [ -z "${PORTAL_SOURCE_ROOT}" ]; then
@@ -179,4 +180,12 @@ if [ -z "${BUILD_FOLDER_PREFIX}" ]; then
 	exit 1
 fi
 
-cd $PORTAL_SOURCE_ROOT && update && branches $@ && fixpacks
+REBUILD="$@"
+
+if [ "" == "$REBUILD" ]; then
+	REBUILD="master 70x 62x 61x"
+fi
+
+cd $PORTAL_SOURCE_ROOT
+update $REBUILD
+branches $REBUILD && fixpacks
