@@ -7,6 +7,8 @@ subrepo() {
 	remote_project=$4
 
 	# Clone into correct directory and switch into it
+
+	echo "Cloning $remote_project"
 	git clone $remote_location $target_folder/$remote_project
 	pushd $target_folder/$remote_project > /dev/null
 
