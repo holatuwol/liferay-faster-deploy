@@ -7,11 +7,7 @@ cachenpm() {
 		rm -rf "${cache_home}"
 	fi
 
-	if [ "" != "$(which yarn)" ]; then
-		NPM_INSTALL='yarn'
-	else
-		NPM_INSTALL='npm install'
-	fi
+	NPM_INSTALL='npm install'
 
 	findmodules $@
 
