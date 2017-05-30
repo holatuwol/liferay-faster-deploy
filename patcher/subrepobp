@@ -15,12 +15,14 @@ backport() {
 
 	# Make sure we're on the master branch to identify the subrepos
 
-	if [ "master" != "$(git rev-parse --abbrev-ref HEAD)" ]; then
-		git checkout $(git log -1 --pretty='%H' master)
+	git fetch upstream --no-tags
 
-		if [[ 0 -ne $? ]]; then
-			return 1
-		fi
+	upstream_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/master$" | cut -d'/' -f 3)
+
+	git checkout $(git log -1 --pretty='%H' ${upstream_remote}/master)
+
+	if [[ 0 -ne $? ]]; then
+		return 1
 	fi
 
 	SUBREPO_ROOT=$SUBREPO_ROOT $(dirname ${BASH_SOURCE[0]})/../github/subrepos
@@ -32,7 +34,9 @@ backport() {
 	# Switch to ee-7.0.x so that we can see what repositories are in push mode
 	# for pulling in changes
 
-	git checkout $(git log -1 --pretty='%H' ee-7.0.x)
+	upstream_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/ee-7.0.x$" | cut -d'/' -f 3)
+
+	git checkout $(git log -1 --pretty='%H' ${upstream_remote}/ee-7.0.x)
 
 	if [[ 0 -ne $? ]]; then
 		return 1
