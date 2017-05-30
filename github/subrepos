@@ -25,14 +25,13 @@ subrepos() {
 	pushd $GIT_ROOT > /dev/null
 
 	source_folder=$PWD
-	target_folder=$(dirname $PWD)/subrepos
 
 	for repo_file in $(git ls-files modules | grep -F '.gitrepo' | xargs grep -Fl 'mode = pull'); do
 		remote_location=$(grep -F 'remote = ' $repo_file | cut -d'=' -f 2)
 		remote_project=$(echo "$remote_location" | cut -d'/' -f 2 | cut -d'.' -f 1)
 
 		if [ ! -d $target_folder/$remote_project ]; then
-			subrepo $source_folder $target_folder $remote_location $remote_project
+			subrepo $source_folder $SUBREPO_ROOT $remote_location $remote_project
 		fi
 	done
 
@@ -46,7 +45,12 @@ setopts() {
 setopts
 
 if [ ! -d $GIT_ROOT/modules ]; then
-	echo Please run this from the portal source
+	echo 'Please run this from the portal source'
+	exit 1
+fi
+
+if [ "" == "$SUBREPO_ROOT" ]; then
+	echo 'Please specify the root folder for subrepositories'
 	exit 1
 fi
 

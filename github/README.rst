@@ -18,7 +18,8 @@ Then, add this section to `.bash_aliases` (or the equivalent on whichever shell 
 	}
 
 	gpr() {
-		${MCD_RD_CLONE_PATH}/github/pullrequest $@
+		SUBREPO_ROOT=/path/to/subrepo/root \
+			${MCD_RD_CLONE_PATH}/github/pullrequest $@
 	}
 
 Open GitHub In Web Browser
