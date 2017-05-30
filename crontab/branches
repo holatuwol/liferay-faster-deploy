@@ -71,9 +71,15 @@ branches() {
 		return 0
 	fi
 
+	local REBUILD="$@"
+
+	if [ "" == "$REBUILD" ]; then
+		REBUILD="master 70x 62x 61x"
+	fi
+
 	# Clear out the data folder for all past builds
 
-	for folder in master 70x 62x 61x; do
+	for folder in $REBUILD; do
 		for BUILD_ID in $(ls -1 "$BUILD_FOLDER_PREFIX/$folder" | grep -vF '.log'); do
 			rm -rf "$BUILD_FOLDER_PREFIX/$folder/$BUILD_ID/data"
 		done
@@ -85,10 +91,17 @@ branches() {
 
 	# Build all branches
 
-	branch master 60
-	branch 70x 70
-	branch 62x 62
-	branch 61x 61
+	for folder in $REBUILD; do
+		if [ "master" == "$folder" ]; then
+			branch master 60
+		elif [ "70x" == "$folder" ]; then
+			branch 70x 70
+		elif [ "62x" == "$folder" ]; then
+			branch 62x 62
+		elif [ "61x" == "$folder" ]; then
+			branch 61x 61
+		fi
+	done
 
 	echo Completed $(date)
 
@@ -166,4 +179,4 @@ if [ -z "${BUILD_FOLDER_PREFIX}" ]; then
 	exit 1
 fi
 
-cd $PORTAL_SOURCE_ROOT && update && branches && fixpacks
+cd $PORTAL_SOURCE_ROOT && update && branches $@ && fixpacks
