@@ -31,7 +31,7 @@ subrepos() {
 		remote_project=$(echo "$remote_location" | cut -d'/' -f 2 | cut -d'.' -f 1)
 
 		if [ ! -d $SUBREPO_ROOT/$remote_project ]; then
-			echo subrepo $source_folder $SUBREPO_ROOT $remote_location $remote_project
+			subrepo $source_folder $SUBREPO_ROOT $remote_location $remote_project
 		fi
 	done
 
