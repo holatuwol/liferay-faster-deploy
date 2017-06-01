@@ -1,0 +1,41 @@
+#!/bin/bash
+
+nodew() {
+	if [ "" == "$REPO_PATH" ]; then
+		if [ "" == "$(which $1)" ]; then
+			echo 'Please clone the https://github.com/$2 repository'
+			echo 'and specify the path to the local directory where you cloned it'
+			return 1
+		fi
+
+		$(which $1) $@
+		return $?
+	fi
+
+	if [ ! -d "$REPO_PATH" ]; then
+		echo "$REPO_PATH does not exist"
+		return 1
+	fi
+
+	pushd "${REPO_PATH}" > /dev/null
+
+	if [ ! -d "${REPO_PATH}/node_modules" ]; then
+		if [ "" != "$(which yarn)" ]; then
+			yarn
+		else
+			npm install
+		fi
+	fi
+
+	local EXECUTABLE=$(cat package.json | jq .bin.$1 | cut -d'"' -f 2)
+
+	popd > /dev/null
+
+	nodejs "${REPO_PATH}/$EXECUTABLE" ${@:3}
+}
+
+if [ -d /usr/local/bin ] && [ "" == "$(echo $PATH | grep -F '/usr/local/bin')" ]; then
+	PATH="$PATH:/usr/local/bin"
+fi
+
+nodew $@
