@@ -1,0 +1,25 @@
+This is just a reference for wrapper scripts around scripts provided in other repositories, but I don't install into my path (for example, ``npm install -g``), and prefer instead to run directly from the repository.
+
+## Jack
+
+* Wrapper: ``jack``
+* Repository: `drewbrokke/jack <https://github.com/drewbrokke/jack>`__
+
+.. code-block:: bash
+
+	jack() {
+		REPO_PATH=/path/to/jack/repository \
+			${MCD_RD_CLONE_PATH}/notmine/jack $@
+	}
+
+## Liferay Watch
+
+* Wrapper: ``lwatch``
+* Repository: `brunobasto/liferay-watch <https://github.com/brunobasto/liferay-watch>`__
+
+.. code-block:: bash
+
+	lwatch() {
+		REPO_PATH=/path/to/lwatch/repository \
+			${MCD_RD_CLONE_PATH}/notmine/lwatch $@
+	}

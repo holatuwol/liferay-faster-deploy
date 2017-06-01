@@ -1,0 +1,3 @@
+#!/bin/bash
+
+REPO_PATH=$REPO_PATH $(dirname ${BASH_SOURCE[0]})/nodew jack drewbrokke/jack $@
