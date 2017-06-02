@@ -57,13 +57,13 @@ getglobalnode() {
 		curl -O https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-darwin-x64.tar.gz
 		tar -zxf node-${NODE_VERSION}-darwin-x64.tar.gz
 		rm node-${NODE_VERSION}-darwin-x64.tar.gz
+		mv node-${NODE_VERSION}-darwin-x64 node-${NODE_VERSION}
 	else
 		curl -O https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-linux-x64.tar.gz
 		tar -zxf node-${NODE_VERSION}-linux-x64.tar.gz
 		rm node-${NODE_VERSION}-linux-x64.tar.gz
+		mv node-${NODE_VERSION}-linux-x64 node-${NODE_VERSION}
 	fi
-
-	mv node-${NODE_VERSION}-linux-x64 node-${NODE_VERSION}
 
 	curl -O https://nodejs.org/dist/${NODE_VERSION}/win-x64/node.exe
 	mv node.exe node-${NODE_VERSION}/bin/
