@@ -100,13 +100,6 @@ catalinastart() {
 		return 1
 	fi
 
-	# Start from a clean osgi/state folder, because that can cause
-	# problems after redeploy.
-
-	if [ -d $LIFERAY_HOME/osgi/state ]; then
-		rm -rf $LIFERAY_HOME/osgi/state
-	fi
-
 	# Use portal-kernel/portal-service to determine the current
 	# Liferay version in order to decide on the Java version to use
 
@@ -139,6 +132,13 @@ catalinastart() {
 
 	if [ "" == "$IS_RUNNING" ]; then
 		catalinaconf
+
+		# Start from a clean osgi/state folder, because that can cause
+		# problems after redeploy.
+
+		if [ -d $LIFERAY_HOME/osgi/state ]; then
+			rm -rf $LIFERAY_HOME/osgi/state
+		fi
 
 		$CATALINA_HOME/bin/startup.sh
 	fi
