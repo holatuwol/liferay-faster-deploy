@@ -52,6 +52,8 @@ modulecache() {
 
 		popd > /dev/null
 	done
+
+	find ${cache_home} -name '*.tar.gz' -mtime +7 -exec rm {} \;
 }
 
 modulecache

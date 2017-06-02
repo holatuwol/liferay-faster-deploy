@@ -46,7 +46,7 @@ All of these ideas are based on avoiding the Gradle ``npmInstall`` task. Therefo
 Iterations
 ----------
 
-This section documents some of the ideas that I've experimented with in order to improve the speed of the Node.js execution. Currently, the script is configured to use ``modulerun`` to be as close to the actual master compilation as possible, while ``modulecache`` is the recommended configuration if you frequently run ``git clean -xdf``. Recent changes to master have made it so that ``globalcache`` does not work without further improvements to its merge strategy (right now it naively creates a single file).
+This section documents some of the ideas that I've experimented with in order to improve the speed of the Node.js execution. Currently, the script is configured to use ``modulecache``, because I frequently run ``git clean -xdf``, while ``modulerun`` is the recommended configuration if you have your heart set to being as close to the actual master compilation as possible. Recent changes to master have made it so that ``globalcache`` does not work without further improvements to its merge strategy (right now it naively creates a single file).
 
 ``modulerun``
 ~~~~~~~~~~~~~

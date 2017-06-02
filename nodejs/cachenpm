@@ -12,8 +12,8 @@ cachenpm() {
 	findmodules $@
 
 	# . $(dirname "${BASH_SOURCE[0]}")/globalcache $@
-	# . $(dirname "${BASH_SOURCE[0]}")/modulecache $@
-	. $(dirname "${BASH_SOURCE[0]}")/modulerun $@
+	. $(dirname "${BASH_SOURCE[0]}")/modulecache $@
+	# . $(dirname "${BASH_SOURCE[0]}")/modulerun $@
 
 	NPM_PRODUCTION=$(npm config get production)
 	npm config set production false
