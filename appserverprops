@@ -66,7 +66,7 @@ cleanappserver() {
 		return 0
 	fi
 
-	local TOMCAT_FOLDER=tomcat-${TOMCAT_VERSION}
+	TOMCAT_FOLDER=tomcat-${TOMCAT_VERSION}
 
 	if [ "" == "$ARCHIVE_HOME" ]; then
 		if [ ! -d $LIFERAY_HOME/$TOMCAT_FOLDER ]; then
@@ -83,11 +83,11 @@ cleanappserver() {
 
 	# make sure we have an archive file
 
-	ARCHIVE_FILE=${ARCHIVE_HOME}/apache-tomcat-${TOMCAT_VERSION}.tar.gz
+	ARCHIVE_FILE=${ARCHIVE_HOME}/apache-tomcat-${TOMCAT_VERSION}.zip
 
 	if [ ! -f "$ARCHIVE_FILE" ]; then
 		pushd $ARCHIVE_HOME > /dev/null
-		curl -O "http://archive.apache.org/dist/tomcat/tomcat-${TOMCAT_MAJOR_VERSION}/v${TOMCAT_VERSION}/bin/apache-tomcat-${TOMCAT_VERSION}.tar.gz"
+		curl -O "http://archive.apache.org/dist/tomcat/tomcat-${TOMCAT_MAJOR_VERSION}/v${TOMCAT_VERSION}/bin/apache-tomcat-${TOMCAT_VERSION}.zip"
 		popd > /dev/null
 	fi
 
