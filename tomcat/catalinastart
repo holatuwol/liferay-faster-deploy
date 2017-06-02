@@ -153,7 +153,7 @@ catalinastart() {
 }
 
 javahome() {
-	. $(dirname ${BASH_SOURCE[0]})/javahome $@
+	. $(dirname ${BASH_SOURCE[0]})/../javahome $@
 }
 
 tcnative() {
