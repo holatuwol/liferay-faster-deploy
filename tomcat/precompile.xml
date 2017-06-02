@@ -1,0 +1,71 @@
+<!-- Based off of the Jasper 2 JSP Engine How To               -->
+<!-- http://tomcat.apache.org/tomcat-5.5-doc/jasper-howto.html -->
+
+<project name="webapps" default="compile" basedir=".">
+
+	<property environment="env" />
+
+	<property name="tomcat.deploy.dir" location="${tomcat.home.dir}/webapps" />
+	<property name="tomcat.work.dir" location="${tomcat.home.dir}/work" />
+
+	<taskdef classname="org.apache.jasper.JspC" name="jasper2">
+		<classpath>
+			<pathelement location="${env.JAVA_HOME}/lib/tools.jar"/>
+			<fileset dir="${tomcat.home.dir}/bin"><include name="*.jar"/></fileset>
+			<fileset dir="${tomcat.home.dir}/lib"><include name="*.jar"/></fileset>
+			<fileset dir="${tomcat.home.dir}/lib/ext"><include name="*.jar"/></fileset>
+		</classpath>
+	</taskdef>
+
+	<!-- =========================================== -->
+	<!--  Compiles the .jsp files into .class files  -->
+	<!-- =========================================== -->
+
+	<target name="compile">
+
+		<echo message="Converting .jsp files for ${webapp.home}" />
+
+		<property name="webapp.home.dir" value="${tomcat.deploy.dir}/${webapp.home}" />
+		<property name="webapp.work.dir" value="${tomcat.work.dir}/Catalina/localhost/${webapp.work}" />
+
+		<jasper2
+			uriroot="${webapp.home.dir}"
+			webXmlFragment="${webapp.home.dir}/WEB-INF/generated_web.xml"
+			outputDir="${webapp.work.dir}">
+		</jasper2>
+
+		<mkdir dir="${webapp.work.dir}" />
+
+		<javac
+			srcdir="${webapp.work.dir}" destdir="${webapp.work.dir}"
+			source="${jsp.java.version}" target="${jsp.java.version}"
+			debug="on" failonerror="false" fork="true"
+			memoryMaximumSize="2048m" memoryInitialSize="1024m">
+
+			<compilerarg line="-encoding utf-8"/>
+
+			<classpath>
+				<fileset dir="${tomcat.home.dir}/lib"><include name="*.jar" /></fileset>
+				<fileset dir="${tomcat.home.dir}/lib/ext"><include name="*.jar" /></fileset>
+				<fileset dir="${webapp.home.dir}/WEB-INF/lib" erroronmissingdir="false"><include name="*.jar" /></fileset>
+				<pathelement location="${webapp.home.dir}/WEB-INF/classes"/>
+			</classpath>
+		</javac>
+
+		<echo message="Fixing timestamps on .class files for ${webapp.home}" />
+
+		<java
+			classname="com.liferay.portal.tools.jspc.common.TimestampUpdater"
+			fork="true"
+			newenvironment="true"
+		>
+			<classpath>
+				<pathelement location="${tomcat.home.dir}/webapps/ROOT/WEB-INF/lib/ant.jar" />
+				<pathelement location="${tomcat.home.dir}/webapps/ROOT/WEB-INF/lib/portal-impl.jar" />
+			</classpath>
+
+			<arg line="${webapp.work.dir}" />
+		</java>
+	</target>
+
+</project>
