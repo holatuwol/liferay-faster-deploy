@@ -74,8 +74,10 @@ It is also designed specifically to account for multiple origin repositories, su
 
 Aside from that, currently, the script does the following:
 
-* specify reviewer by partial name
-* rebase against upstream
-* run source formatter against your changes
-* run PMD against your changes
-* open your web browser to the compare URL so you can create a pull request
+* finds reviewer by partial name
+* rebases against upstream
+* generates patches to split changes across subrepositories if needed
+* runs the baseline task against changed modules (ignoring profiles)
+* runs source formatter against your changes (ignoring profiles)
+* runs `pmd <https://pmd.github.io>`__ against all changed files (required by pull request tests)
+* opens a web browser to the GitHub compare URL so you can create a pull request
