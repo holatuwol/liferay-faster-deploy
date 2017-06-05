@@ -13,6 +13,10 @@ backport() {
 		return 1
 	fi
 
+	# Find out where we're starting from
+
+	. $(dirname ${BASH_SOURCE[0]})/../getparent
+
 	# Make sure we're on the master branch to identify the subrepos
 
 	upstream_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/master$" | cut -d'/' -f 3)
@@ -88,10 +92,17 @@ backport() {
 
 	local EXIT_CODE=1
 
-	if [ "" != "$(git rev-parse --verify $1-70x 2> /dev/null)" ]; then
-		git checkout $1-70x
+	local TARGET_BRANCH="$1-70x"
+
+	if [ "" != "$BASE_TAG" ]; then
+		TARGET_BRANCH=$1-$(echo "$BASE_TAG" | grep -o 'de-[0-9]*' | tr -d '-')
+	fi
+
+	if [ "" != "$(git rev-parse --verify $TARGET_BRANCH 2> /dev/null)" ]; then
+		git checkout $TARGET_BRANCH
 	else
-		git checkout -b $1-70x
+		git checkout $BASE_TAG
+		git checkout -b $TARGET_BRANCH
 
 		if [[ 0 -ne $? ]]; then
 			return 1
@@ -119,7 +130,23 @@ subrepobpr() {
 
 	git fetch upstream master --no-tags
 
-	for commit in $(git log upstream/master --pretty='%H' --grep "$LOG_SEARCH" | tac); do
+	# First, see if the commits are already in master
+
+	git log upstream/master --pretty='%H' --grep "$LOG_SEARCH" > $GIT_ROOT/.redeploy/commits.txt
+
+	# If no commits are in master, check the local branches
+
+	if [[ 0 -eq $(cat $GIT_ROOT/.redeploy/commits.txt | wc -l) ]]; then
+		cat /dev/null > $GIT_ROOT/.redeploy/commits.txt
+
+		for branch in $@; do
+			git log $branch --pretty='%H' --grep "$LOG_SEARCH" >> $GIT_ROOT/.redeploy/commits.txt 2> /dev/null
+		done
+	fi
+
+	# Generate patch files for each commit
+
+	for commit in $(tac $GIT_ROOT/.redeploy/commits.txt); do
 		HAS_COMMITS=true
 
 		for patch in $(git format-patch $commit -1); do
@@ -127,10 +154,10 @@ subrepobpr() {
 			prefix=$(printf "%04d" $counter)
 
 			mv $patch $prefix-$1.patch
-		done
 
-		sed -i.bak "s@^--- a/@--- a/$MODULE_PATH/@g" $prefix-$1.patch
-		sed -i.bak "s@^+++ b/@+++ b/$MODULE_PATH/@g" $prefix-$1.patch
+			sed -i.bak "s@^--- a/@--- a/$MODULE_PATH/@g" $prefix-$1.patch
+			sed -i.bak "s@^+++ b/@+++ b/$MODULE_PATH/@g" $prefix-$1.patch
+		done
 	done
 
 	if [ "" != "$HAS_COMMITS" ]; then
