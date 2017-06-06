@@ -1,0 +1,22 @@
+#!/bin/bash
+
+checkpackage() {
+	if $(python -c "import $package"); then
+		return 0
+	fi
+
+	if [ "" != "$(which conda)" ]; then
+		conda install $package
+	elif [ "" != "$(which pip)" ]; then
+		pip install $package
+	else
+		echo "Neither pip nor conda are available on the path"
+		return 1
+	fi
+}
+
+export PATH=$PATH:/usr/local/bin
+
+for package in $@; do
+	checkpackage $package
+done
