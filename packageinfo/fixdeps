@@ -1,5 +1,9 @@
 #!/bin/bash
 
+checkpython() {
+	$(dirname ${BASH_SOURCE[0]})/../checkpython $@
+}
+
 csvmanifest() {
 	. $(dirname "${BASH_SOURCE[0]}")/csvmanifest $@
 }
@@ -152,5 +156,11 @@ fixdeps() {
 setopts() {
 	. $(dirname "${BASH_SOURCE[0]}")/../setopts
 }
+
+checkpython semver
+
+if [[ 0 -ne $? ]]; then
+	exit 1
+fi
 
 setopts && fixdeps

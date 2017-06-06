@@ -1,5 +1,9 @@
 #!/bin/bash
 
+checkpython() {
+	$(dirname ${BASH_SOURCE[0]})/../checkpython $@
+}
+
 dirnames() {
 	python $(dirname $0)/../dirnames.py
 }
@@ -52,6 +56,12 @@ packageinfo() {
 
 if [ -z "${PORTAL_SOURCE_ROOT}" ]; then
 	echo "Please set a PORTAL_SOURCE_ROOT for the build"
+	exit 1
+fi
+
+checkpython pandas
+
+if [[ 0 -ne $? ]]; then
 	exit 1
 fi
 
