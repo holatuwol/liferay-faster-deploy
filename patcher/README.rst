@@ -85,7 +85,7 @@ This script captures the commits within each subrepository where the log message
 
 * `subrepobp <subrepobp>`__
 
-To use this script, run it from a folder that currently has ``ee-7.0.x`` checked out. Then, list all of the tickets that you wish to backport from the subrepository. This does not yet search for dependencies; it simply searches the logs for the specified tickets and brings them in order.
+To use this script, run it from a folder that currently has ``ee-7.0.x`` checked out or a DE baseline tag checked out. Then, list all of the tickets that you wish to backport from the subrepository. This does not yet search for dependencies; it simply searches the logs for the specified tickets and brings them in order.
 
 .. code-block:: bash
 
