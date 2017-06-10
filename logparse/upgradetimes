@@ -11,10 +11,10 @@ if [ "" == "$1" ] || [ ! -f "$1" ]; then
 fi
 
 
-gettimes "$1" > times_old.out
+gettimes "$1" > times_old.csv
 
 if [ "" != "$2" ] && [ -f "$2" ]; then
-	gettimes "$2" > times_new.out
+	gettimes "$2" > times_new.csv
 
 	python $(dirname ${BASE_SOURCE[0]})/upgradetimes.py
 fi
