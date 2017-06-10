@@ -16,5 +16,5 @@ gettimes "$1" > times_old.csv
 if [ "" != "$2" ] && [ -f "$2" ]; then
 	gettimes "$2" > times_new.csv
 
-	python $(dirname ${BASE_SOURCE[0]})/upgradetimes.py
+	python $(dirname ${BASH_SOURCE[0]})/upgradetimes.py
 fi
