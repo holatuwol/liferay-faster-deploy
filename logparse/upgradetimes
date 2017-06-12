@@ -18,5 +18,7 @@ if [ "" != "$2" ] && [ -f "$2" ]; then
 
 	python $(dirname ${BASH_SOURCE[0]})/upgradetimes.py
 
-	grep -vF '#' times_compare.csv | grep -vF 'UpgradeProcess_' | grep -vF 'VerifyProcessSuite' > times_compare_totals.csv
+	grep -vF '#' times_compare.csv | grep -vF ' ' | \
+		grep -vF 'UpgradeProcess_' | grep -vF 'VerifyProcessSuite' | \
+		sort -t ',' -k2,2rn > times_compare_totals.csv
 fi
