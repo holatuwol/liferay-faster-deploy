@@ -17,4 +17,6 @@ if [ "" != "$2" ] && [ -f "$2" ]; then
 	gettimes "$2" > times_new.csv
 
 	python $(dirname ${BASH_SOURCE[0]})/upgradetimes.py
+
+	grep -vF '#' times_compare.csv | grep -vF 'UpgradeProcess_' | grep -vF 'VerifyProcessSuite' > times_compare_totals.csv
 fi
