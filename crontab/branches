@@ -101,7 +101,9 @@ branches() {
 
 	# Finished build
 
-	checkout master
+	if [ -d .git ]; then
+		checkout master
+	fi
 }
 
 checkout() {
