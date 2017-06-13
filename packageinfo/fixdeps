@@ -61,8 +61,7 @@ fixdeps() {
 		git ls-files . > .redeploy/lsfiles.txt
 	fi
 
-	grep -F build.gradle .redeploy/lsfiles.txt | dirnames > .redeploy/gradle.txt
-	grep -F bnd.bnd .redeploy/lsfiles.txt > .redeploy/bnd.txt
+	grep -F build.gradle .redeploy/lsfiles.txt | grep -vF '/src/' | dirnames > .redeploy/gradle.txt
 
 	cat .redeploy/gradle.txt | awk '{ print $1 "/src/main/java" }' | xargs git ls-files | grep -F .java > .redeploy/java.txt
 	cat .redeploy/gradle.txt | awk '{ print $1 "/src/main/resources/META-INF/resources" }' | xargs git ls-files | grep -F .jsp > .redeploy/jsp.txt
@@ -138,25 +137,73 @@ fixdeps() {
 
 	# Modify the build.gradle that needed to change
 
+	grep -F bnd.bnd .redeploy/lsfiles.txt | grep -vF '/src/' | xargs grep Bundle-SymbolicName | grep -vF '{' | sed 's/Bundle-SymbolicName: //g' > .redeploy/bnd.txt
+
+	local FORMAT_SOURCE=
+
 	for line in $(cat .redeploy/fixdeps.txt | sort -u); do
 		local folder=$(echo "$line" | cut -d',' -f 1)
 		local module=$(echo "$line" | cut -d',' -f 2)
+		local project=$(grep ":$module$" .redeploy/bnd.txt | cut -d':' -f 1 | sed 's@modules@@' | tr '\\' '/' | dirnames | tr '/' ':')
 
 		if [[ $module == com.liferay.portal* ]]; then
 			sed -i.bak -e '/name: "'$module'"/ s/version: "[^"]*"/version: "default"/' $folder/build.gradle
 		else
 			sed -i.bak -e '/name: "'$module'"/ s/group: .*/project("'$project'")/' $folder/build.gradle
+			FORMAT_SOURCE="$FORMAT_SOURCE $(echo $folder | sed 's@modules@@g' | tr -d '/' ':'):formatSource"
 		fi
 	done
 
-	# For anything that fails to compile, report
+	if [ "" != "$FORMAT_SOURCE" ]; then
+		echo $FORMAT_SOURCE | xargs $(dirname "${BASH_SOURCE[0]}")/../gw --continue -DformatSource.format.local.changes=true
+	fi
 
 	local FAILED_COMPILE=$(grep 'compile\(JSP\|Java\) FAILED' .redeploy/compile.txt | sort)
 
-	if [ "" != "$FAILED_COMPILE" ]; then
-		echo "$FAILED_COMPILE"
-		return 1
+	if [ "" == "$FAILED_COMPILE" ]; then
+		return 0
 	fi
+
+	# For anything that fails to compile, try updating build.gradle and redoing
+
+	FORMAT_SOURCE=
+
+	for target_gradle in $(echo "$FAILED_COMPILE" | cut -d' ' -f 1 | sed 's@:compile\(JSP\|Java\)@@g' | sort -u | tr ':' '/' | awk '{ print "modules" $1 "/build.gradle" }'); do
+		for folder in $(cat .redeploy/changes_gradle_1.txt .redeploy/changes_gradle_2.txt); do
+			local module=$(grep 'Bundle-SymbolicName' $folder/bnd.bnd | cut -d' ' -f 2)
+			local project=$(grep ":$module$" .redeploy/bnd.txt | cut -d':' -f 1 | sed 's@modules@@' | tr '\\' '/' | dirnames | tr '/' ':')
+
+			if [[ $module == com.liferay.portal* ]]; then
+				sed -i.bak -e '/name: "'$module'"/ s/version: "[^"]*"/version: "default"/' $target_gradle
+			else
+				sed -i.bak -e '/name: "'$module'"/ s/group: .*/project("'$project'")/' $target_gradle
+				FORMAT_SOURCE="$FORMAT_SOURCE $(dirname $target_gradle | sed 's@modules@@g' | tr '/' ':'):formatSource"
+			fi
+		done
+	done
+
+	local RECOMPILE=$(echo $FAILED_COMPILE | cut -d' ' -f 1)
+
+	pushd modules > /dev/null
+	echo "$RECOMPILE" "$FORMAT_SOURCE" | xargs $(dirname "${BASH_SOURCE[0]}")/../gw --continue -DformatSource.format.local.changes=true | tee ../.redeploy/compile.txt
+	popd > /dev/null
+
+	FAILED_COMPILE=$(grep 'compile\(JSP\|Java\) FAILED' .redeploy/compile.txt | sort)
+
+	if [ "" == "$FAILED_COMPILE" ]; then
+		return 0
+	fi
+
+	# If it failed to recompile, restore the original build.gradle
+
+	for target_gradle in $(echo "$FAILED_COMPILE" | cut -d' ' -f 1 | sed 's@:compile\(JSP\|Java\)@@g' | tr ':' '/' | awk '{ print "modules" $1 "/build.gradle" }'); do
+		git checkout $target_gradle
+	done
+
+	# Report the build failure
+
+	echo "$FAILED_COMPILE"
+	return 1
 }
 
 setopts() {

@@ -11,7 +11,12 @@ packageinfos = dict()
 
 with open('.redeploy/changes.txt') as f:
 	for filename in f.readlines():
-		package = filename[filename.find('src/') + 4:].strip()
+		pos = filename.find('src/')
+
+		if pos == -1:
+			continue
+
+		package = filename[pos+4:].strip()
 
 		if package.find('main/java/') == 0:
 			package = package[10:-12]
