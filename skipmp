@@ -21,18 +21,20 @@ skipmp() {
 			echo "Assuming that you do not want to use skipmp"
 			return 0
 		fi
+	fi
 
+	if [ ! -f build.$USER.properties ] || [ "" != "$(grep -F build.include.dirs build.properties)" ]; then
 		echo "Neither build.include.dirs nor build.exclude.dirs has been set"
-		echo "Restricting build to the following applications (app.bnd)"
+		echo "Restricting build to the following applications (detected via app.bnd)"
 
 		if [ -f $HOME/lpkgs.txt ]; then
 			cat $HOME/lpkgs.txt | tr '\n' ',' | sed 's/,/, /g'
 		else
 			echo -en 'Collaboration\nForms and Workflow\nFoundation\nStatic\nWeb Experience' | tr '\n' ',' | sed 's/,/, /g'
 		fi
-	fi
 
-	echo -en "\n\n"
+		echo -en "\n\n"
+	fi
 
 	git ls-files -v | grep '^h ' | cut -d' ' -f 2 | grep -F '.lfrbuild-portal' | xargs git update-index --no-assume-unchanged
 	git status | grep -F deleted | grep -F '.lfrbuild-portal' | cut -d':' -f 2 | xargs git checkout
@@ -69,41 +71,9 @@ skipmp() {
 		fi
 	done
 
-	build_gradles=$(git ls-files modules | grep -F build.gradle)
-
 	if [[ 0 -ne $(cat .excludes | wc -l) ]]; then
-		cp -f .excludes .excludes_transitive
+		transitiveexcludes
 
-		old_count=0
-		new_count=$(cat .excludes | sort -u | wc -l)
-
-		while [[ $old_count -ne $new_count ]]; do
-			old_count=$new_count
-			old_excludes=$(cat .excludes_transitive)
-
-			project_dependencies=$(echo "$old_excludes" | sed 's@^modules/private@@g' | sed 's@^modules@@g' | tr '/' ':' | xargs | tr ' ' '|')
-
-			if [ "" != "$project_dependencies" ]; then
-				echo -n "$build_gradles" | xargs grep -l "\($project_dependencies\)" | dirnames > .excludes_transitive
-			fi
-
-			library_dependencies=$(echo "$old_excludes" | xargs git ls-files | grep -F bnd.bnd | xargs grep Bundle-SymbolicName | grep -vF '{' | cut -d' ' -f 2 | xargs | tr ' ' '|')
-
-			if [ "" != "$library_dependencies" ]; then
-				echo -n "$build_gradles" | xargs grep -l "\"\($library_dependencies\)\"" | dirnames >> .excludes_transitive
-			fi
-
-			mv .excludes .excludes_old
-			cat .excludes_old .excludes_transitive | sort -u > .excludes
-			rm .excludes_old
-
-			new_count=$(cat .excludes | wc -l)
-		done
-
-		rm -f .excludes_transitive
-	fi
-
-	if [[ 0 -ne $(cat .excludes | wc -l) ]]; then
 		exclude=$(cat .excludes | xargs git ls-files | grep -F .lfrbuild-portal | sort -u)
 
 		echo "$exclude" | dirnames | awk '{ print "Excluding " $1 }'
@@ -112,6 +82,48 @@ skipmp() {
 	fi
 
 	rm -f .excludes
+}
+
+transitiveexcludes() {
+	if [[ 0 -eq $(cat .excludes | wc -l) ]]; then
+		return 0
+	fi
+
+	cp -f .excludes .excludes_transitive
+
+	old_count=0
+	new_count=$(cat .excludes | sort -u | wc -l)
+
+	git ls-files modules | grep -F build.gradle | grep -vF '/src/' > .redeploy/gradle_list.txt
+	git ls-files modules | grep -F bnd.bnd | grep -vF '/src/' | xargs grep Bundle-SymbolicName | grep -vF '{' | sed 's/Bundle-SymbolicName: //g' > .redeploy/bnd_list.txt
+
+	while [[ $old_count -ne $new_count ]]; do
+		old_count=$new_count
+		old_files=$(cat .excludes_transitive)
+
+		project_dependencies=$(echo "$old_files" | sed 's@^modules/private@@g' | sed 's@^modules@@g' | tr '/' ':' | xargs | sed 's/ /\\|/g')
+
+		cat /dev/null > .excludes_transitive
+
+		if [ "" != "$project_dependencies" ]; then
+			cat .redeploy/gradle_list.txt | xargs grep -l "project(\"\($project_dependencies\)\")" | dirnames >> .excludes_transitive
+		fi
+
+		app_folders=$(echo "$old_files" | xargs | sed 's/ /\\|/g')
+		library_dependencies=$(grep "\(${app_folders}\)" .redeploy/bnd_list.txt | cut -d ':' -f 2 | xargs | sed 's/ /\\|/g')
+
+		if [ "" != "$library_dependencies" ]; then
+			cat .redeploy/gradle_list.txt | xargs grep -l "\"\($library_dependencies\)\"" | dirnames >> .excludes_transitive
+		fi
+
+		mv .excludes .excludes_old
+		cat .excludes_old .excludes_transitive | sort -u > .excludes
+		rm .excludes_old
+
+		new_count=$(cat .excludes | wc -l)
+	done
+
+	rm -f .excludes_transitive
 }
 
 setopts
