@@ -19,12 +19,10 @@ nodew() {
 
 	pushd "${REPO_PATH}" > /dev/null
 
-	if [ ! -d "${REPO_PATH}/node_modules" ]; then
-		if [ "" != "$(which yarn)" ]; then
-			yarn
-		else
-			npm install
-		fi
+	if [ "" != "$(which yarn)" ]; then
+		yarn
+	else
+		npm install
 	fi
 
 	local EXECUTABLE=$(cat package.json | jq .bin.$1 | cut -d'"' -f 2)
