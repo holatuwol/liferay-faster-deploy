@@ -1,15 +1,7 @@
 #!/bin/bash
 
-checkpython() {
-	$(dirname ${BASH_SOURCE[0]})/../checkpython $@
-}
-
-csvmanifest() {
-	. $(dirname "${BASH_SOURCE[0]}")/csvmanifest $@
-}
-
-dirnames() {
-	python $(dirname "${BASH_SOURCE[0]}")/../dirnames.py
+cachenpm() {
+	$(dirname ${BASH_SOURCE[0]})/../nodejs/cachenpm $@
 }
 
 checkfiles() {
@@ -21,8 +13,20 @@ checkfiles() {
 	grep -h "$expression" .redeploy/java.txt .redeploy/jsp.txt | xargs grep -Fl "$package" | grep -o '.*/src/main/' | sed 's@/src/main/@@g' | sort -u | awk '{ print $1 ",'$module','$package'" }' >> .redeploy/checkdeps.txt
 }
 
+checkpython() {
+	$(dirname ${BASH_SOURCE[0]})/../checkpython $@
+}
+
 checksnapshots() {
 	. $(dirname "${BASH_SOURCE[0]}")/../checksnapshots
+}
+
+csvmanifest() {
+	. $(dirname "${BASH_SOURCE[0]}")/csvmanifest $@
+}
+
+dirnames() {
+	python $(dirname "${BASH_SOURCE[0]}")/../dirnames.py
 }
 
 fixdeps() {
@@ -107,7 +111,9 @@ fixdeps() {
 
 	# Mass compile check
 
-	if [ -d modules ]; then
+	if [ -d modules ] && [[ 0 -ne $(cat .redeploy/checkdeps.txt | wc -l) ]]; then
+		cachenpm $base_remote/$BASE_BRANCH
+
 		cd modules
 		cat ../.redeploy/checkdeps.txt | cut -d',' -f 1 | sort -u | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":compileJSP :" $1 ":jar" }' | xargs $(dirname "${BASH_SOURCE[0]}")/../gw --continue | tee ../.redeploy/compile.txt
 		cd -
