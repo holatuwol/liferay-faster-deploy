@@ -98,7 +98,7 @@ cleanappserver() {
 
 	pushd "$LIFERAY_HOME" > /dev/null
 
-	tar -zxf "$ARCHIVE_FILE"
+	unzip "$ARCHIVE_FILE"
 	mv apache-tomcat-${TOMCAT_VERSION} $TOMCAT_FOLDER
 	rm -rf $TOMCAT_FOLDER/webapps/*
 
