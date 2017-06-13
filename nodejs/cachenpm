@@ -45,20 +45,28 @@ findmodules() {
 
 			echo "$PWD/$folder/package.json" >> "${cache_home}/cachenpm.txt"
 		done
-	elif [ -d "$1" ]; then
-		if [ -f package.json ]; then
-			echo "$1/package.json" >> "${cache_home}/cachenpm.txt"
-		fi
 	else
-		$(dirname "${BASH_SOURCE[0]}")/../gitchanges $@
+		if [ -f "$1/build.gradle" ]; then
+			echo "$1" > .includes
+		else
+			$(dirname "${BASH_SOURCE[0]}")/../gitchanges $@
 
-		for folder in $(cat .redeploy/changes_gradle_2.txt); do
-			if [ ! -f "$folder/package.json" ]; then
-				continue
-			fi
+			cp .redeploy/changes_gradle_2.txt .includes
+		fi
 
-			echo "$PWD/$folder/package.json" >> "${cache_home}/cachenpm.txt"
-		done
+		if [[ 0 -ne $(cat .includes | wc -l) ]]; then
+			transitiveincludes
+
+			for folder in $(cat .includes); do
+				if [ ! -f "$folder/package.json" ]; then
+					continue
+				fi
+
+				echo "$PWD/$folder/package.json" >> "${cache_home}/cachenpm.txt"
+			done
+		fi
+
+		rm -f .includes
 	fi
 
 	popd > /dev/null
@@ -66,6 +74,45 @@ findmodules() {
 
 setopts() {
 	. $(dirname ${BASH_SOURCE[0]})/../setopts
+}
+
+transitiveincludes() {
+	if [[ 0 -eq $(cat .includes | wc -l) ]]; then
+		return 0
+	fi
+
+	cp -f .includes .includes_transitive
+
+	old_count=0
+	new_count=$(cat .includes | sort -u | wc -l)
+
+	git ls-files modules | grep -F build.gradle | grep -vF '/src/' > .redeploy/gradle_list.txt
+	git ls-files modules | grep -F bnd.bnd | grep -vF '/src/' | xargs grep Bundle-SymbolicName | grep -vF '{' | sed 's/Bundle-SymbolicName: //g' > .redeploy/bnd_list.txt
+
+	while [[ $old_count -ne $new_count ]]; do
+		old_count=$new_count
+		old_files=$(cat .includes_transitive)
+
+		project_dependencies=$(echo "$old_files" | awk '{ print $1 "/build.gradle" }' | xargs grep -o 'project(":[^"]*' | cut -d'"' -f 2 | tr ':' '/' | awk '{ print "modules" $1 }')
+
+		if [ "" != "$project_dependencies" ]; then
+			echo -n "$build_gradles" | xargs grep -l "\($project_dependencies\)" > .includes_transitive
+		fi
+
+		library_dependencies=$(echo "$old_files" | awk '{ print $1 "/build.gradle" }' | xargs grep -o 'name: "com.liferay[^"]*"' | cut -d'"' -f 2 | xargs | sed 's/ /\\|/g')
+
+		if [ "" != "$library_dependencies" ]; then
+			grep "\(${library_dependencies}\)" .redeploy/bnd_list.txt | dirnames >> .includes_transitive
+		fi
+
+		mv .includes .includes_old
+		cat .includes_old .includes_transitive | sort -u > .includes
+		rm .includes_old
+
+		new_count=$(cat .includes | wc -l)
+	done
+
+	rm -f .includes_transitive
 }
 
 setopts
