@@ -9,8 +9,9 @@ gitcd() {
 		return 0
 	fi
 
-	echo "Falling back to builtin cd"
-	builtin cd $@
+	if [ "" == "$MATCHING_FOLDERS" ]; then
+		builtin cd $@
+	fi
 }
 
 if [ "-" == "$1" ]; then

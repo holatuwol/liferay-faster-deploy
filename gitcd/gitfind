@@ -21,7 +21,7 @@ gitfile() {
 	# git ls-files likes to use relative folders instead of absolute paths, so
 	# compute the relative path first
 
-	ROOT_FOLDER=$(python -c "from __future__ import print_function; import os.path; print(os.path.relpath('$ROOT_FOLDER', '$PWD'))")
+	ROOT_FOLDER=$(echo "$ROOT_FOLDER" | relpaths)
 
 	# Find the matching folder
 
@@ -55,54 +55,52 @@ gitfilematch() {
 	# First, assume that we're looking for a module root, so check for
 	# bnd.bnd, ivy.xml, and package.json
 
-	MATCHING_FOLDERS=$(grep "/$1/bnd.bnd$" "$SCRATCH_FILE" | dirnames | sort -u)
+	for file in bnd.bnd ivy.xml package.json; do
+		MATCHING_FILES=$(grep "/$1/" "$SCRATCH_FILE" | grep "/${file}$")
 
-	if [ "" != "$MATCHING_FOLDERS" ]; then
-		return 0
-	fi
-
-	MATCHING_FOLDERS=$(grep "/$1/ivy.xml$" "$SCRATCH_FILE" | dirnames | sort -u)
-
-	if [ "" != "$MATCHING_FOLDERS" ]; then
-		return 0
-	fi
-
-	MATCHING_FOLDERS=$(grep "/$1/package.json$" "$SCRATCH_FILE" | dirnames | sort -u)
-
-	if [ "" != "$MATCHING_FOLDERS" ]; then
-		return 0
-	fi
+		if [ "" != "$MATCHING_FILES" ]; then
+			MATCHING_FOLDERS=$(echo "$MATCHING_FILES" | dirnames | sort -u)
+			return 0
+		fi
+	done
 
 	# Same thing as above, but suffix matches instead of exact folder matches
 
-	MATCHING_FOLDERS=$(grep "$1/bnd.bnd$" "$SCRATCH_FILE" | dirnames | sort -u)
+	for file in bnd.bnd ivy.xml package.json; do
+		MATCHING_FILES=$(grep "$1/" "$SCRATCH_FILE" | grep "/${file}$")
 
-	if [ "" != "$MATCHING_FOLDERS" ]; then
-		return 0
-	fi
+		if [ "" != "$MATCHING_FILES" ]; then
+			MATCHING_FOLDERS=$(echo "$MATCHING_FILES" | dirnames | sort -u)
+			return 0
+		fi
+	done
 
-	MATCHING_FOLDERS=$(grep "$1/ivy.xml$" "$SCRATCH_FILE" | dirnames | sort -u)
+	# Same thing as above, but prefix matches instead of exact folder matches
 
-	if [ "" != "$MATCHING_FOLDERS" ]; then
-		return 0
-	fi
+	for file in bnd.bnd ivy.xml package.json; do
+		MATCHING_FILES=$(grep "/$1" "$SCRATCH_FILE" | grep "/${file}$")
 
-	MATCHING_FOLDERS=$(grep "$1/package.json$" "$SCRATCH_FILE" | dirnames | sort -u)
+		if [ "" != "$MATCHING_FILES" ]; then
+			MATCHING_FOLDERS=$(echo "$MATCHING_FILES" | dirnames | sort -u)
+			return 0
+		fi
+	done
 
-	if [ "" != "$MATCHING_FOLDERS" ]; then
-		return 0
-	fi
+	# Same thing as above, but general matches
+
+	for file in bnd.bnd ivy.xml package.json; do
+		MATCHING_FILES=$(grep "$1" "$SCRATCH_FILE" | grep "/${file}$")
+
+		if [ "" != "$MATCHING_FILES" ]; then
+			MATCHING_FOLDERS=$(echo "$MATCHING_FILES" | dirnames | sort -u)
+			return 0
+		fi
+	done
 
 	# Next, check for a folder that isn't a module root, which can either be
 	# an exact match or a prefix/suffix match. Prefer in that order.
 
 	MATCHING_FOLDERS=$(grep -F "/$1/" "$SCRATCH_FILE" | sed "s@$1.*@$1@g" | sort -u)
-
-	if [ "" != "$MATCHING_FOLDERS" ]; then
-		return 0
-	fi
-
-	MATCHING_FOLDERS=$(grep "/$1.*/" "$SCRATCH_FILE" | sed "s@$1\([^/]*\).*@$1\1@g" | sort -u)
 
 	if [ "" != "$MATCHING_FOLDERS" ]; then
 		return 0
@@ -114,18 +112,17 @@ gitfilematch() {
 		return 0
 	fi
 
+	MATCHING_FOLDERS=$(grep "/$1.*/" "$SCRATCH_FILE" | sed "s@$1\([^/]*\).*@$1\1@g" | sort -u)
+
+	if [ "" != "$MATCHING_FOLDERS" ]; then
+		return 0
+	fi
+
 	# Finally, assume that maybe the person is looking for a folder containing
 	# a file and is using the file name as an abbreviated way at getting there.
 	# Choose a prefix match first, then an anywhere match.
 
-	MATCHING_FILES=$(grep -vF '..' "$SCRATCH_FILE" | grep -F "/$1" | sort -u)
-
-	if [ "" != "$MATCHING_FILES" ]; then
-		MATCHING_FOLDERS=$(echo "$MATCHING_FILES" | dirnames | sort -u)
-		return 0
-	fi
-
-	MATCHING_FILES=$(grep -vF '..' "$SCRATCH_FILE" | grep -F "$1")
+	MATCHING_FILES=$(grep -vF '..' "$SCRATCH_FILE" | grep "[^/*]$1[^/*]$")
 
 	if [ "" != "$MATCHING_FILES" ]; then
 		MATCHING_FOLDERS=$(echo "$MATCHING_FILES" | dirnames | sort -u)
@@ -136,6 +133,10 @@ gitfilematch() {
 }
 
 gitfind() {
+	FILE=
+	FOLDER=
+	MATCHING_FOLDERS=
+
 	if [ "" == "$1" ]; then
 		return 0
 	fi
@@ -149,16 +150,12 @@ gitfind() {
 	# Next, make sure that we can use git to find our files
 
 	if [ ! -e $GIT_ROOT/.git ]; then
-		FILE=
-		FOLDER=
-		MATCHING_FOLDERS=
 		return 1
 	fi
 
 	# Shortcut in case anyone says "cd portal-impl" or similar
 
 	if [ -d $GIT_ROOT/$1 ]; then
-		FILE=
 		FOLDER=$GIT_ROOT/$1
 		MATCHING_FOLDERS=
 		return 0
@@ -185,14 +182,18 @@ gitfinderror() {
 		return 1
 	fi
 
-	if [ "" != "$MATCHING_FILES" ] && [[ 1 -ne $(echo "$MATCHING_FILES" | wc -l) ]]; then
+	if [ "" != "$MATCHING_FOLDERS" ]; then
+		if [[ 1 -eq $(echo "$MATCHING_FOLDERS" | wc -l) ]]; then
+			return 0
+		fi
+
 		echo "$1 is ambiguous"
-		echo "$MATCHING_FILES"
+		echo "$MATCHING_FOLDERS" | relpaths
 		return 1
 	fi
 
 	echo "$1 is ambiguous"
-	echo "$MATCHING_FOLDERS"
+	echo "$MATCHING_FILES" | relpaths
 	return 1
 }
 
@@ -212,6 +213,10 @@ nongitfind() {
 	fi
 
 	return 1
+}
+
+relpaths() {
+	python $(dirname ${BASH_SOURCE[0]})/../relpaths.py
 }
 
 nongitfind "$1"

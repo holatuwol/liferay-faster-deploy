@@ -8,7 +8,7 @@ gitcdp() {
 
 	# git ls-files wants a relative path, so let's generate it
 
-	local ROOT_FOLDER=$(python -c "from __future__ import print_function; import os.path; print(os.path.relpath('$GIT_ROOT', '$PWD'))")
+	local ROOT_FOLDER=$(echo "$GIT_ROOT" | relpaths)
 
 	# use git ls-files to find packageinfo files
 
@@ -32,6 +32,10 @@ gitcdp() {
 	fi
 
 	pwd
+}
+
+relpaths() {
+	python $(dirname ${BASH_SOURCE[0]})/../relpaths.py
 }
 
 . "$(dirname "${BASH_SOURCE[0]}")/../setopts"
