@@ -1,0 +1,28 @@
+#!/bin/bash
+
+removeerror() {
+	local counter=$(echo $1 | grep -o '\.[0-9][0-9][0-9][0-9][0-9]$' | cut -d'.' -f 2)
+
+	if [ "" == "$counter" ]; then
+		counter=0
+	fi
+
+	local counter_string=$(printf "%05d" $counter)
+	local base_filename=$(echo $1 | sed 's/\.[0-9][0-9][0-9][0-9][0-9]$//g')
+
+	local old_filename=$1
+	local new_filename=${base_filename}.${counter_string}
+
+	while [ -f $new_filename ]; do
+		old_filename=${new_filename}
+
+		counter=$(($counter + 1))
+		counter_string=$(printf "%05d" $counter)
+
+		new_filename=${base_filename}.${counter_string}
+	done
+
+	python ${BASH_SOURCE[0]}.py ${old_filename} ${new_filename} ${@:2}
+}
+
+removeerror $@
