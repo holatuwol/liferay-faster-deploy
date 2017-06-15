@@ -4,10 +4,9 @@ from __future__ import print_function
 import csv
 from functools import reduce
 
-with open('times_old.csv') as old_f:
-	with open('times_new.csv') as new_f:
-		old_rows = [row for row in csv.reader(old_f)]
-		new_rows = [row for row in csv.reader(new_f)]
+with open('times_old.csv') as old_f, open('times_new.csv') as new_f:
+	old_rows = [row for row in csv.reader(old_f)]
+	new_rows = [row for row in csv.reader(new_f)]
 
 def collapse_upgrades(accumulator, row):
 	if row[0].find('#') != -1:
