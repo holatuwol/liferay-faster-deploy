@@ -186,7 +186,9 @@ gitfinderror() {
 		if [[ 1 -eq $(echo "$MATCHING_FOLDERS" | wc -l) ]]; then
 			return 0
 		fi
+	fi
 
+	if [ "" != "$(echo "$MATCHING_FOLDERS" | grep -F $1)" ]; then
 		echo "$1 is ambiguous"
 		echo "$MATCHING_FOLDERS" | relpaths
 		return 1
