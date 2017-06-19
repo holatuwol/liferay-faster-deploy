@@ -124,6 +124,27 @@ gitfilematch() {
 	# a file and is using the file name as an abbreviated way at getting there.
 	# Choose a prefix match first, then an anywhere match.
 
+	MATCHING_FILES=$(grep -vF '..' "$SCRATCH_FILE" | grep "/${needle}$")
+
+	if [ "" != "$MATCHING_FILES" ]; then
+		MATCHING_FOLDERS=$(echo "$MATCHING_FILES" | dirnames | sort -u)
+		return 0
+	fi
+
+	MATCHING_FILES=$(grep -vF '..' "$SCRATCH_FILE" | grep "/${needle}[^/]*$")
+
+	if [ "" != "$MATCHING_FILES" ]; then
+		MATCHING_FOLDERS=$(echo "$MATCHING_FILES" | dirnames | sort -u)
+		return 0
+	fi
+
+	MATCHING_FILES=$(grep -vF '..' "$SCRATCH_FILE" | grep "[^/]*${needle}$")
+
+	if [ "" != "$MATCHING_FILES" ]; then
+		MATCHING_FOLDERS=$(echo "$MATCHING_FILES" | dirnames | sort -u)
+		return 0
+	fi
+
 	MATCHING_FILES=$(grep -vF '..' "$SCRATCH_FILE" | grep "[^/]*${needle}[^/]*$")
 
 	if [ "" != "$MATCHING_FILES" ]; then
