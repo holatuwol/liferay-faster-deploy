@@ -334,7 +334,7 @@ updatetags() {
 		return 0
 	fi
 
-	for tag_id in $(curl -s "${TAG_ARCHIVE_MIRROR}/tags.txt" | grep -F 'fix-pack'); do
+	for tag_id in $(curl --connect-timeout 2 -s "${TAG_ARCHIVE_MIRROR}/tags.txt" | grep -F 'fix-pack'); do
 		if [ "" == "$(git tag | grep -F "$tag_id")" ]; then
 			git fetch --no-tags git@github.com:liferay/liferay-portal-ee.git tags/${tag_id}:refs/tags/${tag_id}
 		fi
