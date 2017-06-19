@@ -5,10 +5,10 @@ findbuild() {
 	local FIX_NAME=
 
 	if [[ $1 == liferay* ]]; then
-		VERSION=$(echo $1 | cut -d'-' -f 3 | sed 's/\([0-9]\)\([0-9]\)\([0-9][0-9]\)/\1.\2.\3/')
+		VERSION=$(echo $1 | cut -d'-' -f 4 | sed 's/\([0-9]\)\([0-9]\)\([0-9][0-9]\)/\1.\2.\3/')
 		FIX_NAME=$1
 	elif [[ $1 == hotfix* ]]; then
-		VERSION=$(echo $1 | cut -d'-' -f 2 | sed 's/\([0-9]\)\([0-9]\)\([0-9][0-9]\)/\1.\2.\3/')
+		VERSION=$(echo $1 | cut -d'-' -f 3 | sed 's/\([0-9]\)\([0-9]\)\([0-9][0-9]\)/\1.\2.\3/')
 		FIX_NAME="liferay-$1"
 	else
 		VERSION=$(echo $2 | cut -d'-' -f 2 | sed 's/\([0-9]\)\([0-9]\)\([0-9][0-9]\)/\1.\2.\3/')
@@ -19,6 +19,7 @@ findbuild() {
 
 	if [ ! -f $FIX_NAME.zip ]; then
 		echo "Downloading $FIX_NAME to check fixpack_documentation.xml"
+		echo $FILES_MIRROR/private/ee/fix-packs/$VERSION/hotfix/$FIX_NAME.zip
 		curl -s -O "$FILES_MIRROR/private/ee/fix-packs/$VERSION/hotfix/$FIX_NAME.zip"
 		DELETE_ZIP=true
 	fi
