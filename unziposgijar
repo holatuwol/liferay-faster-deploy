@@ -1,0 +1,128 @@
+#!/bin/bash
+
+dirnames() {
+	python $(dirname "${BASH_SOURCE[0]}")/dirnames.py
+}
+
+getmodulepath() {
+	grep -F $1 .redeploy/bnd_list.txt > .redeploy/bndmatches.txt
+
+	# search the bnds for the symbolic name
+
+	if [[ 0 -eq $(cat .redeploy/bndmatches.txt | wc -l) ]]; then
+		echo "Could not find Bundle-SymbolicName $1"
+		return 1
+	fi
+
+	# at this point, we know we have at least a partial match
+	# now to find out if there is an exact guess we can make
+
+	local BND=$(cat .redeploy/bndmatches.txt | cut -d':' -f 1)
+
+	if [[ 1 -eq $(echo "$BND" | wc -l) ]]; then
+		MODULE_PATH=$(dirname $BND)
+		return 0
+	fi
+
+	BND=$(grep -F "$1" .redeploy/bndmatches.txt | cut -d':' -f 1)
+
+	if [ "" != "$BND" ] && [[ 1 -eq $(echo "$BND" | wc -l) ]]; then
+		MODULE_PATH=$(dirname $BND)
+		return 0
+	fi
+
+	# no exact guesses possible, so report that it is ambiguous
+
+	echo "$1 is ambiguous:"
+	cat .redeploy/bndmatches.txt | cut -d':' -f 2
+	return 1
+}
+
+unziposgijar() {
+	# generate a cache that maps between the bundle symbolic name and a module path
+
+	mkdir -p .redeploy
+
+	if [ ! -f .redeploy/bnd_list.txt ]; then
+		git ls-files modules | grep -vF '/src/' | grep -F '/bnd.bnd' | xargs grep -F Bundle-SymbolicName | \
+			grep -vF '{' | sed 's/Bundle-SymbolicName: //g' > .redeploy/bnd_list.txt
+	fi
+
+	local BASE_PATH=
+	local JAR_PATH=
+	local BUNDLE_SYMBOLICNAME=
+	local MODULE_PATH=
+
+	if [ -f $1 ]; then
+		BASE_PATH=$(dirname $1)
+		JAR_PATH=$1
+		BUNDLE_SYMBOLICNAME=$(basename $JAR_PATH | sed 's/.jar$//g')
+		MODULE_PATH=$(grep ":${BUNDLE_SYMBOLICNAME}$" .redeploy/bnd_list.txt | cut -d':' -f 1 | dirnames)
+	elif getmodulepath $1; then
+		BUNDLE_SYMBOLICNAME=$(grep 'Bundle-SymbolicName' $MODULE_PATH/bnd.bnd | cut -d' ' -f 2)
+		JAR_PATH=$(find $LIFERAY_HOME/osgi -name $BUNDLE_SYMBOLICNAME.jar)
+
+		if [ "" != "$JAR_PATH" ]; then
+			BASE_PATH=$(dirname $JAR_PATH)
+		fi
+	else
+		return 1
+	fi
+
+	# check to see if a matching bnd.bnd exists
+
+	if [ "" == "$MODULE_PATH" ]; then
+		return 1
+	fi
+
+	# if the folder timestamp matches the jar timestamp, we do not
+	# need to repeat the unzip process
+
+	local old_timestamp=
+
+	if [ -d $MODULE_PATH/classes ]; then
+		old_timestamp=$(perl -MPOSIX -e 'print POSIX::strftime "%Y%m%d%H%M.%S", localtime((stat $ARGV[0])[9])' "$MODULE_PATH/classes")
+	fi
+
+	local new_timestamp=$(perl -MPOSIX -e 'print POSIX::strftime "%Y%m%d%H%M.%S", localtime((stat $ARGV[0])[9])' "$JAR_PATH")
+
+	if [ "$old_timestamp" == "$new_timestamp" ]; then
+		return 0
+	fi
+
+	# add a rebel.xml to the module jar if we see a .jrebel folder
+
+	if [ -d $HOME/.jrebel ]; then
+		local RESOURCE_PATH="$MODULE_PATH/src/main/resources"
+
+		mkdir -p $RESOURCE_PATH
+
+		if [ -d "$RESOURCE_PATH/META-INF/resources" ]; then
+			cp -f "$SCRIPT_FOLDER/jrebel-web.xml" "$RESOURCE_PATH/rebel.xml"
+		else
+			cp -f "$SCRIPT_FOLDER/jrebel.xml" "$RESOURCE_PATH/rebel.xml"
+		fi
+
+		sed -i.bak "s@MODULE_CLASSES@${MODULE_PATH}/classes@g" "$RESOURCE_PATH/rebel.xml"
+		sed -i.bak "s@MODULE_RESOURCES@${RESOURCE_PATH}/META-INF/resources@g" "$RESOURCE_PATH/rebel.xml"
+
+		rm -f "$RESOURCE_PATH/rebel.xml.bak"
+
+		zip -ujqq "${JAR_PATH}" "${RESOURCE_PATH}/rebel.xml"
+	fi
+
+	# unzip the JAR to the classes folder
+
+	rm -rf $MODULE_PATH/classes
+	mkdir -p $MODULE_PATH/classes
+
+	pushd $MODULE_PATH/classes > /dev/null
+	unzip -qq "${JAR_PATH}"
+	popd > /dev/null
+
+	touch -t $new_timestamp "$MODULE_PATH/classes"
+}
+
+if [ "" != "$1" ]; then
+	unziposgijar $1
+fi

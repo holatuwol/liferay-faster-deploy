@@ -35,60 +35,19 @@ jrebel() {
 		ant setup-jrebel
 	fi
 
-	local BND_LIST=$(git ls-files modules | grep bnd.bnd)
+	echo "Processing root level folders..."
 
-	echo "Processing static and core modules..."
+	for folder in $(ls -1); do
+		if [ -f $folder/build.xml ]; then
+			unzipportaljar $folder
+		fi
+	done
+
+	echo "Processing core and static modules..."
 
 	for folder in core static; do
-		BASE_PATH=$LIFERAY_HOME/osgi/$folder
-
-		for file in $(ls -1 $BASE_PATH); do
-			BUNDLE_SYMBOLICNAME=$(echo $file | sed 's/.jar$//g')
-
-			BND_MATCHES=$(echo "$BND_LIST" | xargs grep -l ": .*${BUNDLE_SYMBOLICNAME}$" | dirnames)
-
-			for bnd_match in $BND_MATCHES; do
-				JAR_PATH=$BASE_PATH/$file
-				MODULE_PATH="$PWD/$bnd_match"
-
-				old_timestamp=
-
-				if [ -d $MODULE_PATH/classes ]; then
-					old_timestamp=$(perl -MPOSIX -e 'print POSIX::strftime "%Y%m%d%H%M.%S", localtime((stat $ARGV[0])[9])' "$MODULE_PATH/classes")
-				fi
-
-				new_timestamp=$(perl -MPOSIX -e 'print POSIX::strftime "%Y%m%d%H%M.%S", localtime((stat $ARGV[0])[9])' "$JAR_PATH")
-
-				if [ "$old_timestamp" == "$new_timestamp" ]; then
-					continue
-				fi
-
-				RESOURCE_PATH="$MODULE_PATH/src/main/resources"
-
-				mkdir -p $RESOURCE_PATH
-
-				if [ -d "$RESOURCE_PATH/META-INF/resources" ]; then
-					cp -f "$SCRIPT_FOLDER/jrebel-web.xml" "$RESOURCE_PATH/rebel.xml"
-				else
-					cp -f "$SCRIPT_FOLDER/jrebel.xml" "$RESOURCE_PATH/rebel.xml"
-				fi
-
-				sed -i.bak "s@MODULE_CLASSES@${MODULE_PATH}/classes@g" "$RESOURCE_PATH/rebel.xml"
-				sed -i.bak "s@MODULE_RESOURCES@${RESOURCE_PATH}/META-INF/resources@g" "$RESOURCE_PATH/rebel.xml"
-
-				rm -f "$RESOURCE_PATH/rebel.xml.bak"
-
-				zip -ujqq "${JAR_PATH}" "${RESOURCE_PATH}/rebel.xml"
-
-				rm -rf $MODULE_PATH/classes
-				mkdir -p $MODULE_PATH/classes
-
-				pushd $MODULE_PATH/classes > /dev/null
-				unzip -qq "${JAR_PATH}"
-				popd > /dev/null
-
-				touch -t $new_timestamp "$MODULE_PATH/classes"
-			done
+		for file in $(ls -1 $LIFERAY_HOME/osgi/$folder); do
+			unziposgijar $LIFERAY_HOME/osgi/$folder/$file
 		done
 	done
 
@@ -97,6 +56,18 @@ jrebel() {
 
 setopts() {
 	. $(dirname "${BASH_SOURCE[0]}")/setopts
+}
+
+unziposgijar() {
+	LIFERAY_HOME=$LIFERAY_HOME \
+		TOMCAT_FOLDER=$TOMCAT_FOLDER \
+			$(dirname "${BASH_SOURCE[0]}")/unziposgijar $@
+}
+
+unzipportaljar() {
+	LIFERAY_HOME=$LIFERAY_HOME \
+		TOMCAT_FOLDER=$TOMCAT_FOLDER \
+			$(dirname "${BASH_SOURCE[0]}")/unzipportaljar $@
 }
 
 setopts && jrebel

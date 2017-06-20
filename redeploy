@@ -106,26 +106,18 @@ deployant() {
 		deployportalpre
 	fi
 
-	if [ "" != "$(grep setup-libs build.xml)" ] && [ ! -f .redeploy/setup_libs.txt ]; then
+	if [ "" != "$(grep setup-libs build.xml)" ]; then
 		ant setup-libs
-		touch .redeploy/setup_libs.txt
 	fi
 
 	# Some of the builds (notably util-taglib) need the rest of the
 	# portal to have been built, so we can copy that from our bundle
 
-	for folder in $(ls -1); do
-		if [ -d $folder/src ] && [ ! -f $folder/$folder.jar ]; then
-			if [ -f $LIFERAY_HOME/tomcat-*/webapps/ROOT/WEB-INF/lib/$folder.jar ]; then
-				cp -a $LIFERAY_HOME/tomcat-*/webapps/ROOT/WEB-INF/lib/$folder.jar $folder
-			elif [ -f $LIFERAY_HOME/tomcat-*/lib/ext/$folder.jar ]; then
-				cp -a $LIFERAY_HOME/tomcat-*/lib/ext/$folder.jar $folder
-			fi
+	echo "Unzipping compiled root level folders from bundle..."
 
-			if [ -f $folder/$folder.jar ] && [ ! -d $folder/classes ]; then
-				mkdir -p $folder/classes
-				unzip -qq $folder/$folder.jar -d $folder/classes
-			fi
+	for folder in $(ls -1); do
+		if [ -f $folder/build.xml ]; then
+			unzipportaljar $folder
 		fi
 	done
 
@@ -154,6 +146,11 @@ deployant() {
 
 deploymodules() {
 	cd modules
+
+	for folder in $(cat ../.redeploy/changes_gradle_2.txt); do
+		unziposgijar $folder
+	done
+
 	cat ../.redeploy/changes_gradle_2.txt | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":deploy" }' | xargs $(dirname "${BASH_SOURCE[0]}")/gw
 	cd ..
 }
@@ -184,6 +181,18 @@ redeploy() {
 
 setopts() {
 	. $(dirname "${BASH_SOURCE[0]}")/setopts
+}
+
+unziposgijar() {
+	LIFERAY_HOME=$LIFERAY_HOME \
+		TOMCAT_FOLDER=$TOMCAT_FOLDER \
+			$(dirname "${BASH_SOURCE[0]}")/unziposgijar $@
+}
+
+unzipportaljar() {
+	LIFERAY_HOME=$LIFERAY_HOME \
+		TOMCAT_FOLDER=$TOMCAT_FOLDER \
+			$(dirname "${BASH_SOURCE[0]}")/unzipportaljar $@
 }
 
 CURRENT_HASH=$(git log -1 --pretty='%H')
