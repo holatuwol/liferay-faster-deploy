@@ -86,14 +86,14 @@ transitiveincludes() {
 	old_count=0
 	new_count=$(cat .includes | sort -u | wc -l)
 
-	git ls-files modules | grep -F build.gradle | grep -vF '/src/' > .redeploy/gradle_list.txt
-	git ls-files modules | grep -F bnd.bnd | grep -vF '/src/' | xargs grep Bundle-SymbolicName | grep -vF '{' | sed 's/Bundle-SymbolicName: //g' > .redeploy/bnd_list.txt
+	git ls-files modules | grep -F '/build.gradle' | grep -vF '/src/' > .redeploy/gradle_list.txt
+	git ls-files modules | grep -F '/bnd.bnd' | grep -vF '/src/' | xargs grep Bundle-SymbolicName | grep -vF '{' | sed 's/Bundle-SymbolicName: //g' > .redeploy/bnd_list.txt
 
 	while [[ $old_count -ne $new_count ]]; do
 		old_count=$new_count
 		old_files=$(cat .includes_transitive)
 
-		project_dependencies=$(echo "$old_files" | awk '{ print $1 "/build.gradle" }' | xargs grep -o 'project(":[^"]*' | cut -d'"' -f 2 | tr ':' '/' | awk '{ print "modules" $1 }')
+		project_dependencies=$(echo -n "$old_files" | awk '{ print $1 "/build.gradle" }' | xargs grep -o 'project(":[^"]*' | cut -d'"' -f 2 | tr ':' '/' | awk '{ print "modules" $1 }' | xargs | sed 's/ /\\|/g')
 
 		if [ "" != "$project_dependencies" ]; then
 			echo -n "$build_gradles" | xargs grep -l "\($project_dependencies\)" > .includes_transitive
