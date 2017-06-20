@@ -94,8 +94,11 @@ transitiveexcludes() {
 	old_count=0
 	new_count=$(cat .excludes | sort -u | wc -l)
 
-	git ls-files modules | grep -F build.gradle | grep -vF '/src/' > .redeploy/gradle_list.txt
-	git ls-files modules | grep -F bnd.bnd | grep -vF '/src/' | xargs grep Bundle-SymbolicName | grep -vF '{' | sed 's/Bundle-SymbolicName: //g' > .redeploy/bnd_list.txt
+	git ls-files modules | grep -vF '/src/' > .redeploy/lsfiles.txt
+	cat .redeploy/lsfiles.txt | grep -F '/build.gradle' > .redeploy/gradle_list.txt
+
+	git ls-files modules | grep -vF '/src/' | grep -F '/bnd.bnd' | xargs grep -F Bundle-SymbolicName | \
+		grep -vF '{' | sed 's/Bundle-SymbolicName: //g' > .redeploy/bnd_list.txt
 
 	while [[ $old_count -ne $new_count ]]; do
 		old_count=$new_count
