@@ -1,3 +1,19 @@
+Prerequisites
+=============
+
+Before using the scripts in this repository, you must have the following installed
+
+* ``jq``: https://stedolan.github.io/jq/
+* ``nodejs``: https://nodejs.org/en/
+* ``python``: https://conda.io/miniconda.html
+** ``jupyter``: http://jupyter.org/
+** ``pandas``: http://pandas.pydata.org/
+** ``semver``: https://pypi.python.org/pypi/semver
+** ``ujson``: https://pypi.python.org/pypi/ujson
+
+Overview
+========
+
 These scripts attempt to create running servers with builds of ``master``, ``ee-7.0.x``, ``ee-6.2.x``, and ``ee-6.1.x`` that are accessible by modifying your machine's local hosts files. The provided Apache server configuration `liferay.conf <liferay.conf>`__ will direct you to one of four running Liferay instances, depending on the host name you provide.
 
 It's important to note that in order to allow the build process to run predictably, builds use `cachenpm <../cachenpm>`__ to run the ``npm install`` outside of the regular ``ant all`` process to avoid unexpected errors (and ``npm install`` is fairly unpredictable) that would otherwise cause the build to fail.

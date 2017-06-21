@@ -1,3 +1,16 @@
+Prerequisites
+=============
+
+Before using the scripts in this repository, you must have the following installed
+
+* ``jq``: https://stedolan.github.io/jq/
+* ``nodejs``: https://nodejs.org/en/
+* ``python``: https://conda.io/miniconda.html
+** ``jupyter``: http://jupyter.org/
+** ``pandas``: http://pandas.pydata.org/
+** ``semver``: https://pypi.python.org/pypi/semver
+** ``ujson``: https://pypi.python.org/pypi/ujson
+
 Installation
 ============
 
