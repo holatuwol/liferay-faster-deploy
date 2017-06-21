@@ -1,7 +1,7 @@
 #!/bin/bash
 
 gitcd() {
-	. "$(dirname "${BASH_SOURCE[0]}")/gitfind" $@
+	. "$(dirname "${BASH_SOURCE[0]}")/gitfind" "$*"
 
 	if [ "" != "$FOLDER" ]; then
 		builtin cd "$FOLDER"
@@ -10,12 +10,12 @@ gitcd() {
 	fi
 
 	if [ "" == "$MATCHING_FOLDERS" ]; then
-		builtin cd $@
+		builtin cd "$*"
 	fi
 }
 
 if [ "-" == "$1" ]; then
-	builtin cd $@
+	builtin cd -
 else
-	gitcd $@
+	gitcd "$*"
 fi

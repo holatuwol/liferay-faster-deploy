@@ -12,7 +12,7 @@ gitfile() {
 
 	# if the folder already exists, don't bother with git ls-files
 
-	if [ -d $ROOT_FOLDER/$1 ]; then
+	if [ -d "$ROOT_FOLDER/$1" ]; then
 		FOLDER=$ROOT_FOLDER/$1
 		MATCHING_FOLDERS=$FOLDER
 		return 0
@@ -247,6 +247,8 @@ relpaths() {
 nongitfind "$1"
 
 if [[ 0 -ne $? ]]; then
+	GIT_ROOT=
+
 	. "$(dirname "${BASH_SOURCE[0]}")/../setopts"
 
 	if [ "" != "$GIT_ROOT" ]; then

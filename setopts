@@ -53,7 +53,7 @@ gitroot() {
 	GIT_ROOT=$PWD
 
 	while [ ! -e "$GIT_ROOT/.git" ] && [ "/" != "$GIT_ROOT" ]; do
-		GIT_ROOT=$(dirname $GIT_ROOT)
+		GIT_ROOT=$(dirname "$GIT_ROOT")
 	done
 
 	if [ ! -e "$GIT_ROOT/.git" ]; then
