@@ -93,7 +93,7 @@ transitiveincludes() {
 		old_count=$new_count
 		old_files=$(cat .includes_transitive)
 
-		project_dependencies=$(echo -n "$old_files" | awk '{ print $1 "/build.gradle" }' | xargs grep -o 'project(":[^"]*' | cut -d'"' -f 2 | tr ':' '/' | awk '{ print "modules" $1 }' | xargs | sed 's/ /\\|/g')
+		project_dependencies=$(echo -n "$old_files" | awk '{ print $1 "/build.gradle" }' | xargs grep -o 'project(":[^"]*' | cut -d'"' -f 2 | tr ':' '/' | awk '{ print "modules" $1 }' | tr '\n' ' ' | tr -d '\r' | sed 's/ /\\|/g')
 
 		if [ "" != "$project_dependencies" ]; then
 			echo -n "$build_gradles" | xargs grep -l "\($project_dependencies\)" > .includes_transitive

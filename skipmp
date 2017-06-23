@@ -104,7 +104,7 @@ transitiveexcludes() {
 		old_count=$new_count
 		old_files=$(cat .excludes_transitive)
 
-		project_dependencies=$(echo "$old_files" | sed 's@^modules/private@@g' | sed 's@^modules@@g' | tr '/' ':' | xargs | sed 's/ /\\|/g')
+		project_dependencies=$(echo "$old_files" | sed 's@^modules/private@@g' | sed 's@^modules@@g' | tr '/' ':' | tr '\n' ' ' | tr -d '\r' | sed 's/ /\\|/g')
 
 		cat /dev/null > .excludes_transitive
 

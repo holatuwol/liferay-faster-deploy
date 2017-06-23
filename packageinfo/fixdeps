@@ -9,7 +9,7 @@ checkfiles() {
 	local module=$2
 	local package=$3
 
-	local expression=$(cat .redeploy/gradle.txt | awk '{ print $1 "/build.gradle" }' | xargs grep -Fl '"'$module'"' | dirnames | tr '\n' '|' | sed 's@|$@@g' | sed 's@|@\\|@g' | awk '{ print "\\(" $1 "\\)" }')
+	local expression=$(cat .redeploy/gradle.txt | awk '{ print $1 "/build.gradle" }' | xargs grep -Fl '"'$module'"' | dirnames | tr '\n' '|' | tr -d '\r' | sed 's@|$@@g' | sed 's@|@\\|@g' | awk '{ print "\\(" $1 "\\)" }')
 	grep -h "$expression" .redeploy/java.txt .redeploy/jsp.txt | xargs grep -Fl "$package" | grep -o '.*/src/main/' | sed 's@/src/main/@@g' | sort -u | awk '{ print $1 ",'$module','$package'" }' >> .redeploy/checkdeps.txt
 }
 
