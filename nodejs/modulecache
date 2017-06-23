@@ -37,6 +37,8 @@ modulecache() {
 		fi
 
 		echo "Caching build for $folder"
+		jq '.dependencies, .devDependencies' $folder/package.json
+
 		rm -rf node_modules
 
 		if [ -d "$folder/node_modules" ] && [ ! -f "$folder/yarn.lock" ]; then

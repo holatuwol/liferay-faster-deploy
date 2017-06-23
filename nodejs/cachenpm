@@ -1,6 +1,8 @@
 #!/bin/bash
 
 cachenpm() {
+	echo "node $(node --version), npm $(npm -version), yarn $(yarn --version)"
+
 	cache_home="$HOME/.liferay/node/cache"
 
 	if [ "clean" == "$1" ]; then
@@ -11,12 +13,19 @@ cachenpm() {
 
 	findmodules $@
 
+	NPM_PRODUCTION=$(npm config get production)
+	npm config set production false
+
+	NPM_REGISTRY=$(npm config get production)
+
+	if [ "https://registry.npmjs.org/" == "$NPM_REGISTRY" ]; then
+		npm config set registry http://registry.npmjs.org/
+		npm config set strict-ssl false
+	fi
+
 	# . $(dirname "${BASH_SOURCE[0]}")/globalcache $@
 	. $(dirname "${BASH_SOURCE[0]}")/modulecache $@
 	# . $(dirname "${BASH_SOURCE[0]}")/modulerun $@
-
-	NPM_PRODUCTION=$(npm config get production)
-	npm config set production false
 
 	if [ "" != "$NPM_PRODUCTION" ] && [ "false" != "$NPM_PRODUCTION" ]; then
 		npm config set production $NPM_PRODUCTION
@@ -38,7 +47,7 @@ findmodules() {
 	pushd "$GIT_ROOT" > /dev/null
 
 	if [ "" == "$1" ]; then
-		for folder in $(git ls-files modules | grep -F package.json | dirnames); do
+		for folder in $(git ls-files modules | grep -F '/package.json' | grep -vF '/src/' | dirnames); do
 			if [ ! -f "$folder/.lfrbuild-portal" ]; then
 				continue
 			fi
