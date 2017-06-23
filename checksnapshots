@@ -41,20 +41,40 @@ checksnapshots() {
 
 	for artifact in $(grep -F version $GIT_ROOT/.gradle/gradle.properties | grep -F 'com.liferay' | cut -d'=' -f 1 | sed 's/\.version$//g'); do
 		local artifact_version=$(grep -F "${artifact}.version" $GIT_ROOT/.gradle/gradle.properties | cut -d'=' -f 2)
+		local folder=$(echo $artifact | cut -d'.' -f 3- | tr '.' '-')
 
-		if [ ! -d "${repository_root}/com/liferay/portal/${artifact}/${artifact_version}" ]; then
+		if [ -d "${repository_root}/com/liferay/portal/${artifact}/${artifact_version}" ]; then
+			local commit_time=$(git log -1 --pretty='%cd' --date=format:'%Y%m%d%H%M.%S' -- $folder)
+			local cache_time=$(perl -MPOSIX -e 'print POSIX::strftime "%Y%m%d%H%M.%S", localtime((stat $ARGV[0])[9])' "${repository_root}/com/liferay/portal/${artifact}/${artifact_version}")
+
+			if [ "$commit_time" == "$cache_time" ]; then
+				continue
+			fi
+
+			echo "Outdated snapshot for $artifact (${artifact_version})"
+			missing_artifact="$missing_artifact $artifact"
+		else
 			echo "Missing snapshot for $artifact (${artifact_version})"
 			missing_artifact="$missing_artifact $artifact"
 		fi
 	done
 
-	if [ "" != "$missing_artifact" ]; then
-		echo "Running install-portal-snapshots to ensure all snapshots are available"
-
-		pushd $GIT_ROOT > /dev/null
-		ant compile install-portal-snapshots
-		popd > /dev/null
+	if [ "" == "$missing_artifact" ]; then
+		return 0
 	fi
+
+	echo "Running install-portal-snapshots to ensure all snapshots are available"
+
+	pushd $GIT_ROOT > /dev/null
+	ant compile install-portal-snapshots
+	popd > /dev/null
+
+	for artifact in $missing_artifact; do
+		local folder=$(echo $artifact | cut -d'.' -f 3- | tr '.' '-')
+		local commit_time=$(git log -1 --pretty='%cd' --date=format:'%Y%m%d%H%M.%S' -- $folder)
+
+		touch -t $commit_time "${repository_root}/com/liferay/portal/${artifact}/${artifact_version}"
+	done
 }
 
 setopts() {

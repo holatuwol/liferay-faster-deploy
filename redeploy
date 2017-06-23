@@ -98,6 +98,10 @@ cdroot() {
 	builtin cd $GIT_ROOT
 }
 
+checksnapshots() {
+	. $(dirname "${BASH_SOURCE[0]}")/checksnapshots
+}
+
 deployant() {
 	# Make sure that we have registry-api and anything else that is
 	# part of the portal-pre profile
@@ -120,6 +124,8 @@ deployant() {
 			unzipportaljar $folder
 		fi
 	done
+
+	checksnapshots
 
 	# Finally, iterate over the folders that are listed for deployment
 
@@ -145,22 +151,28 @@ deployant() {
 }
 
 deploymodules() {
-	cd modules
+	cat /dev/null > .redeploy/changes_gradle_3.txt
 
-	for folder in $(cat ../.redeploy/changes_gradle_2.txt); do
-		unziposgijar $folder
+	for folder in $(cat .redeploy/changes_gradle_2.txt); do
+		if [ -f $folder/.lfrbuild-portal ]; then
+			echo $folder >> .redeploy/changes_gradle_3.txt
+			unziposgijar $folder
+		fi
 	done
 
-	cat ../.redeploy/changes_gradle_2.txt | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":deploy" }' | xargs $(dirname "${BASH_SOURCE[0]}")/gw
+	cd modules
+	cat ../.redeploy/changes_gradle_3.txt | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":deploy" }' | xargs $(dirname "${BASH_SOURCE[0]}")/gw
 	cd ..
 }
 
 deployportalpre() {
-	if [ -d modules ]; then
-		cd modules
-		gw -Dbuild.profile=portal-pre -Pforced.deploy.dir=${PWD}/../tmp/lib-pre deploy
-		cd ..
+	if [ ! -d modules ]; then
+		return 0
 	fi
+
+	cd modules
+	gw -Dbuild.profile=portal-pre -Pforced.deploy.dir=${PWD}/../tmp/lib-pre deploy
+	cd ..
 }
 
 downloadbuild() {
