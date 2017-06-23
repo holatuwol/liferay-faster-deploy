@@ -330,6 +330,10 @@ rebasebranch() {
 }
 
 updatetags() {
+	if [ "" == "$(git remote -v | grep -F liferay-portal-ee)" ]; then
+		return 0
+	fi
+
 	if [ -z "${TAG_ARCHIVE_MIRROR}" ]; then
 		return 0
 	fi
