@@ -9,7 +9,11 @@ gitchanges() {
 
 	# Identify the changes
 
-	echo "Computing changes between HEAD and $1..."
+	if [ "" == "$2" ]; then
+		echo "Computing changes between HEAD and $1..."
+	else
+		echo "Computing changes between HEAD and $2..."
+	fi
 
 	cat /dev/null > .redeploy/changes.txt
 

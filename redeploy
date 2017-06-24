@@ -1,32 +1,18 @@
 #!/bin/bash
 
 applychanges() {
-	local COMPARE_HASH=
-
-	if [ -f .redeploy/last_deploy.txt ]; then
-		COMPARE_HASH=$(cat .redeploy/last_deploy.txt)
-
-		if [ "" != "$COMPARE_HASH" ]; then
-			git merge-base --is-ancestor $COMPARE_HASH $CURRENT_HASH
-
-			if [[ 0 -ne $? ]]; then
-				COMPARE_HASH=
-			fi
-		fi
-	fi
-
-	if [ "" == "$COMPARE_HASH" ]; then
-		COMPARE_HASH=$NEW_BASELINE
-	fi
-
 	# Run cachenpm if needed
 
 	$(dirname "${BASH_SOURCE[0]}")/skipmp
-	$(dirname "${BASH_SOURCE[0]}")/nodejs/cachenpm $COMPARE_HASH
+	$(dirname "${BASH_SOURCE[0]}")/nodejs/cachenpm $NEW_BASELINE
 
 	# Compute all changes, not just the ones in modules (which is what cachenpm does)
 
-	$(dirname "${BASH_SOURCE[0]}")/gitchanges $COMPARE_HASH
+	if [ "" == "$BASE_TAG" ]; then
+		$(dirname "${BASH_SOURCE[0]}")/gitchanges $NEW_BASELINE $BASE_BRANCH
+	else
+		$(dirname "${BASH_SOURCE[0]}")/gitchanges $NEW_BASELINE $BASE_TAG
+	fi
 
 	# If any of the folders that are affected is one that has
 	# one of the version range macros, make sure to fix it
@@ -76,9 +62,7 @@ applychanges() {
 		fi
 	fi
 
-	echo -n $CURRENT_HASH > .redeploy/last_deploy.txt
-
-	if [ -f .redeploy/changes_ant.txt ] && [ "" != "$(grep util .redeploy/changes_ant.txt)" ]; then
+	if [ -f .redeploy/changes_ant.txt ] && [ "" != "$(grep util .redeploy/changes_ant.txt)" ] && [ "ee-7.0.x" == "$BASE_BRANCH" ]; then
 		echo "Modified util-*.jar, must clear the osgi/state folder for WABs to be rebuilt"
 	fi
 
