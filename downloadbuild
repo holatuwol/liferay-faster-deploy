@@ -249,7 +249,7 @@ gettargetfolder() {
 	# If we're using a tag, make sure that we actually want to use that tag, given that
 	# every commit on ee-7.0.x corresponds to some tag.
 
-	if [ "" == "$BASE_TAG" ]; then
+	if [ "" == "$BASE_TAG" ] || [ "ee-7.0.x" != "$BASE_BRANCH" ]; then
 		return 0
 	fi
 
@@ -277,8 +277,10 @@ gettargetfolder() {
 	fi
 
 	echo "There have been ${ACTUAL_COMMITS} commits on this branch compared to ${BASE_TAG}."
-	echo "If this is based on ${BASE_BRANCH}, please specify 0 as a parameter."
-	echo "If this is based on ${BASE_TAG}, please specify $ACTUAL_COMMITS as a parameter."
+	echo "If this is based on ${BASE_BRANCH}, please run 'rd 0' to auto-rebase against $BASE_BRANCH."
+	echo "If this is based on ${BASE_TAG}, please run 'rd $ACTUAL_COMMITS' to override this check."
+	echo "Also make sure that your alias for rd passes parameters (it should have $@ at the end of it)"
+
 	return 1
 }
 
