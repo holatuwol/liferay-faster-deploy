@@ -133,6 +133,8 @@ deployant() {
 
 		if [ -f bnd.bnd ] && [ "" != "$(grep -F 'Bundle-Name' bnd.bnd)" ]; then
 			ant deploy install-portal-snapshot
+		elif [ "" != "$(grep -F deploy-fast build.xml)" ]; then
+			ant deploy-fast
 		else
 			ant deploy
 		fi
