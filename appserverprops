@@ -214,5 +214,9 @@ setopts() {
 setopts
 
 if [[ 0 -eq $? ]]; then
-	appserverprops && buildprops && gradleprops && cleanappserver
+	appserverprops && buildprops && gradleprops
+
+	if [ "" == "$CURRENT_HASH" ]; then
+		cleanappserver
+	fi
 fi
