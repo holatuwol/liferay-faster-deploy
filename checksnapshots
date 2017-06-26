@@ -5,12 +5,18 @@ checksnapshots() {
 		return 0
 	fi
 
+	if [ "" == "$(grep -F setup-sdk build.xml)" ]; then
+		return 0
+	fi
+
 	# Run the pre-checks for ant
 
-	if [ -f "$GIT_ROOT/lib/portal/dependencies.properties" ] && [[ $(ls -1 "$GIT_ROOT/lib/portal" | wc -l) -lt $(cat "$GIT_ROOT/lib/portal/dependencies.properties" | wc -l) ]]; then
-		pushd $GIT_ROOT > /dev/null
-		ant setup-libs
-		popd > /dev/null
+	if [ "" != "$(grep setup-libs build.xml)" ]; then
+		if [[ $(ls -1 "$GIT_ROOT/lib/portal" | wc -l) -lt $(cat "$GIT_ROOT/lib/portal/dependencies.properties" | wc -l) ]]; then
+			pushd $GIT_ROOT > /dev/null
+			ant setup-libs
+			popd > /dev/null
+		fi
 	fi
 
 	if [ ! -f "$GIT_ROOT/.gradle/gradle.properties" ] || [ ! -d "$GIT_ROOT/tools/sdk" ]; then

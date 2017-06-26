@@ -187,7 +187,7 @@ gradleprops() {
 		ANT_LIFERAY_HOME=$GRADLE_LIFERAY_HOME
 	fi
 
-	if [ "$ANT_LIFERAY_HOME" != "$GRADLE_LIFERAY_HOME" ] && [ -d "$GIT_ROOT/modules" ]; then
+	if [ "$ANT_LIFERAY_HOME" != "$GRADLE_LIFERAY_HOME" ] && [ "" != "$(grep -F setup-sdk build.xml)" ]; then
 		if [ "" == "$GRADLE_LIFERAY_HOME" ]; then
 			echo "Missing .gradle/gradle.properties, generating via ant setup-sdk"
 		else

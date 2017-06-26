@@ -96,7 +96,9 @@ deployant() {
 	fi
 
 	if [ "" != "$(grep setup-libs build.xml)" ]; then
-		ant setup-libs
+		if [[ $(ls -1 "$GIT_ROOT/lib/portal" | wc -l) -lt $(cat "$GIT_ROOT/lib/portal/dependencies.properties" | wc -l) ]]; then
+			ant setup-libs
+		fi
 	fi
 
 	# Some of the builds (notably util-taglib) need the rest of the
