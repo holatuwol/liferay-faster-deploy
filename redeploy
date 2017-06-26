@@ -32,7 +32,17 @@ applychanges() {
 	cat .redeploy/changes_gradle_1.txt .redeploy/changes_gradle_2.txt | awk '{ print " * " $1 }'
 	echo ""
 
-	# First, check to see if there are any modules we need to deploy early
+	# First, deploy portal libraries and global libraries
+
+	for file in $(grep '^lib/global/' .redeploy/changes.txt); do
+		cp $file $LIFERAY_HOME/$TOMCAT_FOLDER/lib/ext
+	done
+
+	for file in $(grep '^lib/portal/' .redeploy/changes.txt); do
+		cp $file $LIFERAY_HOME/$TOMCAT_FOLDER/webapps/ROOT/WEB-INF/lib
+	done
+
+	# Check to see if there are any modules we need to deploy early
 
 	if [[ 0 -ne $(cat .redeploy/changes_gradle_1.txt | wc -l) ]]; then
 		deployportalpre
