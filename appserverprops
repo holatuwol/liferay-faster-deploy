@@ -68,6 +68,10 @@ cleanappserver() {
 
 	TOMCAT_FOLDER=tomcat-${TOMCAT_VERSION}
 
+	if [ "" != "$CURRENT_HASH" ]; then
+		return 0
+	fi
+
 	if [ "" == "$ARCHIVE_HOME" ]; then
 		if [ ! -d $LIFERAY_HOME/$TOMCAT_FOLDER ]; then
 			echo "Missing $LIFERAY_HOME/$TOMCAT_FOLDER"
@@ -214,9 +218,5 @@ setopts() {
 setopts
 
 if [[ 0 -eq $? ]]; then
-	appserverprops && buildprops && gradleprops
-
-	if [ "" == "$CURRENT_HASH" ]; then
-		cleanappserver
-	fi
+	appserverprops && buildprops && gradleprops && cleanappserver
 fi
