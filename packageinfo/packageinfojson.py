@@ -71,7 +71,7 @@ with open('dxppackages.json', 'w') as f:
 columns = ['group', 'name', 'version']
 columns += ['version_de%s' % str(i).zfill(2) for i in range(1, releases + 1)]
 
-unique_modules = {(row['group'], row['name']): row for row in packages.values() }
+unique_modules = {(row['group'], row['name']): row for row in packages.values() if row['version'] != '0.0.0'}
 module_changes = [{ column: row[column] for column in columns } for row in unique_modules.values()]
 module_changes = sorted(module_changes, key = lambda x: (x['group'], x['name']))
 
