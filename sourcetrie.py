@@ -60,7 +60,7 @@ class SourceTrie:
 			y = lines[0].find('"', x)
 
 		artifact_name = lines[0][x:y]
-		self.add(path, 'com.liferay.portal', artifact_name, artifact_version)
+		self.add(path, 'com.liferay.portal', artifact_name, artifact_version + '-SNAPSHOT')
 
 	def add_gradle(self, path):
 		artifact_name, artifact_version = self.extract_bnd(path)
