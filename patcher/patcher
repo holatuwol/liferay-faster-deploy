@@ -24,6 +24,60 @@ patcher() {
 		fi
 	done
 
+	# Make sure that we have not modified any packageinfo files
+
+	git diff --name-only $BASE_TAG..HEAD > $GIT_ROOT/.redeploy/patcher_diff.txt
+
+	if [ "" != "$(grep -F git-commit-portal $GIT_ROOT/.redeploy/patcher_diff.txt)" ]; then
+		echo "A fix must not change git-commit-portal*"
+		echo "$CHANGED_PACKAGEINFO"
+		return 1
+	fi
+
+	local CHANGED_PACKAGEINFO=$(grep -F '/packageinfo' $GIT_ROOT/.redeploy/patcher_diff.txt)
+
+	if [ "" != "$CHANGED_PACKAGEINFO" ]; then
+		echo ""
+		echo "A fix must not change packageinfo"
+
+		for file in $CHANGED_PACKAGEINFO; do
+			echo ""
+			echo "$file"
+			git log --pretty='   %C(yellow)%H%Creset %Cgreen%ci%Creset %s' $BASE_TAG..HEAD -- $file
+		done
+	fi
+
+	# Make sure that we have not modified any Bundle-Version values
+
+	local CHANGED_BND=$(grep -F '/bnd.bnd' $GIT_ROOT/.redeploy/patcher_diff.txt)
+	local MODIFIED_BUNDLE_VERSION=
+
+	for file in $CHANGED_BND; do
+		if [ "" != "$(git diff $BASE_TAG..HEAD -- $file | grep -F Bundle-Version | grep -F '+')" ]; then
+			MODIFIED_BUNDLE_VERSION="$MODIFIED_BUNDLE_VERSION $file"
+		fi
+	done
+
+	if [ "" != "$MODIFIED_BUNDLE_VERSION" ]; then
+		echo ""
+		echo "A fix must not modify a Bundle-Version: $file"
+
+		for file in $CHANGED_PACKAGEINFO; do
+			echo ""
+			echo "$file"
+			git log --pretty='   %C(yellow)%H%Creset %Cgreen%ci%Creset %s' $BASE_TAG..HEAD -- $file
+		done
+	fi
+
+	# If any of the checks failed, abort
+
+	if [ "" != "$CHANGED_PACKAGEINFO" ] || [ "" != "$MODIFIED_BUNDLE_VERSION" ]; then
+		echo ""
+		return 1
+	fi
+
+	# All pre-checks complete, launch a web browser
+
 	local BASE_URL=https://patcher.liferay.com/group/guest/patching/-/osb_patcher/fixes/create
 	local BRANCH=$(git symbolic-ref --short HEAD)
 	local PATCHER_FIX_NAME=$(echo $BRANCH | grep -o "LP[EPS]-[0-9]*")

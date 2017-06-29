@@ -59,7 +59,7 @@ You can use it by specifying the hotfix number followed by the version of Lifera
 Add New Fixes
 =============
 
-You might want to create a new fix inside of patcher portal. This script ensures that all the fix baselines used in patcher portal (or at least, the ones that I remember to update in an S3 bucket) are available out locally, and then opens your web browser to the fix creation page.
+You might want to create a new fix inside of patcher portal. This script ensures that all the fix baselines used in patcher portal (or at least, the ones that I remember to update in an S3 bucket) are available out locally, double-checks to make sure that you haven't modified any files that would cause your fix to get rejected (such as ``packageinfo`` updates or ``bnd.bnd`` updates that modify a version), and opens your web browser to the fix creation page.
 
 * `patcher <patcher>`__
 
