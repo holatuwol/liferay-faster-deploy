@@ -3,7 +3,6 @@
 mkdir -p .redeploy
 
 if [ ! -f .redeploy/sourcetrie.pickle ]; then
-	git ls-files | grep '/\(bnd.bnd\|package.json\)$' | grep -vF '/src/' > .redeploy/sourcetrie.txt
-	echo 'portal-web/build.xml' >> .redeploy/sourcetrie.txt
+	git ls-files | grep '/\(bnd.bnd\|package.json\|build.xml\)$' | grep -vF '/src/' > .redeploy/sourcetrie.txt
 	python $(dirname "${BASH_SOURCE[0]}")/sourcetrie.py
 fi
