@@ -32,6 +32,13 @@ python $(dirname $0)/packageinfojson.py $(dirname $PORTAL_SOURCE_ROOT) $CE_RELEA
 
 # Upload the JSON files to the designated bucket
 
+for file in dxppackages.js dxpmodules.js; do
+	rm -f $file.gz
+	cp $(dirname ${BASH_SOURCE[0]})/$file .
+	gzip -k $file
+	aws s3 --profile $AWS_PROFILE cp $file.gz s3://$S3_BUCKET/$file --acl public-read --metadata-directive REPLACE --content-encoding gzip
+done
+
 for file in dxppackages.json dxpmodules.json; do
 	rm -f $file.gz
 	gzip -k $file
