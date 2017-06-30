@@ -93,11 +93,13 @@ downloadbuild() {
 	# If Tomcat is already running, we shouldn't proceed
 	# any further than identifying commit information.
 
-	if [ "" != "$(jps | grep Bootstrap)" ] && [ -f "$LIFERAY_HOME/baseline.txt" ]; then
-		echo "Tomcat is already running, skipping bundle update"
-		NEW_BASELINE=$(cat "$LIFERAY_HOME/baseline.txt")
-		return 0
-	fi
+	for TOMCAT_PID in $(jps | grep Bootstrap | cut -d' ' -f 1); do
+		if [ "" != "$(ps -f $TOMCAT_PID | grep -F $LIFERAY_HOME)" ]; then
+			echo "Tomcat is already running, skipping bundle update"
+			NEW_BASELINE=$(cat "$LIFERAY_HOME/baseline.txt")
+			return 0
+		fi
+	done
 
 	if [ "" != "$BASE_TAG" ]; then
 		downloadtag && extract
