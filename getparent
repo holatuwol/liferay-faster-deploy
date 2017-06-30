@@ -46,6 +46,10 @@ getparent() {
 		BASE_TAG=
 	else
 		BASE_TAG=$(git describe --tags HEAD --abbrev=0 2> /dev/null)
+
+		if [[ $BASE_TAG != fix-pack-* ]]; then
+			BASE_TAG=
+		fi
 	fi
 }
 
