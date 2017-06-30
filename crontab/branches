@@ -118,7 +118,11 @@ fixpack() {
 	fi
 
 	if [ "" == "$(git tag | grep -F "$1")" ]; then
-		git fetch --no-tags git@github.com:liferay/liferay-portal-ee.git tags/$1:refs/tags/$1
+		if [[ $1 == fix-pack-* ]]; then
+			git fetch --no-tags git@github.com:liferay/liferay-portal-ee.git tags/$1:refs/tags/$1
+		else
+			git fetch --no-tags git@github.com:liferay/liferay-portal.git tags/$1:refs/tags/$1
+		fi
 
 		if [ "" == "$(git tag | grep -F "$1")" ]; then
 			return 1
@@ -142,9 +146,17 @@ fixpacks() {
 		return 0
 	fi
 
+	git ls-remote -t git@github.com:liferay/liferay-portal.git | \
+		awk 'print $2 }' | grep ga | grep -vF sync | \
+		sort | cut -d'/' -f 3 > /var/www/html/builds/fixpacks/tags-ce.txt
+
+	for tag_id in $(cat /var/www/html/builds/fixpacks/tags-ce.txt); do
+		fixpack $tag_id
+	done
+
 	git ls-remote -t git@github.com:liferay/liferay-portal-ee.git | \
-		awk '{ print $2 }' | grep 'fix-pack-\(base-61\|base-62\|base-70\|de-\)' | \
-		grep -v '\(test\|demo\)' | sort -t'-' -nk4,5 | cut -d'/' -f 3 > /var/www/html/builds/fixpacks/tags.txt
+		awk '{ print $2 }' | grep 'fix-pack-\(base-61\|base-62\|base-70\|de-\)' | grep -v '\(test\|demo\)' | \
+		sort -t'-' -nk4,5 | cut -d'/' -f 3 > /var/www/html/builds/fixpacks/tags.txt
 
 	for tag_id in $(cat /var/www/html/builds/fixpacks/tags.txt); do
 		fixpack $tag_id

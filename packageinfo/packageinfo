@@ -9,7 +9,15 @@ dirnames() {
 }
 
 packageinfo() {
-	OUTPUT_FILE=$(dirname $PWD)/packageinfo-$(echo "$1" | cut -d'-' -f 3-).txt
+	local OUTPUT_FILE=
+
+	if [[ $1 == fix-pack-base-* ]]; then
+		OUTPUT_FILE=$(dirname $PWD)/packageinfo-7010-base.txt
+	elif [[ $1 == fix-pack-* ]]; then
+		OUTPUT_FILE=$(dirname $PWD)/packageinfo-$(echo "$1" | cut -d'-' -f 5)-$(echo "$1" | cut -d'-' -f 3,4).txt
+	else
+		OUTPUT_FILE=$(dirname $PWD)/packageinfo-$(echo "$1" | cut -d'-' -f 1 | sed 's/\.\([0-9]\)$/\.0\1/g' | tr -d '.')-$(echo "$1" | cut -d'-' -f 2-).txt
+	fi
 
 	if [ -f $OUTPUT_FILE ]; then
 		echo "${OUTPUT_FILE} has already been generated"
@@ -19,7 +27,11 @@ packageinfo() {
 	echo "Generating bundle packageinfo for $1"
 
 	if [ "" == "$(git tag | grep -F "$1")" ]; then
-		git fetch --no-tags git@github.com:liferay/liferay-portal-ee.git tags/$1:refs/tags/$1
+		if [[ $1 == fix-pack-* ]]; then
+			git fetch --no-tags git@github.com:liferay/liferay-portal-ee.git tags/$1:refs/tags/$1
+		else
+			git fetch --no-tags git@github.com:liferay/liferay-portal.git tags/$1:refs/tags/$1
+		fi
 
 		if [ "" == "$(git tag | grep -F "$1")" ]; then
 			return 1
@@ -67,12 +79,16 @@ fi
 
 pushd "$PORTAL_SOURCE_ROOT" > /dev/null
 
-counter=0
-tag_id=fix-pack-base-7010
+git ls-remote -t git@github.com:liferay/liferay-portal.git | \
+	awk '{ print $2 }' | grep ga | grep -vF sync | grep -F '/7.0' | \
+	sort | cut -d'/' -f 3 > .redeploy/tags.txt
 
-while packageinfo $tag_id; do
-	counter=$(expr $counter '+' 1)
-	tag_id=fix-pack-de-$counter-7010
+git ls-remote -t git@github.com:liferay/liferay-portal-ee.git | \
+	awk '{ print $2 }' | grep 'fix-pack-\(base-70\|de-\)' | grep -v '\(test\|demo\)' | \
+	sort -t'-' -nk4,5 | cut -d'/' -f 3 >> .redeploy/tags.txt
+
+for tag_id in $(cat .redeploy/tags.txt); do
+	packageinfo $tag_id
 done
 
 popd > /dev/null

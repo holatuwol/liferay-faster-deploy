@@ -22,12 +22,13 @@ PORTAL_SOURCE_ROOT="$PORTAL_SOURCE_ROOT" \
 	$(dirname $0)/packageinfo
 
 pushd "$PORTAL_SOURCE_ROOT" > /dev/null
-RELEASE_COUNT=$(git tag | grep 'fix-pack-de-[0-9]*-7010' | wc -l)
+CE_RELEASE_COUNT=$(git tag | grep 'ga' | grep '7.0.' | wc -l)
+EE_RELEASE_COUNT=$(git tag | grep 'fix-pack-de-[0-9]*-7010' | wc -l)
 popd > /dev/null
 
 # Generate the JSON files
 
-python $(dirname $0)/packageinfojson.py $(dirname $PORTAL_SOURCE_ROOT) $RELEASE_COUNT
+python $(dirname $0)/packageinfojson.py $(dirname $PORTAL_SOURCE_ROOT) $CE_RELEASE_COUNT $EE_RELEASE_COUNT
 
 # Upload the JSON files to the designated bucket
 
