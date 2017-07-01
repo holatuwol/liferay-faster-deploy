@@ -45,8 +45,8 @@ def get_jira_cookie():
 
 	while jira_cookie is None:
 		try:
-			jira_username = subprocess.call(['git', 'config', 'jira.session-username', jira_cookie_name])
-			jira_password = subprocess.call(['git', 'config', 'jira.session-password', jira_cookie_value])
+			jira_username = subprocess.call(['git', 'config', 'jira.session-username'])
+			jira_password = subprocess.call(['git', 'config', 'jira.session-password'])
 		except:
 			if 'DISPLAY' not in os.environ or os.environ['DISPLAY'].find(':') == -1:
 				return jira_cookie
