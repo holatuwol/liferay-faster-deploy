@@ -43,6 +43,9 @@ def get_jira_cookie():
 			print(jira_base_url + '/auth/1/session')
 			jira_cookie = None
 
+	if 'DISPLAY' not in os.environ or os.environ['DISPLAY'].find(':') == -1:
+		return jira_cookie
+
 	while jira_cookie is None:
 		jira_username = input('JIRA username: ')
 		jira_password = getpass.getpass('JIRA password: ')
@@ -74,6 +77,9 @@ def get_jira_cookie():
 
 def get_jira_issues(jql):
 	jira_cookie = get_jira_cookie()
+
+	if jira_cookie is None:
+		return []
 
 	start_at = 0
 
