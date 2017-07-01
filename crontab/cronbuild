@@ -5,6 +5,10 @@ HOME=/home/$USER
 
 source $HOME/redeploy/crontab/aliases
 
+find /tmp -maxdepth 1 -type d | grep -F '/npm' | xargs rm -rf
+find /tmp -maxdepth 1 -type d | grep '/[0-9a-f]\{40\}' | xargs rm -rf
+
+
 # Make sure we are in the home folder
 
 cd $HOME
