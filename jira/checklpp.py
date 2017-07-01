@@ -183,7 +183,7 @@ def retrieve_active_pull_request_reviews(issues_by_request, requests_by_reviewer
 # Let's do the work
 
 def save_raw_data(base_name, json_value):
-	with open('%s_%s.json' % (base_name, today.isoformat()), 'w') as outfile:
+	with open('rawdata/%s_%s.json' % (base_name, today.isoformat()), 'w') as outfile:
 		json.dump(json_value, outfile)
 
 def process_issues():
