@@ -2,8 +2,9 @@ from __future__ import print_function
 
 from collections import defaultdict
 import dateparser
-from datetime import date, datetime, timezone
+from datetime import date, datetime
 import getpass
+import pytz
 import re
 import requests
 import six
@@ -13,7 +14,7 @@ import ujson as json
 # Initial start time
 
 today = date.today()
-now = datetime.now(timezone.utc)
+now = datetime.now(pytz.utc)
 
 # Code for handling JIRA
 
@@ -144,11 +145,15 @@ def retrieve_pull_requests(reviewer_url, pull_request_ids):
 
 	r = requests.get(github_base_url + api_path, headers=headers)
 
+	new_seen_pull_requests = {}
+
 	if r.status_code != 200:
-		return {}
+		return new_seen_pull_requests
 
 	new_pull_requests = r.json()
-	new_seen_pull_requests = { pull_request['html_url']: pull_request for pull_request in new_pull_requests }
+
+	for pull_request in new_pull_requests:
+		new_seen_pull_requests[pull_request['html_url']] = pull_request
 
 	for pull_request_id in pull_request_ids:
 		github_url = 'https://github.com/%s/pull/%s' % (reviewer_url, pull_request_id)
