@@ -7,9 +7,10 @@ Before using the scripts in this repository, you must have the following install
 * ``nodejs``: https://nodejs.org/en/
 * ``python``: https://conda.io/miniconda.html
 
-  * ``dateparser``: http://jupyter.org/
+  * ``dateparser``: https://pypi.python.org/pypi/dateparser
   * ``jupyter``: http://jupyter.org/
   * ``pandas``: http://pandas.pydata.org/
+  * ``pytz``: https://pypi.python.org/pypi/pytz
   * ``semver``: https://pypi.python.org/pypi/semver
   * ``ujson``: https://pypi.python.org/pypi/ujson
 
