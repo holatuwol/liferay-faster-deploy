@@ -2,7 +2,7 @@ from __future__ import print_function
 
 from collections import defaultdict
 import dateparser
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 import getpass
 import re
 import requests
@@ -12,6 +12,7 @@ import ujson as json
 
 # Initial start time
 
+today = date.today()
 now = datetime.now(timezone.utc)
 
 # Code for handling JIRA
@@ -131,7 +132,9 @@ def extract_pull_requests_in_review(jira_issues):
 github_base_url = 'https://api.github.com'
 github_oauth_token = subprocess.check_output(['git', 'config', 'github.oauth-token']).strip().decode('utf8')
 
-def get_reviewer_pull_requests(reviewer_url):
+def retrieve_pull_requests(reviewer_url, pull_request_ids):
+	print('Checking pull requests waiting on %s' % reviewer_url)
+
 	headers = {
 		'user-agent': 'python checklpp.py',
 		'authorization': 'token %s' % github_oauth_token
@@ -142,34 +145,51 @@ def get_reviewer_pull_requests(reviewer_url):
 	r = requests.get(github_base_url + api_path, headers=headers)
 
 	if r.status_code != 200:
-		return []
+		return {}
 
-	return r.json()
+	new_pull_requests = r.json()
+	new_seen_pull_requests = { pull_request['html_url']: pull_request for pull_request in new_pull_requests }
+
+	for pull_request_id in pull_request_ids:
+		github_url = 'https://github.com/%s/pull/%s' % (reviewer_url, pull_request_id)
+
+		if github_url in new_seen_pull_requests:
+			continue
+
+		api_path = '/repos/%s/pulls/%s' % (reviewer_url, pull_request_id)
+
+		r = requests.get(github_base_url + api_path, headers=headers)
+
+		if r.status_code != 200:
+			continue
+
+		new_seen_pull_requests[github_url] = r.json()
+
+	return new_seen_pull_requests
 
 def retrieve_active_pull_request_reviews(issues_by_request, requests_by_reviewer):
 	active_reviews = []
-	active_pull_requests = {}
+	seen_pull_requests = {}
 
-	for reviewer_url in sorted(requests_by_reviewer.keys()):
-		print('Checking pull requests waiting on %s' % reviewer_url)
+	for reviewer_url, pull_request_ids in sorted(requests_by_reviewer.items()):
+		new_seen_pull_requests = retrieve_pull_requests(reviewer_url, pull_request_ids)
+		new_active_reviews = [pull_request['html_url'] for pull_request in new_seen_pull_requests.values() if pull_request['html_url'] in issues_by_request and pull_request['state'] != 'closed']
 
-		new_pull_requests = get_reviewer_pull_requests(reviewer_url)
-		new_active_reviews = [pull_request['html_url'] for pull_request in new_pull_requests if pull_request['html_url'] in issues_by_request]
-
-		if len(new_active_reviews) == 0:
-			continue
-
+		seen_pull_requests.update(new_seen_pull_requests)
 		active_reviews.extend(new_active_reviews)
 
-		for pull_request in new_pull_requests:
-			active_pull_requests[pull_request['html_url']] = pull_request
-
-	return active_reviews, active_pull_requests
+	return active_reviews, seen_pull_requests
 
 # Let's do the work
 
+def save_raw_data(base_name, json_value):
+	with open('%s_%s.json' % (base_name, today.isoformat()), 'w') as outfile:
+		json.dump(json_value, outfile)
+
 def process_issues():
 	jira_issues = get_jira_issues('project=LPP AND status="In Review" order by key')
+
+	save_raw_data('jira_issues', jira_issues)
 
 	print('Identified %d tickets in review' % len(jira_issues))
 
@@ -177,20 +197,44 @@ def process_issues():
 		return
 
 	issues_by_request, requests_by_reviewer = extract_pull_requests_in_review(jira_issues)
-	active_reviews, active_pull_requests = retrieve_active_pull_request_reviews(issues_by_request, requests_by_reviewer)
+
+	save_raw_data('issues_by_request', issues_by_request)
+	save_raw_data('requests_by_reviewer', requests_by_reviewer)
+
+	active_reviews, seen_pull_requests = retrieve_active_pull_request_reviews(issues_by_request, requests_by_reviewer)
+
+	save_raw_data('active_reviews', active_reviews)
+	save_raw_data('seen_pull_requests', seen_pull_requests)
 
 	if len(active_reviews) == 0:
 		print('No tickets in review are waiting on reviewers')
 		return
 
-	for github_url in active_reviews:
-		created_at = dateparser.parse(active_pull_requests[github_url]['created_at'])
-		delta = now - created_at
+	report_file_name = 'report_%s.html' % today.isoformat()
 
-		print()
-		print('Pull Request: %s' % github_url)
-		print('Affected Tickets: https://issues.liferay.com/browse/%s' % ', '.join(issues_by_request[github_url]))
-		print('Elapsed Time: %d days' % delta.days)
-		print()
+	with open(report_file_name, 'w') as outfile:
+		outfile.write('<table>')
+		outfile.write('<tr><th>Pull Request</th><th>Waiting Tickets</th><th>Elapsed Time</th></tr>')
+
+		for github_url in active_reviews:
+			outfile.write('<tr>')
+
+			pull_request = seen_pull_requests[github_url]
+
+			outfile.write('<td><a href="%s">%s</a></td>' % (github_url, pull_request['base']['user']['login']))
+
+			affected_issues = [issue for issue in issues_by_request[github_url]]
+			affected_issue_urls = ['https://issues.liferay.com/browse/%s' % issue for issue in affected_issues]
+
+			outfile.write('<td>%s</td>' % ', '.join(['<a href="%s">%s</a>' % (issue_url, issue) for issue, issue_url in zip(affected_issues, affected_issue_urls)]))
+
+			created_at = dateparser.parse(pull_request['created_at'])
+			delta = now - created_at
+
+			outfile.write('<td>%d days</td>' % delta.days)
+
+			outfile.write('</tr>')
+
+		outfile.write('</table>')
 
 process_issues()
