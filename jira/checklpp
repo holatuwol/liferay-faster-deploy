@@ -1,0 +1,11 @@
+#!/bin/bash
+
+mkdir -p /var/www/html/reports
+mkdir -p /var/www/html/reports/rawdata
+
+cd /var/www/html/reports
+
+python $(dirname ${BASH_SOURCE[0]})/checklpp.py
+
+rm today.html
+ln -s $(ls -1 | grep -F report | sort | tail -1) today.html

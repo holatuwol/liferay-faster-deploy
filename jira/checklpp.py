@@ -213,6 +213,8 @@ def process_issues():
 	report_file_name = 'report_%s.html' % today.isoformat()
 
 	with open(report_file_name, 'w') as outfile:
+		outfile.write('<h2>Active Pull Requests on %s</h2>' % today.isoformat())
+
 		outfile.write('<table>')
 		outfile.write('<tr><th>Pull Request</th><th>Waiting Tickets</th><th>Elapsed Time</th></tr>')
 
