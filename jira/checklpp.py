@@ -231,13 +231,14 @@ def process_issues():
 		outfile.write('<h2>Active Pull Requests on %s</h2>' % today.isoformat())
 
 		outfile.write('<table>')
-		outfile.write('<tr><th>Pull Request</th><th>Waiting Tickets</th><th>Elapsed Time</th></tr>')
+		outfile.write('<tr><th>Submitter</th><th>Reviewer</th><th>Waiting Tickets</th><th>Elapsed Time</th></tr>')
 
 		for github_url in active_reviews:
 			outfile.write('<tr>')
 
 			pull_request = seen_pull_requests[github_url]
 
+			outfile.write('<td><a href="%s">%s</a></td>' % (github_url, pull_request['user']['login']))
 			outfile.write('<td><a href="%s">%s</a></td>' % (github_url, pull_request['base']['user']['login']))
 
 			affected_issues = [issue for issue in issues_by_request[github_url]]
