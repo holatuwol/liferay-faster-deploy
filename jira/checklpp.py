@@ -217,6 +217,14 @@ def save_raw_data(base_name, json_value):
 	with open(file_name, 'w') as outfile:
 		json.dump(json_value, outfile)
 
+def get_daycount_string(time_delta):
+	elapsed = float(time_delta.days) + float(time_delta.seconds) / (60 * 60 * 24)
+	elapsed_string = '%0.1f days' % elapsed
+
+	print(elapsed_string)
+
+	return elapsed_string
+
 def report_active(outfile, jira_issues, issues_by_request, active_reviews, seen_pull_requests):
 	jira_issues_by_key = { issue['key']: issue for issue in jira_issues }
 
@@ -259,16 +267,16 @@ def report_active(outfile, jira_issues, issues_by_request, active_reviews, seen_
 		# Open Time
 
 		created_at = dateparser.parse(pull_request['created_at'])
-		delta = now - created_at
+		open_time = now - created_at
 
-		outfile.write('<td>%d days</td>' % delta.days)
+		outfile.write('<td>%s</td>' % get_daycount_string(open_time))
 
 		# Idle Time
 
 		updated_at = dateparser.parse(pull_request['updated_at'])
-		delta = now - updated_at
+		idle_time = now - updated_at
 
-		outfile.write('<td>%d days</td>' % delta.days)
+		outfile.write('<td>%s</td>' % get_daycount_string(idle_time))
 
 		outfile.write('</tr>')
 
@@ -344,10 +352,7 @@ def report_completed(outfile, jira_issues, issues_by_request, active_reviews, se
 
 			# Idle Time
 
-			if idle_time is None:
-				outfile.write('<td>unknown</td>')
-			else:
-				outfile.write('<td>%d days</td>' % idle_time.days)
+			outfile.write('<td>%s</td>' % get_daycount_string(idle_time))
 
 			outfile.write('</tr>')
 
