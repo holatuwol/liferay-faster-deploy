@@ -8,8 +8,9 @@ patcher() {
 		return 1
 	fi
 
-	local BASELINE_IDS=$(curl -s https://s3-us-west-2.amazonaws.com/mdang.grow/patcher.json)
-	local BASELINE_ID=$(echo $BASELINE_IDS | jq '.["'$BASE_TAG'"]')
+	local PATCHER_JSON=$(dirname "${BASH_SOURCE[0]}")/patcher.json
+
+	local BASELINE_ID=$(cat $PATCHER_JSON | jq '.["'$BASE_TAG'"]')
 
 	if [ "" == "$BASELINE_ID" ]; then
 		echo $BASE_TAG does not correspond to a known patcher portal baseline
@@ -18,7 +19,7 @@ patcher() {
 
 	local UPSTREAM=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/ee-${BASE_BRANCH}$" | cut -d'/' -f 3)
 
-	for TAG in $(echo $BASELINE_IDS | jq 'keys | .[]' | cut -d'"' -f 2); do
+	for TAG in $(cat $PATCHER_JSON | jq 'keys | .[]' | cut -d'"' -f 2); do
 		if [ "" == "$(git for-each-ref --format='%(refname)' refs/tags/$TAG)" ]; then
 			echo git fetch --no-tags $UPSTREAM tags/$TAG:refs/tags/$TAG
 		fi
