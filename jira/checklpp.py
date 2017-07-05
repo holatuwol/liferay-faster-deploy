@@ -217,6 +217,63 @@ def save_raw_data(base_name, json_value):
 	with open(file_name, 'w') as outfile:
 		json.dump(json_value, outfile)
 
+def report_active(outfile, jira_issues, issues_by_request, active_reviews, seen_pull_requests):
+	jira_issues_by_key = { issue['key']: issue for issue in jira_issues }
+
+	outfile.write('<h2>Active Pull Requests on %s</h2>' % today.isoformat())
+
+	outfile.write('<table>')
+	outfile.write('<tr>')
+
+	for header in ['Submitter', 'Pull Request Link', 'Waiting Tickets', 'Open Time', 'Idle Time']:
+		outfile.write('<th>%s</th>' % header)
+
+	outfile.write('</tr>')
+
+	for github_url in active_reviews:
+		outfile.write('<tr>')
+
+		pull_request = seen_pull_requests[github_url]
+
+		# Submitter
+
+		outfile.write('<td>%s</td>' % pull_request['user']['login'])
+
+		# Pull Request Link
+
+		outfile.write('<td><a href="%s">%s#%d</a></td>' % (github_url, pull_request['base']['user']['login'], pull_request['number']))
+
+		# Waiting Tickets
+
+		affected_issue_keys = [issue_key for issue_key in issues_by_request[github_url]]
+		affected_issue_urls = ['https://issues.liferay.com/browse/%s' % issue_key for issue_key in affected_issue_keys]
+		affected_issue_assignees = [jira_issues_by_key[issue_key]['fields']['assignee']['displayName'] for issue_key in affected_issue_keys]
+
+		affected_issue_links = [
+			'<a href="%s">%s</a> (%s)' % (issue_url, issue_key, issue_assignee)
+				for issue_key, issue_url, issue_assignee in zip(affected_issue_keys, affected_issue_urls, affected_issue_assignees)
+		]
+
+		outfile.write('<td>%s</td>' % '<br />'.join(affected_issue_links))
+
+		# Open Time
+
+		created_at = dateparser.parse(pull_request['created_at'])
+		delta = now - created_at
+
+		outfile.write('<td>%d days</td>' % delta.days)
+
+		# Idle Time
+
+		updated_at = dateparser.parse(pull_request['updated_at'])
+		delta = now - updated_at
+
+		outfile.write('<td>%d days</td>' % delta.days)
+
+		outfile.write('</tr>')
+
+	outfile.write('</table>')
+
 def process_issues():
 	jira_issues = load_raw_data('jira_issues')
 
@@ -255,31 +312,6 @@ def process_issues():
 	report_file_name = 'report_%s.html' % today.isoformat()
 
 	with open(report_file_name, 'w') as outfile:
-		outfile.write('<h2>Active Pull Requests on %s</h2>' % today.isoformat())
-
-		outfile.write('<table>')
-		outfile.write('<tr><th>Submitter</th><th>Reviewer</th><th>Waiting Tickets</th><th>Elapsed Time</th></tr>')
-
-		for github_url in active_reviews:
-			outfile.write('<tr>')
-
-			pull_request = seen_pull_requests[github_url]
-
-			outfile.write('<td><a href="%s">%s</a></td>' % (github_url, pull_request['user']['login']))
-			outfile.write('<td><a href="%s">%s</a></td>' % (github_url, pull_request['base']['user']['login']))
-
-			affected_issues = [issue for issue in issues_by_request[github_url]]
-			affected_issue_urls = ['https://issues.liferay.com/browse/%s' % issue for issue in affected_issues]
-
-			outfile.write('<td>%s</td>' % ', '.join(['<a href="%s">%s</a>' % (issue_url, issue) for issue, issue_url in zip(affected_issues, affected_issue_urls)]))
-
-			created_at = dateparser.parse(pull_request['created_at'])
-			delta = now - created_at
-
-			outfile.write('<td>%d days</td>' % delta.days)
-
-			outfile.write('</tr>')
-
-		outfile.write('</table>')
+		report_active(outfile, jira_issues, issues_by_request, active_reviews, seen_pull_requests)
 
 process_issues()
