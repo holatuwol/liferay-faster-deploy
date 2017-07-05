@@ -221,8 +221,6 @@ def get_daycount_string(time_delta):
 	elapsed = float(time_delta.days) + float(time_delta.seconds) / (60 * 60 * 24)
 	elapsed_string = '%0.1f days' % elapsed
 
-	print(elapsed_string)
-
 	return elapsed_string
 
 def report_active(outfile, jira_issues, issues_by_request, active_reviews, seen_pull_requests):
