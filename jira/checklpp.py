@@ -43,16 +43,19 @@ def get_jira_cookie():
 		if r.status_code != 200:
 			jira_cookie = None
 
-	while jira_cookie is None:
-		try:
-			jira_username = subprocess.check_output(['git', 'config', 'jira.session-username']).strip().decode('utf8')
-			jira_password = subprocess.check_output(['git', 'config', 'jira.session-password']).strip().decode('utf8')
-		except:
-			if 'DISPLAY' not in os.environ or os.environ['DISPLAY'].find(':') == -1:
-				return jira_cookie
+	if jira_cookie is not None:
+		return jira_cookie
 
-			jira_username = input('JIRA username: ')
-			jira_password = getpass.getpass('JIRA password: ')
+	try:
+		jira_username = subprocess.check_output(['git', 'config', 'jira.session-username']).strip().decode('utf8')
+		jira_password = subprocess.check_output(['git', 'config', 'jira.session-password']).strip().decode('utf8')
+	except:
+		if 'DISPLAY' not in os.environ or os.environ['DISPLAY'].find(':') == -1:
+			return None
+
+	while jira_cookie is None:
+		jira_username = input('JIRA username: ')
+		jira_password = getpass.getpass('JIRA password: ')
 
 		post_json = {
 			'username': jira_username,
