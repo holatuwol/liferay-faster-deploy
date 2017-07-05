@@ -202,29 +202,51 @@ def retrieve_active_pull_request_reviews(issues_by_request, requests_by_reviewer
 
 # Let's do the work
 
+def load_raw_data(base_name):
+	file_name = 'rawdata/%s_%s.json' % (base_name, today.isoformat())
+
+	if not os.path.isfile(file_name):
+		return None
+
+	with open(file_name) as infile:
+		return json.load(infile)
+
 def save_raw_data(base_name, json_value):
-	with open('rawdata/%s_%s.json' % (base_name, today.isoformat()), 'w') as outfile:
+	file_name = 'rawdata/%s_%s.json' % (base_name, today.isoformat())
+
+	with open(file_name, 'w') as outfile:
 		json.dump(json_value, outfile)
 
 def process_issues():
-	jira_issues = get_jira_issues('project=LPP AND status="In Review" order by key')
+	jira_issues = load_raw_data('jira_issues')
 
-	save_raw_data('jira_issues', jira_issues)
+	if jira_issues is None:
+		jira_issues = get_jira_issues('project=LPP AND status="In Review" order by key')
+		save_raw_data('jira_issues', jira_issues)
 
 	print('Identified %d tickets in review' % len(jira_issues))
 
 	if len(jira_issues) == 0:
 		return
 
-	issues_by_request, requests_by_reviewer = extract_pull_requests_in_review(jira_issues)
 
-	save_raw_data('issues_by_request', issues_by_request)
-	save_raw_data('requests_by_reviewer', requests_by_reviewer)
+	issues_by_request = load_raw_data('issues_by_request')
+	requests_by_reviewer = load_raw_data('requests_by_reviewer')
 
-	active_reviews, seen_pull_requests = retrieve_active_pull_request_reviews(issues_by_request, requests_by_reviewer)
+	if issues_by_request is None or requests_by_reviewer is None:
+		issues_by_request, requests_by_reviewer = extract_pull_requests_in_review(jira_issues)
 
-	save_raw_data('active_reviews', active_reviews)
-	save_raw_data('seen_pull_requests', seen_pull_requests)
+		save_raw_data('issues_by_request', issues_by_request)
+		save_raw_data('requests_by_reviewer', requests_by_reviewer)
+
+	active_reviews = load_raw_data('active_reviews')
+	seen_pull_requests = load_raw_data('seen_pull_requests')
+
+	if active_reviews is None or seen_pull_requests is None:
+		active_reviews, seen_pull_requests = retrieve_active_pull_request_reviews(issues_by_request, requests_by_reviewer)
+
+		save_raw_data('active_reviews', active_reviews)
+		save_raw_data('seen_pull_requests', seen_pull_requests)
 
 	if len(active_reviews) == 0:
 		print('No tickets in review are waiting on reviewers')
