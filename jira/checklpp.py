@@ -357,14 +357,13 @@ def process_issues():
 	jira_issues = load_raw_data('jira_issues')
 
 	if jira_issues is None:
-		jira_issues = get_jira_issues('project=LPP AND status="In Review" order by key')
+		jira_issues = get_jira_issues('project=LPP AND type not in ("SME Request", "SME Request SubTask") AND status="In Review" order by key')
 		save_raw_data('jira_issues', jira_issues)
 
 	print('Identified %d tickets in review' % len(jira_issues))
 
 	if len(jira_issues) == 0:
 		return
-
 
 	issues_by_request = load_raw_data('issues_by_request')
 	requests_by_reviewer = load_raw_data('requests_by_reviewer')
