@@ -274,6 +274,85 @@ def report_active(outfile, jira_issues, issues_by_request, active_reviews, seen_
 
 	outfile.write('</table>')
 
+def report_completed(outfile, jira_issues, issues_by_request, active_reviews, seen_pull_requests):
+	requests_by_issue = defaultdict(set)
+
+	for github_url, issue_keys in issues_by_request.items():
+		for issue_key in issue_keys:
+			requests_by_issue[issue_key].add(github_url)
+
+	completed_review = []
+	region_field_name = 'customfield_11523'
+
+	for issue in jira_issues:
+		issue_key = issue['key']
+		github_urls = requests_by_issue[issue_key]
+		all_pulls_closed = len([github_url for github_url in github_urls if github_url in active_reviews]) == 0
+
+		if not all_pulls_closed:
+			continue
+
+		assignee = issue['fields']['assignee']['displayName']
+
+		regions = []
+
+		if region_field_name in issue['fields']:
+			regions = [region['value'] for region in issue['fields'][region_field_name]]
+
+		region = ''
+
+		if len(regions) > 0:
+			region = regions[0]
+
+		idle_time = None
+
+		for github_url in github_urls:
+			pull_request = seen_pull_requests[github_url]
+
+			if pull_request['closed_at'] is None:
+				continue
+
+			closed_at = dateparser.parse(pull_request['closed_at'])
+			new_idle_time = now - closed_at
+
+			if idle_time is None or new_idle_time < idle_time:
+				idle_time = new_idle_time
+
+		completed_review.append((region, issue_key, assignee, idle_time))
+
+	completed_review.sort()
+
+	if len(completed_review) > 0:
+		outfile.write('<h2>Review Already Completed for %s</h2>' % today.isoformat())
+
+		outfile.write('<table>')
+		outfile.write('<tr>')
+
+		for header in ['Region', 'Ticket', 'Idle Time']:
+			outfile.write('<th>%s</th>' % header)
+
+		for region, issue_key, assignee, idle_time in completed_review:
+			outfile.write('<tr>')
+
+			# Region
+
+			outfile.write('<td>%s</td>' % region)
+
+			# Ticket
+
+			outfile.write('<td><a href="https://issues.liferay.com/browse/%s">%s</a> (%s)</td>' % (issue_key, issue_key, assignee))
+
+			# Idle Time
+
+			if idle_time is None:
+				outfile.write('<td>unknown</td>')
+			else:
+				outfile.write('<td>%d days</td>' % idle_time.days)
+
+			outfile.write('</tr>')
+
+		outfile.write('</table>')
+
 def process_issues():
 	jira_issues = load_raw_data('jira_issues')
 
@@ -313,5 +392,6 @@ def process_issues():
 
 	with open(report_file_name, 'w') as outfile:
 		report_active(outfile, jira_issues, issues_by_request, active_reviews, seen_pull_requests)
+		report_completed(outfile, jira_issues, issues_by_request, active_reviews, seen_pull_requests)
 
 process_issues()
