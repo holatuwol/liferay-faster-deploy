@@ -54,8 +54,9 @@ def get_jira_cookie():
 			return None
 
 	while jira_cookie is None:
-		jira_username = input('JIRA username: ')
-		jira_password = getpass.getpass('JIRA password: ')
+		if jira_username is None or jira_password is None:
+			jira_username = input('JIRA username: ')
+			jira_password = getpass.getpass('JIRA password: ')
 
 		post_json = {
 			'username': jira_username,
@@ -66,6 +67,10 @@ def get_jira_cookie():
 
 		if r.status_code != 200:
 			print('Invalid login')
+
+			jira_username = None
+			jira_password = None
+
 			continue
 
 		response_json = r.json()
