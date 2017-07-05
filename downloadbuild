@@ -334,19 +334,25 @@ rebasebranch() {
 }
 
 updatetags() {
-	if [ "" == "$(git remote -v | grep -F liferay-portal-ee)" ]; then
-		return 0
-	fi
-
 	if [ -z "${TAG_ARCHIVE_MIRROR}" ]; then
 		return 0
 	fi
 
-	for tag_id in $(curl --connect-timeout 2 -s "${TAG_ARCHIVE_MIRROR}/tags.txt" | grep -F 'fix-pack'); do
-		if [ "" == "$(git tag | grep -F "$tag_id")" ]; then
-			git fetch --no-tags git@github.com:liferay/liferay-portal-ee.git tags/${tag_id}:refs/tags/${tag_id}
-		fi
-	done
+	if [ "" != "$(git remote -v | grep -F liferay-portal | grep -vF liferay-portal-ee)" ]; then
+		for tag_id in $(curl --connect-timeout 2 -s "${TAG_ARCHIVE_MIRROR}/tags-ce.txt"); do
+			if [ "" == "$(git tag | grep -F "$tag_id")" ]; then
+				git fetch --no-tags git@github.com:liferay/liferay-portal.git tags/${tag_id}:refs/tags/${tag_id}
+			fi
+		done
+	fi
+
+	if [ "" != "$(git remote -v | grep -F liferay-portal-ee)" ]; then
+		for tag_id in $(curl --connect-timeout 2 -s "${TAG_ARCHIVE_MIRROR}/tags.txt"); do
+			if [ "" == "$(git tag | grep -F "$tag_id")" ]; then
+				git fetch --no-tags git@github.com:liferay/liferay-portal-ee.git tags/${tag_id}:refs/tags/${tag_id}
+			fi
+		done
+	fi
 }
 
 CURRENT_HASH=$(git log -1 --pretty='%H')
