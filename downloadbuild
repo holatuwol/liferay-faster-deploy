@@ -251,7 +251,12 @@ gettargetfolder() {
 	# If we're using a tag, make sure that we actually want to use that tag, given that
 	# every commit on ee-7.0.x corresponds to some tag.
 
-	if [ "" == "$BASE_TAG" ] || [ "ee-7.0.x" != "$BASE_BRANCH" ]; then
+	if [ "" == "$BASE_TAG" ]; then
+		return 0
+	elif [ "master" == "$BASE_BRANCH" ]; then
+		BASE_TAG=
+		return 0
+	elif [ "ee-7.0.x" != "$BASE_BRANCH" ]; then
 		return 0
 	fi
 
@@ -261,10 +266,10 @@ gettargetfolder() {
 		MAX_COMMITS=10
 	fi
 
-	# If they disabled tags by specifying 0, then blank out the matching tag and assume
+	# If they disabled tags by specifying -1, then blank out the matching tag and assume
 	# the best matching branch.
 
-	if [[ 0 -eq $MAX_COMMITS ]]; then
+	if [[ -1 -eq $MAX_COMMITS ]]; then
 		BASE_TAG=
 		return 0
 	fi
@@ -279,7 +284,7 @@ gettargetfolder() {
 	fi
 
 	echo "There have been ${ACTUAL_COMMITS} commits on this branch compared to ${BASE_TAG}."
-	echo "If this is based on ${BASE_BRANCH}, please run 'rd 0' to auto-rebase against $BASE_BRANCH."
+	echo "If this is based on ${BASE_BRANCH}, please run 'rd -1' to auto-rebase against $BASE_BRANCH."
 	echo "If this is based on ${BASE_TAG}, please run 'rd $ACTUAL_COMMITS' to override this check."
 	echo "Also make sure that your alias for rd passes parameters (it should have $@ at the end of it)"
 
