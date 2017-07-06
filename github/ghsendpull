@@ -161,7 +161,7 @@ sendpull() {
 	if [ -f "$GIT_ROOT/release.properties" ]; then
 		pushd $GIT_ROOT > /dev/null
 
-		$(dirname ${BASH_SOURCE})/subrepos
+		SUBREPO_ROOT=$SUBREPO_ROOT $(dirname ${BASH_SOURCE})/subrepos
 
 		. $(dirname "${BASH_SOURCE[0]}")/../gitchanges ${upstream_remote}/$BASE_BRANCH
 
