@@ -1,10 +1,12 @@
+
 from __future__ import print_function
 
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 import dateparser
 from datetime import date, datetime
-import getpass
+import numpy as np
 import os
+import pandas as pd
 import pytz
 import re
 import requests
@@ -12,12 +14,39 @@ import six
 import subprocess
 import ujson as json
 
-# Initial start time
-
 today = date.today()
 now = datetime.now(pytz.utc)
 
-# Code for handling JIRA
+def load_raw_data(base_name):
+    file_name = 'rawdata/%s_%s.json' % (base_name, today.isoformat())
+
+    if not os.path.isfile(file_name):
+        return None
+
+    with open(file_name) as infile:
+        return json.load(infile)
+
+def save_raw_data(base_name, json_value):
+    file_name = 'rawdata/%s_%s.json' % (base_name, today.isoformat())
+
+    with open(file_name, 'w') as outfile:
+        json.dump(json_value, outfile)
+
+def get_config(key):
+    try:
+        return subprocess.check_output(['git', 'config', key]).strip().decode('utf8')
+    except:
+        return None
+
+def set_config(key, value):
+    subprocess.call(['git', 'config', '--global', key, value])
+    subprocess.call(['git', 'config', '--global', key, value])
+
+jira_username = get_config('jira.session-username')
+jira_password = get_config('jira.session-password')
+
+assert(jira_username is not None)
+assert(jira_password is not None)
 
 jira_base_url = 'https://issues.liferay.com/rest'
 
@@ -28,11 +57,11 @@ def get_jira_cookie():
     jira_cookie_value = None
 
     try:
-        jira_cookie_name = subprocess.check_output(['git', 'config', 'jira.session-cookie-name']).strip().decode('utf8')
-        jira_cookie_value = subprocess.check_output(['git', 'config', 'jira.session-cookie-value']).strip().decode('utf8')
+        jira_cookie_name = get_config('jira.session-cookie-name')
+        jira_cookie_value = get_config('jira.session-cookie-value')
     except:
         pass
-
+    
     if jira_cookie_name is not None and jira_cookie_value is not None:
         jira_cookie = {
             jira_cookie_name: jira_cookie_value
@@ -45,47 +74,34 @@ def get_jira_cookie():
 
     if jira_cookie is not None:
         return jira_cookie
+        
+    post_json = {
+        'username': jira_username,
+        'password': jira_password
+    }
 
-    try:
-        jira_username = subprocess.check_output(['git', 'config', 'jira.session-username']).strip().decode('utf8')
-        jira_password = subprocess.check_output(['git', 'config', 'jira.session-password']).strip().decode('utf8')
-    except:
-        if 'DISPLAY' not in os.environ or os.environ['DISPLAY'].find(':') == -1:
-            return None
+    r = requests.post(jira_base_url + '/auth/1/session', json=post_json)
 
-    while jira_cookie is None:
-        if jira_username is None or jira_password is None:
-            jira_username = input('JIRA username: ')
-            jira_password = getpass.getpass('JIRA password: ')
+    if r.status_code != 200:
+        print('Invalid login')
 
-        post_json = {
-            'username': jira_username,
-            'password': jira_password
-        }
+        return None
 
-        r = requests.post(jira_base_url + '/auth/1/session', json=post_json)
+    response_json = r.json()
 
-        if r.status_code != 200:
-            print('Invalid login')
+    jira_cookie_name = response_json['session']['name']
+    jira_cookie_value = response_json['session']['value']
 
-            jira_username = None
-            jira_password = None
+    set_config('jira.session-cookie-name', jira_cookie_name)
+    set_config('jira.session-cookie-value', jira_cookie_value)
 
-            continue
-
-        response_json = r.json()
-
-        jira_cookie_name = response_json['session']['name']
-        jira_cookie_value = response_json['session']['value']
-
-        subprocess.call(['git', 'config', '--global', 'jira.session-cookie-name', jira_cookie_name])
-        subprocess.call(['git', 'config', '--global', 'jira.session-cookie-value', jira_cookie_value])
-
-        jira_cookie = {
-            jira_cookie_name: jira_cookie_value
-        }
+    jira_cookie = {
+        jira_cookie_name: jira_cookie_value
+    }
 
     return jira_cookie
+
+assert(get_jira_cookie() is not None)
 
 def get_jira_issues(jql):
     jira_cookie = get_jira_cookie()
@@ -99,8 +115,6 @@ def get_jira_issues(jql):
         'jql': jql,
         'startAt': start_at
     }
-
-    print('Executing JIRA search')
 
     r = requests.post(jira_base_url + '/api/2/search', cookies=jira_cookie, json=post_json)
 
@@ -126,32 +140,53 @@ def get_jira_issues(jql):
 
     return issues
 
-def extract_pull_requests_in_review(jira_issues):
-    issues_by_request = defaultdict(set)
-    requests_by_reviewer = defaultdict(set)
+jira_issues = load_raw_data('jira_issues')
 
-    for jira_issue in jira_issues:
-        for value in jira_issue['fields'].values():
-            if not isinstance(value, six.string_types):
-                continue
+if jira_issues is None:
+    print('Executing JIRA search')
 
-            for github_url in re.findall('https://github.com/[^\s]*/pull/[\d]+', value):
-                issues_by_request[github_url].add(jira_issue['key'])
+    jql = 'project = LPP AND type not in ("SME Request", "SME Request SubTask") AND status = "In Review" order by key'
+    jira_issues = get_jira_issues(jql)
+    save_raw_data('jira_issues', jira_issues)
+else:
+    print('Loaded cached JIRA search')
 
-                pos = github_url.find('/', github_url.find('/', 19) + 1)
-                reviewer_url = github_url[19:pos]
-                pull_request_id = github_url[github_url.rfind('/') + 1:]
+JIRAIssue = namedtuple('JIRAIssue', ['key', 'status', 'assignee', 'summary'])
 
-                requests_by_reviewer[reviewer_url].add(pull_request_id)
+pd.DataFrame([
+    JIRAIssue(
+        key=jira_issue['key'],
+        status=jira_issue['fields']['status']['name'],
+        assignee=jira_issue['fields']['assignee']['displayName'],
+        summary=jira_issue['fields']['summary']
+    )
+        for jira_issue in jira_issues
+])
 
-    return issues_by_request, requests_by_reviewer
+github_oauth_token = get_config('github.oauth-token')
 
-# Code for handling GitHub
+assert(github_oauth_token is not None)
 
 github_base_url = 'https://api.github.com'
-github_oauth_token = subprocess.check_output(['git', 'config', 'github.oauth-token']).strip().decode('utf8')
 
-def retrieve_pull_requests(reviewer_url, pull_request_ids):
+def is_repository_accessible(reviewer_url):
+    print('Validating OAuth token against %s' % reviewer_url)
+
+    headers = {
+        'user-agent': 'python checklpp.py',
+        'authorization': 'token %s' % github_oauth_token
+    }
+
+    api_path = '/repos/%s' % reviewer_url
+    
+    r = requests.get(github_base_url + api_path, headers=headers)
+    
+    return r.status_code == 200
+
+assert(is_repository_accessible('liferay/liferay-portal'))
+assert(is_repository_accessible('liferay/liferay-portal-ee'))
+
+def retrieve_pull_requests(reviewer_url, pull_request_ids=[]):
     print('Checking pull requests waiting on %s' % reviewer_url)
 
     headers = {
@@ -187,6 +222,67 @@ def retrieve_pull_requests(reviewer_url, pull_request_ids):
 
     return new_seen_pull_requests
 
+open_backport_pulls = load_raw_data('open_backport_pulls')
+
+if open_backport_pulls is None:
+    open_backport_pulls = retrieve_pull_requests('liferay/liferay-portal-ee')
+    
+    save_raw_data('open_backport_pulls', open_backport_pulls)
+else:
+    print('Loaded cached open backports')
+
+GHPullRequest = namedtuple('GHPullRequest', ['submitter', 'reviewer', 'repository', 'branch', 'github_url'])
+
+pd.DataFrame([
+    GHPullRequest(
+        submitter=pull_request['user']['login'],
+        reviewer=pull_request['base']['user']['login'],
+        repository=pull_request['base']['repo']['name'],
+        branch=pull_request['base']['ref'],
+        github_url=github_url
+    )
+        for github_url, pull_request in open_backport_pulls.items()
+])
+
+def extract_pull_requests_in_review(jira_issues):
+    issues_by_request = defaultdict(set)
+    requests_by_reviewer = defaultdict(set)
+
+    for jira_issue in jira_issues:
+        for value in jira_issue['fields'].values():
+            if not isinstance(value, six.string_types):
+                continue
+
+            for github_url in re.findall('https://github.com/[^\s]*/pull/[\d]+', value):
+                issues_by_request[github_url].add(jira_issue['key'])
+
+                pos = github_url.find('/', github_url.find('/', 19) + 1)
+                reviewer_url = github_url[19:pos]
+                pull_request_id = github_url[github_url.rfind('/') + 1:]
+
+                requests_by_reviewer[reviewer_url].add(pull_request_id)
+
+    return issues_by_request, requests_by_reviewer
+
+issues_by_request = load_raw_data('issues_by_request')
+requests_by_reviewer = load_raw_data('requests_by_reviewer')
+
+if issues_by_request is None or requests_by_reviewer is None:
+    issues_by_request, requests_by_reviewer = extract_pull_requests_in_review(jira_issues)
+
+    save_raw_data('issues_by_request', issues_by_request)
+    save_raw_data('requests_by_reviewer', requests_by_reviewer)
+else:
+    print('Loaded cached JIRA to GitHub mapping')
+
+JIRAGitHubMapping = namedtuple('JIRAGitHubMapping', ['jiraKey', 'githubKey'])
+
+pd.DataFrame([
+    JIRAGitHubMapping(jiraKey=jiraKey, githubKey=githubKey)
+        for githubKey, jiraKeys in issues_by_request.items()
+            for jiraKey in jiraKeys
+])
+
 def retrieve_active_pull_request_reviews(issues_by_request, requests_by_reviewer):
     active_reviews = []
     seen_pull_requests = {}
@@ -200,22 +296,16 @@ def retrieve_active_pull_request_reviews(issues_by_request, requests_by_reviewer
 
     return active_reviews, seen_pull_requests
 
-# Let's do the work
+active_reviews = load_raw_data('active_reviews')
+seen_pull_requests = load_raw_data('seen_pull_requests')
 
-def load_raw_data(base_name):
-    file_name = 'rawdata/%s_%s.json' % (base_name, today.isoformat())
+if active_reviews is None or seen_pull_requests is None:
+    active_reviews, seen_pull_requests = retrieve_active_pull_request_reviews(issues_by_request, requests_by_reviewer)
 
-    if not os.path.isfile(file_name):
-        return None
-
-    with open(file_name) as infile:
-        return json.load(infile)
-
-def save_raw_data(base_name, json_value):
-    file_name = 'rawdata/%s_%s.json' % (base_name, today.isoformat())
-
-    with open(file_name, 'w') as outfile:
-        json.dump(json_value, outfile)
+    save_raw_data('active_reviews', active_reviews)
+    save_raw_data('seen_pull_requests', seen_pull_requests)
+else:
+    print('Loaded cached pull request metadata')
 
 def get_daycount_string(time_delta):
     elapsed = float(time_delta.days) + float(time_delta.seconds) / (60 * 60 * 24)
@@ -239,6 +329,9 @@ def report_active(outfile, jira_issues, issues_by_request, active_reviews, seen_
     for github_url in active_reviews:
         outfile.write('<tr>')
 
+        if github_url not in seen_pull_requests:
+            continue
+        
         pull_request = seen_pull_requests[github_url]
 
         # Submitter
@@ -313,6 +406,9 @@ def report_completed(outfile, jira_issues, issues_by_request, active_reviews, se
         idle_time = None
 
         for github_url in github_urls:
+            if github_url not in seen_pull_requests:
+                continue
+            
             pull_request = seen_pull_requests[github_url]
 
             if pull_request['closed_at'] is None:
@@ -356,44 +452,9 @@ def report_completed(outfile, jira_issues, issues_by_request, active_reviews, se
 
         outfile.write('</table>')
 
-def process_issues():
-    jira_issues = load_raw_data('jira_issues')
+report_file_name = 'report_%s.html' % today.isoformat()
 
-    if jira_issues is None:
-        jira_issues = get_jira_issues('project=LPP AND type not in ("SME Request", "SME Request SubTask") AND status="In Review" order by key')
-        save_raw_data('jira_issues', jira_issues)
+with open(report_file_name, 'w') as outfile:
+    report_active(outfile, jira_issues, issues_by_request, active_reviews, seen_pull_requests)
+    report_completed(outfile, jira_issues, issues_by_request, active_reviews, seen_pull_requests)
 
-    print('Identified %d tickets in review' % len(jira_issues))
-
-    if len(jira_issues) == 0:
-        return
-
-    issues_by_request = load_raw_data('issues_by_request')
-    requests_by_reviewer = load_raw_data('requests_by_reviewer')
-
-    if issues_by_request is None or requests_by_reviewer is None:
-        issues_by_request, requests_by_reviewer = extract_pull_requests_in_review(jira_issues)
-
-        save_raw_data('issues_by_request', issues_by_request)
-        save_raw_data('requests_by_reviewer', requests_by_reviewer)
-
-    active_reviews = load_raw_data('active_reviews')
-    seen_pull_requests = load_raw_data('seen_pull_requests')
-
-    if active_reviews is None or seen_pull_requests is None:
-        active_reviews, seen_pull_requests = retrieve_active_pull_request_reviews(issues_by_request, requests_by_reviewer)
-
-        save_raw_data('active_reviews', active_reviews)
-        save_raw_data('seen_pull_requests', seen_pull_requests)
-
-    if len(active_reviews) == 0:
-        print('No tickets in review are waiting on reviewers')
-        return
-
-    report_file_name = 'report_%s.html' % today.isoformat()
-
-    with open(report_file_name, 'w') as outfile:
-        report_active(outfile, jira_issues, issues_by_request, active_reviews, seen_pull_requests)
-        report_completed(outfile, jira_issues, issues_by_request, active_reviews, seen_pull_requests)
-
-process_issues()
