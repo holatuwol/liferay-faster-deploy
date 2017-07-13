@@ -1,5 +1,9 @@
 #!/bin/bash
 
+if [ "" == "$AWS_PROFILE" ];
+	AWS_PROFILE=default
+fi
+
 mkdir -p /var/www/html/reports
 mkdir -p /var/www/html/reports/rawdata
 
