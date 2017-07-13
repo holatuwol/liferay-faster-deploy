@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ "" == "$AWS_PROFILE" ];
+if [ "" == "$AWS_PROFILE" ]; then
 	AWS_PROFILE=default
 fi
 

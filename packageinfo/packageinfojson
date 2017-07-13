@@ -1,5 +1,9 @@
 #!/bin/bash
 
+if [ "" == "$AWS_PROFILE" ]; then
+	AWS_PROFILE=default
+fi
+
 cd /tmp
 
 if [ -z "${PORTAL_SOURCE_ROOT}" ]; then
