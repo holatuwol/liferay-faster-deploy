@@ -7,5 +7,10 @@ cd /var/www/html/reports
 
 python $(dirname ${BASH_SOURCE[0]})/checklpp.py
 
-rm today.html
-ln -s $(ls -1 | grep -F report | sort | tail -1) today.html
+rm -f idle_ticket_data.json.gz
+rm -f idle_ticket_data.json
+
+cp $(ls -1 | grep -F idle_ticket_data.json | sort | tail -1) idle_ticket_data.json
+
+gzip -k idle_ticket_data.json
+aws s3 --profile $AWS_PROFILE cp idle_ticket_data.json.gz s3://$S3_BUCKET/idle_ticket_data.json --acl public-read --metadata-directive REPLACE --content-encoding gzip
