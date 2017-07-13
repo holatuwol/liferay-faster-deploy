@@ -4,6 +4,7 @@ from __future__ import print_function
 from collections import defaultdict, namedtuple
 import dateparser
 from datetime import date, datetime
+import hashlib
 import numpy as np
 import os
 import pandas as pd
@@ -11,26 +12,74 @@ import pytz
 import re
 import requests
 import six
+import sys
 import subprocess
 import ujson as json
 
 today = date.today()
 now = datetime.now(pytz.utc)
 
-def load_raw_data(base_name):
-    file_name = 'rawdata/%s_%s.json' % (base_name, today.isoformat())
+def save_raw_data(cache_name, raw_data, index_fields=[]):
+    base_name = os.path.basename(cache_name)
+    subfolder_name = os.path.dirname(cache_name)
+    folder_name = 'rawdata/%s' % subfolder_name
+
+    if not os.path.exists(folder_name):
+        os.makedirs(folder_name)
+
+    file_name = '%s/%s_%s.json' % (folder_name, today.isoformat(), base_name)
+
+    with open(file_name, 'w') as outfile:
+        for primkey, row_value in raw_data.items():
+            outfile.write(json.dumps(primkey))
+            outfile.write('\t')
+
+            for index_field in index_fields:
+                if index_field in row_value:
+                    outfile.write(json.dumps(row[index_field]))
+                else:
+                    outfile.write(json.dumps(None))
+            
+                outfile.write('\t')
+        
+            outfile.write(json.dumps(row_value))
+            outfile.write('\n')
+    
+    return load_raw_data(cache_name)
+
+def load_raw_data(cache_name):
+    base_name = os.path.basename(cache_name)
+    subfolder_name = os.path.dirname(cache_name)
+    folder_name = 'rawdata/%s' % subfolder_name
+
+    if not os.path.exists(folder_name):
+        return None
+
+    file_name = '%s/%s_%s.json' % (folder_name, today.isoformat(), base_name)
 
     if not os.path.isfile(file_name):
         return None
 
+    raw_data = {}
+    indexed_data = defaultdict(list)
+    
     with open(file_name) as infile:
-        return json.load(infile)
+        for line in infile:
+            row = line.split('\t')
 
-def save_raw_data(base_name, json_value):
-    file_name = 'rawdata/%s_%s.json' % (base_name, today.isoformat())
+            primkey = json.loads(row[0])
+            index_values = tuple([json.loads(index_field) for index_field in row[1:-1]])
+            row_value = json.loads(row[-1])
 
-    with open(file_name, 'w') as outfile:
-        json.dump(json_value, outfile)
+            raw_data[primkey] = row_value
+
+            if len(index_values) > 0:
+                indexed_data[index_values].append(primkey)
+
+    if len(indexed_data) == 0:
+        return raw_data
+            
+    return raw_data, indexed_data
 
 def get_config(key):
     try:
@@ -103,7 +152,7 @@ def get_jira_cookie():
 
 assert(get_jira_cookie() is not None)
 
-def get_jira_issues(jql):
+def retrieve_jira_issues(jql):
     jira_cookie = get_jira_cookie()
 
     if jira_cookie is None:
@@ -119,11 +168,14 @@ def get_jira_issues(jql):
     r = requests.post(jira_base_url + '/api/2/search', cookies=jira_cookie, json=post_json)
 
     if r.status_code != 200:
-        return []
+        return {}
 
     response_json = r.json()
 
-    issues = response_json['issues']
+    issues = {}
+    
+    for issue in response_json['issues']:
+        issues[issue['key']] = issue
 
     while start_at + response_json['maxResults'] < response_json['total']:
         start_at += response_json['maxResults']
@@ -136,32 +188,84 @@ def get_jira_issues(jql):
 
         response_json = r.json()
 
-        issues.extend(response_json['issues'])
+        for issue in response_json['issues']:
+            issues[issue['key']] = issue
 
     return issues
 
-jira_issues = load_raw_data('jira_issues')
+in_review_jql = '''
+    project = LPP AND
+    type not in ("SME Request", "SME Request SubTask") AND
+    status = "In Review"
+    order by key
+'''
 
-if jira_issues is None:
+jql_hashes = load_raw_data('jql_hashes')
+
+if jql_hashes is None:
+    jql_hashes = {}
+
+def get_jql_hashed_name(base_name, jql):
+    jql_hash = None
+    
+    for key, value in jql_hashes.items():
+        if value == jql:
+            jql_hash = key
+            break
+
+    if jql_hash is None:            
+        digester = hashlib.md5()
+        digester.update(jql)
+        jql_hash = digester.hexdigest()
+
+        jql_hashes[jql_hash] = jql
+
+        save_raw_data('jql_hashes', jql_hashes)
+    
+    return '%s/%s' % (jql_hash, base_name)
+
+def get_jira_issues(jql):
+    base_name = get_jql_hashed_name('jira_issues', jql)
+
+    jira_issues = load_raw_data(base_name)
+
+    if jira_issues is not None:
+        print('Loaded cached JIRA search')
+        return jira_issues
+
     print('Executing JIRA search')
 
-    jql = 'project = LPP AND type not in ("SME Request", "SME Request SubTask") AND status = "In Review" order by key'
-    jira_issues = get_jira_issues(jql)
-    save_raw_data('jira_issues', jira_issues)
+    jira_issues = retrieve_jira_issues(in_review_jql)
+    jira_issues = save_raw_data(base_name, jira_issues)
+    return jira_issues
+
+if __name__ == '__main__':
+    jira_issues = get_jira_issues(in_review_jql)
 else:
-    print('Loaded cached JIRA search')
+    jira_issues = {}
 
-JIRAIssue = namedtuple('JIRAIssue', ['key', 'status', 'assignee', 'summary'])
+JIRAIssue = namedtuple(
+    'JIRAIssue',
+    ['ticket_key', 'region', 'status', 'assignee', 'summary']
+)
 
-pd.DataFrame([
-    JIRAIssue(
-        key=jira_issue['key'],
-        status=jira_issue['fields']['status']['name'],
-        assignee=jira_issue['fields']['assignee']['displayName'],
-        summary=jira_issue['fields']['summary']
+def get_jira_tuple(issue):
+    region_field_name = 'customfield_11523'
+
+    regions = ['']
+
+    if region_field_name in issue['fields']:
+        regions = [region['value'] for region in issue['fields'][region_field_name]]
+
+    return JIRAIssue(
+        ticket_key=issue['key'],
+        region=regions[0],
+        status=issue['fields']['status']['name'],
+        assignee=issue['fields']['assignee']['displayName'],
+        summary=issue['fields']['summary']
     )
-        for jira_issue in jira_issues
-])
+
+pd.DataFrame([get_jira_tuple(issue) for issue in jira_issues.values()])
 
 github_oauth_token = get_config('github.oauth-token')
 
@@ -201,14 +305,16 @@ def retrieve_pull_requests(reviewer_url, pull_request_ids=[]):
     if r.status_code != 200:
         return {}
 
-    new_pull_requests = r.json()
-
-    new_seen_pull_requests = { pull_request['html_url']: pull_request for pull_request in new_pull_requests }
+    new_pull_requests_list = r.json()
+    new_pull_requests = {
+        pull_request['html_url']: pull_request
+            for pull_request in new_pull_requests_list
+    }
 
     for pull_request_id in pull_request_ids:
         github_url = 'https://github.com/%s/pull/%s' % (reviewer_url, pull_request_id)
 
-        if github_url in new_seen_pull_requests:
+        if github_url in new_pull_requests:
             continue
 
         api_path = '/repos/%s/pulls/%s' % (reviewer_url, pull_request_id)
@@ -218,243 +324,360 @@ def retrieve_pull_requests(reviewer_url, pull_request_ids=[]):
         if r.status_code != 200:
             continue
 
-        new_seen_pull_requests[github_url] = r.json()
+        new_pull_requests[github_url] = r.json()
 
-    return new_seen_pull_requests
+    return new_pull_requests
 
-open_backport_pulls = load_raw_data('open_backport_pulls')
+def get_open_backports():
+    open_backports = load_raw_data('open_backports')
 
-if open_backport_pulls is None:
-    open_backport_pulls = retrieve_pull_requests('liferay/liferay-portal-ee')
-    
-    save_raw_data('open_backport_pulls', open_backport_pulls)
+    if open_backports is not None:
+        print('Loaded cached open backports')
+        return open_backports
+        
+    open_backports = retrieve_pull_requests('liferay/liferay-portal-ee')
+    open_backports = save_raw_data('open_backport_pulls', open_backports)
+    return open_backports
+
+if __name__ == '__main__':
+    open_backports = get_open_backports()
 else:
-    print('Loaded cached open backports')
+    open_backport_pulls = []
 
-GHPullRequest = namedtuple('GHPullRequest', ['submitter', 'reviewer', 'repository', 'branch', 'github_url'])
+GHPullRequest = namedtuple(
+    'GHPullRequest',
+    ['submitter', 'pull_id', 'branch', 'created_at', 'updated_at', 'closed_at', 'state', 'github_url']
+)
 
-pd.DataFrame([
-    GHPullRequest(
-        submitter=pull_request['user']['login'],
-        reviewer=pull_request['base']['user']['login'],
-        repository=pull_request['base']['repo']['name'],
-        branch=pull_request['base']['ref'],
-        github_url=github_url
+def get_github_tuple(pull_request):
+    pull_id = '%s/%s#%d' % (
+        pull_request['base']['user']['login'],
+        pull_request['base']['repo']['name'],
+        pull_request['number']
     )
-        for github_url, pull_request in open_backport_pulls.items()
-])
+    
+    return GHPullRequest(
+        submitter=pull_request['user']['login'],
+        pull_id=pull_id,
+        branch=pull_request['base']['ref'],
+        created_at=pull_request['created_at'],
+        updated_at=pull_request['updated_at'],
+        closed_at=pull_request['closed_at'],
+        state=pull_request['state'],
+        github_url=pull_request['html_url']
+    )
 
-def extract_pull_requests_in_review(jira_issues):
+pd.DataFrame([get_github_tuple(pull_request) for pull_request in open_backports.values()])
+
+def extract_jira_pull_request_urls(jira_issues):
     issues_by_request = defaultdict(set)
+    requests_by_issue = defaultdict(set)
     requests_by_reviewer = defaultdict(set)
 
-    for jira_issue in jira_issues:
+    for jira_key, jira_issue in jira_issues.items():
         for value in jira_issue['fields'].values():
             if not isinstance(value, six.string_types):
                 continue
 
             for github_url in re.findall('https://github.com/[^\s]*/pull/[\d]+', value):
-                issues_by_request[github_url].add(jira_issue['key'])
+                requests_by_issue[jira_key].add(github_url)
+                issues_by_request[github_url].add(jira_key)
 
-                pos = github_url.find('/', github_url.find('/', 19) + 1)
-                reviewer_url = github_url[19:pos]
-                pull_request_id = github_url[github_url.rfind('/') + 1:]
+    return issues_by_request, requests_by_issue
 
-                requests_by_reviewer[reviewer_url].add(pull_request_id)
+def get_jira_pull_request_urls(jql):
+    base_name_1 = get_jql_hashed_name('issues_by_request', jql)
+    base_name_2 = get_jql_hashed_name('requests_by_issue', jql)
+    
+    issues_by_request = load_raw_data(base_name_1)
+    requests_by_issue = load_raw_data(base_name_2)
 
-    return issues_by_request, requests_by_reviewer
+    if issues_by_request is not None and requests_by_issue is not None:
+        print('Loaded cached JIRA to GitHub mapping')
+        return issues_by_request, requests_by_issue
+    
+    jira_issues = get_jira_issues(jql)
+    issues_by_request, requests_by_issue = extract_jira_pull_request_urls(jira_issues)
 
-issues_by_request = load_raw_data('issues_by_request')
-requests_by_reviewer = load_raw_data('requests_by_reviewer')
+    issues_by_request = save_raw_data(base_name_1, issues_by_request)
+    requests_by_issue = save_raw_data(base_name_2, requests_by_issue)
+    
+    return issues_by_request, requests_by_issue
 
-if issues_by_request is None or requests_by_reviewer is None:
-    issues_by_request, requests_by_reviewer = extract_pull_requests_in_review(jira_issues)
-
-    save_raw_data('issues_by_request', issues_by_request)
-    save_raw_data('requests_by_reviewer', requests_by_reviewer)
+if __name__ == '__main__':
+    issues_by_request, requests_by_issue = get_jira_pull_request_urls(in_review_jql)
 else:
-    print('Loaded cached JIRA to GitHub mapping')
+    issues_by_request = {}
+    requests_by_issue = {}
 
-JIRAGitHubMapping = namedtuple('JIRAGitHubMapping', ['jiraKey', 'githubKey'])
+JIRAGitHubMapping = namedtuple('JIRAGitHubMapping', ['jira_key', 'github_url'])
 
 pd.DataFrame([
-    JIRAGitHubMapping(jiraKey=jiraKey, githubKey=githubKey)
-        for githubKey, jiraKeys in issues_by_request.items()
-            for jiraKey in jiraKeys
+    JIRAGitHubMapping(jira_key=jira_key, github_url=github_url)
+        for jira_key, github_urls in requests_by_issue.items()
+            for github_url in github_urls
 ])
 
-def retrieve_active_pull_request_reviews(issues_by_request, requests_by_reviewer):
-    active_reviews = []
-    seen_pull_requests = {}
+def retrieve_related_pull_requests(issues_by_request):
+    requests_by_reviewer = defaultdict(set)
+    
+    for github_url in issues_by_request.keys():
+        reviewer_url = github_url[19:github_url.rfind('/pull/')]
+        requests_by_reviewer[reviewer_url].add(github_url[github_url.rfind('/')+1:])
+    
+    related_pull_requests = {}
 
     for reviewer_url, pull_request_ids in sorted(requests_by_reviewer.items()):
-        new_seen_pull_requests = retrieve_pull_requests(reviewer_url, pull_request_ids)
-        new_active_reviews = [pull_request['html_url'] for pull_request in new_seen_pull_requests.values() if pull_request['html_url'] in issues_by_request and pull_request['state'] != 'closed']
+        new_pull_requests = retrieve_pull_requests(reviewer_url, pull_request_ids)
+        related_pull_requests.update(new_pull_requests)
 
-        seen_pull_requests.update(new_seen_pull_requests)
-        active_reviews.extend(new_active_reviews)
+    return related_pull_requests
 
-    return active_reviews, seen_pull_requests
+def get_related_pull_requests(jql):
+    base_name = get_jql_hashed_name('related_pull_requests', jql)
+    
+    related_pull_requests = load_raw_data(base_name)
 
-active_reviews = load_raw_data('active_reviews')
-seen_pull_requests = load_raw_data('seen_pull_requests')
+    if related_pull_requests is not None:
+        print('Loaded cached pull request metadata')
+        return related_pull_requests
 
-if active_reviews is None or seen_pull_requests is None:
-    active_reviews, seen_pull_requests = retrieve_active_pull_request_reviews(issues_by_request, requests_by_reviewer)
+    issues_by_request, requests_by_issue = get_jira_pull_request_urls(jql)
 
-    save_raw_data('active_reviews', active_reviews)
-    save_raw_data('seen_pull_requests', seen_pull_requests)
+    related_pull_requests = retrieve_related_pull_requests(issues_by_request)
+    related_pull_requests = save_raw_data(base_name, related_pull_requests)
+    
+    return related_pull_requests
+
+if __name__ == '__main__':
+    related_pull_requests = get_related_pull_requests(in_review_jql)
 else:
-    print('Loaded cached pull request metadata')
+    related_pull_requests = {}
 
-def get_daycount_string(time_delta):
-    elapsed = float(time_delta.days) + float(time_delta.seconds) / (60 * 60 * 24)
-    elapsed_string = '%0.1f days' % elapsed
+pd.DataFrame([get_github_tuple(pull_request) for pull_request in related_pull_requests.values()])
 
-    return elapsed_string
+def get_jira_github_join(jql):
+    base_name = get_jql_hashed_name('jira_github_join', jql)
+    
+    jira_github_join = load_raw_data(base_name)
 
-def report_active(outfile, jira_issues, issues_by_request, active_reviews, seen_pull_requests):
-    jira_issues_by_key = { issue['key']: issue for issue in jira_issues }
+    if jira_github_join is not None:
+        print('Loaded cached JIRA-GitHub join result')
+        return jira_github_join
 
-    outfile.write('<h2>Active Pull Requests on %s</h2>' % today.isoformat())
+    jira_issues = get_jira_issues(jql)
+    issues_by_request, requests_by_issue = get_jira_pull_request_urls(jql)
+    seen_pull_requests = get_related_pull_requests(jql)
 
-    outfile.write('<table>')
-    outfile.write('<tr>')
+    jira_github_join = {
+        jira_key: {
+            'jira': jira_issues[jira_key],
+            'github': [seen_pull_requests[github_url] for github_url in github_urls]
+        }
+        for jira_key, github_urls in requests_by_issue.items()
+    }
+    
+    jira_github_join = save_raw_data(base_name, jira_github_join)
+    
+    return jira_github_join
 
-    for header in ['Submitter', 'Pull Request Link', 'Waiting Tickets', 'Open Time', 'Idle Time']:
-        outfile.write('<th>%s</th>' % header)
+def get_github_open_count(jql):
+    base_name = get_jql_hashed_name('github_open_count', jql)
+    
+    github_open_count = load_raw_data(base_name)
 
-    outfile.write('</tr>')
+    if github_open_count is not None:
+        print('Loaded cached JIRA-GitHub join count result')
+        return github_open_count
 
-    for github_url in active_reviews:
-        outfile.write('<tr>')
+    jira_github_join = get_jira_github_join(jql)
 
-        if github_url not in seen_pull_requests:
-            continue
+    github_open_count = {
+        jira_key: len([pull_request for pull_request in join_result['github'] if pull_request['state'] == 'open'])
+            for jira_key, join_result in jira_github_join.items()
+    }
+    
+    github_open_count = save_raw_data(base_name, github_open_count)
+    
+    return github_open_count
+
+if __name__ == '__main__':
+    github_open_count = get_github_open_count(in_review_jql)
+else:
+    github_open_count = {}
+
+GitHubOpenCount = namedtuple('GitHubOpenCount', ['jira_key', 'open_count'])
+
+pd.DataFrame([
+    GitHubOpenCount(jira_key=jira_key, open_count=open_count)
+        for jira_key, open_count in github_open_count.items()
+])
+
+def get_github_idle_tickets(jql):
+    base_name = get_jql_hashed_name('github_idle_tickets', jql)
+    
+    github_idle_tickets = load_raw_data(base_name)
+
+    if github_idle_tickets is not None:
+        print('Loaded cached list of tickets idle on GitHub')
+        return github_idle_tickets
+
+    github_open_count = get_github_open_count(jql)    
+    jira_github_join = get_jira_github_join(jql)
+    
+    github_idle_tickets = {
+        jira_key: {
+            'jira': join_result['jira'],
+            'github': [pull_request for pull_request in join_result['github'] if pull_request['state'] == 'open']
+        }
+        for jira_key, join_result in jira_github_join.items() if github_open_count[jira_key] > 0
+    }
+
+    github_idle_tickets = save_raw_data(base_name, github_idle_tickets)
+    
+    return github_idle_tickets
+
+if __name__ == '__main__':
+    github_idle_tickets = get_github_idle_tickets(in_review_jql)
+else:
+    github_idle_tickets = {}
+
+JiraGitHubLookup = namedtuple(
+    'JiraGitHubLookup',
+    list(JIRAIssue._fields) + list(GHPullRequest._fields)
+)
+
+def get_jira_github_tuple(jira_key, jira_issue, pull_request):
+    jira_tuple = get_jira_tuple(jira_issue)
+    github_tuple = get_github_tuple(pull_request)
+
+    combined_columns = jira_tuple._asdict()
+    combined_columns.update(github_tuple._asdict())
+    
+    new_tuple = JiraGitHubLookup(**combined_columns)
+
+    return new_tuple
+
+pd.DataFrame([
+    get_jira_github_tuple(jira_key, join_result['jira'], pull_request)
+        for jira_key, join_result in github_idle_tickets.items()
+            for pull_request in join_result['github']
+])
+
+def get_jira_idle_tickets(jql):
+    base_name = get_jql_hashed_name('jira_idle_tickets', jql)
+    
+    jira_idle_tickets = load_raw_data(base_name)
+
+    if jira_idle_tickets is not None:
+        print('Loaded cached list of tickets idle on JIRA')
+        return jira_idle_tickets
+
+    github_open_count = get_github_open_count(jql)    
+    jira_github_join = get_jira_github_join(jql)
+    
+    github_closed_pulls = {
+        key: {
+            'jira': join_result['jira'],
+            'github': [
+                pull_request
+                    for pull_request in join_result['github'] if pull_request['state'] == 'closed'
+            ]
+        }
+        for key, join_result in jira_github_join.items() if github_open_count[key] == 0
+    }
+    
+    jira_idle_tickets = {
+        key: {
+            'jira': join_result['jira'],
+            'github': max(join_result['github'], key=lambda x: x['closed_at'])
+        }
+        for key, join_result in github_closed_pulls.items()
+    }
+
+    jira_idle_tickets = save_raw_data(base_name, jira_idle_tickets)
+    
+    return jira_idle_tickets
+
+if __name__ == '__main__':
+    jira_idle_tickets = get_jira_idle_tickets(in_review_jql)
+else:
+    jira_idle_tickets = {}
+
+pd.DataFrame([
+    get_jira_github_tuple(jira_key, join_result['jira'], join_result['github'])
+        for jira_key, join_result in jira_idle_tickets.items()
+])
+
+def get_time_delta_as_days(time_delta):
+    return float(time_delta.days) + float(time_delta.seconds) / (60 * 60 * 24)
+
+new_fields = list(JiraGitHubLookup._fields) + ['open_time_days', 'idle_time_days']
+removed_fields = ['created_at', 'updated_at', 'closed_at']
+
+for removed_field in removed_fields:
+    new_fields.remove(removed_field)
+
+JiraGitHubLookupIdleTime = namedtuple('JiraGitHubLookupIdleTime', new_fields)
+
+def get_jira_github_idle_time_tuple(jira_key, jira_issue, pull_request):
+    old_tuple = get_jira_github_tuple(jira_key, jira_issue, pull_request)
+    old_values = old_tuple._asdict()
+
+    for removed_field in removed_fields:
+        del old_values[removed_field]
+    
+    created_at = dateparser.parse(pull_request['created_at'])
+    updated_at = dateparser.parse(pull_request['updated_at'])
+
+    closed_at = pull_request['closed_at']
+    
+    if closed_at is None:
+        open_time_days = get_time_delta_as_days(now - created_at)
+        idle_time_days = get_time_delta_as_days(now - updated_at)
+    else:
+        closed_at = dateparser.parse(pull_request['closed_at'])
+
+        open_time_days = None
+        idle_time_days = get_time_delta_as_days(now - closed_at)
+    
+    new_tuple = JiraGitHubLookupIdleTime(
+        open_time_days=open_time_days,
+        idle_time_days=idle_time_days,
+        **old_values
+    )
+
+    return new_tuple
+
+pd.DataFrame([
+    get_jira_github_idle_time_tuple(jira_key, join_result['jira'], pull_request)
+        for jira_key, join_result in github_idle_tickets.items()
+            for pull_request in join_result['github']
+])
+
+pd.DataFrame([
+    get_jira_github_idle_time_tuple(jira_key, join_result['jira'], join_result['github'])
+        for jira_key, join_result in jira_idle_tickets.items()
+])
+
+if __name__ == '__main__':
+    github_idle_tickets_list = [
+        get_jira_github_idle_time_tuple(jira_key, join_result['jira'], pull_request)._asdict()
+            for jira_key, join_result in github_idle_tickets.items()
+                for pull_request in join_result['github']
+    ]
+    
+    jira_idle_tickets_list = [
+        get_jira_github_idle_time_tuple(jira_key, join_result['jira'], join_result['github'])._asdict()
+            for jira_key, join_result in jira_idle_tickets.items()
+    ]
+    
+    with open('%s_idle_ticket_data.json' % today.isoformat(), 'w') as outfile:
+        idle_ticket_data = {
+            'lastUpdated': now.isoformat(),
+            'githubIdleTicketsList': github_idle_tickets_list,
+            'jiraIdleTicketsList': jira_idle_tickets_list
+        }
         
-        pull_request = seen_pull_requests[github_url]
-
-        # Submitter
-
-        outfile.write('<td>%s</td>' % pull_request['user']['login'])
-
-        # Pull Request Link
-
-        outfile.write('<td><a href="%s">%s#%d</a></td>' % (github_url, pull_request['base']['user']['login'], pull_request['number']))
-
-        # Waiting Tickets
-
-        affected_issue_keys = [issue_key for issue_key in issues_by_request[github_url]]
-        affected_issue_urls = ['https://issues.liferay.com/browse/%s' % issue_key for issue_key in affected_issue_keys]
-        affected_issue_assignees = [jira_issues_by_key[issue_key]['fields']['assignee']['displayName'] for issue_key in affected_issue_keys]
-
-        affected_issue_links = [
-            '<a href="%s">%s</a> (%s)' % (issue_url, issue_key, issue_assignee)
-                for issue_key, issue_url, issue_assignee in zip(affected_issue_keys, affected_issue_urls, affected_issue_assignees)
-        ]
-
-        outfile.write('<td>%s</td>' % '<br />'.join(affected_issue_links))
-
-        # Open Time
-
-        created_at = dateparser.parse(pull_request['created_at'])
-        open_time = now - created_at
-
-        outfile.write('<td>%s</td>' % get_daycount_string(open_time))
-
-        # Idle Time
-
-        updated_at = dateparser.parse(pull_request['updated_at'])
-        idle_time = now - updated_at
-
-        outfile.write('<td>%s</td>' % get_daycount_string(idle_time))
-
-        outfile.write('</tr>')
-
-    outfile.write('</table>')
-
-def report_completed(outfile, jira_issues, issues_by_request, active_reviews, seen_pull_requests):
-    requests_by_issue = defaultdict(set)
-
-    for github_url, issue_keys in issues_by_request.items():
-        for issue_key in issue_keys:
-            requests_by_issue[issue_key].add(github_url)
-
-    completed_review = []
-    region_field_name = 'customfield_11523'
-
-    for issue in jira_issues:
-        issue_key = issue['key']
-        github_urls = requests_by_issue[issue_key]
-        all_pulls_closed = len([github_url for github_url in github_urls if github_url in active_reviews]) == 0
-
-        if not all_pulls_closed:
-            continue
-
-        assignee = issue['fields']['assignee']['displayName']
-
-        regions = []
-
-        if region_field_name in issue['fields']:
-            regions = [region['value'] for region in issue['fields'][region_field_name]]
-
-        region = ''
-
-        if len(regions) > 0:
-            region = regions[0]
-
-        idle_time = None
-
-        for github_url in github_urls:
-            if github_url not in seen_pull_requests:
-                continue
-            
-            pull_request = seen_pull_requests[github_url]
-
-            if pull_request['closed_at'] is None:
-                continue
-
-            closed_at = dateparser.parse(pull_request['closed_at'])
-            new_idle_time = now - closed_at
-
-            if idle_time is None or new_idle_time < idle_time:
-                idle_time = new_idle_time
-
-        completed_review.append((region, issue_key, assignee, idle_time))
-
-    completed_review.sort()
-
-    if len(completed_review) > 0:
-        outfile.write('<h2>Review Already Completed for %s</h2>' % today.isoformat())
-
-        outfile.write('<table>')
-        outfile.write('<tr>')
-
-        for header in ['Region', 'Ticket', 'Idle Time']:
-            outfile.write('<th>%s</th>' % header)
-
-        for region, issue_key, assignee, idle_time in completed_review:
-            outfile.write('<tr>')
-
-            # Region
-
-            outfile.write('<td>%s</td>' % region)
-
-            # Ticket
-
-            outfile.write('<td><a href="https://issues.liferay.com/browse/%s">%s</a> (%s)</td>' % (issue_key, issue_key, assignee))
-
-            # Idle Time
-
-            outfile.write('<td>%s</td>' % get_daycount_string(idle_time))
-
-            outfile.write('</tr>')
-
-        outfile.write('</table>')
-
-report_file_name = 'report_%s.html' % today.isoformat()
-
-with open(report_file_name, 'w') as outfile:
-    report_active(outfile, jira_issues, issues_by_request, active_reviews, seen_pull_requests)
-    report_completed(outfile, jira_issues, issues_by_request, active_reviews, seen_pull_requests)
+        json.dump(idle_ticket_data, outfile)
 
