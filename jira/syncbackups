@@ -1,0 +1,48 @@
+#!/bin/bash
+
+loaddb() {
+	lrfiles "" index.html
+
+	local filename=$(grep -o ">${1}-[^<]*" index.html | cut -d '>' -f 2 | sort -u | tail -1)
+
+	if [ "" == "$filename" ]; then
+		return 1
+	fi
+
+	lrfiles ${filename}
+	gunzip ${filename}
+
+	local sqlname=$(echo ${filename} | rev | cut -d'.' -f 2- | rev)
+
+	echo "
+	drop schema $2;
+	create schema $2;
+	use $2;
+	source ${sqlname};
+	" > reload.sql
+
+	mysql -u root < reload.sql > reload.out
+
+	rm reload.sql
+	rm reload.out
+}
+
+lrfiles() {
+	if [ "" == "$2" ]; then
+		curl -O -u $(git config files.username):$(git config files.password) https://files.liferay.com/private/lrdcom/$1
+	else
+		curl -u $(git config files.username):$(git config files.password) https://files.liferay.com/private/lrdcom/$1 > $2
+	fi
+}
+
+if [ "" == "$BACKUP_FOLDER" ]; then
+	echo "Please specify a backup folder"
+	exit 1
+fi
+
+cd $BACKUP_FOLDER
+
+rm *.sql
+
+loaddb customer_lportal customer
+loaddb developer_lportal lportal
