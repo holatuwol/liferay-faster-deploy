@@ -19,7 +19,7 @@ import ujson as json
 today = date.today()
 now = datetime.now(pytz.utc)
 
-def save_raw_data(cache_name, raw_data, index_fields=[]):
+def get_file_name(cache_name, suffix):
     base_name = os.path.basename(cache_name)
     subfolder_name = os.path.dirname(cache_name)
     folder_name = 'rawdata/%s' % subfolder_name
@@ -27,59 +27,56 @@ def save_raw_data(cache_name, raw_data, index_fields=[]):
     if not os.path.exists(folder_name):
         os.makedirs(folder_name)
 
-    file_name = '%s/%s_%s.json' % (folder_name, today.isoformat(), base_name)
+    return '%s/%s_%s.%s' % (folder_name, today.isoformat(), base_name, suffix)
+
+def save_row(outfile, keys, row_value):
+    for key in keys:
+        outfile.write(json.dumps(key))
+        outfile.write('\t')
+
+    outfile.write(json.dumps(row_value))
+    outfile.write('\n')
+    
+def save_raw_dict(cache_name, raw_dict, index_fields=[]):
+    file_name = get_file_name(cache_name, '.json')
 
     with open(file_name, 'w') as outfile:
-        for primkey, row_value in raw_data.items():
-            outfile.write(json.dumps(primkey))
-            outfile.write('\t')
-
-            for index_field in index_fields:
-                if index_field in row_value:
-                    outfile.write(json.dumps(row[index_field]))
-                else:
-                    outfile.write(json.dumps(None))
-            
-                outfile.write('\t')
-        
-            outfile.write(json.dumps(row_value))
-            outfile.write('\n')
+        for primkey, row_value in raw_dict.items():
+            keys = [primkey] + [row[field] if field in row else None for field in index_fields]
+            save_row(outfile, keys, row_value)
     
-    return load_raw_data(cache_name)
+    return load_raw_dict(cache_name)
 
-def load_raw_data(cache_name):
-    base_name = os.path.basename(cache_name)
-    subfolder_name = os.path.dirname(cache_name)
-    folder_name = 'rawdata/%s' % subfolder_name
+def load_row(line):
+    row = line.split('\t')
+    keys = [json.loads(key) for key in row[0:-1]]
+    return keys, json.loads(row[-1])
 
-    if not os.path.exists(folder_name):
-        return None
-
-    file_name = '%s/%s_%s.json' % (folder_name, today.isoformat(), base_name)
+def load_raw_dict(cache_name):
+    file_name = get_file_name(cache_name, '.json')
 
     if not os.path.isfile(file_name):
         return None
 
-    raw_data = {}
+    raw_dict = {}
     indexed_data = defaultdict(list)
     
     with open(file_name) as infile:
         for line in infile:
-            row = line.split('\t')
+            keys, row_value = load_row(line)
 
-            primkey = json.loads(row[0])
-            index_values = tuple([json.loads(index_field) for index_field in row[1:-1]])
-            row_value = json.loads(row[-1])
+            primkey = keys[0]
+            raw_dict[primkey] = row_value
 
-            raw_data[primkey] = row_value
-
-            if len(index_values) > 0:
-                indexed_data[index_values].append(primkey)
+            index_fields = tuple(keys[1:])
+            
+            if len(index_fields) > 0:
+                indexed_data[index_fields].append(row_value)
 
     if len(indexed_data) == 0:
-        return raw_data
+        return raw_dict
             
-    return raw_data, indexed_data
+    return raw_dict, indexed_data
 
 def get_config(key):
     try:
@@ -200,7 +197,7 @@ in_review_jql = '''
     order by key
 '''
 
-jql_hashes = load_raw_data('jql_hashes')
+jql_hashes = load_raw_dict('jql_hashes')
 
 if jql_hashes is None:
     jql_hashes = {}
@@ -220,14 +217,14 @@ def get_jql_hashed_name(base_name, jql):
 
         jql_hashes[jql_hash] = jql
 
-        save_raw_data('jql_hashes', jql_hashes)
+        save_raw_dict('jql_hashes', jql_hashes)
     
     return '%s/%s' % (jql_hash, base_name)
 
 def get_jira_issues(jql):
     base_name = get_jql_hashed_name('jira_issues', jql)
 
-    jira_issues = load_raw_data(base_name)
+    jira_issues = load_raw_dict(base_name)
 
     if jira_issues is not None:
         print('Loaded cached JIRA search')
@@ -236,7 +233,7 @@ def get_jira_issues(jql):
     print('Executing JIRA search')
 
     jira_issues = retrieve_jira_issues(in_review_jql)
-    jira_issues = save_raw_data(base_name, jira_issues)
+    jira_issues = save_raw_dict(base_name, jira_issues)
     return jira_issues
 
 if __name__ == '__main__':
@@ -329,20 +326,20 @@ def retrieve_pull_requests(reviewer_url, pull_request_ids=[]):
     return new_pull_requests
 
 def get_open_backports():
-    open_backports = load_raw_data('open_backports')
+    open_backports = load_raw_dict('open_backports')
 
     if open_backports is not None:
         print('Loaded cached open backports')
         return open_backports
         
     open_backports = retrieve_pull_requests('liferay/liferay-portal-ee')
-    open_backports = save_raw_data('open_backport_pulls', open_backports)
+    open_backports = save_raw_dict('open_backport_pulls', open_backports)
     return open_backports
 
 if __name__ == '__main__':
     open_backports = get_open_backports()
 else:
-    open_backport_pulls = []
+    open_backports = {}
 
 GHPullRequest = namedtuple(
     'GHPullRequest',
@@ -389,8 +386,8 @@ def get_jira_pull_request_urls(jql):
     base_name_1 = get_jql_hashed_name('issues_by_request', jql)
     base_name_2 = get_jql_hashed_name('requests_by_issue', jql)
     
-    issues_by_request = load_raw_data(base_name_1)
-    requests_by_issue = load_raw_data(base_name_2)
+    issues_by_request = load_raw_dict(base_name_1)
+    requests_by_issue = load_raw_dict(base_name_2)
 
     if issues_by_request is not None and requests_by_issue is not None:
         print('Loaded cached JIRA to GitHub mapping')
@@ -399,8 +396,8 @@ def get_jira_pull_request_urls(jql):
     jira_issues = get_jira_issues(jql)
     issues_by_request, requests_by_issue = extract_jira_pull_request_urls(jira_issues)
 
-    issues_by_request = save_raw_data(base_name_1, issues_by_request)
-    requests_by_issue = save_raw_data(base_name_2, requests_by_issue)
+    issues_by_request = save_raw_dict(base_name_1, issues_by_request)
+    requests_by_issue = save_raw_dict(base_name_2, requests_by_issue)
     
     return issues_by_request, requests_by_issue
 
@@ -436,7 +433,7 @@ def retrieve_related_pull_requests(issues_by_request):
 def get_related_pull_requests(jql):
     base_name = get_jql_hashed_name('related_pull_requests', jql)
     
-    related_pull_requests = load_raw_data(base_name)
+    related_pull_requests = load_raw_dict(base_name)
 
     if related_pull_requests is not None:
         print('Loaded cached pull request metadata')
@@ -445,7 +442,7 @@ def get_related_pull_requests(jql):
     issues_by_request, requests_by_issue = get_jira_pull_request_urls(jql)
 
     related_pull_requests = retrieve_related_pull_requests(issues_by_request)
-    related_pull_requests = save_raw_data(base_name, related_pull_requests)
+    related_pull_requests = save_raw_dict(base_name, related_pull_requests)
     
     return related_pull_requests
 
@@ -459,7 +456,7 @@ pd.DataFrame([get_github_tuple(pull_request) for pull_request in related_pull_re
 def get_jira_github_join(jql):
     base_name = get_jql_hashed_name('jira_github_join', jql)
     
-    jira_github_join = load_raw_data(base_name)
+    jira_github_join = load_raw_dict(base_name)
 
     if jira_github_join is not None:
         print('Loaded cached JIRA-GitHub join result')
@@ -477,14 +474,14 @@ def get_jira_github_join(jql):
         for jira_key, github_urls in requests_by_issue.items()
     }
     
-    jira_github_join = save_raw_data(base_name, jira_github_join)
+    jira_github_join = save_raw_dict(base_name, jira_github_join)
     
     return jira_github_join
 
 def get_github_open_count(jql):
     base_name = get_jql_hashed_name('github_open_count', jql)
     
-    github_open_count = load_raw_data(base_name)
+    github_open_count = load_raw_dict(base_name)
 
     if github_open_count is not None:
         print('Loaded cached JIRA-GitHub join count result')
@@ -497,7 +494,7 @@ def get_github_open_count(jql):
             for jira_key, join_result in jira_github_join.items()
     }
     
-    github_open_count = save_raw_data(base_name, github_open_count)
+    github_open_count = save_raw_dict(base_name, github_open_count)
     
     return github_open_count
 
@@ -516,7 +513,7 @@ pd.DataFrame([
 def get_github_idle_tickets(jql):
     base_name = get_jql_hashed_name('github_idle_tickets', jql)
     
-    github_idle_tickets = load_raw_data(base_name)
+    github_idle_tickets = load_raw_dict(base_name)
 
     if github_idle_tickets is not None:
         print('Loaded cached list of tickets idle on GitHub')
@@ -533,7 +530,7 @@ def get_github_idle_tickets(jql):
         for jira_key, join_result in jira_github_join.items() if github_open_count[jira_key] > 0
     }
 
-    github_idle_tickets = save_raw_data(base_name, github_idle_tickets)
+    github_idle_tickets = save_raw_dict(base_name, github_idle_tickets)
     
     return github_idle_tickets
 
@@ -567,7 +564,7 @@ pd.DataFrame([
 def get_jira_idle_tickets(jql):
     base_name = get_jql_hashed_name('jira_idle_tickets', jql)
     
-    jira_idle_tickets = load_raw_data(base_name)
+    jira_idle_tickets = load_raw_dict(base_name)
 
     if jira_idle_tickets is not None:
         print('Loaded cached list of tickets idle on JIRA')
@@ -595,7 +592,7 @@ def get_jira_idle_tickets(jql):
         for key, join_result in github_closed_pulls.items()
     }
 
-    jira_idle_tickets = save_raw_data(base_name, jira_idle_tickets)
+    jira_idle_tickets = save_raw_dict(base_name, jira_idle_tickets)
     
     return jira_idle_tickets
 
