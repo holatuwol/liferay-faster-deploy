@@ -53,7 +53,12 @@ def save_raw_dict(cache_name, raw_dict, index_fields=[]):
 def load_row(line):
     row = line.split('\t')
     keys = [json.loads(key) for key in row[0:-1]]
-    return keys, json.loads(row[-1])
+    row_value = json.loads(row[-1])
+    
+    if len(keys) == 0:
+        return row_value
+        
+    return row_value
 
 def load_raw_dict(cache_name):
     file_name = get_file_name(cache_name, 'json')
