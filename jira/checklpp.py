@@ -27,6 +27,9 @@ def get_file_name(cache_name, suffix):
     if not os.path.exists(folder_name):
         os.makedirs(folder_name)
 
+    if suffix[0] == '.':
+        suffix = suffix[1:]
+        
     return '%s/%s_%s.%s' % (folder_name, today.isoformat(), base_name, suffix)
 
 def save_row(outfile, keys, row_value):
@@ -38,7 +41,7 @@ def save_row(outfile, keys, row_value):
     outfile.write('\n')
     
 def save_raw_dict(cache_name, raw_dict, index_fields=[]):
-    file_name = get_file_name(cache_name, '.json')
+    file_name = get_file_name(cache_name, 'json')
 
     with open(file_name, 'w') as outfile:
         for primkey, row_value in raw_dict.items():
@@ -53,7 +56,7 @@ def load_row(line):
     return keys, json.loads(row[-1])
 
 def load_raw_dict(cache_name):
-    file_name = get_file_name(cache_name, '.json')
+    file_name = get_file_name(cache_name, 'json')
 
     if not os.path.isfile(file_name):
         return None
