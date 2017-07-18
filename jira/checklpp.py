@@ -421,7 +421,7 @@ def retrieve_related_pull_requests(issues_by_request):
     for github_url in issues_by_request.keys():
         reviewer_url = github_url[19:github_url.rfind('/pull/')]
         requests_by_reviewer[reviewer_url].add(github_url[github_url.rfind('/')+1:])
-    
+
     related_pull_requests = {}
 
     for reviewer_url, pull_request_ids in sorted(requests_by_reviewer.items()):
@@ -464,14 +464,15 @@ def get_jira_github_join(jql):
 
     jira_issues = get_jira_issues(jql)
     issues_by_request, requests_by_issue = get_jira_pull_request_urls(jql)
-    seen_pull_requests = get_related_pull_requests(jql)
+    related_pull_requests = get_related_pull_requests(jql)
 
     jira_github_join = {
         jira_key: {
             'jira': jira_issues[jira_key],
-            'github': [seen_pull_requests[github_url] for github_url in github_urls]
+            'github': [related_pull_requests[github_url] for github_url in github_urls]
         }
         for jira_key, github_urls in requests_by_issue.items()
+            if github_url in related_pull_requests
     }
     
     jira_github_join = save_raw_dict(base_name, jira_github_join)
