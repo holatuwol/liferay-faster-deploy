@@ -29,7 +29,7 @@ def get_file_name(cache_name, suffix):
 
     if suffix[0] == '.':
         suffix = suffix[1:]
-        
+
     return '%s/%s_%s.%s' % (folder_name, today.isoformat(), base_name, suffix)
 
 def save_row(outfile, keys, row_value):
@@ -39,7 +39,7 @@ def save_row(outfile, keys, row_value):
 
     outfile.write(json.dumps(row_value))
     outfile.write('\n')
-    
+
 def save_raw_dict(cache_name, raw_dict, index_fields=[]):
     file_name = get_file_name(cache_name, 'json')
 
@@ -47,18 +47,18 @@ def save_raw_dict(cache_name, raw_dict, index_fields=[]):
         for primkey, row_value in raw_dict.items():
             keys = [primkey] + [row[field] if field in row else None for field in index_fields]
             save_row(outfile, keys, row_value)
-    
+
     return load_raw_dict(cache_name)
 
 def load_row(line):
     row = line.split('\t')
     keys = [json.loads(key) for key in row[0:-1]]
     row_value = json.loads(row[-1])
-    
+
     if len(keys) == 0:
         return row_value
-        
-    return row_value
+
+    return keys, row_value
 
 def load_raw_dict(cache_name):
     file_name = get_file_name(cache_name, 'json')
@@ -68,7 +68,7 @@ def load_raw_dict(cache_name):
 
     raw_dict = {}
     indexed_data = defaultdict(list)
-    
+
     with open(file_name) as infile:
         for line in infile:
             keys, row_value = load_row(line)
@@ -77,13 +77,13 @@ def load_raw_dict(cache_name):
             raw_dict[primkey] = row_value
 
             index_fields = tuple(keys[1:])
-            
+
             if len(index_fields) > 0:
                 indexed_data[index_fields].append(row_value)
 
     if len(indexed_data) == 0:
         return raw_dict
-            
+
     return raw_dict, indexed_data
 
 def get_config(key):
@@ -115,7 +115,7 @@ def get_jira_cookie():
         jira_cookie_value = get_config('jira.session-cookie-value')
     except:
         pass
-    
+
     if jira_cookie_name is not None and jira_cookie_value is not None:
         jira_cookie = {
             jira_cookie_name: jira_cookie_value
@@ -128,7 +128,7 @@ def get_jira_cookie():
 
     if jira_cookie is not None:
         return jira_cookie
-        
+
     post_json = {
         'username': jira_username,
         'password': jira_password
@@ -178,7 +178,7 @@ def retrieve_jira_issues(jql):
     response_json = r.json()
 
     issues = {}
-    
+
     for issue in response_json['issues']:
         issues[issue['key']] = issue
 
@@ -212,13 +212,13 @@ if jql_hashes is None:
 
 def get_jql_hashed_name(base_name, jql):
     jql_hash = None
-    
+
     for key, value in jql_hashes.items():
         if value == jql:
             jql_hash = key
             break
 
-    if jql_hash is None:            
+    if jql_hash is None:
         digester = hashlib.md5()
         digester.update(jql)
         jql_hash = digester.hexdigest()
@@ -226,7 +226,7 @@ def get_jql_hashed_name(base_name, jql):
         jql_hashes[jql_hash] = jql
 
         save_raw_dict('jql_hashes', jql_hashes)
-    
+
     return '%s/%s' % (jql_hash, base_name)
 
 def get_jira_issues(jql):
@@ -287,9 +287,9 @@ def is_repository_accessible(reviewer_url):
     }
 
     api_path = '/repos/%s' % reviewer_url
-    
+
     r = requests.get(github_base_url + api_path, headers=headers)
-    
+
     return r.status_code == 200
 
 assert(is_repository_accessible('liferay/liferay-portal'))
@@ -339,7 +339,7 @@ def get_open_backports():
     if open_backports is not None:
         print('Loaded cached open backports')
         return open_backports
-        
+
     open_backports = retrieve_pull_requests('liferay/liferay-portal-ee')
     open_backports = save_raw_dict('open_backport_pulls', open_backports)
     return open_backports
@@ -360,7 +360,7 @@ def get_github_tuple(pull_request):
         pull_request['base']['repo']['name'],
         pull_request['number']
     )
-    
+
     return GHPullRequest(
         submitter=pull_request['user']['login'],
         pull_id=pull_id,
@@ -393,20 +393,20 @@ def extract_jira_pull_request_urls(jira_issues):
 def get_jira_pull_request_urls(jql):
     base_name_1 = get_jql_hashed_name('issues_by_request', jql)
     base_name_2 = get_jql_hashed_name('requests_by_issue', jql)
-    
+
     issues_by_request = load_raw_dict(base_name_1)
     requests_by_issue = load_raw_dict(base_name_2)
 
     if issues_by_request is not None and requests_by_issue is not None:
         print('Loaded cached JIRA to GitHub mapping')
         return issues_by_request, requests_by_issue
-    
+
     jira_issues = get_jira_issues(jql)
     issues_by_request, requests_by_issue = extract_jira_pull_request_urls(jira_issues)
 
     issues_by_request = save_raw_dict(base_name_1, issues_by_request)
     requests_by_issue = save_raw_dict(base_name_2, requests_by_issue)
-    
+
     return issues_by_request, requests_by_issue
 
 if __name__ == '__main__':
@@ -425,7 +425,7 @@ pd.DataFrame([
 
 def retrieve_related_pull_requests(issues_by_request):
     requests_by_reviewer = defaultdict(set)
-    
+
     for github_url in issues_by_request.keys():
         reviewer_url = github_url[19:github_url.rfind('/pull/')]
         requests_by_reviewer[reviewer_url].add(github_url[github_url.rfind('/')+1:])
@@ -440,7 +440,7 @@ def retrieve_related_pull_requests(issues_by_request):
 
 def get_related_pull_requests(jql):
     base_name = get_jql_hashed_name('related_pull_requests', jql)
-    
+
     related_pull_requests = load_raw_dict(base_name)
 
     if related_pull_requests is not None:
@@ -451,7 +451,7 @@ def get_related_pull_requests(jql):
 
     related_pull_requests = retrieve_related_pull_requests(issues_by_request)
     related_pull_requests = save_raw_dict(base_name, related_pull_requests)
-    
+
     return related_pull_requests
 
 if __name__ == '__main__':
@@ -463,7 +463,7 @@ pd.DataFrame([get_github_tuple(pull_request) for pull_request in related_pull_re
 
 def get_jira_github_join(jql):
     base_name = get_jql_hashed_name('jira_github_join', jql)
-    
+
     jira_github_join = load_raw_dict(base_name)
 
     if jira_github_join is not None:
@@ -477,19 +477,21 @@ def get_jira_github_join(jql):
     jira_github_join = {
         jira_key: {
             'jira': jira_issues[jira_key],
-            'github': [related_pull_requests[github_url] for github_url in github_urls]
+            'github': [
+                related_pull_requests[github_url] for github_url in github_urls
+                    if github_url in related_pull_requests
+            ]
         }
         for jira_key, github_urls in requests_by_issue.items()
-            if github_url in related_pull_requests
     }
-    
+
     jira_github_join = save_raw_dict(base_name, jira_github_join)
-    
+
     return jira_github_join
 
 def get_github_open_count(jql):
     base_name = get_jql_hashed_name('github_open_count', jql)
-    
+
     github_open_count = load_raw_dict(base_name)
 
     if github_open_count is not None:
@@ -502,9 +504,9 @@ def get_github_open_count(jql):
         jira_key: len([pull_request for pull_request in join_result['github'] if pull_request['state'] == 'open'])
             for jira_key, join_result in jira_github_join.items()
     }
-    
+
     github_open_count = save_raw_dict(base_name, github_open_count)
-    
+
     return github_open_count
 
 if __name__ == '__main__':
@@ -521,16 +523,16 @@ pd.DataFrame([
 
 def get_github_idle_tickets(jql):
     base_name = get_jql_hashed_name('github_idle_tickets', jql)
-    
+
     github_idle_tickets = load_raw_dict(base_name)
 
     if github_idle_tickets is not None:
         print('Loaded cached list of tickets idle on GitHub')
         return github_idle_tickets
 
-    github_open_count = get_github_open_count(jql)    
+    github_open_count = get_github_open_count(jql)
     jira_github_join = get_jira_github_join(jql)
-    
+
     github_idle_tickets = {
         jira_key: {
             'jira': join_result['jira'],
@@ -540,7 +542,7 @@ def get_github_idle_tickets(jql):
     }
 
     github_idle_tickets = save_raw_dict(base_name, github_idle_tickets)
-    
+
     return github_idle_tickets
 
 if __name__ == '__main__':
@@ -559,7 +561,7 @@ def get_jira_github_tuple(jira_key, jira_issue, pull_request):
 
     combined_columns = jira_tuple._asdict()
     combined_columns.update(github_tuple._asdict())
-    
+
     new_tuple = JiraGitHubLookup(**combined_columns)
 
     return new_tuple
@@ -572,16 +574,16 @@ pd.DataFrame([
 
 def get_jira_idle_tickets(jql):
     base_name = get_jql_hashed_name('jira_idle_tickets', jql)
-    
+
     jira_idle_tickets = load_raw_dict(base_name)
 
     if jira_idle_tickets is not None:
         print('Loaded cached list of tickets idle on JIRA')
         return jira_idle_tickets
 
-    github_open_count = get_github_open_count(jql)    
+    github_open_count = get_github_open_count(jql)
     jira_github_join = get_jira_github_join(jql)
-    
+
     github_closed_pulls = {
         key: {
             'jira': join_result['jira'],
@@ -592,7 +594,7 @@ def get_jira_idle_tickets(jql):
         }
         for key, join_result in jira_github_join.items() if github_open_count[key] == 0
     }
-    
+
     jira_idle_tickets = {
         key: {
             'jira': join_result['jira'],
@@ -602,7 +604,7 @@ def get_jira_idle_tickets(jql):
     }
 
     jira_idle_tickets = save_raw_dict(base_name, jira_idle_tickets)
-    
+
     return jira_idle_tickets
 
 if __name__ == '__main__':
@@ -632,12 +634,12 @@ def get_jira_github_idle_time_tuple(jira_key, jira_issue, pull_request):
 
     for removed_field in removed_fields:
         del old_values[removed_field]
-    
+
     created_at = dateparser.parse(pull_request['created_at'])
     updated_at = dateparser.parse(pull_request['updated_at'])
 
     closed_at = pull_request['closed_at']
-    
+
     if closed_at is None:
         open_time_days = get_time_delta_as_days(now - created_at)
         idle_time_days = get_time_delta_as_days(now - updated_at)
@@ -646,7 +648,7 @@ def get_jira_github_idle_time_tuple(jira_key, jira_issue, pull_request):
 
         open_time_days = None
         idle_time_days = get_time_delta_as_days(now - closed_at)
-    
+
     new_tuple = JiraGitHubLookupIdleTime(
         open_time_days=open_time_days,
         idle_time_days=idle_time_days,
@@ -672,18 +674,18 @@ if __name__ == '__main__':
             for jira_key, join_result in github_idle_tickets.items()
                 for pull_request in join_result['github']
     ]
-    
+
     jira_idle_tickets_list = [
         get_jira_github_idle_time_tuple(jira_key, join_result['jira'], join_result['github'])._asdict()
             for jira_key, join_result in jira_idle_tickets.items()
     ]
-    
+
     with open('%s_idle_ticket_data.json' % today.isoformat(), 'w') as outfile:
         idle_ticket_data = {
             'lastUpdated': now.isoformat(),
             'githubIdleTicketsList': github_idle_tickets_list,
             'jiraIdleTicketsList': jira_idle_tickets_list
         }
-        
+
         json.dump(idle_ticket_data, outfile)
 
