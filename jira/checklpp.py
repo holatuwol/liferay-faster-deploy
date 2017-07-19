@@ -158,6 +158,11 @@ def get_jira_cookie():
 assert(get_jira_cookie() is not None)
 
 def retrieve_jira_issues(jql):
+    if jql.find('order by') == -1:
+        ordered_jql = '%s order by updated asc' % jql
+    else:
+        ordered_jql = jql
+
     jira_cookie = get_jira_cookie()
 
     if jira_cookie is None:
@@ -165,12 +170,15 @@ def retrieve_jira_issues(jql):
 
     start_at = 0
 
-    post_json = {
-        'jql': jql,
-        'startAt': start_at
+    payload = {
+        'jql': ordered_jql,
+        'startAt': start_at,
+        'maxResults': 1000
     }
 
-    r = requests.post(jira_base_url + '/api/2/search', cookies=jira_cookie, json=post_json)
+    search_url = jira_base_url + '/api/2/search'
+
+    r = requests.get(search_url, cookies=jira_cookie, params=payload)
 
     if r.status_code != 200:
         return {}
@@ -182,11 +190,13 @@ def retrieve_jira_issues(jql):
     for issue in response_json['issues']:
         issues[issue['key']] = issue
 
-    while start_at + response_json['maxResults'] < response_json['total']:
-        start_at += response_json['maxResults']
-        post_json['startAt'] = start_at
+    while start_at + len(response_json['issues']) < response_json['total']:
+        start_at += len(response_json['issues'])
+        payload['startAt'] = start_at
 
-        r = requests.post(jira_base_url + '/api/2/search', cookies=jira_cookie, json=post_json)
+        print('[%s] Retrieved %d of %d results' % (datetime.now().isoformat(), start_at, response_json['total']))
+
+        r = requests.get(search_url, cookies=jira_cookie, params=payload)
 
         if r.status_code != 200:
             return issues
@@ -202,7 +212,6 @@ in_review_jql = '''
     project = LPP AND
     type not in ("SME Request", "SME Request SubTask") AND
     status = "In Review"
-    order by key
 '''
 
 jql_hashes = load_raw_dict('jql_hashes')
@@ -235,12 +244,12 @@ def get_jira_issues(jql):
     jira_issues = load_raw_dict(base_name)
 
     if jira_issues is not None:
-        print('Loaded cached JIRA search')
+        print('Loaded cached JIRA search %s' % jql)
         return jira_issues
 
-    print('Executing JIRA search')
+    print('Executing JIRA search %s' % jql)
 
-    jira_issues = retrieve_jira_issues(in_review_jql)
+    jira_issues = retrieve_jira_issues(jql)
     jira_issues = save_raw_dict(base_name, jira_issues)
     return jira_issues
 
