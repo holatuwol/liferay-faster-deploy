@@ -157,7 +157,7 @@ def get_jira_cookie():
 
 assert(get_jira_cookie() is not None)
 
-def retrieve_jira_issues(jql):
+def retrieve_jira_issues(jql,expand=[]):
     if jql.find('order by') == -1:
         ordered_jql = '%s order by updated asc' % jql
     else:
@@ -173,7 +173,8 @@ def retrieve_jira_issues(jql):
     payload = {
         'jql': ordered_jql,
         'startAt': start_at,
-        'maxResults': 1000
+        'maxResults': 1000,
+        'expand': ','.join(expand)
     }
 
     search_url = jira_base_url + '/api/2/search'
@@ -238,7 +239,7 @@ def get_jql_hashed_name(base_name, jql):
 
     return '%s/%s' % (jql_hash, base_name)
 
-def get_jira_issues(jql):
+def get_jira_issues(jql, expand=[]):
     base_name = get_jql_hashed_name('jira_issues', jql)
 
     jira_issues = load_raw_dict(base_name)
@@ -249,7 +250,7 @@ def get_jira_issues(jql):
 
     print('Executing JIRA search %s' % jql)
 
-    jira_issues = retrieve_jira_issues(jql)
+    jira_issues = retrieve_jira_issues(jql, expand)
     jira_issues = save_raw_dict(base_name, jira_issues)
     return jira_issues
 
