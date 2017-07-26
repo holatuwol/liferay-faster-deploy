@@ -5,6 +5,8 @@ checksnapshots() {
 }
 
 findgradle() {
+	echo 'Locating gradlew binary'
+
 	if [ -e $GRADLE_HOME/gradlew ]; then
 		return 0
 	fi
@@ -16,6 +18,12 @@ findgradle() {
 	done
 
 	if [ -e $GRADLE_HOME/gradlew ]; then
+		if [[ 0 -ne $(egrep -o $'\r\n'\$ "$GRADLE_HOME/gradlew" | wc -c ) ]]; then
+			perl -pi -e 's/\r\n|\n|\r/\n/g' "$GRADLE_HOME/gradlew"
+		fi
+
+		chmod u+x $GRADLE_HOME/gradlew
+
 		return 0
 	fi
 
@@ -31,6 +39,10 @@ findgradle() {
 
 fixgradle() {
 	# if this is a blade workspace or a subrepo, don't do anything
+
+	if [ "" == "$GIT_ROOT" ]; then
+		return 0
+	fi
 
 	if [ -f $GRADLE_HOME/build.gradle ] && [ -f settings.gradle ]; then
 		if [ "" != "$(git ls-files -v | grep '^h ' | cut -d' ' -f 2 | grep -F 'settings.gradle')" ]; then
@@ -104,8 +116,6 @@ fixgradle() {
 }
 
 gw() {
-	echo "Locating gradle wrapper..."
-
 	findgradle
 
 	if [[ 0 -ne $? ]]; then
@@ -120,20 +130,22 @@ gw() {
 
 	# avoid using the CDN, because it's not reliable
 
-	echo "Removing references to CDN..."
-
 	local GRADLE_ARGS="--stacktrace"
 
-	pushd $GIT_ROOT > /dev/null
+	if [ "" != "$GIT_ROOT" ]; then
+		echo "Removing references to CDN..."
 
-	git ls-files -v | grep -v '^h ' | cut -d' ' -f 2- | grep '.\(gradle\|properties\)$' | xargs grep -Fl cdn.lfrs.sl > $GIT_ROOT/.redeploy/usedcdn.txt
+		pushd $GIT_ROOT > /dev/null
 
-	if [[ 0 -ne $(cat $GIT_ROOT/.redeploy/usedcdn.txt | wc -l) ]]; then
-		GRADLE_ARGS="$GRADLE_ARGS --no-daemon -Drepository.url=http://repository.liferay.com/nexus/content/groups/public"
-		cat $GIT_ROOT/.redeploy/usedcdn.txt | xargs sed -i.bak 's@https://cdn.lfrs.sl/@http://@g'
+		git ls-files -v | grep -v '^h ' | cut -d' ' -f 2- | grep '.\(gradle\|properties\)$' | xargs grep -Fl cdn.lfrs.sl > $GIT_ROOT/.redeploy/usedcdn.txt
+
+		if [ -f $GIT_ROOT/.redeploy/usedcdn.txt ] && [[ 0 -ne $(cat $GIT_ROOT/.redeploy/usedcdn.txt | wc -l) ]]; then
+			GRADLE_ARGS="$GRADLE_ARGS --no-daemon -Drepository.url=http://repository.liferay.com/nexus/content/groups/public"
+			cat $GIT_ROOT/.redeploy/usedcdn.txt | xargs sed -i.bak 's@https://cdn.lfrs.sl/@http://@g'
+		fi
+
+		popd > /dev/null
 	fi
-
-	popd > /dev/null
 
 	# run the gradlew binary, making sure to set GRADLE_OPTS if
 	# it is not yet set
@@ -153,7 +165,7 @@ gw() {
 		EXIT_CODE=$?
 	fi
 
-	if [[ 0 -ne $(cat $GIT_ROOT/.redeploy/usedcdn.txt | wc -l) ]]; then
+	if [ -f $GIT_ROOT/.redeploy/usedcdn.txt ] && [[ 0 -ne $(cat $GIT_ROOT/.redeploy/usedcdn.txt | wc -l) ]]; then
 		pushd $GIT_ROOT > /dev/null
 		cat $GIT_ROOT/.redeploy/usedcdn.txt | xargs git checkout
 		popd > /dev/null
@@ -182,8 +194,10 @@ if [[ 8 -gt $JAVA_VERSION ]]; then
 	setopts
 fi
 
-mkdir -p $GIT_ROOT/.redeploy
+if [ "" != "$GIT_ROOT" ]; then
+	mkdir -p $GIT_ROOT/.redeploy
 
-cat /dev/null > $GIT_ROOT/.redeploy/gwchanges.txt
+	cat /dev/null > $GIT_ROOT/.redeploy/gwchanges.txt
+fi
 
 gw $@
