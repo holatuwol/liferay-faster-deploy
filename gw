@@ -38,7 +38,7 @@ findgradle() {
 }
 
 fixgradle() {
-	# if this is a blade workspace or a subrepo, don't do anything
+	# if this is a blade workspace or a subrepo, don't do anything more
 
 	if [ "" == "$GIT_ROOT" ]; then
 		return 0
@@ -130,22 +130,7 @@ gw() {
 
 	# avoid using the CDN, because it's not reliable
 
-	local GRADLE_ARGS="--stacktrace"
-
-	if [ "" != "$GIT_ROOT" ]; then
-		echo "Removing references to CDN..."
-
-		pushd $GIT_ROOT > /dev/null
-
-		git ls-files -v | grep -v '^h ' | cut -d' ' -f 2- | grep '.\(gradle\|properties\)$' | xargs grep -Fl cdn.lfrs.sl > $GIT_ROOT/.redeploy/usedcdn.txt
-
-		if [ -f $GIT_ROOT/.redeploy/usedcdn.txt ] && [[ 0 -ne $(cat $GIT_ROOT/.redeploy/usedcdn.txt | wc -l) ]]; then
-			GRADLE_ARGS="$GRADLE_ARGS --no-daemon -Drepository.url=http://repository.liferay.com/nexus/content/groups/public"
-			cat $GIT_ROOT/.redeploy/usedcdn.txt | xargs sed -i.bak 's@https://cdn.lfrs.sl/@http://@g'
-		fi
-
-		popd > /dev/null
-	fi
+	local GRADLE_ARGS="--stacktrace --no-daemon -Drepository.url=http://repository.liferay.com/nexus/content/groups/public"
 
 	# run the gradlew binary, making sure to set GRADLE_OPTS if
 	# it is not yet set
@@ -163,12 +148,6 @@ gw() {
 		gradle $GRADLE_ARGS $@
 
 		EXIT_CODE=$?
-	fi
-
-	if [ -f $GIT_ROOT/.redeploy/usedcdn.txt ] && [[ 0 -ne $(cat $GIT_ROOT/.redeploy/usedcdn.txt | wc -l) ]]; then
-		pushd $GIT_ROOT > /dev/null
-		cat $GIT_ROOT/.redeploy/usedcdn.txt | xargs git checkout
-		popd > /dev/null
 	fi
 
 	return $EXIT_CODE
