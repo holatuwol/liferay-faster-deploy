@@ -191,6 +191,15 @@ if [ "" == "$REBUILD" ]; then
 	REBUILD="master 70x 62x 61x"
 fi
 
+if [ ! -e $(dirname $PORTAL_SOURCE_ROOT)/liferay-binaries-cache-2017 ]; then
+	pushd $(dirname $PORTAL_SOURCE_ROOT)
+	git clone git@github.com:liferay/liferay-binaries-cache-2017.git
+fi
+
+cd $(dirname $PORTAL_SOURCE_ROOT)/liferay-binaries-cache-2017
+update
+git rebase origin/master
+
 cd $PORTAL_SOURCE_ROOT
 update $REBUILD
 branches $REBUILD
