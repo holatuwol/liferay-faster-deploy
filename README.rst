@@ -33,7 +33,12 @@ Then, add this section to `.bash_aliases` (or the equivalent on whichever shell 
 	}
 
 	rd() {
-		TAG_ARCHIVE_MIRROR='http://cloud-10-50-0-165/builds/fixpacks' \
+		# Please reset the below to point to the correct server locations.
+		# If something does not apply, set the value to blank.
+
+		LIFERAY_FILES_MIRROR='http://mirrors/files.liferay.com' \
+			LIFERAY_RELEASES_MIRROR='http://mirrors/releases.liferay.com' \
+			TAG_ARCHIVE_MIRROR='http://cloud-10-50-0-165/builds/fixpacks' \
 			BRANCH_ARCHIVE_MIRROR='http://cloud-10-50-0-165/builds/branches' \
 				${MCD_RD_CLONE_PATH}/redeploy $@
 	}

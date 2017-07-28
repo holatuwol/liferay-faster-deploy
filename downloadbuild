@@ -1,35 +1,14 @@
 #!/bin/bash
 
 downloadbranch() {
-	# Make sure there is a build on the archive mirror for our branch
-
 	SHORT_NAME=$(echo $BASE_BRANCH | sed 's/ee-//g' | sed 's/\.//g')
-	BUILD_NAME=$(getbuildname)
+	NEW_BASELINE=
 
-	if [ "" == "$BUILD_NAME" ]; then
-		LOCATED_BUILD=$(find "$HOME/.liferay/builds" -name ${SHORT_NAME}*.tar.gz | sort | tail -1)
+	downloadbranchbuild
 
-		if [ "" == "$LOCATED_BUILD" ]; then
-			echo "Could not find build for $BASE_BRANCH"
-			return 1
-		fi
-
-		BUILD_NAME=$(basename $LOCATED_BUILD)
-		NEW_BASELINE=$(cat "$HOME/.liferay/builds/${BUILD_NAME}.githash")
-		echo "Could not find build for $BASE_BRANCH, using ${BUILD_NAME}"
-		return 0
+	if [ "" == "$NEW_BASELINE" ]; then
+		downloadbranchmirror
 	fi
-
-	# If we're going to download the new build, then delete older builds
-
-	if [ ! -f "$HOME/.liferay/builds/$BUILD_NAME" ]; then
-		find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.tar.gz" | xargs rm
-		find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.tar.gz.githash" | xargs rm
-	fi
-
-	# Acquire the hash and make sure we have it
-
-	NEW_BASELINE=$(getbuildhash)
 
 	if [ "" == "$(git log -1 --pretty='%H' $NEW_BASELINE 2> /dev/null)" ]; then
 		echo "Checking remotes for updates"
@@ -45,8 +24,6 @@ downloadbranch() {
 		BASE_HASH=$(git log -1 --pretty='%H' $BASE_BRANCH)
 
 		if [ "$BASE_HASH" != "$NEW_BASELINE" ]; then
-			rm -f .redeploy/last_deploy.txt
-
 			NEEDS_STASH=$(git status -s | grep -v '??')
 
 			if [ "" != "$NEEDS_STASH" ]; then
@@ -66,19 +43,100 @@ downloadbranch() {
 				return $REBASE_STATUS
 			fi
 		fi
-	else
-		rm -f .redeploy/last_deploy.txt
 	fi
+}
+
+downloadbranchbuild() {
+	# Make sure there is a build on the archive mirror for our branch
+
+	if [ "" == "$BRANCH_ARCHIVE_MIRROR" ]; then
+		return 0
+	fi
+
+	# Make sure there is a build on the archive mirror for our branch
+
+	BUILD_NAME=$(getbuildname)
+
+	if [ "" == "$BUILD_NAME" ]; then
+		LOCATED_BUILD=$(find "$HOME/.liferay/builds" -name ${SHORT_NAME}*.tar.gz | sort | tail -1)
+
+		if [ "" == "$LOCATED_BUILD" ]; then
+			echo "Could not find build for $BASE_BRANCH"
+			return 1
+		fi
+
+		BUILD_NAME=$(basename $LOCATED_BUILD)
+		NEW_BASELINE=$(cat "$HOME/.liferay/builds/${BUILD_NAME}.githash")
+		echo "Could not find build for $BASE_BRANCH, using ${BUILD_NAME}"
+		return 0
+	fi
+
+	# If we're going to download the new build, then delete older builds
+
+	if [ ! -f "$HOME/.liferay/builds/$BUILD_NAME" ]; then
+		find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.tar.gz*" | xargs rm
+		find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.zip*" | xargs rm
+	fi
+
+	# Acquire the hash and make sure we have it
+
+	NEW_BASELINE=$(getbuildhash)
 
 	# Download the build if we haven't done so already, making
 	# sure to clean up past builds to not take up too much space
 
-	if [ -z "${BRANCH_ARCHIVE_MIRROR}" ]; then
-		echo "Please set a BRANCH_ARCHIVE_MIRROR for the build to download updated snapshots"
-	elif [ ! -f "$HOME/.liferay/builds/$BUILD_NAME" ]; then
-		echo "Downloading snapshot for $SHORT_NAME ($NEW_BASELINE)"
-		getbuild "${BRANCH_ARCHIVE_MIRROR}/${BUILD_NAME}"
+	echo "Downloading snapshot for $SHORT_NAME ($NEW_BASELINE)"
+	getbuild "${BRANCH_ARCHIVE_MIRROR}/${BUILD_NAME}"
+}
+
+downloadbranchmirror() {
+	local REQUEST_URL=
+
+	if [[ "$BASE_BRANCH" == ee-* ]]; then
+		if [ "" == "$LIFERAY_FILES_MIRROR" ]; then
+			return 0
+		fi
+
+		REQUEST_URL="$LIFERAY_FILES_MIRROR/private/ee/portal/nightly-$BASE_BRANCH/"
+	else
+		if [ "" == "$LIFERAY_RELEASES_MIRROR" ]; then
+			return 0
+		fi
+
+		REQUEST_URL="$LIFERAY_RELEASES_MIRROR/portal/nightly-$BASE_BRANCH/"
 	fi
+
+	local BUILD_TIMESTAMP=$(curl -s --connect-timeout 2 $REQUEST_URL | grep -o '<a href="[0-9]*/">' | cut -d'"' -f 2 | sort | tail -1)
+
+	if [ "" == "$BUILD_TIMESTAMP" ]; then
+		return 0
+	fi
+
+	REQUEST_URL="${REQUEST_URL}${BUILD_TIMESTAMP}"
+	BUILD_TIMESTAMP=$(echo $BUILD_TIMESTAMP | cut -d'/' -f 1)
+	BUILD_NAME="$SHORT_NAME-$BUILD_TIMESTAMP.zip"
+
+	local BUILD_CANDIDATE=$(curl -s --connect-timeout 2 $REQUEST_URL | grep -o '<a href="[^"]*tomcat-7.0-[^"]*">' | cut -d'"' -f 2 | sort | tail -1)
+
+	if [ "" == "$BUILD_TIMESTAMP" ]; then
+		return 0
+	fi
+
+	REQUEST_URL="${REQUEST_URL}${BUILD_CANDIDATE}"
+
+	NEW_BASELINE=$(echo $BUILD_CANDIDATE | grep -o "[a-z0-9]*.zip" | cut -d'.' -f 1 | cut -d'-' -f 2)
+
+	if [ -f "$HOME/.liferay/builds/$BUILD_NAME" ]; then
+		return 0
+	fi
+
+	find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.tar.gz*" | xargs rm
+	find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.zip*" | xargs rm
+
+	echo "Downloading snapshot for $SHORT_NAME ($NEW_BASELINE)"
+
+	getbuild $REQUEST_URL ${BUILD_NAME}
+	echo -n $NEW_BASELINE > $HOME/.liferay/builds/${BUILD_NAME}.githash
 }
 
 downloadbuild() {
@@ -155,19 +213,27 @@ extract() {
 		return 0
 	fi
 
-	rm -f .redeploy/last_deploy.txt
-
 	pushd "$LIFERAY_HOME" > /dev/null
 
 	rm -rf tomcat* osgi tools work
 
-	EXCLUDES=
+	if [[ "$BUILD_NAME" == *.tar.gz ]]; then
+		local EXCLUDES=
 
-	if [ -d data ]; then
-		EXCLUDES="--exclude='data/hypersonic/lportal.script' --exclude='data/hypersonic/lportal.properties'"
+		if [ -d data ]; then
+			EXCLUDES="--exclude='data/hypersonic/lportal.script' --exclude='data/hypersonic/lportal.properties'"
+		fi
+
+		tar -zxf "$HOME/.liferay/builds/${BUILD_NAME}" $EXCLUDES
+	elif [[ "$BUILD_NAME" == *.zip ]]; then
+		local EXCLUDES=
+
+		if [ -d data ]; then
+			EXCLUDES="-x 'data/hypersonic/lportal.script' -x 'data/hypersonic/lportal.properties'"
+		fi
+
+		unzip $EXCLUDES "$HOME/.liferay/builds/${BUILD_NAME}"
 	fi
-
-	tar -zxf "$HOME/.liferay/builds/${BUILD_NAME}" $EXCLUDES
 
 	echo -n "$NEW_BASELINE" > "baseline.txt"
 
@@ -181,6 +247,10 @@ getbuild() {
 		aws s3 cp "$1" .
 	else
 		curl -O "$1"
+	fi
+
+	if [ "" != "$2" ]; then
+		mv $(basename $1) $2
 	fi
 
 	builtin cd -
