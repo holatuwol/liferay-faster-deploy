@@ -44,6 +44,12 @@ fixgradle() {
 		return 0
 	fi
 
+	if [ "" != "$(grep -F update-binaries-cache "$GIT_ROOT/build.xml")" ]; then
+		pushd "$GIT_ROOT" > /dev/null
+		ant update-binaries-cache
+		popd > /dev/null
+	fi
+
 	if [ -f $GRADLE_HOME/build.gradle ] && [ -f settings.gradle ]; then
 		if [ "" != "$(git ls-files -v | grep '^h ' | cut -d' ' -f 2 | grep -F 'settings.gradle')" ]; then
 			git ls-files -v | grep '^h ' | cut -d' ' -f 2 | grep -F 'settings.gradle' | xargs git checkout
