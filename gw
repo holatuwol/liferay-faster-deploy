@@ -44,7 +44,7 @@ fixgradle() {
 		return 0
 	fi
 
-	if [ "" != "$(grep -F update-binaries-cache "$GIT_ROOT/build.xml")" ]; then
+	if [ -f "$GIT_ROOT/build.xml" ] && [ "" != "$(grep -F update-binaries-cache "$GIT_ROOT/build.xml")" ]; then
 		pushd "$GIT_ROOT" > /dev/null
 		ant update-binaries-cache
 		popd > /dev/null
@@ -106,11 +106,11 @@ fixgradle() {
 		TOMCAT_VERSION=$(grep -F app.server.tomcat.version= $GIT_ROOT/app.server.$USER.properties | cut -d'=' -f 2)
 	fi
 
-	if [ "" == "$TOMCAT_VERSION" ]; then
+	if [ "" == "$TOMCAT_VERSION" ] && [ -f app.server.properties ]; then
 		TOMCAT_VERSION=$(grep -F app.server.tomcat.version= $GIT_ROOT/app.server.properties | cut -d'=' -f 2)
 	fi
 
-	if [ ! -f $LIFERAY_HOME/tomcat-$TOMCAT_VERSION/webapps/ROOT/WEB-INF/lib/util-taglib.jar ]; then
+	if [ -d "$GIT_ROOT/util-taglib" ] && [ ! -f $LIFERAY_HOME/tomcat-$TOMCAT_VERSION/webapps/ROOT/WEB-INF/lib/util-taglib.jar ]; then
 		echo "Deploying util-taglib.jar, because it may be needed in Gradle tasks"
 
 		checksnapshots
