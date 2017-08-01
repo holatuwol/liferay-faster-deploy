@@ -25,6 +25,8 @@ buildprops() {
 			perl -pi -e 's/\r\n|\n|\r/\n/g' "$GIT_ROOT/build.$USER.properties"
 		fi
 
+		setpassword
+
 		return 0
 	fi
 
@@ -42,13 +44,7 @@ buildprops() {
 
 	echo 'javac.compiler=modern' >> $GIT_ROOT/build.$USER.properties
 
-	# Make sure the repository password is up to date
-
-	local UPSTREAM_BRANCH=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/ee-7.0.x$" | cut -d'/' -f 3,4)
-
-	if [ "" != "$UPSTREAM_BRANCH" ] && [ -f $GIT_ROOT/build.properties ]; then
-		git show ${UPSTREAM_BRANCH}:build.properties | grep repository.private.password= >> $GIT_ROOT/build.$USER.properties
-	fi
+	setpassword
 }
 
 cleanappserver() {
@@ -213,6 +209,30 @@ gradleprops() {
 
 setopts() {
 	. $(dirname "${BASH_SOURCE[0]}")/setopts
+}
+
+setpassword() {
+	if [ ! -f $GIT_ROOT/build.properties ]; then
+		return 0
+	fi
+
+	# Make sure the repository password is up to date
+
+	local UPSTREAM_BRANCH=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/ee-7.0.x$" | cut -d'/' -f 3,4)
+
+	if [ "" == "$UPSTREAM_BRANCH" ]; then
+		return 0
+	fi
+
+	local REPOSITORY_PASSWORD_LINE=$(git show ${UPSTREAM_BRANCH}:build.properties | grep -F build.repository.private.password= | sed 's/^ *//g')
+
+	if [ ! -f $GIT_ROOT/build.$USER.properties ]; then
+		echo "$REPOSITORY_PASSWORD_LINE" > $GIT_ROOT/build.$USER.properties
+	elif [ "" == "$(grep -F repository.private.password $GIT_ROOT/build.$USER.properties)" ]; then
+		echo "$REPOSITORY_PASSWORD_LINE" >> $GIT_ROOT/build.$USER.properties
+	else
+		sed -i.bak "s/.*build.repository.private.password=.*/$REPOSITORY_PASSWORD_LINE/g" $GIT_ROOT/build.$USER.properties
+	fi
 }
 
 setopts
