@@ -106,12 +106,12 @@ fixgradle() {
 		TOMCAT_VERSION=$(grep -F app.server.tomcat.version= $GIT_ROOT/app.server.$USER.properties | cut -d'=' -f 2)
 	fi
 
-	if [ "" == "$TOMCAT_VERSION" ] && [ -f app.server.properties ]; then
+	if [ "" == "$TOMCAT_VERSION" ] && [ -f $GIT_ROOT/app.server.properties ]; then
 		TOMCAT_VERSION=$(grep -F app.server.tomcat.version= $GIT_ROOT/app.server.properties | cut -d'=' -f 2)
 	fi
 
 	if [ -d "$GIT_ROOT/util-taglib" ] && [ ! -f $LIFERAY_HOME/tomcat-$TOMCAT_VERSION/webapps/ROOT/WEB-INF/lib/util-taglib.jar ]; then
-		echo "Deploying util-taglib.jar, because it may be needed in Gradle tasks"
+		echo "Deploying util-taglib.jar to $LIFERAY_HOME/tomcat-$TOMCAT_VERSION, because it may be needed in Gradle tasks"
 
 		checksnapshots
 
