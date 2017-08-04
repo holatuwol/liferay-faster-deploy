@@ -12,4 +12,4 @@ else
 	echo '{ "globClass": "build/classes/java/main/**/*.class" }' > .lwatch.json
 fi
 
-REPO_PATH=$REPO_PATH $(dirname ${BASH_SOURCE[0]})/nodew lwatch brunobasto/liferay-watch $@
+REPO_PATH=$REPO_PATH $(dirname ${BASH_SOURCE[0]})/nodew lwatch liferay/liferay-osgi-watch $@

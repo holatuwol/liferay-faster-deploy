@@ -17,7 +17,7 @@ Liferay Watch
 =============
 
 * Wrapper: ``lwatch``
-* Repository: `brunobasto/liferay-watch <https://github.com/brunobasto/liferay-watch>`__
+* Repository: `brunobasto/liferay-watch <https://github.com/liferay/liferay-osgi-watch>`__
 
 .. code-block:: bash
 
