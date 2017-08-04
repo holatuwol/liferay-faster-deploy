@@ -200,7 +200,9 @@ sendpull() {
 			return 0
 		fi
 
-		fixdeps && baseline && formatsource && pmdreport
+		if [ -f build.gradle ]; then
+			fixdeps && baseline && formatsource && pmdreport
+		fi
 
 		EXIT_CODE=$?
 
