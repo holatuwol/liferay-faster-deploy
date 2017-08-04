@@ -6,7 +6,17 @@ if [ "" == "" ]; then
 	BUNDLE_NAME=$(basename $PWD)
 fi
 
-if [[ 4 -lt $(gradle --version | grep Gradle | cut -d' ' -f 2 | cut -d'.' -f 1) ]]; then
+if [ ! -f package.json ]; then
+	echo '{ "name": "'$BUNDLE_NAME'" }' > package.json
+fi
+
+if [ ! -d build ] && [ ! -d classes ]; then
+	gradle deploy
+fi
+
+if [ -d classes ]; then
+	echo '{ "globClass": "classes/**/*.class" }' > .lwatch.json
+elif [[ 4 -lt $(gradle --version | grep Gradle | cut -d' ' -f 2 | cut -d'.' -f 1) ]]; then
 	echo '{ "globClass": "build/classes/main/**/*.class" }' > .lwatch.json
 else
 	echo '{ "globClass": "build/classes/java/main/**/*.class" }' > .lwatch.json
