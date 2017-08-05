@@ -58,9 +58,11 @@ TOMCAT_PORT_PREFIX=$(grep -o "port=\"[89][0-9]05\"" $CATALINA_BASE/conf/server.x
 DEBUG_PORT_SUFFIX=00
 DEBUG_PORT=$TOMCAT_PORT_PREFIX$DEBUG_PORT_SUFFIX
 
+export JPDA_OPTS="-Xdebug -Xrunjdwp:transport=dt_socket,address=$DEBUG_PORT,server=y,suspend=n"
+
 JMX_PORT_SUFFIX=99
 JMX_PORT=$TOMCAT_PORT_PREFIX$JMX_PORT_SUFFIX
 
 IP_ADDRESS=$(hostname -I | cut -d' ' -f 1)
 
-export JPDA_OPTS="-Xdebug -Xrunjdwp:transport=dt_socket,address=$DEBUG_PORT,server=y,suspend=n"
+export CATALINA_OPTS="$CATALINA_OPTS -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=$JMX_PORT -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false"
