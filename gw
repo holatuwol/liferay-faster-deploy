@@ -44,7 +44,7 @@ fixgradle() {
 		return 0
 	fi
 
-	if [ -f "$GIT_ROOT/build.xml" ] && [ "" != "$(grep -F update-binaries-cache "$GIT_ROOT/build.xml")" ]; then
+	if [ -f "$GIT_ROOT/build.xml" ] && [ -e ../liferay-binaries-cache-2017 ] && [ "" != "$(grep -F update-binaries-cache "$GIT_ROOT/build.xml")" ]; then
 		pushd "$GIT_ROOT" > /dev/null
 		ant update-binaries-cache
 		popd > /dev/null
