@@ -1,5 +1,9 @@
 #!/bin/bash
 
+gw() {
+	$(dirname $BASH_SOURCE[0])/../gw $@
+}
+
 BUNDLE_NAME=$(grep '^Bundle-SymbolicName' bnd.bnd | cut -d':' -f 2 | tr -d ' ')
 
 if [ "" == "$BUNDLE_NAME" ]; then
@@ -11,12 +15,12 @@ if [ ! -f package.json ]; then
 fi
 
 if [ ! -d build ] && [ ! -d classes ]; then
-	gradle deploy
+	gw deploy
 fi
 
 if [ -d classes ]; then
 	echo '{ "globClass": "classes/**/*.class" }' > .lwatch.json
-elif [[ 4 -lt $(gradle --version | grep Gradle | cut -d' ' -f 2 | cut -d'.' -f 1) ]]; then
+elif [[ 4 -lt $(gw --version | grep "^Gradle " | cut -d' ' -f 2 | cut -d'.' -f 1) ]]; then
 	echo '{ "globClass": "build/classes/main/**/*.class" }' > .lwatch.json
 else
 	echo '{ "globClass": "build/classes/java/main/**/*.class" }' > .lwatch.json
