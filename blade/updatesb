@@ -1,0 +1,42 @@
+#!/bin/bash
+
+. $(dirname ${BASH_SOURCE[0]})/update_common
+
+updatesb() {
+	pushd modules > /dev/null
+
+	updateplugin portal-tools-service-builder gradle-plugins-service-builder
+	updateplugin source-formatter gradle-plugins-source-formatter
+	updateplugin javadoc-formatter gradle-plugins-javadoc-formatter
+	updateplugin portal-tools-wsdd-builder gradle-plugins-wsdd-builder
+
+	addfolder sdk/gradle-plugins
+
+	gw $GRADLE_ARGS
+
+	popd > /dev/null
+}
+
+pushd $PORTAL_SOURCE_ROOT > /dev/null
+
+setopts
+updatesb
+
+popd > /dev/null
+
+pushd $BLADE_WORKSPACE_ROOT/liferay-workspace > /dev/null
+
+git clean -xdf
+
+setopts
+fixgradleplugin
+
+gw :apps:service-builder:foo-service:buildService :apps:service-builder:foo-api:compileJava
+
+popd > /dev/null
+
+pushd $PORTAL_SOURCE_ROOT > /dev/null
+
+cleanup
+
+popd > /dev/null
