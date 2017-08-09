@@ -43,6 +43,10 @@ fixgradleplugin() {
 	sed -i.bak "/\"com.liferay.gradle.plugins\"/s@version: \"[^\"]*\"@version: \"$GP_VERSION\"@g" \
 		build.gradle \
 		settings.gradle
+
+	sed -i.bak "/\"com.liferay.gradle.plugins.workspace\"/s@version: \"[^\"]*\"@version: \"$GPWS_VERSION\"@g" \
+		build.gradle \
+		settings.gradle
 }
 
 fixmavenroot() {
@@ -77,7 +81,7 @@ updatemodule() {
 	if [ "" != "$2" ]; then
 		local PROJECT_NAME=":$(echo $4 | tr '/' ':')"
 
-		sed -i.bak "/$2/s@version: \"[^\"]*\"@version: \"$3\"@" $1/build.gradle
+		sed -i.bak "/\"$2\"/s@version: \"[^\"]*\"@version: \"$3\"@" $1/build.gradle
 		sed -i.bak "s@project(\"$PROJECT_NAME\")@group: \"com.liferay\", name: \"$2\", version: \"$3\"@g" $1/build.gradle
 	fi
 
@@ -95,6 +99,7 @@ updateplugin() {
 	local PLUGIN_VERSION=$(updatemodule sdk/$2 $TOOL_NAME $TOOL_VERSION util/$1)
 
 	GP_VERSION=$(updatemodule sdk/gradle-plugins $PLUGIN_NAME $PLUGIN_VERSION sdk/$2)
+	GPWS_VERSION=$(updatemodule sdk/gradle-plugins-workspace com.liferay.gradle.plugins $GP_VERSION sdk/$2)
 }
 
 if [ "" == "$BLADE_WORKSPACE_ROOT" ]; then

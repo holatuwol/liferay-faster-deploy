@@ -11,6 +11,7 @@ updatesb() {
 	updateplugin portal-tools-wsdd-builder gradle-plugins-wsdd-builder
 
 	addfolder sdk/gradle-plugins
+	addfolder sdk/gradle-plugins-workspace
 
 	gw $GRADLE_ARGS
 
