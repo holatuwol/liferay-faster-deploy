@@ -26,7 +26,7 @@ gitchanges() {
 
 	git status -s | grep -vF '.redeploy' | awk '{print $2}' >> .redeploy/changes.txt
 
-	if [[ 0 -eq $(cat .redeploy/changes.txt | wc -l) ]]; then
+	if [[ 0 -eq $(cat .redeploy/changes.txt | grep -c '^') ]]; then
 		echo 'No changes detected.'
 
 		cat /dev/null > .redeploy/changes_ant.txt

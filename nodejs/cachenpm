@@ -63,7 +63,7 @@ findmodules() {
 			cp .redeploy/changes_gradle_2.txt .includes
 		fi
 
-		if [[ 0 -ne $(cat .includes | wc -l) ]]; then
+		if [[ 0 -ne $(cat .includes | grep -c '^') ]]; then
 			transitiveincludes
 
 			for folder in $(cat .includes); do
@@ -86,14 +86,14 @@ setopts() {
 }
 
 transitiveincludes() {
-	if [[ 0 -eq $(cat .includes | wc -l) ]]; then
+	if [[ 0 -eq $(cat .includes | grep -c '^') ]]; then
 		return 0
 	fi
 
 	cp -f .includes .includes_transitive
 
 	old_count=0
-	new_count=$(cat .includes | sort -u | wc -l)
+	new_count=$(cat .includes | sort -u | grep -c '^')
 
 	git ls-files modules | grep -F '/build.gradle' | grep -vF '/src/' > .redeploy/gradle_list.txt
 	git ls-files modules | grep -F '/bnd.bnd' | grep -vF '/src/' | xargs grep Bundle-SymbolicName | grep -vF '{' | sed 's/Bundle-SymbolicName: //g' > .redeploy/bnd_list.txt
@@ -118,7 +118,7 @@ transitiveincludes() {
 		cat .includes_old .includes_transitive | sort -u > .includes
 		rm .includes_old
 
-		new_count=$(cat .includes | wc -l)
+		new_count=$(cat .includes | grep -c '^')
 	done
 
 	rm -f .includes_transitive

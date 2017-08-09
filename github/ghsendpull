@@ -42,7 +42,7 @@ checkrepomode() {
 
 	echo -e "\nThis pull request must be split between repositories\n"
 
-	if [[ 0 -ne $(cat .redeploy/central.txt | wc -l) ]]; then
+	if [[ 0 -ne $(cat .redeploy/central.txt | grep -c '^') ]]; then
 		echo "* $(git remote get-url $upstream_remote)"
 		cat .redeploy/central.txt | awk '{ print "'"'"'" $1 "/'"'"'" }' | xargs git format-patch ${upstream_remote}/$BASE_BRANCH -- | awk '{ print "    ./" $1 }'
 	fi
@@ -169,7 +169,7 @@ sendpull() {
 
 		. $(dirname "${BASH_SOURCE[0]}")/../gitchanges ${upstream_remote}/$BASE_BRANCH
 
-		if [[ 0 -eq $(cat .redeploy/changes.txt | wc -l) ]]; then
+		if [[ 0 -eq $(cat .redeploy/changes.txt | grep -c '^') ]]; then
 			echo No changes detected.
 			return 0
 		fi
@@ -195,7 +195,7 @@ sendpull() {
 
 		. $(dirname "${BASH_SOURCE[0]}")/../gitchanges ${upstream_remote}/$BASE_BRANCH
 
-		if [[ 0 -eq $(cat .redeploy/changes.txt | wc -l) ]]; then
+		if [[ 0 -eq $(cat .redeploy/changes.txt | grep -c '^') ]]; then
 			echo No changes detected.
 			return 0
 		fi

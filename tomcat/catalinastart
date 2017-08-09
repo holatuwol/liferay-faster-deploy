@@ -63,7 +63,7 @@ catalinaconf() {
 	# Copy setenv.sh that knows how to adjust the default JPDA port
 	# and use more memory.
 
-	if [ ! -f setenv.sh ] || [[ 5 -lt $(cat setenv.sh | wc -l) ]]; then
+	if [ ! -f setenv.sh ] || [[ 5 -lt $(cat setenv.sh | grep -c '^') ]]; then
 		cp $(dirname ${BASH_SOURCE[0]})/setenv.sh .
 	fi
 

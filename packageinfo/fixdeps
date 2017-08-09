@@ -47,7 +47,7 @@ fixdeps() {
 	local upstream_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
 	local base_remote=
 
-	if [[ $(git log --pretty='%H' ${origin_remote}/${BASE_BRANCH}..HEAD | wc -l) -gt $(git log --pretty='%H' ${upstream_remote}/${BASE_BRANCH}..HEAD | wc -l) ]]; then
+	if [[ $(git log --pretty='%H' ${origin_remote}/${BASE_BRANCH}..HEAD | grep -c '^') -gt $(git log --pretty='%H' ${upstream_remote}/${BASE_BRANCH}..HEAD | grep -c '^') ]]; then
 		base_remote=$upstream_remote
 	else
 		base_remote=$origin_remote
@@ -75,7 +75,7 @@ fixdeps() {
 	git diff --name-only $base_remote/$BASE_BRANCH..HEAD > .redeploy/diff.txt
 	grep -F packageinfo .redeploy/diff.txt > .redeploy/changes.txt
 
-	if [[ 0 -eq $(cat .redeploy/changes.txt | wc -l) ]]; then
+	if [[ 0 -eq $(cat .redeploy/changes.txt | grep -c '^') ]]; then
 		echo No changes detected.
 		return 0
 	fi
@@ -110,7 +110,7 @@ fixdeps() {
 
 	# Mass compile check
 
-	if [ -d modules ] && [[ 0 -ne $(cat .redeploy/checkdeps.txt | wc -l) ]]; then
+	if [ -d modules ] && [[ 0 -ne $(cat .redeploy/checkdeps.txt | grep -c '^') ]]; then
 		cachenpm $base_remote/$BASE_BRANCH
 
 		cd modules

@@ -41,7 +41,7 @@ findreviewer() {
 		return 1
 	fi
 
-	if [[ 1 -ne $(echo "$reviewer" | wc -l) ]]; then
+	if [[ 1 -ne $(echo "$reviewer" | grep -c '^') ]]; then
 		echo -e "$search_key is ambiguous\n\n$reviewer"
 		return 1
 	fi

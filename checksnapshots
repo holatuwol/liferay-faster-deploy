@@ -12,7 +12,7 @@ checksnapshots() {
 	# Run the pre-checks for ant
 
 	if [ "" != "$(grep setup-libs build.xml)" ]; then
-		if [[ $(ls -1 "$GIT_ROOT/lib/portal" | wc -l) -lt $(cat "$GIT_ROOT/lib/portal/dependencies.properties" | wc -l) ]]; then
+		if [[ $(ls -1 "$GIT_ROOT/lib/portal" | grep -c '^') -lt $(cat "$GIT_ROOT/lib/portal/dependencies.properties" | grep -c '^') ]]; then
 			pushd $GIT_ROOT > /dev/null
 			ant setup-libs
 			popd > /dev/null

@@ -71,7 +71,7 @@ skipmp() {
 		fi
 	done
 
-	if [[ 0 -ne $(cat .excludes | wc -l) ]]; then
+	if [[ 0 -ne $(cat .excludes | grep -c '^') ]]; then
 		transitiveexcludes
 
 		exclude=$(cat .excludes | xargs git ls-files | grep -F .lfrbuild-portal | sort -u)
@@ -85,14 +85,14 @@ skipmp() {
 }
 
 transitiveexcludes() {
-	if [[ 0 -eq $(cat .excludes | wc -l) ]]; then
+	if [[ 0 -eq $(cat .excludes | grep -c '^') ]]; then
 		return 0
 	fi
 
 	cp -f .excludes .excludes_transitive
 
 	old_count=0
-	new_count=$(cat .excludes | sort -u | wc -l)
+	new_count=$(cat .excludes | sort -u | grep -c '^')
 
 	git ls-files modules | grep -vF '/src/' > .redeploy/lsfiles.txt
 	cat .redeploy/lsfiles.txt | grep -F '/build.gradle' > .redeploy/gradle_list.txt
@@ -123,7 +123,7 @@ transitiveexcludes() {
 		cat .excludes_old .excludes_transitive | sort -u > .excludes
 		rm .excludes_old
 
-		new_count=$(cat .excludes | wc -l)
+		new_count=$(cat .excludes | grep -c '^')
 	done
 
 	rm -f .excludes_transitive

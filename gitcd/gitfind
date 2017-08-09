@@ -28,11 +28,11 @@ gitfile() {
 	if gitfilematch "$1" "$ROOT_FOLDER"; then
 		local TOP_FOLDER=$(echo "$MATCHING_FOLDERS" | head -1)
 
-		if [[ $(echo "$MATCHING_FOLDERS" | wc -l) -eq $(echo "$MATCHING_FOLDERS" | grep -F "$TOP_FOLDER" | wc -l) ]]; then
+		if [[ $(echo "$MATCHING_FOLDERS" | grep -c '^') -eq $(echo "$MATCHING_FOLDERS" | grep -F "$TOP_FOLDER" | grep -c '^') ]]; then
 			FOLDER=$TOP_FOLDER
 		fi
 
-		if [ "" != "$FOLDER" ] && [ "" != "$MATCHING_FILES" ] && [[ 1 -eq $(echo "$MATCHING_FILES" | wc -l) ]]; then
+		if [ "" != "$FOLDER" ] && [ "" != "$MATCHING_FILES" ] && [[ 1 -eq $(echo "$MATCHING_FILES" | grep -c '^') ]]; then
 			FILE=$(basename "$MATCHING_FILES")
 		fi
 	fi
@@ -48,7 +48,7 @@ gitfilematch() {
 
 	# If the folder is empty, there's nothing for us to do
 
-	if [[ 0 -eq $(cat "$SCRATCH_FILE" | wc -l) ]]; then
+	if [[ 0 -eq $(cat "$SCRATCH_FILE" | grep -c '^') ]]; then
 		return 1
 	fi
 
@@ -192,7 +192,7 @@ gitfind() {
 		gitfile $1 "$GIT_ROOT"
 	fi
 
-	if [ "" == "$MATCHING_FOLDERS" ] || [[ 1 -ne $(echo "$MATCHING_FOLDERS" | wc -l) ]]; then
+	if [ "" == "$MATCHING_FOLDERS" ] || [[ 1 -ne $(echo "$MATCHING_FOLDERS" | grep -c '^') ]]; then
 		return 1
 	else
 		return 0
@@ -206,7 +206,7 @@ gitfinderror() {
 	fi
 
 	if [ "" != "$MATCHING_FOLDERS" ]; then
-		if [[ 1 -eq $(echo "$MATCHING_FOLDERS" | wc -l) ]]; then
+		if [[ 1 -eq $(echo "$MATCHING_FOLDERS" | grep -c '^') ]]; then
 			return 0
 		fi
 	fi

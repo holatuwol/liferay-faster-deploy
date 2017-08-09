@@ -349,7 +349,7 @@ gettargetfolder() {
 	# If they didn't say, we'll try to guess based on how far away this commit is from
 	# the last tag. If it exceeds the specified threshold, we error out.
 
-	ACTUAL_COMMITS=$(git log --pretty='%H' ${BASE_TAG}..HEAD | wc -l)
+	ACTUAL_COMMITS=$(git log --pretty='%H' ${BASE_TAG}..HEAD | grep -c '^')
 
 	if [[ $MAX_COMMITS -ge $ACTUAL_COMMITS ]]; then
 		return 0

@@ -44,7 +44,7 @@ applychanges() {
 
 	# Check to see if there are any modules we need to deploy early
 
-	if [[ 0 -ne $(cat .redeploy/changes_gradle_1.txt | wc -l) ]]; then
+	if [[ 0 -ne $(cat .redeploy/changes_gradle_1.txt | grep -c '^') ]]; then
 		deployportalpre
 
 		if [[ 0 -ne $? ]]; then
@@ -54,7 +54,7 @@ applychanges() {
 
 	# Next, check to see if there is anything we need to deploy with ant
 
-	if [[ 0 -ne $(cat .redeploy/changes_ant.txt | wc -l) ]]; then
+	if [[ 0 -ne $(cat .redeploy/changes_ant.txt | grep -c '^') ]]; then
 		deployant
 
 		if [[ 0 -ne $? ]]; then
@@ -64,7 +64,7 @@ applychanges() {
 
 	# Finally, check to see if there is anything we need to deploy with gradle
 
-	if [[ 0 -ne $(cat .redeploy/changes_gradle_2.txt | wc -l) ]]; then
+	if [[ 0 -ne $(cat .redeploy/changes_gradle_2.txt | grep -c '^') ]]; then
 		deploymodules
 
 		if [[ 0 -ne $? ]]; then
@@ -106,7 +106,7 @@ deployant() {
 	fi
 
 	if [ "" != "$(grep setup-libs build.xml)" ]; then
-		if [[ $(ls -1 "$GIT_ROOT/lib/portal" | wc -l) -lt $(cat "$GIT_ROOT/lib/portal/dependencies.properties" | wc -l) ]]; then
+		if [[ $(ls -1 "$GIT_ROOT/lib/portal" | grep -c '^') -lt $(cat "$GIT_ROOT/lib/portal/dependencies.properties" | grep -c '^') ]]; then
 			ant setup-libs
 		fi
 	fi

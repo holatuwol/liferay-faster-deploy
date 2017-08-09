@@ -136,7 +136,7 @@ subrepobpr() {
 
 	# If no commits are in master, check the local branches
 
-	if [[ 0 -eq $(cat $GIT_ROOT/.redeploy/commits.txt | wc -l) ]]; then
+	if [[ 0 -eq $(cat $GIT_ROOT/.redeploy/commits.txt | grep -c '^') ]]; then
 		cat /dev/null > $GIT_ROOT/.redeploy/commits.txt
 
 		for branch in $@; do

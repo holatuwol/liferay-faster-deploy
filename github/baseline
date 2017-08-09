@@ -19,7 +19,7 @@ baseline() {
 		local upstream_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
 		local base_remote=
 
-		if [[ $(git log --pretty='%H' ${origin_remote}/${BASE_BRANCH}..HEAD | wc -l) -gt $(git log --pretty='%H' ${upstream_remote}/${BASE_BRANCH}..HEAD | wc -l) ]]; then
+		if [[ $(git log --pretty='%H' ${origin_remote}/${BASE_BRANCH}..HEAD | grep -c '^') -gt $(git log --pretty='%H' ${upstream_remote}/${BASE_BRANCH}..HEAD | grep -c '^') ]]; then
 			base_remote=$upstream_remote
 		else
 			base_remote=$origin_remote
@@ -32,7 +32,7 @@ baseline() {
 
 	$(dirname "${BASH_SOURCE[0]}")/../gitchanges $CHANGE_ID
 
-	if [[ 0 -eq $(cat .redeploy/changes.txt | wc -l) ]]; then
+	if [[ 0 -eq $(cat .redeploy/changes.txt | grep -c '^') ]]; then
 		echo No changes detected.
 		return 0
 	fi
@@ -52,7 +52,7 @@ baseline() {
 		fi
 	done
 
-	if [[ 0 -ne $(cat $GIT_ROOT/.redeploy/baseline.txt | wc -l) ]]; then
+	if [[ 0 -ne $(cat $GIT_ROOT/.redeploy/baseline.txt | grep -c '^') ]]; then
 		checksnapshots
 
 		# Execute the one large command we built before
@@ -74,7 +74,7 @@ baseline() {
 		fi
 	fi
 
-	if [[ 0 -ne $(grep -v modules "$GIT_ROOT/.redeploy/changes_ant.txt" | grep -F '.java' | wc -l) ]]; then
+	if [[ 0 -ne $(grep -v modules "$GIT_ROOT/.redeploy/changes_ant.txt" | grep -F '.java' | grep -c '^') ]]; then
 		for folder in $(cat "$GIT_ROOT/.redeploy/changes_ant.txt"); do
 			if [ "" == "$(grep -F "$folder" $GIT_ROOT/.redeploy/changes.txt | grep -F '.java')" ]; then
 				continue

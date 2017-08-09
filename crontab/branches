@@ -38,7 +38,7 @@ branch() {
 
 	# Only retain last three builds
 
-	BUILD_COUNT=$(ls -1 "$BUILD_FOLDER_PREFIX/$1" | grep -vF '.log' | wc -l)
+	BUILD_COUNT=$(ls -1 "$BUILD_FOLDER_PREFIX/$1" | grep -vF '.log' | grep -c '^')
 
 	if [[ $BUILD_COUNT -gt 3 ]]; then
 		for BUILD_ID in $(ls -1 "$BUILD_FOLDER_PREFIX/$1" | grep -vF '.log' | sort | head -$(expr $BUILD_COUNT '-' 3)); do

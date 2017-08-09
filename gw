@@ -78,7 +78,7 @@ fixgradle() {
 	# if you appear to be building to a Liferay downloaded bundle rather
 	# than a built bundle, tell the user to use the override folder
 
-	if [ -d "$LIFERAY_HOME/osgi/marketplace" ] && [[ 0 -ne $(ls -1 $LIFERAY_HOME/osgi/marketplace | grep -F .lpkg | wc -l) ]]; then
+	if [ -d "$LIFERAY_HOME/osgi/marketplace" ] && [[ 0 -ne $(ls -1 $LIFERAY_HOME/osgi/marketplace | grep -F .lpkg | grep -c '^') ]]; then
 		local OVERRIDE=$LIFERAY_HOME/osgi/marketplace/override
 
 		if [ "" == "$(grep -F "$OVERRIDE" build.gradle)" ]; then

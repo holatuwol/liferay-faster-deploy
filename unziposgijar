@@ -9,7 +9,7 @@ getmodulepath() {
 
 	# search the bnds for the symbolic name
 
-	if [[ 0 -eq $(cat .redeploy/bndmatches.txt | wc -l) ]]; then
+	if [[ 0 -eq $(cat .redeploy/bndmatches.txt | grep -c '^') ]]; then
 		echo "Could not find Bundle-SymbolicName $1"
 		return 1
 	fi
@@ -19,14 +19,14 @@ getmodulepath() {
 
 	local BND=$(cat .redeploy/bndmatches.txt | cut -d':' -f 1)
 
-	if [[ 1 -eq $(echo "$BND" | wc -l) ]]; then
+	if [[ 1 -eq $(echo "$BND" | grep -c '^') ]]; then
 		MODULE_PATH=$(dirname $BND)
 		return 0
 	fi
 
 	BND=$(grep -F "$1" .redeploy/bndmatches.txt | cut -d':' -f 1)
 
-	if [ "" != "$BND" ] && [[ 1 -eq $(echo "$BND" | wc -l) ]]; then
+	if [ "" != "$BND" ] && [[ 1 -eq $(echo "$BND" | grep -c '^') ]]; then
 		MODULE_PATH=$(dirname $BND)
 		return 0
 	fi
