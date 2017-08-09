@@ -160,7 +160,7 @@ deploymodules() {
 	done
 
 	cd modules
-	cat ../.redeploy/changes_gradle_3.txt | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":deploy" }' | xargs $(dirname "${BASH_SOURCE[0]}")/gw
+	cat ../.redeploy/changes_gradle_3.txt | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":compileJSP :" $1 ":deploy" }' | xargs $(dirname "${BASH_SOURCE[0]}")/gw
 	cd ..
 }
 
