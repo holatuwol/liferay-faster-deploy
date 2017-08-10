@@ -32,19 +32,23 @@ function checkVersionInfo() {
 	var table = document.createElement('table');
 	table.className = 'table';
 	summary.appendChild(table);
+	var tableBody = document.createElement('tbody');
+	table.appendChild(tableBody);
+	table = tableBody;
 
 	var getRowBackgroundAlpha = function(version1, version2) {
-		if (version1 != version2) {
-			return 0.1;
-		}
+		return (version1 != version2) ? 0.1 : 0.0;
+	};
 
-		return 0.0;
+	var getRowForegroundAlpha = function(version1, version2) {
+		return (version1 != version2) ? 0.9 : 0.4;
 	};
 
 	var addRow = function(isHeader, rowData) {
 		var row = document.createElement('tr');
 
 		if (!isHeader && (rowData.length > 3)) {
+			row.style.color = 'rgba(0,0,0,' + getRowForegroundAlpha(rowData[2], rowData[3]) + ')'
 			row.style.backgroundColor = 'rgba(0,0,0,' + getRowBackgroundAlpha(rowData[2], rowData[3]) + ')';
 		}
 
