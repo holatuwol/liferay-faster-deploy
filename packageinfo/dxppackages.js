@@ -22,8 +22,15 @@ notableOnly.checked = getParameter('notableOnly') == 'true';
 function checkPackageInfo() {
 	if (history.pushState) {
 		var newURL = window.location.protocol + "//" + window.location.host + window.location.pathname +
-			'?sourceVersion=' + select1.options[select1.selectedIndex].value + '&targetVersion=' + select2.options[select2.selectedIndex].value +
-				'&nameFilter=' + nameFilter.value + '&notableOnly=' + notableOnly.checked;
+			'?sourceVersion=' + select1.options[select1.selectedIndex].value + '&targetVersion=' + select2.options[select2.selectedIndex].value;
+
+		if (nameFilter.value) {
+			newURL += '&nameFilter=' + nameFilter.value;
+		}
+
+		if (notableOnly.checked) {
+			newURL += '&notableOnly=true';
+		}
 
 		history.pushState({path: newURL}, '', newURL);
 	}

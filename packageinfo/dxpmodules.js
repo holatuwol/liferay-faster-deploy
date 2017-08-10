@@ -22,8 +22,11 @@ function checkVersionInfo() {
 
 	if (history.pushState) {
 		var newURL = window.location.protocol + "//" + window.location.host + window.location.pathname +
-			'?sourceVersion=' + select1.options[select1.selectedIndex].value + '&targetVersion=' + select2.options[select2.selectedIndex].value +
-				'&nameFilter=' + nameFilter.value;
+			'?sourceVersion=' + select1.options[select1.selectedIndex].value + '&targetVersion=' + select2.options[select2.selectedIndex].value;
+
+		if (nameFilter.value) {
+			newURL += '&nameFilter=' + nameFilter.value;
+		}
 
 		history.pushState({path: newURL}, '', newURL);
 	}
