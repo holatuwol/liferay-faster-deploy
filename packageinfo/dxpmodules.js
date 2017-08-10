@@ -1,10 +1,33 @@
+function getParameter(name) {
+	if (!location.search) {
+		return '';
+	}
+
+	var re = new RegExp('[?&]' + name + '=([^&]*)');
+	var m = re.exec(location.search);
+	return m ? m[1] : '';
+};
+
 var versionInfoList = null;
 
 var select1 = document.getElementById('sourceVersion');
+var select1Value = getParameter('sourceVersion');
 var select2 = document.getElementById('targetVersion');
+var select2Value = getParameter('targetVersion');
 var nameFilter = document.getElementById('nameFilter');
+nameFilter.value = getParameter('nameFilter');
 
 function checkVersionInfo() {
+	// https://stackoverflow.com/questions/12508225/how-do-we-update-url-or-query-strings-using-javascript-jquery-without-reloading
+
+	if (history.pushState) {
+		var newURL = window.location.protocol + "//" + window.location.host + window.location.pathname +
+			'?sourceVersion=' + select1.options[select1.selectedIndex].value + '&targetVersion=' + select2.options[select2.selectedIndex].value +
+				'&nameFilter=' + nameFilter.value;
+
+		history.pushState({path: newURL}, '', newURL);
+	}
+
 	var name1 = 'version_' + select1.options[select1.selectedIndex].value;
 	var header1 = select1.options[select1.selectedIndex].innerHTML;
 
@@ -107,6 +130,17 @@ request.onreadystatechange = function() {
 			return select;
 		};
 
+		var setIndex = function(select, x) {
+			for (var i = 0; i < select.options.length; i++) {
+				if (select.options[i].value == x) {
+					select.selectedIndex = i;
+					return;
+				}
+			}
+
+			select.selectedIndex = select.options.length - 1;
+		};
+
 		var fixPackIds = Object.keys(versionInfoList[0])
 			.filter(x => x.indexOf(prefix) == 0)
 			.map(x => x.substring(prefix.length));
@@ -114,8 +148,8 @@ request.onreadystatechange = function() {
 		fixPackIds.reduce(addFixPack, select1);
 		fixPackIds.reduce(addFixPack, select2);
 
-		select1.selectedIndex = fixPackIds.length - 1;
-		select2.selectedIndex = fixPackIds.length - 1;
+		setIndex(select1, select1Value);
+		setIndex(select2, select2Value);
 
 		select1.onchange = checkVersionInfo;
 		select2.onchange = checkVersionInfo;
