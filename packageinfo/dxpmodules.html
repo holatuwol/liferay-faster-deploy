@@ -1,0 +1,62 @@
+<html><head>
+<title>Module Version Changes Since DXP Release</title>
+
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+<!-- Optional theme -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+
+<!-- Latest compiled and minified JavaScript -->
+<script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
+</head>
+
+<body>
+
+<div class="container" role="main">
+
+<h1>Module Version Changes Since DXP Release</h1>
+
+<p>When developing for Liferay, you usually prefer specifying the lowest possible version of the bundle or module that provides the API that you are consuming, as that maximizes the number of versions where your customization can successfully run. However, sometimes a community member or a customer knows that they aren't going to downgrade their Liferay, and they want to know, "What version of this bundle/module am I using in this version of DXP?" This page was created to answer that question.</p>
+
+<h2>Choose Your Comparison</h2>
+
+<p><strong>Note</strong>: If the values in the select boxes are the same, this will list the versions of all modules at the specified baseline rather than a comparison. Artifacts from the <code>com.liferay.portal</code> group are listed as snapshots, but you should use the non-snapshot .0 release instead.</p>
+
+<table class="table">
+<tbody>
+<tr><th>Starting Version</th><th>Check Against Version</th><th>Name Filter</th></tr>
+<tr>
+<td>
+<select id="sourceVersion" name="sourceVersion">
+    <option value="7000-ga1">7000-ga1</option>
+</select>
+</td>
+<td>
+<select id="targetVersion" name="targetVersion">
+    <option value="7000-ga1">7000-ga1</option>
+</select>
+</td>
+<td>
+<input id="nameFilter" name="nameFilter" type="text" />
+</td>
+</tr>
+</tbody>
+</table>
+
+<h2>Comparison Results</h2>
+
+<p><strong>Note</strong>: Entries with a gray background indicate a version change. Version 0.0.0 means that the module does not exist in that version of DXP.</p>
+
+<div id="summary">&nbsp;</div>
+
+</div>
+
+</body>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"></script>
+<script src="https://s3-us-west-2.amazonaws.com/mdang.grow/dxpmodules.js"></script>
+
+</html>

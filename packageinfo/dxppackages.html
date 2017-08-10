@@ -1,0 +1,86 @@
+<html><head>
+<title>Package Breaking Changes Since DXP Release</title>
+
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+<!-- Optional theme -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+
+<!-- Latest compiled and minified JavaScript -->
+<script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
+</head>
+
+<body>
+
+<div class="container" role="main">
+
+<h1>Package Breaking Changes Since DXP Release</h1>
+
+<p>If you plan to customize DXP, you should be aware that some of the packages exported by various DXP artifacts experienced version increases after the release. You can use the select boxes below to check if you'll run into problems.</p>
+
+<h2>Choose Your Comparison</h2>
+
+<p><strong>Note</strong>: If the values in the select boxes are the same, this will list the versions of all packages at the specified baseline rather than a comparison. You can show only breaking changes using the checkboxes below.</p>
+
+<table class="table">
+<tbody>
+<tr><th>Starting Version</th><th>Check Against Version</th><th>Name Filter</th><th>Breaking Changes Only</th></tr>
+<tr>
+<td>
+<select id="sourceVersion" name="sourceVersion">
+	<option value="7000-ga1" selected>7000-ga1</option>
+</select>
+</td>
+<td>
+<select id="targetVersion" name="targetVersion">
+	<option value="7000-ga1" selected>7000-ga1</option>
+</select>
+</td>
+<td>
+<input id="nameFilter" name="nameFilter" type="text" />
+</td>
+<td>
+<input id="notableOnly" name="notableOnly" type="checkbox" />
+</td>
+</tr>
+</tbody>
+</table>
+
+<h2>Comparison Results</h2>
+
+<p><strong>Note</strong>: Entries with a gray background indicate a version change. Version 0.0.0 means that the package does not exist in that version of DXP. You can show only breaking changes using the checkboxes above.</p>
+
+<div id="summary">&nbsp;</div>
+
+<h2>About the Comparison</h2>
+
+<p>You might be wondering, "What is a breaking change?"</p>
+
+<p>A major version increase in a package caused by a patch means that if you patch your server, your custom module will no longer be active after server restart if it used any of these packages. This can only be addressed by recompiling against an updated artifact that indicates it has the needed export version. Therefore, in all cases, a major version change is treated as a breaking change.</p>
+
+<p>A minor version increase in a package caused by a patch means that if you patch your server and compile against the updated artifact, your customization will not deploy if you then decide to undo the patch. This can only be addressed by recompiling against the older artifact used after the rollback that indicates the needed export version. Therefore, when you are DOWNGRADING Liferay, a minor version change is treated as a breaking change.</p>
+
+<p>Note that it's also possible that an artifact with the manifest you need has not yet been published to Maven, so you may have to manually add the dependency to your local repository by extracting the JAR from the marketplace LPKG in your bundle.</p>
+
+<ul><li><a href="https://maven.apache.org/guides/mini/guide-3rd-party-jars-local.html">Guide to installing 3rd party JARs</a></li></ul>
+
+<h2>Additional Notes</h2>
+
+<p>Additionally, if you used any of the following packages, the bundle that exports that package has changed. This will be relevant if you plan to upgrade the old artifact to a new version, as your code will stop compiling.</p>
+
+<table class="table">
+<tbody>
+<tr><th>Package Name</th><th>Old Artifact Name</th><th>New Artifact Name</th></tr>
+<tr><td>com.liferay.contacts.util</td><td>com.liferay.contacts.service</td><td>com.liferay.contacts.api</td></tr>
+</tbody>
+</table>
+
+</div>
+
+</body>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"></script>
+<script src="https://s3-us-west-2.amazonaws.com/mdang.grow/dxppackages.js"></script>
