@@ -5,7 +5,7 @@ checksnapshots() {
 		return 0
 	fi
 
-	if [ "" == "$(grep -F setup-sdk build.xml)" ]; then
+	if [ ! -f build.xml ] || [ "" == "$(grep -F setup-sdk build.xml)" ]; then
 		return 0
 	fi
 
