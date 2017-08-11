@@ -60,6 +60,12 @@ applychanges() {
 		if [[ 0 -ne $? ]]; then
 			return 1
 		fi
+
+		if [ "" != "$(grep -F packageinfo .redeploy/changes.txt | grep -vF modules)" ]; then
+			cd modules/core/portal-bootstrap
+			gw deploy
+			cd -
+		fi
 	fi
 
 	# Finally, check to see if there is anything we need to deploy with gradle
