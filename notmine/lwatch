@@ -2,7 +2,7 @@
 
 BUNDLE_NAME=$(grep '^Bundle-SymbolicName' bnd.bnd | cut -d':' -f 2 | tr -d ' ')
 
-if [ "" == "" ]; then
+if [ "" == "$BUNDLE_NAME" ]; then
 	BUNDLE_NAME=$(basename $PWD)
 fi
 
