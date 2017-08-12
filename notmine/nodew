@@ -29,7 +29,13 @@ nodew() {
 
 	popd > /dev/null
 
-	nodejs "${REPO_PATH}/$EXECUTABLE" ${@:3}
+	NODEJS=$(which nodejs 2> /dev/null)
+
+	if [ "" == "$NODEJS" ]; then
+		NODEJS=$(which node 2> /dev/null)
+	fi
+
+	"${NODEJS}" "${REPO_PATH}/$EXECUTABLE" ${@:3}
 }
 
 if [ -d /usr/local/bin ] && [ "" == "$(echo $PATH | grep -F '/usr/local/bin')" ]; then
