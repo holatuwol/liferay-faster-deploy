@@ -1,6 +1,10 @@
 #!/bin/bash
 
 antformatsource() {
+	if [ ! -d "$GIT_ROOT/portal-impl" ]; then
+		return 0
+	fi
+
 	ARGS=
 
 	if [ "" != "$1" ] && [ -f $1 ]; then
@@ -17,7 +21,7 @@ antformatsource() {
 		ARGS="-Dformat.local.changes=true"
 	fi
 
-	cd $GIT_ROOT/portal-impl
+	cd "$GIT_ROOT/portal-impl"
 	pwd
 
 	echo ant format-source $ARGS
