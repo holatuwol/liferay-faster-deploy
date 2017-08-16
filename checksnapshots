@@ -9,6 +9,14 @@ checksnapshots() {
 		return 0
 	fi
 
+	# Make sure our dependencies are up to date
+
+	if [ "" != "$GIT_ROOT" ] && [ -f "$GIT_ROOT/build.xml" ] && [ -e $GIT_ROOT/../liferay-binaries-cache-2017 ] && [ "" != "$(grep -F update-binaries-cache "$GIT_ROOT/build.xml")" ]; then
+		pushd "$GIT_ROOT" > /dev/null
+		ant update-binaries-cache
+		popd > /dev/null
+	fi
+
 	# Run the pre-checks for ant
 
 	if [ "" != "$(grep setup-libs build.xml)" ]; then
@@ -52,18 +60,8 @@ checksnapshots() {
 		local folder=$(echo $artifact | cut -d'.' -f 3- | tr '.' '-')
 
 		if [ -d "${repository_root}/com/liferay/portal/${artifact}/${artifact_version}" ]; then
-			local newest_file=
-
-			if [ -d $folder/src ]; then
-				newest_file=$(find $folder/src -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" ")
-			elif [ -d $folder/docroot ]; then
-				newest_file=$(find $folder/docroot -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" ")
-			else
-				newest_file=$(find $folder -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" ")
-			fi
-
-			local change_time=$(perl -MPOSIX -e 'print POSIX::strftime "%Y%m%d%H%M.%S", localtime((stat $ARGV[0])[9])' "${newest_file}")
-			local cache_time=$(perl -MPOSIX -e 'print POSIX::strftime "%Y%m%d%H%M.%S", localtime((stat $ARGV[0])[9])' "${repository_root}/com/liferay/portal/${artifact}/${artifact_version}")
+			local change_time=$(modifiedtime $folder)
+			local cache_time=$(modifiedtime "${repository_root}/com/liferay/portal/${artifact}/${artifact_version}")
 
 			if [ "$change_time" == "$cache_time" ]; then
 				continue
@@ -99,21 +97,16 @@ checksnapshots() {
 	for artifact in $artifacts; do
 		local artifact_version=$(grep -F "${artifact}.version" $GIT_ROOT/.gradle/gradle.properties | cut -d'=' -f 2)
 		local folder=$(echo $artifact | cut -d'.' -f 3- | tr '.' '-')
+		local change_time=$(modifiedtime $folder)
 
-		local newest_file=
-
-		if [ -d $folder/src ]; then
-			newest_file=$(find $folder/src -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" ")
-		elif [ -d $folder/docroot ]; then
-			newest_file=$(find $folder/docroot -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" ")
-		else
-			newest_file=$(find $folder -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" ")
-		fi
-
-		local change_time=$(perl -MPOSIX -e 'print POSIX::strftime "%Y%m%d%H%M.%S", localtime((stat $ARGV[0])[9])' "${newest_file}")
-
-		touch -t $change_time "${repository_root}/com/liferay/portal/${artifact}/${artifact_version}"
+		for artifact_file in $(find "${repository_root}/com/liferay/portal/${artifact}/${artifact_version}"); do
+			touch -t $change_time "$artifact_file"
+		done
 	done
+}
+
+modifiedtime() {
+	python $(dirname "${BASH_SOURCE[0]}")/modifiedtime.py "$@"
 }
 
 setopts() {
