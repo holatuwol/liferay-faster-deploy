@@ -3,15 +3,24 @@
 USER=$(whoami)
 HOME=/home/$USER
 
-source $HOME/redeploy/crontab/aliases
+SCRIPT_FOLDER=$(dirname "${BASH_SOURCE[0]}")
+
+if [ "" == "$PORTAL_SOURCE_ROOT" ]; then
+	PORTAL_SOURCE_ROOT=$HOME/source
+fi
+
+if [ "" == "$BUILD_FOLDER_PREFIX" ]; then
+	BUILD_FOLDER_PREFIX=$HOME/builds
+fi
+
+source "${SCRIPT_FOLDER}/aliases"
 
 find /tmp -maxdepth 1 -type d | grep -F '/npm' | xargs rm -rf
 find /tmp -maxdepth 1 -type d | grep '/[0-9a-f]\{40\}' | xargs rm -rf
 
-
 # Make sure we are in the home folder
 
-cd $HOME
+cd $BUILD_FOLDER_PREFIX
 
 # If another build is running, don't overlap
 
@@ -22,7 +31,7 @@ fi
 
 # Make sure other builds know we are running
 
-touch $HOME/.build
+touch $BUILD_FOLDER_PREFIX/.build
 
 # If we're doing a clean build, remove past pull request branches
 # and also make sure we have an up-to-date set of branches to use
@@ -31,7 +40,7 @@ touch $HOME/.build
 if [ "clean" == "$1" ]; then
 	cx all
 
-	pushd $HOME/source
+	pushd "$PORTAL_SOURCE_ROOT"
 
 	for pull_id in $(git branch | grep -o 'pr-.*' | cut -d'-' -f 2); do
 		git branch -D pr-$pull_id
@@ -40,15 +49,17 @@ if [ "clean" == "$1" ]; then
 
 	popd
 
-	PORTAL_SOURCE_ROOT=$HOME/source \
-		BUILD_FOLDER_PREFIX=$HOME \
-			$HOME/redeploy/crontab/branches
+	rm -rf $HOME/.liferay/node/cache
+
+	PORTAL_SOURCE_ROOT=$PORTAL_SOURCE_ROOT \
+		BUILD_FOLDER_PREFIX=$BUILD_FOLDER_PREFIX \
+			"$SCRIPT_FOLDER/branches"
 
 	# Create a source archive in case we want to spin up an EC2
 	# instance using up to date source.
 
 	if [ -f $HOME/.snapshot ]; then
-		$HOME/redeploy/crontab/gitsave
+		"$SCRIPT_FOLDER/gitsave"
 	fi
 fi
 
@@ -60,9 +71,9 @@ if [ "" != "$PULL_USER" ]; then
 	rm -rf "$HOME/builds"
 	mkdir "$HOME/builds"
 
-	PORTAL_SOURCE_ROOT=$HOME/source \
-		BUILD_FOLDER_PREFIX=$HOME/builds \
-			$HOME/redeploy/crontab/pulls $@
+	PORTAL_SOURCE_ROOT=$PORTAL_SOURCE_ROOT \
+		BUILD_FOLDER_PREFIX=$BUILD_FOLDER_PREFIX \
+			"$SCRIPT_FOLDER/pulls"
 fi
 
 # If we're doing a clean build, we'll want to start up the builds of
@@ -76,4 +87,4 @@ fi
 
 # Make sure other builds know we are finished
 
-rm $HOME/.build
+rm $BUILD_FOLDER_PREFIX/.build
