@@ -9,23 +9,31 @@ cachenpm() {
 		rm -rf "${cache_home}"
 	fi
 
-	NPM_INSTALL='npm install'
+	NPM_INSTALL=$(npm config get cachenpm-install-strategy)
+
+	if [ "undefined" == "$NPM_INSTALL" ]; then
+		NPM_INSTALL='npm install'
+	fi
 
 	findmodules $@
 
-	NPM_PRODUCTION=$(npm config get production)
+	local NPM_PRODUCTION=$(npm config get production)
 	npm config set production false
 
-	NPM_REGISTRY=$(npm config get production)
+	local NPM_REGISTRY=$(npm config get production)
 
 	if [ "https://registry.npmjs.org/" == "$NPM_REGISTRY" ]; then
 		npm config set registry http://registry.npmjs.org/
 		npm config set strict-ssl false
 	fi
 
-	# . $(dirname "${BASH_SOURCE[0]}")/globalcache $@
-	. $(dirname "${BASH_SOURCE[0]}")/modulecache $@
-	# . $(dirname "${BASH_SOURCE[0]}")/modulerun $@
+	local CACHE_STRATEGY=$(npm config get cachenpm-cache-strategy)
+
+	if [ ! -f "$(dirname "${BASH_SOURCE[0]}")/$CACHE_STRATEGY" ]; then
+		CACHE_STRATEGY=modulecache
+	fi
+
+	. "$(dirname "${BASH_SOURCE[0]}")/${CACHE_STRATEGY}" $@
 
 	if [ "" != "$NPM_PRODUCTION" ] && [ "false" != "$NPM_PRODUCTION" ]; then
 		npm config set production $NPM_PRODUCTION
