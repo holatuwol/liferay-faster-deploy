@@ -1,13 +1,14 @@
 #!/bin/bash
 
-checkremote() {
-	remote_url=$(git remote get-url $1)
-	remote_branches=$(remotebranches $1)
+deletebranches() {
+	local remote_url=$(git remote get-url $1)
+	local remote_branches=$(git for-each-ref --format='%(refname)' refs/remotes/$1)
 
 	if [ "git@github.com:liferay/liferay-portal.git" == "$remote_url" ]; then
 		echo "$remote_branches" | grep -v '/master$'
 	elif [ "git@github.com:liferay/liferay-portal-ee.git" == "$remote_url" ]; then
-		echo "$remote_branches" | grep -v '/master-private$' | grep -v '/ee-[0-9]*\.[0-9]*\.x$'
+		echo "$remote_branches" | grep -v '/master-private$' | grep -v '/ee-[0-9]*\.[0-9]*\.x$' | grep -v '/7.0.x$' | grep -v '/7.0.x-private$'
+		echo "$remote_branches" | grep '/ee-7.0.x$'
 	elif [ "git@github.com:liferay/liferay-plugins.git" == "$remote_url" ]; then
 		echo "$remote_branches" | grep -v '/master$' | grep -v '/ee-[0-9]*\.[0-9]*\.x$'
 	elif [ "git@github.com:liferay/liferay-plugins-ee.git" == "$remote_url" ]; then
@@ -17,21 +18,70 @@ checkremote() {
 	fi
 }
 
-remotebranches() {
-	git for-each-ref --format='%(refname)' refs/remotes/$1 | cut -d'/' -f 3-
+pushorigin() {
+	local upstream_url=$(git remote get-url $2)
+	local origin_name=$(git remote -v | grep -F $(echo $upstream_url | cut -d'/' -f 2) | grep -vF $upstream_url | awk '{ print $1 }' | uniq)
+
+	if [ "" == "$origin_name" ]; then
+		return 0
+	fi
+
+	echo "Updating $1 on $origin_name"
+
+	if [ "" == "$(git for-each-ref --format='%(refname)' refs/heads/$1)" ]; then
+		git fetch $2 --no-tags $1:$1
+	fi
+
+	if [ "" == "$(git for-each-ref --format='%(refname)' refs/remotes/$origin_name/$1)" ]; then
+		for commit in $(git log --reverse --pretty='%H' $1 | awk 'NR % 10000 == 0'); do
+			git push $origin_name $commit:refs/heads/$1
+		done
+	else
+		for commit in $(git log --reverse --pretty='%H' $origin_name/$1..$1 | awk 'NR % 10000 == 0'); do
+			git push $origin_name $commit:refs/heads/$1
+		done
+	fi
+
+	git push $origin_name $1:$1
+}
+
+retainbranches() {
+	local remote_url=$(git remote get-url $1)
+	local remote_branches=$(git ls-remote -h $1 | awk '{ print $2 }')
+
+	if [ "git@github.com:liferay/liferay-portal.git" == "$remote_url" ]; then
+		echo "$remote_branches" | grep '/master$'
+	elif [ "git@github.com:liferay/liferay-portal-ee.git" == "$remote_url" ]; then
+		echo "$remote_branches" | grep '/master-private$'
+		echo "$remote_branches" | grep '/ee-[0-9]*\.[0-9]*\.x$' | grep -v '/ee-7.0.x$'
+		echo "$remote_branches" | grep '/7.0.x$'
+		echo "$remote_branches" | grep '/7.0.x-private$'
+	elif [ "git@github.com:liferay/liferay-plugins.git" == "$remote_url" ]; then
+		echo "$remote_branches" | grep '/master$'
+		echo "$remote_branches" | grep '/ee-[0-9]*\.[0-9]*\.x$'
+	elif [ "git@github.com:liferay/liferay-plugins-ee.git" == "$remote_url" ]; then
+		echo "$remote_branches" | grep '/ee-[0-9]*\.[0-9]*\.x$'
+		echo "$remote_branches" | grep '/ee-[0-9]*\.[0-9]*\.[0-9]*$'
+	else
+		echo "$remote_branches" | grep '/master$'
+	fi
 }
 
 for remote in $(git remote | grep upstream); do
-	remove_branches=$(checkremote $remote | tr '\n' ' ')
+	delete_branches=$(deletebranches $remote | tr '\n' ' ')
 
-	if [ "" != "$remove_branches" ]; then
-		git branch -d -r $remove_branches
+	if [ "" != "$delete_branches" ]; then
+		git branch -d -r $delete_branches
 	fi
 
-	retain_branches=$(remotebranches "$remote" | cut -d'/' -f 2 | tr '\n' ' ')
+	retain_branches=$(retainbranches "$remote" | cut -d'/' -f 3- | tr '\n' ' ')
 
 	if [ "" != "$retain_branches" ]; then
 		git remote set-branches $remote $retain_branches
 		git fetch $remote --no-tags --prune
+
+		for branch in $retain_branches; do
+			pushorigin $branch $remote
+		done
 	fi
 done
