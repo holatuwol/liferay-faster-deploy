@@ -19,30 +19,7 @@ deletebranches() {
 }
 
 pushorigin() {
-	local upstream_url=$(git remote get-url $2)
-	local origin_name=$(git remote -v | grep -F $(echo $upstream_url | cut -d'/' -f 2) | grep -vF $upstream_url | awk '{ print $1 }' | uniq)
-
-	if [ "" == "$origin_name" ]; then
-		return 0
-	fi
-
-	echo "Updating $1 on $origin_name"
-
-	if [ "" == "$(git for-each-ref --format='%(refname)' refs/heads/$1)" ]; then
-		git fetch $2 --no-tags $1:$1
-	fi
-
-	if [ "" == "$(git for-each-ref --format='%(refname)' refs/remotes/$origin_name/$1)" ]; then
-		for commit in $(git log --reverse --pretty='%H' $1 | awk 'NR % 10000 == 0'); do
-			git push $origin_name $commit:refs/heads/$1
-		done
-	else
-		for commit in $(git log --reverse --pretty='%H' $origin_name/$1..$1 | awk 'NR % 10000 == 0'); do
-			git push $origin_name $commit:refs/heads/$1
-		done
-	fi
-
-	git push $origin_name $1:$1
+	"$(dirname "${BASH_SOURCE[0]}")/pushorigin" "$1" "$2"
 }
 
 retainbranches() {

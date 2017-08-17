@@ -38,6 +38,10 @@ Then, add this section to `.bash_aliases` (or the equivalent on whichever shell 
 			${MCD_RD_CLONE_PATH}/github/pullrequest $@
 	}
 
+	pushorigin() {
+		${MCD_RD_CLONE_PATH}/github/pushorigin "$1" "$2"
+	}
+
 Open GitHub In Web Browser
 ==========================
 
@@ -97,3 +101,12 @@ Aside from that, currently, the script does the following:
 * runs source formatter against your changes (ignoring profiles)
 * runs `pmd <https://pmd.github.io>`__ against all changed files (required by pull request tests)
 * opens a web browser to the GitHub compare URL so you can create a pull request
+
+Push Branch to Origin
+=====================
+
+For Git histories involving commits with many files, GitHub won't allow you to easily push up your commit history. This can be problematic if someone creates a branch new branch in your upstream with tens of thousands of commits that diverged many thousands of commits earlier in your existing branches. To work around the problem, it's possible to break your commit history up into much smaller pieces (for example, 10k commits) and push it up that way.
+
+.. code-block:: bash
+
+	pushorigin BRANCH_NAME UPSTREAM_NAME
