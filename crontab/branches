@@ -13,8 +13,10 @@ branch() {
 
 	if [ "master" == "$1" ]; then
 		BASE_BRANCH=$1
-	else
+	elif [ "$1" != "70x" ]; then
 		BASE_BRANCH=ee-$(echo $1 | sed 's/\([0-9]\)/\1./g')
+	else
+		BASE_BRANCH=$(echo $1 | sed 's/\([0-9]\)/\1./g')
 	fi
 
 	checkout $BASE_BRANCH
@@ -164,7 +166,12 @@ fixpacks() {
 }
 
 update() {
-	git fetch upstream --no-tags
+	if [ "" == "$(git remote | grep '^upstream$')" ]; then
+		git fetch origin --no-tags
+	else
+		git fetch upstream --no-tags
+	fi
+
 	git reflog expire --expire=now --all
 	git gc --prune
 	return 0
