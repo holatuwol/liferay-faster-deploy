@@ -20,7 +20,7 @@ cachenpm() {
 	local NPM_PRODUCTION=$(npm config get production)
 	npm config set production false
 
-	local NPM_REGISTRY=$(npm config get production)
+	local NPM_REGISTRY=$(npm config get registry)
 
 	if [ "https://registry.npmjs.org/" == "$NPM_REGISTRY" ]; then
 		npm config set registry http://registry.npmjs.org/
