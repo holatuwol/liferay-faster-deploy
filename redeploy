@@ -78,8 +78,10 @@ applychanges() {
 		fi
 	fi
 
-	if [ -f .redeploy/changes_ant.txt ] && [ "" != "$(grep util .redeploy/changes_ant.txt)" ] && [ "ee-7.0.x" == "$BASE_BRANCH" ]; then
-		echo "Modified util-*.jar, must clear the osgi/state folder for WABs to be rebuilt"
+	if [ -f .redeploy/changes_ant.txt ] && [ "" != "$(grep util .redeploy/changes_ant.txt)" ]; then
+		if [ "ee-6.1.x" != "$BASE_BRANCH" ] && [ "ee-6.2.x" != "$BASE_BRANCH" ]; then
+			echo "Modified util-*.jar, must clear the osgi/state folder for WABs to be rebuilt"
+		fi
 	fi
 
 	# Undo changes to build-common.xml and modules/build.gradle

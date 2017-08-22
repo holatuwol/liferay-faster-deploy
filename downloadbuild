@@ -321,14 +321,14 @@ gettargetfolder() {
 	. $(dirname "${BASH_SOURCE[0]}")/getparent
 
 	# If we're using a tag, make sure that we actually want to use that tag, given that
-	# every commit on ee-7.0.x corresponds to some tag.
+	# every commit on 7.0.x corresponds to some tag.
 
 	if [ "" == "$BASE_TAG" ]; then
 		return 0
-	elif [ "master" == "$BASE_BRANCH" ]; then
+	elif [ "master" == "$BASE_BRANCH" ] || [ "master-private" == "$BASE_BRANCH" ]; then
 		BASE_TAG=
 		return 0
-	elif [ "ee-7.0.x" != "$BASE_BRANCH" ]; then
+	elif [ "7.0.x" != "$BASE_BRANCH" ] && [ "7.0.x-private" != "$BASE_BRANCH" ]; then
 		return 0
 	fi
 

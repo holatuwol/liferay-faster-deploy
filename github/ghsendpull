@@ -92,7 +92,7 @@ sendpull() {
 
 	# Figure out where we are pushing our branch
 
-	if [ -f "$GIT_ROOT/release.properties" ] || [ -f "$GIT_ROOT/build.properties" ]; then
+	if [ -f "$GIT_ROOT/release.properties" ] || [ -f "$GIT_ROOT/build.properties" ] || [ -f "$GIT_ROOT/working.dir.properties" ]; then
 		. $(dirname "${BASH_SOURCE[0]}")/../getparent
 	else
 		CURRENT_BRANCH=$(git symbolic-ref --short HEAD)

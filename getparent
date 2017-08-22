@@ -14,12 +14,16 @@ getparent() {
 	local FULL_VERSION=
 	local MAJOR_VERSION=
 
-	if [ -f "$GIT_ROOT/release.properties" ]; then
-		FULL_VERSION=$(grep lp.version= "$GIT_ROOT/release.properties" | cut -d'=' -f 2)
-		MAJOR_VERSION=$(grep lp.version.major= "$GIT_ROOT/release.properties" | cut -d'=' -f 2)
-	elif [ -f "$GIT_ROOT/build.properties" ]; then
-		FULL_VERSION=$(grep lp.version= "$GIT_ROOT/build.properties" | cut -d'=' -f 2)
-		MAJOR_VERSION=$(grep lp.version= "$GIT_ROOT/build.properties" | cut -d'=' -f 2 | cut -d'.' -f 1,2)
+	if [ -f "release.properties" ]; then
+		FULL_VERSION=$(grep lp.version= "release.properties" | cut -d'=' -f 2)
+		MAJOR_VERSION=$(grep lp.version.major= "release.properties" | cut -d'=' -f 2)
+	elif [ -f "build.properties" ]; then
+		FULL_VERSION=$(grep lp.version= "build.properties" | cut -d'=' -f 2)
+		MAJOR_VERSION=$(grep lp.version= "build.properties" | cut -d'=' -f 2 | cut -d'.' -f 1,2)
+	elif [ -f "git-commit-portal" ]; then
+		local PORTAL_COMMIT=$(cat git-commit-portal)
+		FULL_VERSION=$(git show $PORTAL_COMMIT:release.properties | grep lp.version= | cut -d'=' -f 2)
+		MAJOR_VERSION=$(git show $PORTAL_COMMIT:release.properties | grep lp.version= | cut -d'=' -f 2 | cut -d'.' -f 1,2)
 	fi
 
 	if [ "6.0" == "$MAJOR_VERSION" ]; then
@@ -29,10 +33,18 @@ getparent() {
 	elif [ "6.2" == "$MAJOR_VERSION" ]; then
 		BASE_BRANCH=ee-6.2.x
 	elif [ "7.0" == "$MAJOR_VERSION" ] && [ "7.0.10" == "$FULL_VERSION" ]; then
-		BASE_BRANCH=ee-7.0.x
+		if [ -f working.dir.properties ]; then
+			BASE_BRANCH=7.0.x-private
+		else
+			BASE_BRANCH=7.0.x
+		fi
 	elif [ "7.0" == "$MAJOR_VERSION" ]; then
-		BASE_BRANCH=master
-	elif [ -f "$GIT_ROOT/settings.gradle" ] && [ "" != "$(grep -F com.liferay settings.gradle)" ]; then
+		if [ -f working.dir.properties ]; then
+			BASE_BRANCH=master-private
+		else
+			BASE_BRANCH=master
+		fi
+	elif [ -f "settings.gradle" ] && [ "" != "$(grep -F com.liferay settings.gradle)" ]; then
 		BASE_BRANCH=master
 	else
 		return 1
@@ -56,7 +68,11 @@ getparent() {
 isbuildbranch() {
 	if [ "master" == "$1" ]; then
 		return 0
-	elif [ "ee-7.0.x" == "$1" ]; then
+	elif [ "master-private" == "$1" ]; then
+		return 0
+	elif [ "7.0.x" == "$1" ]; then
+		return 0
+	elif [ "7.0.x-private" == "$1" ]; then
 		return 0
 	elif [ "ee-6.2.x" == "$1" ]; then
 		return 0
@@ -74,5 +90,7 @@ setopts() {
 setopts
 
 if [ "" != "$GIT_ROOT" ]; then
+	pushd $GIT_ROOT > /dev/null
 	getparent $@
+	popd > /dev/null
 fi
