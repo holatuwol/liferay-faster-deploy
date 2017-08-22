@@ -23,6 +23,8 @@ branch() {
 		BASE_BRANCH=$(echo $1 | sed 's/\([0-9]\)/\1./g')
 	fi
 
+	local OLD_BRANCH=$(git branch | grep -F '*' | cut -d' ' -f 2)
+
 	checkout $BASE_BRANCH
 
 	if [ "$BASE_BRANCH" != "$(git branch | grep -F '*' | cut -d' ' -f 2)" ]; then
@@ -33,6 +35,7 @@ branch() {
 
 	if [[ 0 -ne $? ]]; then
 		git rebase --abort
+		git checkout $OLD_BRANCH
 		return 1
 	fi
 
@@ -41,6 +44,8 @@ branch() {
 		ARCHIVE_FOLDER="/var/www/html/builds/branches" \
 		TIMESTAMP="$TIMESTAMP" \
 			$SCRIPT_FOLDER/prepare $@
+
+	git checkout $OLD_BRANCH
 
 	# Only retain last three builds
 
@@ -104,12 +109,6 @@ branches() {
 	done
 
 	echo Completed $(date)
-
-	# Finished build
-
-	if [ -d .git ]; then
-		checkout master
-	fi
 }
 
 checkout() {
