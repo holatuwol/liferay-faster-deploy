@@ -2,6 +2,10 @@
 
 TIMESTAMP=$(date +%Y%m%d)
 
+pushd $(dirname "${BASH_SOURCE[0]}") > /dev/null
+SCRIPT_FOLDER=$(pwd -P)
+popd > /dev/null
+
 branch() {
 	if [ -f "/var/www/html/builds/branches/${1}-${TIMESTAMP}.tar.gz" ]; then
 		return 0
@@ -36,7 +40,7 @@ branch() {
 		BUILD_FOLDER_SUFFIX="$TIMESTAMP" \
 		ARCHIVE_FOLDER="/var/www/html/builds/branches" \
 		TIMESTAMP="$TIMESTAMP" \
-			$(dirname "${BASH_SOURCE[0]}")/prepare $@
+			$SCRIPT_FOLDER/prepare $@
 
 	# Only retain last three builds
 
@@ -153,7 +157,7 @@ fixpack() {
 		BUILD_FOLDER_SUFFIX="" \
 		ARCHIVE_FOLDER="/var/www/html/builds/fixpacks" \
 		TIMESTAMP="" \
-			$(dirname "${BASH_SOURCE[0]}")/prepare $1 80
+			$SCRIPT_FOLDER/prepare $1 80
 
 	rm -rf "$BUILD_FOLDER_PREFIX/temp/$1"
 }

@@ -1,5 +1,9 @@
 #!/bin/bash
 
+pushd $(dirname "${BASH_SOURCE[0]}") > /dev/null
+SCRIPT_FOLDER=$(pwd -P)
+popd > /dev/null
+
 compile() {
 	echo "Starting compilation for $1"
 	GIT_HASH=$(git log -1 --pretty='%H')
@@ -12,7 +16,7 @@ compile() {
 	echo "app.server.parent.dir=$LIFERAY_HOME" > app.server.$USER.properties
 
 	ARCHIVE_HOME="$HOME/.liferay/tomcat" \
-		$(dirname "${BASH_SOURCE[0]}")/../appserverprops
+		$SCRIPT_FOLDER/../appserverprops
 
 	# Begin building
 
@@ -21,11 +25,11 @@ compile() {
 	echo '' | tee -a "${LIFERAY_HOME}.log"
 
 	if [ -f modules/build.gradle ]; then
-		$(dirname "${BASH_SOURCE[0]}")/../skipmp | tee -a "${LIFERAY_HOME}.log"
-		$(dirname "${BASH_SOURCE[0]}")/../nodejs/cachenpm | tee -a "${LIFERAY_HOME}.log"
+		$/../skipmp | tee -a "${LIFERAY_HOME}.log"
+		$SCRIPT_FOLDER/../nodejs/cachenpm | tee -a "${LIFERAY_HOME}.log"
 	fi
 
-	$(dirname "${BASH_SOURCE[0]}")/../fixbnd
+	$SCRIPT_FOLDER/../fixbnd
 
 	set -o pipefail
 	ant all | tee -a "${LIFERAY_HOME}.log"
@@ -101,7 +105,7 @@ finish() {
 }
 
 javahome() {
-	. $(dirname ${BASH_SOURCE[0]})/../javahome $@
+	. $SCRIPT_FOLDER/../javahome $@
 }
 
 prepare() {

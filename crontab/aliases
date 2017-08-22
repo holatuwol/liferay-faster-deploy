@@ -4,6 +4,10 @@ if [ "" == "$(which conda 2>/dev/null)" ]; then
 	PATH="$HOME/miniconda3/bin:$PATH"
 fi
 
+pushd $(dirname "${BASH_SOURCE[0]}") > /dev/null
+SCRIPT_FOLDER=$(pwd -P)
+popd > /dev/null
+
 if [ "" == "$BUILD_FOLDER_PREFIX" ]; then
 	BUILD_FOLDER_PREFIX=$HOME/builds
 fi
@@ -11,7 +15,7 @@ fi
 build() {
 	cd $HOME
 	rm -f nohup.out
-	nohup "$(dirname "${BASH_SOURCE[0]}")/cronbuild" clean &
+	nohup "$(dirname "$SCRIPT_FOLDER/cronbuild" clean &
 	cd -
 }
 

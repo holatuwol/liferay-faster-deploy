@@ -3,7 +3,9 @@
 USER=$(whoami)
 HOME=/home/$USER
 
-SCRIPT_FOLDER=$(dirname "${BASH_SOURCE[0]}")
+pushd $(dirname "${BASH_SOURCE[0]}") > /dev/null
+SCRIPT_FOLDER=$(pwd -P)
+popd > /dev/null
 
 if [ "" == "$PORTAL_SOURCE_ROOT" ]; then
 	PORTAL_SOURCE_ROOT=$HOME/source

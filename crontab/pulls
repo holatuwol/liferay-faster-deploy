@@ -2,6 +2,10 @@
 
 TIMESTAMP=$(date +%Y%m%d)
 
+pushd $(dirname "${BASH_SOURCE[0]}") > /dev/null
+SCRIPT_FOLDER=$(pwd -P)
+popd > /dev/null
+
 checkout() {
 	git clean -xdf
 	git reset --hard
@@ -13,7 +17,7 @@ prepare() {
 		BUILD_FOLDER_SUFFIX="" \
 		ARCHIVE_FOLDER="/var/www/html/builds" \
 		TIMESTAMP="$TIMESTAMP" \
-			$(dirname "${BASH_SOURCE[0]}")/prepare $@
+			$SCRIPT_FOLDER/prepare $@
 }
 
 pull() {
