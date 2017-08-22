@@ -31,11 +31,13 @@ branch() {
 		return 1
 	fi
 
-	git rebase upstream/$BASE_BRANCH
+	local upstream_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
+
+	git rebase ${upstream_remote}/$BASE_BRANCH
 
 	if [[ 0 -ne $? ]]; then
 		git rebase --abort
-		git checkout $OLD_BRANCH
+		checkout $OLD_BRANCH
 		return 1
 	fi
 
@@ -185,10 +187,14 @@ fixpacks() {
 }
 
 update() {
+	$SCRIPT_FOLDER/../github/fixupstream
+
 	if [ "" == "$(git remote | grep '^upstream$')" ]; then
 		git fetch origin --no-tags
 	else
-		git fetch upstream --no-tags
+		for remote in $(git remote | grep '^upstream'); do
+			git fetch $remote --no-tags
+		done
 	fi
 
 	git reflog expire --expire=now --all
