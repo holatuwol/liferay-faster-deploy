@@ -7,7 +7,13 @@ repopass() {
 
 	# Make sure the repository password is up to date
 
-	local UPSTREAM_BRANCH=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/7.0.x-private$" | cut -d'/' -f 3,4)
+	local LOCAL_BRANCH=$(grep -o '`[^`]*`' "$GIT_ROOT/README.markdown" | cut -d'`' -f 2 | uniq)
+
+	if [ "" == "$LOCAL_BRANCH" ]; then
+		LOCAL_BRANCH=7.0.x
+	fi
+
+	local UPSTREAM_BRANCH=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/$LOCAL_BRANCH-private$" | cut -d'/' -f 3,4)
 
 	if [ "" == "$UPSTREAM_BRANCH" ]; then
 		return 0
