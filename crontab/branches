@@ -109,6 +109,22 @@ branches() {
 }
 
 checkout() {
+	local WORKTREE_FOLDER=
+
+	if [ -d .git/worktrees ]; then
+		WORKTREE_FOLDER=$PWD/.git/worktrees
+	elif [ -f .git ]; then
+		WORKTREE_FOLDER=$(dirname "$(cut -d' ' -f 2 .git)")
+	fi
+
+	if [ "" != "$WORKTREE_FOLDER" ]; then
+		for worktree in $WORKTREE_FOLDER/*; do
+			if [ "refs/heads/$1" == "$(cut -d' ' -f 2 "${worktree}/HEAD")" ]; then
+				cd "$(dirname "$(cat "${worktree}/gitdir")")"
+			fi
+		done
+	fi
+
 	git clean -xdf
 	git reset --hard
 	git checkout $1
