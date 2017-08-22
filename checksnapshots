@@ -38,11 +38,11 @@ checksnapshots() {
 	local repository_root=
 
 	if [ -f "$GIT_ROOT/build.$USER.properties" ]; then
-		repository_root=$(grep -F 'build.repository.local.dir=' "$GIT_ROOT/build.$USER.properties" | cut -d'=' -f 2 | sed 's@${project.dir}/@'$GIT_ROOT'/@g')
+		repository_root=$(grep -F 'build.repository.local.dir=' "$GIT_ROOT/build.$USER.properties" | cut -d'=' -f 2 | sed 's@${project.dir}/@'$GIT_ROOT'/@g' | sed 's@${user.home}/@'$HOME'/@g')
 	fi
 
 	if [ "" == "$repository_root" ]; then
-		repository_root=$(grep -F 'build.repository.local.dir=' "$GIT_ROOT/build.properties" | cut -d'=' -f 2 | sed 's@${project.dir}/@'$GIT_ROOT'/@g')
+		repository_root=$(grep -F 'build.repository.local.dir=' "$GIT_ROOT/build.properties" | cut -d'=' -f 2 | sed 's@${project.dir}/@'$GIT_ROOT'/@g' | sed 's@${user.home}/@'$HOME'/@g')
 	fi
 
 	if [ "" == "$repository_root" ]; then
