@@ -15,7 +15,7 @@ fi
 build() {
 	cd $HOME
 	rm -f nohup.out
-	nohup "$(dirname "$SCRIPT_FOLDER/cronbuild" clean &
+	nohup "$SCRIPT_FOLDER/cronbuild" clean &
 	cd -
 }
 
