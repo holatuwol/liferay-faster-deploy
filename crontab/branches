@@ -45,7 +45,7 @@ branch() {
 		TIMESTAMP="$TIMESTAMP" \
 			$SCRIPT_FOLDER/prepare $@
 
-	git checkout $OLD_BRANCH
+	checkout $OLD_BRANCH
 
 	# Only retain last three builds
 
