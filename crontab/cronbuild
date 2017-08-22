@@ -20,11 +20,11 @@ find /tmp -maxdepth 1 -type d | grep '/[0-9a-f]\{40\}' | xargs rm -rf
 
 # Make sure we are in the home folder
 
-cd $BUILD_FOLDER_PREFIX
+cd $HOME
 
 # If another build is running, don't overlap
 
-if [ -f $HOME/.build ] && [ "clean" != "$1" ]; then
+if [ -f $BUILD_FOLDER_PREFIX/.build ] && [ "clean" != "$1" ]; then
 	echo Script already running.
 	exit 1
 fi
@@ -68,8 +68,8 @@ fi
 PULL_USER=$(git config github.pull-user)
 
 if [ "" != "$PULL_USER" ]; then
-	rm -rf "$HOME/builds"
-	mkdir "$HOME/builds"
+	rm -rf "$BUILD_FOLDER_PREFIX"
+	mkdir "$BUILD_FOLDER_PREFIX"
 
 	PORTAL_SOURCE_ROOT=$PORTAL_SOURCE_ROOT \
 		BUILD_FOLDER_PREFIX=$BUILD_FOLDER_PREFIX \
