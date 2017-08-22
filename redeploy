@@ -167,8 +167,18 @@ deploymodules() {
 		fi
 	done
 
+	cat /dev/null > .redeploy/deploy_gradle.txt
+
+	cat .redeploy/changes_gradle_3.txt | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":deploy" }' > .redeploy/deploy_gradle.txt
+
+	for module in $(cat .redeploy/changes_gradle_3.txt); do
+		if [ "" != "$(git ls-files $module | grep -F .jsp)" ]; then
+			echo "$module" | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":compileJSP" }' >> .redeploy/deploy_gradle.txt
+		fi
+	done
+
 	cd modules
-	cat ../.redeploy/changes_gradle_3.txt | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":compileJSP :" $1 ":deploy" }' | xargs $(dirname "${BASH_SOURCE[0]}")/gw
+	cat ../.redeploy/deploy_gradle.txt | sort | xargs $(dirname "${BASH_SOURCE[0]}")/gw
 	cd ..
 }
 
