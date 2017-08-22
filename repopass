@@ -1,0 +1,31 @@
+#!/bin/bash
+
+repopass() {
+	if [ ! -f "$GIT_ROOT/build.properties" ] && [ ! -f "$GIT_ROOT/working.dir.properties" ]; then
+		return 0
+	fi
+
+	# Make sure the repository password is up to date
+
+	local UPSTREAM_BRANCH=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/7.0.x-private$" | cut -d'/' -f 3,4)
+
+	if [ "" == "$UPSTREAM_BRANCH" ]; then
+		return 0
+	fi
+
+	if [ ! -f "$GIT_ROOT/build.$USER.properties" ]; then
+		python $(dirname ${BASH_SOURCE[0]})/repopass.py ${UPSTREAM_BRANCH} > "$GIT_ROOT/build.$USER.properties"
+	else
+		mv "$GIT_ROOT/build.$USER.properties" "$GIT_ROOT/build.$USER.properties.bak"
+		grep -vF build.repository.private. "$GIT_ROOT/build.$USER.properties.bak" > "$GIT_ROOT/build.$USER.properties"
+		rm "$GIT_ROOT/build.$USER.properties.bak"
+
+		python $(dirname ${BASH_SOURCE[0]})/repopass.py ${UPSTREAM_BRANCH} >> "$GIT_ROOT/build.$USER.properties"
+	fi
+}
+
+setopts() {
+	. $(dirname "${BASH_SOURCE[0]}")/setopts
+}
+
+setopts && repopass
