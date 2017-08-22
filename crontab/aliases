@@ -4,10 +4,14 @@ if [ "" == "$(which conda 2>/dev/null)" ]; then
 	PATH="$HOME/miniconda3/bin:$PATH"
 fi
 
+if [ "" == "$BUILD_FOLDER_PREFIX" ]; then
+	BUILD_FOLDER_PREFIX=$HOME/builds
+fi
+
 build() {
 	cd $HOME
 	rm -f nohup.out
-	nohup redeploy/crontab/cronbuild clean &
+	nohup "$(dirname "${BASH_SOURCE[0]}")/cronbuild" clean &
 	cd -
 }
 
@@ -26,12 +30,12 @@ cr() {
 
 		TOMCAT_FOLDER=$(ls -1 $HOME/$1/$BUILD_ID | grep '^tomcat-')
 		CATALINA_HOME=$HOME/$1/$BUILD_ID/$TOMCAT_FOLDER
-	elif [ -d $HOME/builds/$1 ]; then
-		TOMCAT_FOLDER=$(ls -1 $HOME/builds/$1 | grep '^tomcat-')
-		CATALINA_HOME=$HOME/builds/$1/$TOMCAT_FOLDER
+	elif [ -d $BUILD_FOLDER_PREFIX/$1 ]; then
+		TOMCAT_FOLDER=$(ls -1 $BUILD_FOLDER_PREFIX/$1 | grep '^tomcat-')
+		CATALINA_HOME=$BUILD_FOLDER_PREFIX/$1/$TOMCAT_FOLDER
 	elif [ -f /var/www/html/builds/$1-${TIMESTAMP}.tar.gz ]; then
-		mkdir -p $HOME/builds/$1
-		tar -zxf /var/www/html/builds/$1-${TIMESTAMP}.tar.gz -C $HOME/builds/$1/
+		mkdir -p $BUILD_FOLDER_PREFIX/$1
+		tar -zxf /var/www/html/builds/$1-${TIMESTAMP}.tar.gz -C $BUILD_FOLDER_PREFIX/$1/
 		cr $@
 		return $?
 	elif [ -f $HOME/.pulls ]; then
@@ -82,7 +86,7 @@ cx() {
 		return 0
 	fi
 
-	if [ "temp" == "$1" ] || [ -d $HOME/builds/$1 ]; then
+	if [ "temp" == "$1" ] || [ -d $BUILD_FOLDER_PREFIX/$1 ]; then
 		setpull
 	fi
 
@@ -90,10 +94,10 @@ cx() {
 		BUILD_ID=$(ls -1 $HOME/$1 | grep -vF '.log' | sort | tail -1)
 		TOMCAT_FOLDER=$(ls -1 $HOME/$1/$BUILD_ID | grep '^tomcat-')
 		CATALINA_HOME=$HOME/$1/$BUILD_ID/$TOMCAT_FOLDER
-	elif [ -d $HOME/builds/$1 ]; then
+	elif [ -d $BUILD_FOLDER_PREFIX/$1 ]; then
 		setpull
-		TOMCAT_FOLDER=$(ls -1 $HOME/builds/$1 | grep '^tomcat-')
-		CATALINA_HOME=$HOME/builds/$1/$TOMCAT_FOLDER
+		TOMCAT_FOLDER=$(ls -1 $BUILD_FOLDER_PREFIX/$1 | grep '^tomcat-')
+		CATALINA_HOME=$BUILD_FOLDER_PREFIX/$1/$TOMCAT_FOLDER
 	else
 		echo "Unable to identify which Tomcat to shutdown"
 		return 0
@@ -107,9 +111,9 @@ ct() {
 		echo "Tailing logs for latest build of $1"
 		BUILD_ID=$(ls -1 $HOME/$1 | sort | tail -1)
 		/usr/bin/tail -f $HOME/$1/$BUILD_ID/tomcat-*/logs/catalina.out
-	elif [ -d $HOME/builds/$1 ]; then
+	elif [ -d $BUILD_FOLDER_PREFIX/$1 ]; then
 		echo "Tailing logs for build of pull request $1"
-		/usr/bin/tail -f $HOME/builds/$1/tomcat-*/logs/catalina.out
+		/usr/bin/tail -f $BUILD_FOLDER_PREFIX/$1/tomcat-*/logs/catalina.out
 	fi
 }
 
