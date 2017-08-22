@@ -3,7 +3,7 @@ import subprocess
 import sys
 
 key_prefix = 'build.repository.private.';
-key_suffix = '[%s]' % sys.argv[1].split('/')[1];
+key_suffix = '[%s]' % sys.argv[1].split('/')[-1];
 
 properties_content = subprocess.check_output(['git', 'show', '%s:working.dir.properties' % sys.argv[1]])
 
