@@ -24,6 +24,10 @@ compile() {
 	echo "$GIT_HASH" | tee -a "${LIFERAY_HOME}.log"
 	echo '' | tee -a "${LIFERAY_HOME}.log"
 
+	if [ -f working.dir.properties ] && [ -f build-working-dir.xml ]; then
+		ant -f build-working-dir.xml
+	fi
+
 	if [ -f modules/build.gradle ]; then
 		$/../skipmp | tee -a "${LIFERAY_HOME}.log"
 		$SCRIPT_FOLDER/../nodejs/cachenpm | tee -a "${LIFERAY_HOME}.log"
