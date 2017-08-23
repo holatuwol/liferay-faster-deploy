@@ -79,18 +79,23 @@ checksnapshots() {
 		return 0
 	fi
 
-	echo "Running install-portal-snapshots to ensure all snapshots are available"
+	echo "Running install-portal-snapshot to ensure all snapshots are available"
 
 	pushd $GIT_ROOT > /dev/null
 
-	if [[ 0 -eq "$(echo $missing_artifact | grep -c ' ')" ]]; then
-		local folder=$(echo $missing_artifact | cut -d'.' -f 3- | tr '.' '-')
-		pushd $folder > /dev/null
-		ant compile install-portal-snapshot
-		popd > /dev/null
-	else
-		ant compile install-portal-snapshots
-	fi
+	for candidate_folder in $(sed -n '/target name="deploy"/,/\/target/p' build.xml | grep -F 'ant dir' | grep -F 'target="deploy"' | cut -d'"' -f 2); do
+		for artifact in $missing_artifact; do
+			local folder=$(echo $artifact | cut -d'.' -f 3- | tr '.' '-')
+
+			if [ "$candidate_folder" != "$folder" ]; then
+				continue
+			fi
+
+			pushd $folder > /dev/null
+			ant compile install-portal-snapshot
+			popd > /dev/null
+		done
+	done
 
 	popd > /dev/null
 
