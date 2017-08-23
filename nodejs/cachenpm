@@ -52,11 +52,9 @@ findmodules() {
 	mkdir -p "${cache_home}"
 	cat /dev/null > "${cache_home}/cachenpm.txt"
 
-	pushd "$GIT_ROOT" > /dev/null
-
 	if [ "" == "$1" ]; then
-		for folder in $(git ls-files modules | grep -F '/package.json' | grep -vF '/src/' | dirnames); do
-			if [ ! -f "$folder/.lfrbuild-portal" ]; then
+		for folder in $(git ls-files | grep -F '/package.json' | grep -vF '/src/' | dirnames); do
+			if [ -d "$GIT_ROOT/modules" ] && [ ! -f "$folder/.lfrbuild-portal" ]; then
 				continue
 			fi
 
@@ -85,8 +83,6 @@ findmodules() {
 
 		rm -f .includes
 	fi
-
-	popd > /dev/null
 }
 
 setopts() {
