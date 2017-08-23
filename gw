@@ -119,6 +119,10 @@ gw() {
 		return 1
 	fi
 
+	# Avoid running npm inside of gradle
+
+	$(dirname ${BASH_SOURCE[0]})/nodejs/cachenpm
+
 	# avoid using the CDN, because it's not reliable
 
 	local GRADLE_ARGS="--stacktrace --no-daemon -Drepository.url=http://repository.liferay.com/nexus/content/groups/public"
