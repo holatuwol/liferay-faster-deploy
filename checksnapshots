@@ -83,6 +83,14 @@ checksnapshots() {
 
 	pushd $GIT_ROOT > /dev/null
 
+	if [ -d modules ] && [ ! -d tmp/lib-pre ]; then
+		cd modules
+		gw -Dbuild.profile=portal-pre -Pforced.deploy.dir=${PWD}/../tmp/lib-pre deploy
+		cd ..
+	fi
+
+	ant setup-libs
+
 	for candidate_folder in $(sed -n '/target name="deploy"/,/\/target/p' build.xml | grep -F 'ant dir' | grep -F 'target="deploy"' | cut -d'"' -f 2); do
 		for artifact in $missing_artifact; do
 			local folder=$(echo $artifact | cut -d'.' -f 3- | tr '.' '-')
@@ -108,6 +116,10 @@ checksnapshots() {
 			touch -t $change_time "$artifact_file"
 		done
 	done
+}
+
+gw() {
+	$(dirname "${BASH_SOURCE[0]}")/gw $@
 }
 
 modifiedtime() {
