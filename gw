@@ -145,6 +145,10 @@ gw() {
 		EXIT_CODE=$?
 	fi
 
+	# Undo the cachenpm changes
+
+	$(dirname ${BASH_SOURCE[0]})/nodejs/enablegwnpm
+
 	return $EXIT_CODE
 }
 

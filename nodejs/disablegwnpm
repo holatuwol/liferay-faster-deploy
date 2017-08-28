@@ -13,6 +13,7 @@ disablegwnpm() {
 		return 0
 	fi
 
+	cp $MODULES_HOME/build.gradle $MODULES_HOME/build.gradle.bak
 	git checkout $MODULES_HOME/build.gradle
 
 	echo "
