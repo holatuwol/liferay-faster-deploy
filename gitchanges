@@ -24,7 +24,7 @@ gitchanges() {
 
 	echo "Computing local changes..."
 
-	git status -s | grep -vF '.redeploy' | awk '{print $2}' >> .redeploy/changes.txt
+	git status -s | grep -vF '.redeploy' | grep -vF 'yarn.lock' | awk '{print $2}' >> .redeploy/changes.txt
 
 	if [[ 0 -eq $(cat .redeploy/changes.txt | grep -c '^') ]]; then
 		echo 'No changes detected.'
