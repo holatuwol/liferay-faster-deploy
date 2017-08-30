@@ -18,6 +18,38 @@ deletebranches() {
 	fi
 }
 
+fixupstream() {
+	local GIT_VERSION=$(git --version | awk '{ print $3 }' | cut -d'.' -f 1).$(git --version | awk '{ print $3 }' | cut -d'.' -f 2 | printf "%03d" 2)
+
+	for remote in $(git remote | grep upstream); do
+		delete_branches=$(deletebranches $remote | tr '\n' ' ')
+
+		if [ "" != "$delete_branches" ]; then
+			git branch -d -r $delete_branches
+		fi
+
+		retain_branches=$(retainbranches "$remote" | cut -d'/' -f 3- | tr '\n' ' ')
+
+		if [ "" != "$retain_branches" ]; then
+			if [[ 2.010 >= $GIT_VERSION ]]; then
+				git remote set-branches $remote $retain_branches
+			else
+				for retain_branch in $retain_branches; do
+					git remote set-url --add $retain_branch
+				done
+			fi
+
+			git fetch $remote --no-tags --prune
+
+			for branch in $retain_branches; do
+				pushorigin $branch $remote
+			done
+		fi
+	done
+
+	return 0
+}
+
 pushorigin() {
 	"$(dirname "${BASH_SOURCE[0]}")/pushorigin" "$1" "$2"
 }
@@ -44,21 +76,4 @@ retainbranches() {
 	fi
 }
 
-for remote in $(git remote | grep upstream); do
-	delete_branches=$(deletebranches $remote | tr '\n' ' ')
-
-	if [ "" != "$delete_branches" ]; then
-		git branch -d -r $delete_branches
-	fi
-
-	retain_branches=$(retainbranches "$remote" | cut -d'/' -f 3- | tr '\n' ' ')
-
-	if [ "" != "$retain_branches" ]; then
-		git remote set-branches $remote $retain_branches
-		git fetch $remote --no-tags --prune
-
-		for branch in $retain_branches; do
-			pushorigin $branch $remote
-		done
-	fi
-done
+fixupstream
