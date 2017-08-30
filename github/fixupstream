@@ -19,7 +19,7 @@ deletebranches() {
 }
 
 fixupstream() {
-	local GIT_VERSION=$(git --version | awk '{ print $3 }' | cut -d'.' -f 1).$(git --version | awk '{ print $3 }' | cut -d'.' -f 2 | printf "%03d" 2)
+	local GIT_VERSION=$(git --version | awk '{ print $3 }' | cut -d'.' -f 1).$(git --version | awk '{ print $3 }' | cut -d'.' -f 2 | xargs printf "%03d")
 
 	for remote in $(git remote | grep upstream); do
 		delete_branches=$(deletebranches $remote | tr '\n' ' ')
