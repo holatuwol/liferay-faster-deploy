@@ -25,23 +25,14 @@ fixupstream() {
 		local remote_url=$(git remote -v | grep "^${remote}\s" | awk '{ print $2 }' | uniq)
 		delete_branches=$(deletebranches $remote | cut -d'/' -f 4)
 
-		if [[ 2010 -lt $GIT_VERSION ]]; then
-			for delete_branch in $delete_branches; do
-				git branch -d -r $remote/$delete_branch
-			done
-		fi
+		for delete_branch in $delete_branches; do
+			git branch -d -r $remote/$delete_branch
+		done
 
 		retain_branches=$(retainbranches "$remote" | cut -d'/' -f 3-)
 
-		if [[ 2010 -lt $GIT_VERSION ]]; then
-			if [ "" != "$retain_branches" ]; then
-				git remote set-branches $remote $(echo "$retain_branches" | tr '\n' ' ')
-			fi
-		else
-			for retain_branch in $retain_branches; do
-				git fetch --no-tags ${remote_url} $retain_branch:$retain_branch
-				git branch --set-upstream $retain_branch $remote/$retain_branch
-			done
+		if [ "" != "$retain_branches" ]; then
+			git remote set-branches $remote $(echo "$retain_branches" | tr '\n' ' ')
 		fi
 
 		if [ "" != "$(git remote | grep origin)" ]; then
@@ -54,6 +45,8 @@ fixupstream() {
 	for remote in $(git remote | grep upstream); do
 		git fetch --no-tags $remote --prune
 	done
+
+	git prune
 
 	return 0
 }
