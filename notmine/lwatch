@@ -4,21 +4,31 @@ gw() {
 	$(dirname $BASH_SOURCE[0])/../gw $@
 }
 
-BUNDLE_NAME=$(grep '^Bundle-SymbolicName' bnd.bnd | cut -d':' -f 2 | tr -d ' ')
+BUNDLE_NAME=
+
+if [ -f bnd.bnd ]; then
+	BUNDLE_NAME=$(grep '^Bundle-SymbolicName' bnd.bnd | cut -d':' -f 2 | tr -d ' ')
+fi
+
+if [ "" == "$BUNDLE_NAME" ] && [ -f package.json ]; then
+	BUNDLE_NAME=$(cat package.json | jq .liferayTheme.distName | cut -d'"' -f 2)
+fi
 
 if [ "" == "$BUNDLE_NAME" ]; then
 	BUNDLE_NAME=$(basename $PWD)
 fi
 
 if [ ! -f package.json ]; then
-	echo '{ "name": "'$BUNDLE_NAME'" }' > package.json
+	echo '{ "name": "'$BUNDLE_NAME'", "liferayTheme": { "distName": "'$BUNDLE_NAME'" } }' > package.json
 fi
 
 if [ ! -d build ] && [ ! -d classes ]; then
 	gw deploy
 fi
 
-if [ -d classes ]; then
+if [ -d docroot ]; then
+	echo '{ "globClass": "docroot/**/*.class" }' > .lwatch.json
+elif [ -d classes ]; then
 	echo '{ "globClass": "classes/**/*.class" }' > .lwatch.json
 elif [[ 4 -lt $(gw --version | grep "^Gradle " | cut -d' ' -f 2 | cut -d'.' -f 1) ]]; then
 	echo '{ "globClass": "build/classes/main/**/*.class" }' > .lwatch.json
