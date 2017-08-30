@@ -6,7 +6,7 @@ findreviewer() {
 	local remote_name=$(git remote | grep "^$1$")
 
 	if [ "" != "$remote_name" ]; then
-		reviewer=$(git remote get-url $remote_name | cut -d':' -f 2 | cut -d'/' -f 1)
+		reviewer=$(git remote -v | grep "^${remote_name}\s" | awk '{ print $2 }' | uniq | cut -d':' -f 2 | cut -d'/' -f 1)
 		return 0
 	fi
 
@@ -20,7 +20,7 @@ findreviewer() {
 	# a remote for the ambiguous matches, we'll accept that.
 
 	for remote in $(git remote); do
-		remote_user=$(git remote get-url $remote | cut -d':' -f 2 | cut -d'/' -f 1)
+		remote_user=$(git remote -v | grep "^${remote}\s" | awk '{ print $2 }' | uniq | cut -d':' -f 2 | cut -d'/' -f 1)
 
 		if [ "" != "$(echo "$reviewer" | grep "^${remote_user}$")" ]; then
 			echo "Skipping user ${remote_user} as they are under remote ${remote}"

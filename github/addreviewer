@@ -10,7 +10,7 @@ addreviewer() {
 	reviewer_alias=$(echo "$1" | sed 's/[^a-zA-Z]//g')
 
 	for remote in $(git remote | grep upstream); do
-		local remote_url=$(git remote get-url $remote)
+		local remote_url=$(git remote -v | grep "^${remote}\s" | awk '{ print $2 }' | uniq)
 
 		# Don't do anything if we already created the remote, since
 		# we can assume it's setup the way the user wants

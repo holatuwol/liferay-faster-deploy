@@ -43,7 +43,7 @@ checkrepomode() {
 	echo -e "\nThis pull request must be split between repositories\n"
 
 	if [[ 0 -ne $(cat .redeploy/central.txt | grep -c '^') ]]; then
-		echo "* $(git remote get-url $upstream_remote)"
+		echo "* $(git remote -v | grep "^${upstream_remote}\s" | awk '{ print $2 }' | uniq)"
 		cat .redeploy/central.txt | awk '{ print "'"'"'" $1 "/'"'"'" }' | xargs git format-patch ${upstream_remote}/$BASE_BRANCH -- | awk '{ print "    ./" $1 }'
 	fi
 
@@ -231,7 +231,7 @@ sendpull() {
 	# Open a web browser so we can submit the pull request
 
 	current_user=$(git remote -v | grep origin | cut -d':' -f 2 | cut -d'/' -f 1 | sort -u)
-	reviewer_repository=$(git remote get-url $upstream_remote | cut -d'/' -f 2 | sed 's/\.git$//g' | uniq)
+	reviewer_repository=$(git remote -v | grep "^${upstream_remote}\s" | awk '{ print $2 }' | uniq | cut -d'/' -f 2 | sed 's/\.git$//g' | uniq)
 
 	python -m webbrowser "https://github.com/${reviewer}/${reviewer_repository}/compare/${BASE_BRANCH}...${current_user}:${CURRENT_BRANCH}"
 }
