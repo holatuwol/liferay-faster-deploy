@@ -31,7 +31,7 @@ fixupstream() {
 		retain_branches=$(retainbranches "$remote" | cut -d'/' -f 3- | tr '\n' ' ')
 
 		if [ "" != "$retain_branches" ]; then
-			if [[ 2.010 >= $GIT_VERSION ]]; then
+			if [[ 2.010 -ge $GIT_VERSION ]]; then
 				git remote set-branches $remote $retain_branches
 			else
 				for retain_branch in $retain_branches; do
