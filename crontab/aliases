@@ -9,7 +9,7 @@ SCRIPT_FOLDER=$(pwd -P)
 popd > /dev/null
 
 if [ "" == "$BUILD_FOLDER_PREFIX" ]; then
-	BUILD_FOLDER_PREFIX=$HOME/builds
+	BUILD_FOLDER_PREFIX=$HOME
 fi
 
 build() {
