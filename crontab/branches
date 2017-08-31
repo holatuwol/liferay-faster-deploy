@@ -7,13 +7,20 @@ SCRIPT_FOLDER=$(pwd -P)
 popd > /dev/null
 
 branch() {
+	# If we've already built the branch today, no need to rebuild it
+
 	if [ -f "/var/www/html/builds/branches/${1}-${TIMESTAMP}.tar.gz" ]; then
 		return 0
 	fi
 
+	# We flag whether or not we want to build a branch by making a folder,
+	# so if that folder does not exist, don't bother
+
 	if [ ! -d "$BUILD_FOLDER_PREFIX/$1" ]; then
 		return 0
 	fi
+
+	# Determine the actual base branch to use for building
 
 	if [ "master" == "$1" ]; then
 		BASE_BRANCH=$1
@@ -23,7 +30,7 @@ branch() {
 		BASE_BRANCH=$(echo $1 | sed 's/\([0-9]\)/\1./g')
 	fi
 
-	local OLD_BRANCH=$(git branch | grep -F '*' | cut -d' ' -f 2)
+	# Check to see if we can successfully checkout the branch
 
 	checkout $BASE_BRANCH
 
@@ -31,15 +38,26 @@ branch() {
 		return 1
 	fi
 
+	# Rebase against the old branch
+
 	local upstream_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
 
 	git rebase ${upstream_remote}/$BASE_BRANCH
 
 	if [[ 0 -ne $? ]]; then
 		git rebase --abort
-		checkout $OLD_BRANCH
 		return 1
 	fi
+
+	# If we have an equivalent private branch, we should actually be building that
+
+	if [ "master" != "$1" ] && [ "" != "$(git for-each-ref --format='%(refname)' "refs/heads/${BASE_BRANCH}-private")" ]; then
+		checkout ${BASE_BRANCH}-private
+		git rebase ${upstream_remote}/$BASE_BRANCH-private
+		setportalcommit
+	fi
+
+	# Execute the build
 
 	BUILD_FOLDER_PREFIX="$BUILD_FOLDER_PREFIX" \
 		BUILD_FOLDER_SUFFIX="$TIMESTAMP" \
@@ -47,14 +65,12 @@ branch() {
 		TIMESTAMP="$TIMESTAMP" \
 			$SCRIPT_FOLDER/prepare $@
 
-	checkout $OLD_BRANCH
-
 	# Only retain last three builds
 
-	BUILD_COUNT=$(ls -1 "$BUILD_FOLDER_PREFIX/$1" | grep -vF '.log' | grep -c '^')
+	BUILD_COUNT=$(ls -1 "$BUILD_FOLDER_PREFIX/$1/" | grep -vF '.log' | grep -c '^')
 
 	if [[ $BUILD_COUNT -gt 3 ]]; then
-		for BUILD_ID in $(ls -1 "$BUILD_FOLDER_PREFIX/$1" | grep -vF '.log' | sort | head -$(expr $BUILD_COUNT '-' 3)); do
+		for BUILD_ID in $(ls -1 "$BUILD_FOLDER_PREFIX/$1/" | grep -vF '.log' | sort | head -$(expr $BUILD_COUNT '-' 3)); do
 			rm -rf "$BUILD_FOLDER_PREFIX/$1/$BUILD_ID"
 		done
 	fi
@@ -87,9 +103,11 @@ branches() {
 	# Clear out the data folder for all past builds
 
 	for folder in $REBUILD; do
-		for BUILD_ID in $(ls -1 "$BUILD_FOLDER_PREFIX/$folder" | grep -vF '.log'); do
-			rm -rf "$BUILD_FOLDER_PREFIX/$folder/$BUILD_ID/data"
-		done
+		if [ -d $BUILD_FOLDER_PREFIX/$folder ]; then
+			for BUILD_ID in $(ls -1 "$BUILD_FOLDER_PREFIX/$folder/" | grep -vF '.log'); do
+				rm -rf "$BUILD_FOLDER_PREFIX/$folder/$BUILD_ID/data"
+			done
+		fi
 	done
 
 	# Start build
@@ -136,9 +154,13 @@ checkout() {
 }
 
 fixpack() {
+	# If we've already built the fixpack, no need to rebuild it
+
 	if [ -f "/var/www/html/builds/fixpacks/${1}.tar.gz" ]; then
 		return 0
 	fi
+
+	# If we have not checked out the tag locally, make sure to check it out
 
 	if [ "" == "$(git tag | grep -F "$1")" ]; then
 		if [[ $1 == fix-pack-* ]]; then
@@ -152,7 +174,20 @@ fixpack() {
 		fi
 	fi
 
+	# We only build the private tag on the build server if both a public
+	# and private tag are present
+
+	if [ "" != "$(git tag | grep -F "$1-private")" ]; then
+		return 0
+	fi
+
 	checkout $1
+
+	if [[ $1 == *-private ]]; then
+		setportalcommit
+	fi
+
+	# Execute the build
 
 	BUILD_FOLDER_PREFIX="$BUILD_FOLDER_PREFIX/temp" \
 		BUILD_FOLDER_SUFFIX="" \
@@ -184,6 +219,15 @@ fixpacks() {
 	for tag_id in $(cat /var/www/html/builds/fixpacks/tags.txt); do
 		fixpack $tag_id
 	done
+}
+
+setportalcommit() {
+	echo -e "\n\nUpdating git-commit-portal commit"
+
+	echo git log -1 --pretty='%H' $(echo $1 | sed 's/-private$//g')
+	git log -1 --pretty='%H' $(echo $1 | sed 's/-private$//g') | tee git-commit-portal
+
+	ant -f build-working-dir.xml
 }
 
 update() {

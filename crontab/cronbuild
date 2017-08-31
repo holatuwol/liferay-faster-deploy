@@ -83,7 +83,9 @@ fi
 
 if [ "clean" == "$1" ]; then
 	for folder in master 70x 62x 61x; do
-		cr $folder
+		if [ -d $BUILD_FOLDER_PREFIX/$folder ]; then
+			cr $folder
+		fi
 	done
 fi
 
