@@ -21,7 +21,7 @@ build() {
 
 cr() {
 	if [ -d "$BUILD_FOLDER_PREFIX/$1" ]; then
-		CATALINA_HOME=$(find $BUILD_FOLDER_PREFIX/$1 -type d -name 'tomcat*' | sort -u | tail -1)
+		CATALINA_HOME=$(find $BUILD_FOLDER_PREFIX/$1 -type d -name 'tomcat-*' | sort -u | tail -1)
 	fi
 
 	if [ "" == "$CATALINA_HOME" ]; then
@@ -38,6 +38,10 @@ cr() {
 
 	if [ "" == "$CATALINA_HOME" ]; then
 		echo "Failed to find build for $1"
+		return 1
+	fi
+
+	if [ ! -d "$CATALINA_HOME/bin" ]; then
 		return 1
 	fi
 
