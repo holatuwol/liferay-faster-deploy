@@ -23,8 +23,13 @@ skipmp() {
 		fi
 	fi
 
+	if [ "" != "$(grep -F build.include.dirs build.properties)" ]; then
+		echo >> build.$USER.properties
+		sed -n '/#build.include.dirs/,/[^\\]$/p' build.properties  | cut -d'#' -f 2 >> build.$USER.properties
+		return 0
+	fi
+
 	if [ ! -f build.$USER.properties ] || [ "" != "$(grep -F build.include.dirs build.properties)" ]; then
-		echo "Neither build.include.dirs nor build.exclude.dirs has been set"
 		echo "Restricting build to the following applications (detected via app.bnd)"
 
 		if [ -f $HOME/lpkgs.txt ]; then
