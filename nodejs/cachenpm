@@ -53,13 +53,19 @@ findmodules() {
 	cat /dev/null > "${cache_home}/cachenpm.txt"
 
 	if [ "" == "$1" ]; then
-		for folder in $(git ls-files | grep -F '/package.json' | grep -vF '/src/' | dirnames); do
-			if [ -d "$GIT_ROOT/modules" ] && [ ! -f "$folder/.lfrbuild-portal" ]; then
-				continue
-			fi
-
-			echo "$PWD/$folder/package.json" >> "${cache_home}/cachenpm.txt"
-		done
+		if [ -d $GIT_ROOT/modules ]; then
+			for folder in $(find $GIT_ROOT/modules -name .lfrbuild-portal | grep -vF '/src/' | dirnames); do
+				if [ -f "$folder/package.json" ]; then
+					echo "$folder/package.json" >> "${cache_home}/cachenpm.txt"
+				fi
+			done
+		else
+			for folder in $(find $GIT_ROOT -name build.gradle | grep -vF '/src/' | dirnames); do
+				if [ -f "$folder/package.json" ]; then
+					echo "$folder/package.json" >> "${cache_home}/cachenpm.txt"
+				fi
+			done
+		fi
 	else
 		if [ -f "$1/build.gradle" ]; then
 			echo "$1" > .includes
