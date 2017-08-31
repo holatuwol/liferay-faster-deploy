@@ -123,8 +123,8 @@ prepare() {
 		export ANT_OPTS='-Xms2g -Xmx2g -XX:MaxPermSize=512m'
 		javahome 6
 	else
-		export GRADLE_OPTS='-Xms3g -Xmx3g -Dorg.gradle.workers.max=1'
-		export ANT_OPTS='-Xms1g -Xmx1g'
+		export GRADLE_OPTS='-Xms4g -Xmx4g -Dorg.gradle.workers.max=1'
+		export ANT_OPTS='-Xms2g -Xmx2g'
 		javahome 8
 	fi
 

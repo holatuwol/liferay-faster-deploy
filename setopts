@@ -15,7 +15,7 @@ buildopts() {
 
 	export ANT_OPTS
 
-	GRADLE_OPTS='-Xms3g -Xmx3g -Dorg.gradle.workers.max=1'
+	GRADLE_OPTS='-Xms4g -Xmx4g -Dorg.gradle.workers.max=1'
 
 	if [[ 8 -gt $JAVA_VERSION ]]; then
 		GRADLE_OPTS="$GRADLE_OPTS -XX:MaxPermSize=512m"
