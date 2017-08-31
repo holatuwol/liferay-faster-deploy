@@ -7,10 +7,10 @@ pushorigin() {
 		if [[ "$2" == origin* ]]; then
 			origin_name=$2
 		else
-			local remote_url=$(git remote -v | grep "^${2}\s" | awk '{ print $2 }' | uniq)
+			local upstream_url=$(git remote -v | grep "^${2}\s" | awk '{ print $2 }' | uniq)
 
 			if [ "" == "$upstream_url" ]; then
-				echo "Unable to determine origin corresponding to $2"
+				echo "Unable to determine origin corresponding to $2/$1"
 				return 1
 			fi
 
