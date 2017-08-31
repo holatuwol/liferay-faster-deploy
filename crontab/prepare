@@ -29,7 +29,7 @@ compile() {
 	fi
 
 	if [ -f modules/build.gradle ]; then
-		$/../skipmp | tee -a "${LIFERAY_HOME}.log"
+		$SCRIPT_FOLDER/../skipmp | tee -a "${LIFERAY_HOME}.log"
 		$SCRIPT_FOLDER/../nodejs/cachenpm | tee -a "${LIFERAY_HOME}.log"
 	fi
 
