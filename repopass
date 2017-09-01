@@ -7,9 +7,9 @@ repopass() {
 
 	# Make sure the repository password is up to date
 
-	local LOCAL_BRANCH=$(grep -o '`[^`]*`' "$GIT_ROOT/README.markdown" | cut -d'`' -f 2 | uniq)
+	local LOCAL_BRANCH=$(grep -F git.working.branch.name build.properties | cut -d'=' -f 2)
 
-	if [ "" == "$LOCAL_BRANCH" ]; then
+	if [ "" == "$LOCAL_BRANCH" ] || [ "ee-7.0.x" == "$LOCAL_BRANCH" ]; then
 		LOCAL_BRANCH=7.0.x
 	fi
 

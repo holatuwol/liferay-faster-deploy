@@ -19,11 +19,11 @@ getparent() {
 		MAJOR_VERSION=$(grep lp.version.major= "release.properties" | cut -d'=' -f 2)
 	elif [ -f "build.properties" ]; then
 		FULL_VERSION=$(grep lp.version= "build.properties" | cut -d'=' -f 2)
-		MAJOR_VERSION=$(grep lp.version= "build.properties" | cut -d'=' -f 2 | cut -d'.' -f 1,2)
+		MAJOR_VERSION=$(echo "$FULL_VERSION" | cut -d'.' -f 1,2)
 	elif [ -f "git-commit-portal" ]; then
 		local PORTAL_COMMIT=$(cat git-commit-portal)
 		FULL_VERSION=$(git show $PORTAL_COMMIT:release.properties | grep lp.version= | cut -d'=' -f 2)
-		MAJOR_VERSION=$(git show $PORTAL_COMMIT:release.properties | grep lp.version= | cut -d'=' -f 2 | cut -d'.' -f 1,2)
+		MAJOR_VERSION=$(echo "$FULL_VERSION" | cut -d'.' -f 1,2)
 	fi
 
 	if [ "6.0" == "$MAJOR_VERSION" ]; then
@@ -32,22 +32,16 @@ getparent() {
 		BASE_BRANCH=ee-6.1.x
 	elif [ "6.2" == "$MAJOR_VERSION" ]; then
 		BASE_BRANCH=ee-6.2.x
-	elif [ "7.0" == "$MAJOR_VERSION" ] && [ "7.0.10" == "$FULL_VERSION" ]; then
-		if [ -f working.dir.properties ]; then
-			BASE_BRANCH=7.0.x-private
-		else
+	elif [ "7.0" == "$MAJOR_VERSION" ]; then
+		BASE_BRANCH=$(grep -F git.working.branch.name build.properties | cut -d'=' -f 2)
+
+		if [ "" == "$BASE_BRANCH" ] || [ "ee-7.0.x" == "$BASE_BRANCH" ]; then
 			BASE_BRANCH=7.0.x
 		fi
-	elif [ "7.0" == "$MAJOR_VERSION" ]; then
-		if [ -f working.dir.properties ]; then
-			BASE_BRANCH=master-private
-		else
-			BASE_BRANCH=master
+
+		if [ -d modules/private ]; then
+			BASE_BRANCH=${BASE_BRANCH}-private
 		fi
-	elif [ -f "settings.gradle" ] && [ "" != "$(grep -F com.liferay settings.gradle)" ]; then
-		BASE_BRANCH=master
-	else
-		return 1
 	fi
 
 	# If the branch isn't an ancestor, try to find a matching tag
