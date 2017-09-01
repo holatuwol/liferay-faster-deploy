@@ -9,12 +9,6 @@ cachenpm() {
 		rm -rf "${cache_home}"
 	fi
 
-	NPM_INSTALL=$(npm config get cachenpm-install-strategy)
-
-	if [ "undefined" == "$NPM_INSTALL" ]; then
-		NPM_INSTALL='npm install'
-	fi
-
 	findmodules $@
 
 	local NPM_PRODUCTION=$(npm config get production)
@@ -136,4 +130,14 @@ transitiveincludes() {
 
 setopts
 
-cachenpm $@ && disablegwnpm
+NPM_INSTALL=$(npm config get cachenpm-install-strategy)
+
+if [ "undefined" == "$NPM_INSTALL" ]; then
+	NPM_INSTALL='npm install'
+fi
+
+cachenpm $@
+
+if [ "npm install" != "$NPM_INSTALL" ]; then
+	disablegwnpm
+fi
