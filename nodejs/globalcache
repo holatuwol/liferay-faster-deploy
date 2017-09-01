@@ -23,7 +23,7 @@ globalcache() {
 	if [ -f package.json.old ] && [ "" == "$(diff package.json package.json.old)" ]; then
 		echo 'package.json has no changes'
 	else
-		$NPM_INSTALL
+		time $NPM_INSTALL
 	fi
 
 	rm package.json.old

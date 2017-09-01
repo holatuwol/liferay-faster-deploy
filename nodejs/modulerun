@@ -4,14 +4,18 @@ modulerun() {
 	for folder in $(cat ${cache_home}/cachenpm.txt | dirnames); do
 		pushd $folder > /dev/null
 
-		if [ -d "$folder/node_modules" ] && [ ! -f "$folder/yarn.lock" ]; then
-			npm install
-		else
-			$NPM_INSTALL
-		fi
+		time modulerunonce
 
 		popd > /dev/null
 	done
+}
+
+modulerunonce() {
+	$NPM_INSTALL
+
+	if [[ 0 -eq $(ls node_modules/ | grep -c '^') ]] && [ "yarn" != "$NPM_INSTALL" ]; then
+		yarn
+	fi
 }
 
 modulerun

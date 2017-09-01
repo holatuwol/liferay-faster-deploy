@@ -11,51 +11,66 @@ modulecache() {
 	fi
 
 	for folder in $(cat ${cache_home}/cachenpm.txt | dirnames); do
-		cache_hash=$(jq '.dependencies, .devDependencies' $folder/package.json | $MD5SUM | cut -d' ' -f 1)
-		cache_file="${cache_home}/${cache_hash}.tar.gz"
+		local cache_hash=$(jq '.dependencies, .devDependencies' $folder/package.json | $MD5SUM | cut -d' ' -f 1)
+		local cache_file="${cache_home}/${cache_hash}.tar.gz"
 
 		pushd $folder > /dev/null
 
 		if [ -f "$cache_file" ]; then
-			cache_time=$(perl -MPOSIX -e 'print POSIX::strftime "%Y%m%d%H%M.%S", localtime((stat $ARGV[0])[9])' "${cache_file}")
-			folder_time=
-
-			if [ -d "node_modules" ]; then
-				folder_time=$(perl -MPOSIX -e 'print POSIX::strftime "%Y%m%d%H%M.%S", localtime((stat $ARGV[0])[9])' node_modules)
-			fi
-
-			if [ "$cache_time" != "$folder_time" ]; then
-				echo "Restoring cache for $folder"
-
-				rm -rf node_modules
-				tar -zxf "${cache_file}"
-				touch -t $cache_time node_modules
-			fi
-
-			popd > /dev/null
-			continue
-		fi
-
-		echo "Caching build for $folder"
-		jq '.dependencies, .devDependencies' $folder/package.json
-
-		rm -rf node_modules
-
-		if [ -d "$folder/node_modules" ] && [ ! -f "$folder/yarn.lock" ]; then
-			npm install && tar -zcf "$cache_file" node_modules
+			modulerestoreonce $cache_file
 		else
-			$NPM_INSTALL && tar -zcf "$cache_file" node_modules
-		fi
-
-		if [ -f "$cache_file" ]; then
-			cache_time=$(perl -MPOSIX -e 'print POSIX::strftime "%Y%m%d%H%M.%S", localtime((stat $ARGV[0])[9])' "$cache_file")
-			touch -t $cache_time node_modules
+			time modulecacheonce
 		fi
 
 		popd > /dev/null
 	done
 
 	find ${cache_home} -name '*.tar.gz' -mtime +7 -exec rm {} \;
+}
+
+modulecacheonce() {
+	local cache_file=$1
+
+	echo "Caching build for $folder"
+
+	jq '.dependencies, .devDependencies' package.json
+
+	rm -rf node_modules
+
+	$NPM_INSTALL
+
+	if [[ 0 -eq $(ls node_modules/ | grep -c '^') ]] && [ "yarn" != "$NPM_INSTALL" ]; then
+		yarn
+	fi
+
+	if [[ 0 -ne $(ls node_modules/ | grep -c '^') ]]; then
+		tar -zcf "$cache_file" node_modules
+	fi
+
+	if [ -f "$cache_file" ]; then
+		cache_time=$(perl -MPOSIX -e 'print POSIX::strftime "%Y%m%d%H%M.%S", localtime((stat $ARGV[0])[9])' "$cache_file")
+		touch -t $cache_time node_modules
+	fi
+}
+
+modulerestoreonce() {
+	local cache_file=$1
+	local cache_time=$(perl -MPOSIX -e 'print POSIX::strftime "%Y%m%d%H%M.%S", localtime((stat $ARGV[0])[9])' "${cache_file}")
+	local folder_time=
+
+	if [ -d "node_modules" ]; then
+		folder_time=$(perl -MPOSIX -e 'print POSIX::strftime "%Y%m%d%H%M.%S", localtime((stat $ARGV[0])[9])' node_modules)
+	fi
+
+	if [ "$cache_time" == "$folder_time" ]; then
+		return 0
+	fi
+
+	echo "Restoring cache for $folder"
+
+	rm -rf node_modules
+	tar -zxf "${cache_file}"
+	touch -t $cache_time node_modules
 }
 
 modulecache
