@@ -46,6 +46,12 @@ gitfilematch() {
 	local SCRATCH_FILE=$GIT_ROOT/.redeploy/lsfiles.txt
 	git ls-files $2 | sort -u > "$SCRATCH_FILE"
 
+	if [ -f working.dir.properties ]; then
+		for file in bnd.bnd ivy.xml package.json; do
+			find modules -type f -name $file >> "$SCRATCH_FILE"
+		done
+	fi
+
 	# If the folder is empty, there's nothing for us to do
 
 	if [[ 0 -eq $(cat "$SCRATCH_FILE" | grep -c '^') ]]; then
