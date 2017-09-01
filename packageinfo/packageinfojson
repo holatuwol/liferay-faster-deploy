@@ -27,7 +27,7 @@ PORTAL_SOURCE_ROOT="$PORTAL_SOURCE_ROOT" \
 
 pushd "$PORTAL_SOURCE_ROOT" > /dev/null
 CE_RELEASE_COUNT=$(git tag | grep 'ga' | grep '7.0.' | grep -c '^')
-EE_RELEASE_COUNT=$(git tag | grep 'fix-pack-de-[0-9]*-7010' | grep -c '^')
+EE_RELEASE_COUNT=$(git tag | grep 'fix-pack-de-[0-9]*-7010$' | grep -c '^')
 popd > /dev/null
 
 # Generate the JSON files

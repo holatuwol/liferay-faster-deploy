@@ -80,7 +80,7 @@ fi
 pushd "$PORTAL_SOURCE_ROOT" > /dev/null
 
 git ls-remote -t git@github.com:liferay/liferay-portal.git | \
-	awk '{ print $2 }' | grep ga | grep -vF sync | grep -F '/7.0' | \
+	awk '{ print $2 }' | grep ga | grep -vF sync | grep -vF 'private' | grep -F '/7.0' | \
 	sort | cut -d'/' -f 3 > .redeploy/tags.txt
 
 git ls-remote -t git@github.com:liferay/liferay-portal-ee.git | \
