@@ -48,7 +48,7 @@ gitfilematch() {
 
 	if [ -f working.dir.properties ]; then
 		for file in bnd.bnd ivy.xml package.json; do
-			find modules -type f -name $file >> "$SCRATCH_FILE"
+			find modules -type f -name $file | grep -vF node_modules >> "$SCRATCH_FILE"
 		done
 	fi
 
