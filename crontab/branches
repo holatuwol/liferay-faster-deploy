@@ -51,7 +51,11 @@ branch() {
 
 	# If we have an equivalent private branch, we should actually be building that
 
+	local BUILT_PRIVATE=
+
 	if [ "master" != "$1" ] && [ "" != "$(git for-each-ref --format='%(refname)' "refs/heads/${BASE_BRANCH}-private")" ]; then
+		BUILT_PRIVATE=true
+
 		checkout ${BASE_BRANCH}-private
 		git rebase ${upstream_remote}/$BASE_BRANCH-private
 		setportalcommit
@@ -64,6 +68,16 @@ branch() {
 		ARCHIVE_FOLDER="/var/www/html/builds/branches" \
 		TIMESTAMP="$TIMESTAMP" \
 			$SCRIPT_FOLDER/prepare $@
+
+	# If we have an equivalent private branch, also copy our build there
+
+	if [ "" != "$BUILT_PRIVATE" ] && [ -d /var/www/html/builds/branches/$1-${TIMESTAMP}.tar.gz ]; then
+		cp /var/www/html/builds/branches/$1-${TIMESTAMP}.tar.gz /var/www/html/builds/branches/$1-private-${TIMESTAMP}.tar.gz
+
+		echo "Git Hash:" > /var/www/html/builds/branches/$1-private-${TIMESTAMP}.log
+		cat git-commit-portal >> /var/www/html/builds/branches/$1-private-${TIMESTAMP}.log
+		tail -n +3 /var/www/html/builds/branches/$1-${TIMESTAMP}.log >> /var/www/html/builds/branches/$1-private-${TIMESTAMP}.log
+	fi
 
 	# Only retain last three builds
 
@@ -174,17 +188,21 @@ fixpack() {
 		fi
 	fi
 
-	# We only build the private tag on the build server if both a public
-	# and private tag are present
+	# If we have an equivalent private tag, we should actually be building that,
+	# but because we have that logic, avoid building the private tag
 
-	if [ "" != "$(git tag | grep -F "$1-private")" ]; then
+	if [[ $1 == *-private ]]; then
 		return 0
 	fi
 
-	checkout $1
+	local BUILT_PRIVATE=
 
-	if [[ $1 == *-private ]]; then
+	if [ "" != "$(git for-each-ref --format='%(refname)' "refs/tags/${1}-private")" ]; then
+		BUILT_PRIVATE=true
+		checkout ${1}-private
 		setportalcommit
+	else
+		checkout $1
 	fi
 
 	# Execute the build
@@ -194,6 +212,18 @@ fixpack() {
 		ARCHIVE_FOLDER="/var/www/html/builds/fixpacks" \
 		TIMESTAMP="" \
 			$SCRIPT_FOLDER/prepare $1 80
+
+	# If we have an equivalent private tag, also copy our build there
+
+	if [ "" != "$BUILT_PRIVATE" ] && [ -d /var/www/html/builds/fixpacks/$1.tar.gz ]; then
+		cp /var/www/html/builds/fixpacks/$1.tar.gz /var/www/html/builds/fixpacks/$1-private.tar.gz
+
+		echo "Git Hash:" > /var/www/html/builds/fixpacks/$1-private.log
+		cat git-commit-portal >> /var/www/html/builds/fixpacks/$1-private.log
+		tail -n +3 /var/www/html/builds/fixpacks/$1.log >> /var/www/html/builds/fixpacks/$1-private.log
+	fi
+
+	# Remove the temp folder where we were building to
 
 	rm -rf "$BUILD_FOLDER_PREFIX/temp/$1"
 }
