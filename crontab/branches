@@ -73,10 +73,11 @@ branch() {
 
 	if [ "" != "$BUILT_PRIVATE" ] && [ -d /var/www/html/builds/branches/$1-${TIMESTAMP}.tar.gz ]; then
 		cp /var/www/html/builds/branches/$1-${TIMESTAMP}.tar.gz /var/www/html/builds/branches/$1-private-${TIMESTAMP}.tar.gz
+		mv /var/www/html/builds/branches/$1-${TIMESTAMP}.log /var/www/html/builds/branches/$1-private-${TIMESTAMP}.log
 
-		echo "Git Hash:" > /var/www/html/builds/branches/$1-private-${TIMESTAMP}.log
-		cat git-commit-portal >> /var/www/html/builds/branches/$1-private-${TIMESTAMP}.log
-		tail -n +3 /var/www/html/builds/branches/$1-${TIMESTAMP}.log >> /var/www/html/builds/branches/$1-private-${TIMESTAMP}.log
+		echo "Git Hash:" > /var/www/html/builds/branches/$1-${TIMESTAMP}.log
+		cat git-commit-portal >> /var/www/html/builds/branches/$1-${TIMESTAMP}.log
+		tail -n +3 /var/www/html/builds/branches/$1-${TIMESTAMP}-private.log >> /var/www/html/builds/branches/$1-${TIMESTAMP}.log
 	fi
 
 	# Only retain last three builds
@@ -217,10 +218,11 @@ fixpack() {
 
 	if [ "" != "$BUILT_PRIVATE" ] && [ -d /var/www/html/builds/fixpacks/$1.tar.gz ]; then
 		cp /var/www/html/builds/fixpacks/$1.tar.gz /var/www/html/builds/fixpacks/$1-private.tar.gz
+		mv /var/www/html/builds/fixpacks/$1.log /var/www/html/builds/fixpacks/$1-private.log
 
-		echo "Git Hash:" > /var/www/html/builds/fixpacks/$1-private.log
-		cat git-commit-portal >> /var/www/html/builds/fixpacks/$1-private.log
-		tail -n +3 /var/www/html/builds/fixpacks/$1.log >> /var/www/html/builds/fixpacks/$1-private.log
+		echo "Git Hash:" > /var/www/html/builds/fixpacks/$1.log
+		cat git-commit-portal >> /var/www/html/builds/fixpacks/$1.log
+		tail -n +3 /var/www/html/builds/fixpacks/$1-private.log >> /var/www/html/builds/fixpacks/$1.log
 	fi
 
 	# Remove the temp folder where we were building to
