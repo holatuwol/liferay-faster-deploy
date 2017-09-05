@@ -71,7 +71,7 @@ branch() {
 
 	# If we have an equivalent private branch, also copy our build there
 
-	if [ "" != "$BUILT_PRIVATE" ] && [ -d /var/www/html/builds/branches/$1-${TIMESTAMP}.tar.gz ]; then
+	if [ "" != "$BUILT_PRIVATE" ] && [ -f /var/www/html/builds/branches/$1-${TIMESTAMP}.tar.gz ]; then
 		cp /var/www/html/builds/branches/$1-${TIMESTAMP}.tar.gz /var/www/html/builds/branches/$1-private-${TIMESTAMP}.tar.gz
 		mv /var/www/html/builds/branches/$1-${TIMESTAMP}.log /var/www/html/builds/branches/$1-private-${TIMESTAMP}.log
 
@@ -216,7 +216,7 @@ fixpack() {
 
 	# If we have an equivalent private tag, also copy our build there
 
-	if [ "" != "$BUILT_PRIVATE" ] && [ -d /var/www/html/builds/fixpacks/$1.tar.gz ]; then
+	if [ "" != "$BUILT_PRIVATE" ] && [ -f /var/www/html/builds/fixpacks/$1.tar.gz ]; then
 		cp /var/www/html/builds/fixpacks/$1.tar.gz /var/www/html/builds/fixpacks/$1-private.tar.gz
 		mv /var/www/html/builds/fixpacks/$1.log /var/www/html/builds/fixpacks/$1-private.log
 
