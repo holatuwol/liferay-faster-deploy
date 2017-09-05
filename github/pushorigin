@@ -2,11 +2,27 @@
 
 pushorigin() {
 	local origin_name=origin
+	local upstream_name=upstream
 
 	if [ "" != "$2" ]; then
 		if [[ "$2" == origin* ]]; then
 			origin_name=$2
+
+			local origin_url=$(git remote -v | grep "^${2}\s" | awk '{ print $2 }' | uniq)
+
+			if [ "" == "$origin_url" ]; then
+				echo "Unable to determine upstream corresponding to $2/$1"
+				return 1
+			fi
+
+			upstream_name=$(git remote -v | grep -F $(echo $origin_url | cut -d'/' -f 2) | grep -vF $origin_url | awk '{ print $1 }' | uniq)
+
+			if [ "" == "$upstream_name" ]; then
+				return 0
+			fi
 		else
+			upstream_name=$2
+
 			local upstream_url=$(git remote -v | grep "^${2}\s" | awk '{ print $2 }' | uniq)
 
 			if [ "" == "$upstream_url" ]; then
@@ -25,7 +41,7 @@ pushorigin() {
 	echo "Updating $1 on $origin_name"
 
 	if [ "" == "$(git for-each-ref --format='%(refname)' refs/heads/$1)" ]; then
-		git fetch $2 --no-tags $1:$1
+		git fetch $upstream_name --no-tags $1:$1
 	fi
 
 	if [ "" == "$(git for-each-ref --format='%(refname)' refs/remotes/$origin_name/$1)" ]; then
