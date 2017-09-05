@@ -4,7 +4,6 @@ applychanges() {
 	# Run cachenpm if needed
 
 	$(dirname "${BASH_SOURCE[0]}")/skipmp
-	$(dirname "${BASH_SOURCE[0]}")/nodejs/cachenpm $NEW_BASELINE
 
 	# Compute all changes, not just the ones in modules (which is what cachenpm does)
 
@@ -71,6 +70,7 @@ applychanges() {
 	# Finally, check to see if there is anything we need to deploy with gradle
 
 	if [[ 0 -ne $(cat .redeploy/changes_gradle_2.txt | grep -c '^') ]]; then
+		$(dirname "${BASH_SOURCE[0]}")/nodejs/cachenpm $NEW_BASELINE
 		deploymodules
 
 		if [[ 0 -ne $? ]]; then
