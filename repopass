@@ -1,13 +1,18 @@
 #!/bin/bash
 
 repopass() {
-	if [ ! -f "$GIT_ROOT/build.properties" ] && [ ! -f "$GIT_ROOT/working.dir.properties" ]; then
-		return 0
-	fi
-
 	# Make sure the repository password is up to date
 
-	local LOCAL_BRANCH=$(grep -F git.working.branch.name build.properties | cut -d'=' -f 2)
+	local LOCAL_BRANCH=
+
+	if [ -f "$GIT_ROOT/build.properties" ]; then
+		LOCAL_BRANCH=$(grep -F git.working.branch.name "$GIT_ROOT/build.properties" | cut -d'=' -f 2)
+	elif [ -f "$GIT_ROOT/working.dir.properties" ]; then
+		ant -f build-working-dir.xml
+		LOCAL_BRANCH=$(grep -F git.working.branch.name "$GIT_ROOT/build.properties" | cut -d'=' -f 2)
+	else
+		return 0
+	fi
 
 	if [ "" == "$LOCAL_BRANCH" ] || [ "ee-7.0.x" == "$LOCAL_BRANCH" ]; then
 		LOCAL_BRANCH=7.0.x

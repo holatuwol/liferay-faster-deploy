@@ -13,6 +13,7 @@ getparent() {
 
 	local FULL_VERSION=
 	local MAJOR_VERSION=
+	local PORTAL_COMMIT=
 
 	if [ -f "release.properties" ]; then
 		FULL_VERSION=$(grep lp.version= "release.properties" | cut -d'=' -f 2)
@@ -21,7 +22,7 @@ getparent() {
 		FULL_VERSION=$(grep lp.version= "build.properties" | cut -d'=' -f 2)
 		MAJOR_VERSION=$(echo "$FULL_VERSION" | cut -d'.' -f 1,2)
 	elif [ -f "git-commit-portal" ]; then
-		local PORTAL_COMMIT=$(cat git-commit-portal)
+		PORTAL_COMMIT=$(cat git-commit-portal)
 		FULL_VERSION=$(git show $PORTAL_COMMIT:release.properties | grep lp.version= | cut -d'=' -f 2)
 		MAJOR_VERSION=$(echo "$FULL_VERSION" | cut -d'.' -f 1,2)
 	fi
@@ -33,7 +34,13 @@ getparent() {
 	elif [ "6.2" == "$MAJOR_VERSION" ]; then
 		BASE_BRANCH=ee-6.2.x
 	elif [ "7.0" == "$MAJOR_VERSION" ]; then
-		BASE_BRANCH=$(grep -F git.working.branch.name build.properties | cut -d'=' -f 2)
+		if [ -f "build.properties" ]; then
+			BASE_BRANCH=$(grep -F git.working.branch.name build.properties | cut -d'=' -f 2)
+		elif [ -f "git-commit-portal" ]; then
+			BASE_BRANCH=$(git show $PORTAL_COMMIT:build.properties | grep -F git.working.branch.name | cut -d'=' -f 2)
+		else
+			BASE_BRANCH=
+		fi
 
 		if [ "" == "$BASE_BRANCH" ] || [ "ee-7.0.x" == "$BASE_BRANCH" ]; then
 			BASE_BRANCH=7.0.x

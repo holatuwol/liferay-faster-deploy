@@ -9,6 +9,10 @@ setopts() {
 }
 
 skipmp() {
+	if [ ! -f build.properties ]; then
+		return 0
+	fi
+
 	if [ -f build.$USER.properties ] && [ "" != "$(grep -F build.include.dirs build.properties)" ]; then
 		if [ "" != "$(grep -F build.include.dirs build.$USER.properties)" ]; then
 			echo "build.include.dirs has already been set in build.$USER.properties"
