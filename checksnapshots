@@ -5,7 +5,7 @@ checksnapshots() {
 		return 0
 	fi
 
-	if [ ! -f build.xml ] || [ "" == "$(grep -F setup-sdk build.xml)" ]; then
+	if [ ! -f "$GIT_ROOT/build.xml" ] || [ "" == "$(grep -F setup-sdk "$GIT_ROOT/build.xml")" ]; then
 		return 0
 	fi
 
@@ -76,6 +76,7 @@ checksnapshots() {
 	done
 
 	if [ "" == "$missing_artifact" ]; then
+		rm $GIT_ROOT/.redeploy/checksnapshots.txt
 		return 0
 	fi
 
@@ -85,7 +86,7 @@ checksnapshots() {
 
 	if [ -d modules ] && [ ! -d tmp/lib-pre ]; then
 		cd modules
-		gw -Dbuild.profile=portal-pre -Pforced.deploy.dir=${PWD}/../tmp/lib-pre deploy
+		../gradlew -Dbuild.profile=portal-pre -Pforced.deploy.dir=${PWD}/../tmp/lib-pre deploy
 		cd ..
 	fi
 
@@ -116,10 +117,8 @@ checksnapshots() {
 			touch -t $change_time "$artifact_file"
 		done
 	done
-}
 
-gw() {
-	$(dirname "${BASH_SOURCE[0]}")/gw $@
+	rm $GIT_ROOT/.redeploy/checksnapshots.txt
 }
 
 modifiedtime() {
