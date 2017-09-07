@@ -19,6 +19,9 @@ subrepo() {
 	git remote rename origin upstream
 	git remote rename $(git remote | grep -v upstream) origin
 
+	# Fix upstream
+	$(dirname ${BASH_SOURCE})/fixupstream
+
 	# Switch out of the directory we switched into
 	popd > /dev/null
 }

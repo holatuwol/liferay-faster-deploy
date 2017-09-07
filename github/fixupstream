@@ -14,7 +14,7 @@ deletebranches() {
 	elif [ "git@github.com:liferay/liferay-plugins-ee.git" == "$remote_url" ]; then
 		echo "$remote_branches" | grep -v '/ee-[0-9]*\.[0-9]*\.x$' | grep -v '/ee-[0-9]*\.[0-9]*\.[0-9]*$'
 	else
-		echo "$remote_branches" | grep -v '/master$'
+		echo "$remote_branches" | grep -v '/master$' | grep -v '/master-private$' | grep -v '/7.0.x-private$'
 	fi
 }
 
@@ -46,6 +46,11 @@ fixupstream() {
 		git fetch --no-tags $remote --prune
 	done
 
+
+	for remote in $(git remote | grep origin); do
+		git fetch $remote --prune
+	done
+
 	git prune
 
 	return 0
@@ -74,6 +79,8 @@ retainbranches() {
 		echo "$remote_branches" | grep '/ee-[0-9]*\.[0-9]*\.[0-9]*$'
 	else
 		echo "$remote_branches" | grep '/master$'
+		echo "$remote_branches" | grep '/master-private$'
+		echo "$remote_branches" | grep '/7.0.x-private$'
 	fi
 }
 
