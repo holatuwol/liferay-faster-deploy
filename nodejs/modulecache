@@ -10,6 +10,8 @@ modulecache() {
 		return 1
 	fi
 
+	cat /dev/null > ${cache_home}/cachenpm.tmp
+
 	for folder in $(cat ${cache_home}/cachenpm.txt | dirnames); do
 		local cache_hash=$(jq '.dependencies, .devDependencies' $folder/package.json | $MD5SUM | cut -d' ' -f 1)
 		local cache_file="${cache_home}/${cache_hash}.tar.gz"
@@ -19,32 +21,40 @@ modulecache() {
 		if [ -f "$cache_file" ]; then
 			modulerestoreonce $cache_file
 		else
-			time modulecacheonce
+			echo "$folder/package.json" >> ${cache_home}/cachenpm.tmp
 		fi
 
 		popd > /dev/null
 	done
 
-	find ${cache_home} -name '*.tar.gz' -mtime +7 -exec rm {} \;
+	rm ${cache_home}/cachenpm.txt
+	mv ${cache_home}/cachenpm.tmp ${cache_home}/cachenpm.txt
+
+	if [[ 0 -ne $(grep -c '^' ${cache_home}/cachenpm.txt) ]]; then
+		modulerun
+	fi
+
+	for folder in $(cat ${cache_home}/cachenpm.txt | dirnames); do
+		local cache_hash=$(jq '.dependencies, .devDependencies' $folder/package.json | $MD5SUM | cut -d' ' -f 1)
+		local cache_file="${cache_home}/${cache_hash}.tar.gz"
+
+		pushd $folder > /dev/null
+
+		modulecacheonce $cache_file
+
+		popd > /dev/null
+	done
 }
 
 modulecacheonce() {
 	local cache_file=$1
 
-	echo "Caching build for $folder"
+	if [ ! -f $cache_file ]; then
+		echo "Caching build for $folder"
 
-	jq '.dependencies, .devDependencies' package.json
-
-	rm -rf node_modules
-
-	$NPM_INSTALL
-
-	if [[ 0 -eq $(ls node_modules/ | grep -c '^') ]] && [ "yarn" != "$NPM_INSTALL" ]; then
-		yarn
-	fi
-
-	if [[ 0 -ne $(ls node_modules/ | grep -c '^') ]]; then
-		tar -zcf "$cache_file" node_modules
+		if [[ 0 -ne $(ls node_modules/ | grep -c '^') ]]; then
+			tar -czf "$cache_file" node_modules
+		fi
 	fi
 
 	if [ -f "$cache_file" ]; then
@@ -71,6 +81,10 @@ modulerestoreonce() {
 	rm -rf node_modules
 	tar -zxf "${cache_file}"
 	touch -t $cache_time node_modules
+}
+
+modulerun() {
+	. $(dirname ${BASH_SOURCE[0]})/modulerun
 }
 
 modulecache

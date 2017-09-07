@@ -1,21 +1,11 @@
 #!/bin/bash
 
 modulerun() {
-	for folder in $(cat ${cache_home}/cachenpm.txt | dirnames); do
-		pushd $folder > /dev/null
+	pushd modules
 
-		time modulerunonce
+	cat ${cache_home}/cachenpm.txt | dirnames | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":npmInstall" }' | xargs $(dirname "${BASH_SOURCE[0]}")/../gw
 
-		popd > /dev/null
-	done
-}
-
-modulerunonce() {
-	$NPM_INSTALL
-
-	if [[ 0 -eq $(ls node_modules/ | grep -c '^') ]] && [ "yarn" != "$NPM_INSTALL" ]; then
-		yarn
-	fi
+	popd > /dev/null
 }
 
 modulerun
