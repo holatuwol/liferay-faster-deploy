@@ -27,7 +27,11 @@ cachenpm() {
 		CACHE_STRATEGY=modulecache
 	fi
 
+	pushd "$GIT_ROOT" > /dev/null
+
 	. "$(dirname "${BASH_SOURCE[0]}")/${CACHE_STRATEGY}" $@
+
+	popd > /dev/null
 
 	if [ "" != "$NPM_PRODUCTION" ] && [ "false" != "$NPM_PRODUCTION" ]; then
 		npm config set production $NPM_PRODUCTION
@@ -38,23 +42,21 @@ dirnames() {
 	python $(dirname "${BASH_SOURCE[0]}")/../dirnames.py
 }
 
-disablegwnpm() {
-	$(dirname "${BASH_SOURCE[0]}")/disablegwnpm
-}
-
 findmodules() {
 	mkdir -p "${cache_home}"
 	cat /dev/null > "${cache_home}/cachenpm.txt"
 
+	pushd "$GIT_ROOT" > /dev/null
+
 	if [ "" == "$1" ]; then
-		if [ -d $GIT_ROOT/modules ]; then
-			for folder in $(find $GIT_ROOT/modules -name .lfrbuild-portal | grep -vF '/src/' | dirnames); do
+		if [ -d modules ]; then
+			for folder in $(find modules -name .lfrbuild-portal | grep -vF '/src/' | dirnames); do
 				if [ -f "$folder/package.json" ]; then
 					echo "$folder/package.json" >> "${cache_home}/cachenpm.txt"
 				fi
 			done
 		else
-			for folder in $(find $GIT_ROOT -name build.gradle | grep -vF '/src/' | dirnames); do
+			for folder in $(find . -name build.gradle | grep -vF '/src/' | dirnames); do
 				if [ -f "$folder/package.json" ]; then
 					echo "$folder/package.json" >> "${cache_home}/cachenpm.txt"
 				fi
@@ -77,12 +79,14 @@ findmodules() {
 					continue
 				fi
 
-				echo "$PWD/$folder/package.json" >> "${cache_home}/cachenpm.txt"
+				echo "$folder/package.json" >> "${cache_home}/cachenpm.txt"
 			done
 		fi
 
 		rm -f .includes
 	fi
+
+	popd > /dev/null
 }
 
 setopts() {
@@ -137,7 +141,3 @@ if [ "undefined" == "$NPM_INSTALL" ]; then
 fi
 
 cachenpm $@
-
-if [ "npm install" != "$NPM_INSTALL" ]; then
-	disablegwnpm
-fi

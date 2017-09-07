@@ -68,10 +68,6 @@ You would then tell ``cachenpm`` to use it by setting a global ``npm`` configura
 Update Gradle Plugin
 --------------------
 
-All of these ideas are based on avoiding the Gradle ``npmInstall`` task. Therefore, we must disable the ``npmInstall`` task by modifying ``build.gradle`` so that we don't have to deal with the default behavior. This is done automatically by the script.
-
-* `disablegwnpm <disablegwnpm>`__
-
 Iterations
 ----------
 

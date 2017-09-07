@@ -51,10 +51,6 @@ safeant() {
 
 	ANT_OPTS="$ANT_OPTS" ant $@ | tee -a $GIT_ROOT/.redeploy/compile.txt
 
-	# Undo the cachenpm changes
-
-	$(dirname ${BASH_SOURCE[0]})/enablegwnpm
-
 	# Report the completion time
 
 	echo "Completed $(date)" | tee -a $GIT_ROOT/.redeploy/compile.txt
