@@ -29,6 +29,10 @@ Clone this repository.
 		${MCD_RD_CLONE_PATH}/nodejs/safeant all
 	}
 
+	cachenpm() {
+		${MCD_RD_CLONE_PATH}/nodejs/cachenpm
+	}
+
 Separate Node.js from Main Build
 ================================
 
