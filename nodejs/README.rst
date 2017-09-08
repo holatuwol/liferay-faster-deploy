@@ -68,7 +68,7 @@ Iterations
 
 This section documents some of the ideas that I've experimented with in order to improve the speed of the Node.js execution. Currently, the script is configured to use ``modulecache``, because I frequently run ``git clean -xdf``, while ``modulerun`` is the recommended configuration if you have your heart set to being as close to the actual master compilation as possible. Recent changes to master have made it so that ``globalcache`` does not work without further improvements to its merge strategy (right now it naively creates a single file).
 
-You would tell ``cachenpm`` to use a different caching strategy by setting a global ``npm`` configuration. Note that for now, ``modulerun`` and ``modulecache`` work, and ``globalcache`` is kept as a code reference for when I can find time to make it work again.
+You would tell ``cachenpm`` to use a different caching strategy by setting a global ``npm`` configuration.
 
 .. code-block:: bash
 
