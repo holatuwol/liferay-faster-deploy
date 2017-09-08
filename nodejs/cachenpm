@@ -134,10 +134,4 @@ transitiveincludes() {
 
 setopts
 
-NPM_INSTALL=$(npm config get cachenpm-install-strategy)
-
-if [ "undefined" == "$NPM_INSTALL" ]; then
-	NPM_INSTALL='npm install'
-fi
-
 cachenpm $@

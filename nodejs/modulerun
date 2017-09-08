@@ -1,11 +1,30 @@
 #!/bin/bash
 
 modulerun() {
+	modulerungw
+	modulerunyarn
+}
+
+modulerungw() {
 	pushd modules
 
-	cat ${cache_home}/cachenpm.txt | dirnames | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":npmInstall" }' | xargs $(dirname "${BASH_SOURCE[0]}")/../gw
+	cat ${cache_home}/cachenpm.txt | dirnames | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":npmInstall" }' | xargs $(dirname "${BASH_SOURCE[0]}")/../gw --continue
 
 	popd > /dev/null
+}
+
+modulerunyarn() {
+	if [ "" == "$(which yarn)" ]; then
+		return 0
+	fi
+
+	for folder in $(cat ${cache_home}/cachenpm.txt); do
+		if [[ 0 -eq $(ls $folder/node_modules/ | grep -c '^') ]]; then
+			pushd $folder > /dev/null
+			yarn
+			popd > /dev/null
+		fi
+	done
 }
 
 modulerun
