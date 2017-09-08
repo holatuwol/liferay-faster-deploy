@@ -18,7 +18,7 @@ modulerunyarn() {
 		return 0
 	fi
 
-	for folder in $(cat ${cache_home}/cachenpm.txt); do
+	for folder in $(cat ${cache_home}/cachenpm.txt | dirnames); do
 		if [[ 0 -eq $(ls $folder/node_modules/ | grep -c '^') ]]; then
 			pushd $folder > /dev/null
 			yarn
