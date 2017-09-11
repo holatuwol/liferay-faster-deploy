@@ -243,16 +243,22 @@ extract() {
 }
 
 getbuild() {
+	local LOCAL_NAME=$(basename $1)
+
+	rm -f ${LOCAL_NAME}.tmp
+
 	builtin cd "$HOME/.liferay/builds/"
 
 	if [[ "$1" == s3://* ]]; then
-		aws s3 cp "$1" .
+		aws s3 cp "$1" ${LOCAL_NAME}.tmp
 	else
-		curl -O "$1"
+		curl -o ${LOCAL_NAME}.tmp "$1"
 	fi
 
 	if [ "" != "$2" ]; then
-		mv $(basename $1) $2
+		mv ${LOCAL_NAME} $2
+	else
+		mv ${LOCAL_NAME}.tmp ${LOCAL_NAME}
 	fi
 
 	builtin cd -
