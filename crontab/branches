@@ -30,35 +30,18 @@ branch() {
 		BASE_BRANCH=$(echo $1 | sed 's/\([0-9]\)/\1./g')
 	fi
 
-	# Check to see if we can successfully checkout the branch
-
-	checkout $BASE_BRANCH
-
-	if [ "$BASE_BRANCH" != "$(git branch | grep -F '*' | cut -d' ' -f 2)" ]; then
-		return 1
-	fi
-
-	# Rebase against the old branch
+	# If we have an equivalent private branch, we should actually be building that
 
 	local upstream_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
 
-	git rebase ${upstream_remote}/$BASE_BRANCH
-
-	if [[ 0 -ne $? ]]; then
-		git rebase --abort
-		return 1
-	fi
-
-	# If we have an equivalent private branch, we should actually be building that
-
 	local BUILT_PRIVATE=
 
-	if [ "master" != "$1" ] && [ "" != "$(git for-each-ref --format='%(refname)' "refs/heads/${BASE_BRANCH}-private")" ]; then
+	if [ "master" != "$1" ] && [ "" != "$(git for-each-ref --format='%(refname)' "refs/remotes/${upstream_remote}/${BASE_BRANCH}-private")" ]; then
 		BUILT_PRIVATE=true
-
-		checkout ${BASE_BRANCH}-private
-		git rebase ${upstream_remote}/$BASE_BRANCH-private
+		checkout ${upstream_remote}/${BASE_BRANCH}-private
 		setportalcommit
+	else
+		checkout ${upstream_remote}/$BASE_BRANCH
 	fi
 
 	# Execute the build
@@ -169,12 +152,6 @@ checkout() {
 }
 
 fixpack() {
-	# If we've already built the fixpack, no need to rebuild it
-
-	if [ -f "/var/www/html/builds/fixpacks/${1}.tar.gz" ]; then
-		return 0
-	fi
-
 	# If we have not checked out the tag locally, make sure to check it out
 
 	if [ "" == "$(git tag | grep -F "$1")" ]; then
@@ -187,6 +164,12 @@ fixpack() {
 		if [ "" == "$(git tag | grep -F "$1")" ]; then
 			return 1
 		fi
+	fi
+
+	# If we've already built the fixpack, no need to rebuild it
+
+	if [ -f "/var/www/html/builds/fixpacks/${1}.tar.gz" ]; then
+		return 0
 	fi
 
 	# If we have an equivalent private tag, we should actually be building that,
