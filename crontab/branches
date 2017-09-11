@@ -60,7 +60,7 @@ branch() {
 
 		echo "Git Hash:" > /var/www/html/builds/branches/$1-${TIMESTAMP}.log
 		cat git-commit-portal >> /var/www/html/builds/branches/$1-${TIMESTAMP}.log
-		tail -n +3 /var/www/html/builds/branches/$1-${TIMESTAMP}-private.log >> /var/www/html/builds/branches/$1-${TIMESTAMP}.log
+		tail -n +3 /var/www/html/builds/branches/$1-private-${TIMESTAMP}.log >> /var/www/html/builds/branches/$1-${TIMESTAMP}.log
 	fi
 
 	# Only retain last three builds
