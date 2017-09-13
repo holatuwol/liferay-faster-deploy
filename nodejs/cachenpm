@@ -1,5 +1,9 @@
 #!/bin/bash
 
+appserverprops() {
+	$(dirname "${BASH_SOURCE[0]}")/../appserverprops
+}
+
 cachenpm() {
 	echo "node $(node --version), npm $(npm -version), yarn $(yarn --version)"
 
@@ -42,6 +46,17 @@ dirnames() {
 	python $(dirname "${BASH_SOURCE[0]}")/../dirnames.py
 }
 
+filterincludes() {
+	if [ ! -f build.$USER.properties ] || [ "" == "$(grep -F build.include.dirs build.$USER.properties)" ]; then
+		cat
+		return 0
+	fi
+
+	local INCLUDE_DIRS=$(sed -n '/build.include.dirs=/,/[^\\]$/p' build.$USER.properties | sed 's/build.include.dirs=//g' | tr -d '\\' | sed 's/ //g' | tr -d '\n' | sed 's@,@/\\|modules/@g' | awk '{ print "^(modules/" $1 "/)" }')
+
+	grep "$INCLUDE_DIRS"
+}
+
 findmodules() {
 	mkdir -p "${cache_home}"
 	cat /dev/null > "${cache_home}/cachenpm.txt"
@@ -50,13 +65,13 @@ findmodules() {
 
 	if [ "" == "$1" ]; then
 		if [ -d modules ]; then
-			for folder in $(find modules -name .lfrbuild-portal | grep -vF '/src/' | dirnames); do
+			for folder in $(find modules -name .lfrbuild-portal | grep -vF '/src/' | filterincludes | dirnames); do
 				if [ -f "$folder/package.json" ]; then
 					echo "$folder/package.json" >> "${cache_home}/cachenpm.txt"
 				fi
 			done
 		else
-			for folder in $(find . -name build.gradle | grep -vF '/src/' | dirnames); do
+			for folder in $(find . -name build.gradle | grep -vF '/src/' | filterincludes | dirnames); do
 				if [ -f "$folder/package.json" ]; then
 					echo "$folder/package.json" >> "${cache_home}/cachenpm.txt"
 				fi
@@ -132,6 +147,4 @@ transitiveincludes() {
 	rm -f .includes_transitive
 }
 
-setopts
-
-cachenpm $@
+setopts && appserverprops && cachenpm $@
