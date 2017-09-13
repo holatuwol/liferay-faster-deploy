@@ -8,7 +8,15 @@ modulerun() {
 modulerungw() {
 	pushd modules
 
-	cat ${cache_home}/cachenpm.txt | dirnames | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":npmInstall" }' | xargs $(dirname "${BASH_SOURCE[0]}")/../gw --continue
+	cat ${cache_home}/cachenpm.txt | dirnames | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":npmInstall" }' > ${cache_home}/cachenpm.gwargs
+
+	for folder in $(cat ${cache_home}/cachenpm.txt | dirnames); do
+		if [ -f $folder/gulpfile.js ]; then
+			echo "$folder" | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":gulpBuild" }' >> ${cache_home}/cachenpm.gwargs
+		fi
+	done
+
+	cat ${cache_home}/cachenpm.gwargs | xargs $(dirname "${BASH_SOURCE[0]}")/../gw --continue
 
 	popd > /dev/null
 }
@@ -19,9 +27,15 @@ modulerunyarn() {
 	fi
 
 	for folder in $(cat ${cache_home}/cachenpm.txt | dirnames); do
-		if [[ 0 -eq $(ls $folder/node_modules/ | grep -c '^') ]]; then
+		if [ ! -d $folder/node_modules ] || [[ 0 -eq $(ls $folder/node_modules/ | grep -c '^') ]]; then
 			pushd $folder > /dev/null
+
 			yarn
+
+			if [ -f gulpfile.js ]; then
+				$(dirname "${BASH_SOURCE[0]}")/../gw gulpBuild
+			fi
+
 			popd > /dev/null
 		fi
 	done
