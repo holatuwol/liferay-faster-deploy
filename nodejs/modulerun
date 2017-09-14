@@ -3,6 +3,21 @@
 modulerun() {
 	modulerungw
 	modulerunyarn
+	modulerungulp
+}
+
+modulerungulp() {
+	cat /dev/null > ${cache_home}/cachenpm.gwargs
+
+	for folder in $(cat ${cache_home}/cachenpm.txt | dirnames); do
+		if [ -d $folder/node_modules ] && [[ 0 -ne $(ls $folder/node_modules/ | grep -c '^') ]] && [ -f $folder/gulpfile.js ]; then
+			echo "$folder" | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":gulpBuild" }' >> ${cache_home}/cachenpm.gwargs
+		fi
+	done
+
+	if [[ 0 -ne "$(grep -c '^' ${cache_home}/cachenpm.gwargs)" ]]; then
+		cat ${cache_home}/cachenpm.gwargs | xargs $(dirname "${BASH_SOURCE[0]}")/../gw --continue
+	fi
 }
 
 modulerungw() {
@@ -10,13 +25,9 @@ modulerungw() {
 
 	cat ${cache_home}/cachenpm.txt | dirnames | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":npmInstall" }' > ${cache_home}/cachenpm.gwargs
 
-	for folder in $(cat ${cache_home}/cachenpm.txt | dirnames); do
-		if [ -f $folder/gulpfile.js ]; then
-			echo "$folder" | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":gulpBuild" }' >> ${cache_home}/cachenpm.gwargs
-		fi
-	done
-
-	cat ${cache_home}/cachenpm.gwargs | xargs $(dirname "${BASH_SOURCE[0]}")/../gw --continue
+	if [[ 0 -ne "$(grep -c '^' ${cache_home}/cachenpm.gwargs)" ]]; then
+		cat ${cache_home}/cachenpm.gwargs | xargs $(dirname "${BASH_SOURCE[0]}")/../gw --continue
+	fi
 
 	popd > /dev/null
 }
@@ -29,13 +40,7 @@ modulerunyarn() {
 	for folder in $(cat ${cache_home}/cachenpm.txt | dirnames); do
 		if [ ! -d $folder/node_modules ] || [[ 0 -eq $(ls $folder/node_modules/ | grep -c '^') ]]; then
 			pushd $folder > /dev/null
-
 			yarn
-
-			if [ -f gulpfile.js ]; then
-				$(dirname "${BASH_SOURCE[0]}")/../gw gulpBuild
-			fi
-
 			popd > /dev/null
 		fi
 	done
