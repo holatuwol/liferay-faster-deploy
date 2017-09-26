@@ -76,7 +76,6 @@ checksnapshots() {
 	done
 
 	if [ "" == "$missing_artifact" ]; then
-		rm $GIT_ROOT/.redeploy/checksnapshots.txt
 		return 0
 	fi
 
@@ -117,8 +116,6 @@ checksnapshots() {
 			touch -t $change_time "$artifact_file"
 		done
 	done
-
-	rm $GIT_ROOT/.redeploy/checksnapshots.txt
 }
 
 modifiedtime() {
