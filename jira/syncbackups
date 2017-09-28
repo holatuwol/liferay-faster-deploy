@@ -46,3 +46,7 @@ rm *.sql
 
 loaddb customer_lportal customer
 loaddb developer_lportal lportal
+
+if [ -d /var/www/html ]; then
+	date > /var/www/html/syncbackups.txt
+fi
