@@ -288,8 +288,8 @@ if [ ! -e $(dirname $PORTAL_SOURCE_ROOT)/liferay-binaries-cache-2017 ]; then
 fi
 
 cd $(dirname $PORTAL_SOURCE_ROOT)/liferay-binaries-cache-2017
-update
-git rebase origin/master
+git clean -xdf
+git reset --hard
 
 cd $PORTAL_SOURCE_ROOT
 update $REBUILD
