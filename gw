@@ -40,14 +40,6 @@ findgradle() {
 fixgradle() {
 	echo 'Checking for common Gradle problems'
 
-	# make sure our dependencies are up to date
-
-	if [ "" != "$GIT_ROOT" ] && [ -f "$GIT_ROOT/build.xml" ] && [ -e $GIT_ROOT/../liferay-binaries-cache-2017 ] && [ "" != "$(grep -F update-binaries-cache "$GIT_ROOT/build.xml")" ]; then
-		pushd "$GIT_ROOT" > /dev/null
-		ant update-binaries-cache
-		popd > /dev/null
-	fi
-
 	# undo any past deletions of settings.gradle
 
 	if [ "" != "$GIT_ROOT" ] && [ "" != "$(git ls-files -v | grep '^h ' | cut -d' ' -f 2 | grep -F 'settings.gradle')" ]; then
