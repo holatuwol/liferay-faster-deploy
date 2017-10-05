@@ -79,9 +79,7 @@ patcher() {
 
 	# All pre-checks complete, launch a web browser
 
-	local BASE_URL=https://patcher.liferay.com/group/guest/patching/-/osb_patcher/fixes/create
 	local BRANCH=$(git symbolic-ref --short HEAD)
-	local PATCHER_FIX_NAME=$(echo $BRANCH | grep -o "LP[EPS]-[0-9]*")
 	local ORIGIN=$(git remote -v | grep liferay-portal-ee | grep -vF ':liferay/' | cut -f 2 | cut -d' ' -f 1 | uniq)
 
 	if [ "" == "$(git for-each-ref --format='%(refname)' refs/$ORIGIN/$BRANCH)" ]; then
@@ -89,6 +87,16 @@ patcher() {
 	elif [ "" != "$(git log --pretty='%H' $ORIGIN/$BRANCH..$BRANCH)" ]; then
 		git push -f $ORIGIN $BRANCH
 	fi
+
+	local BASE_URL=
+
+	if [ "" != "$1" ]; then
+		BASE_URL="https://patcher.liferay.com/group/guest/patching/-/osb_patcher/fixes/$1/edit"
+	else
+		BASE_URL=https://patcher.liferay.com/group/guest/patching/-/osb_patcher/fixes/create
+	fi
+
+	local PATCHER_FIX_NAME=$(echo $BRANCH | grep -o "LP[EPS]-[0-9]*")
 
 	NS=_1_WAR_osbpatcherportlet_
 
@@ -101,4 +109,4 @@ patcher() {
 	python -m webbrowser "${BASE_URL}?${NS}productVersion=${PRODUCT_VERSION}&${NS}patcherProjectVersionId=${BASELINE_ID}&${NS}committish=${BRANCH}&${NS}patcherFixName=${PATCHER_FIX_NAME}&${NS}gitRemoteURL=$ORIGIN" &
 }
 
-patcher
+patcher $@

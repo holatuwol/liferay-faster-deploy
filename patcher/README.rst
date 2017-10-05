@@ -35,7 +35,7 @@ Then, add this section to `.bash_aliases` (or the equivalent on whichever shell 
 	}
 
 	patcher() {
-		${MCD_RD_CLONE_PATH}/patcher/patcher
+		${MCD_RD_CLONE_PATH}/patcher/patcher $@
 	}
 
 	subrepobp() {
