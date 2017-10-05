@@ -27,8 +27,6 @@ with open(sys.argv[1]) as infile, open(sys.argv[2], 'w') as outfile:
 			if skip_error:
 				since_timestamp = []
 
-		if line[0] in numbers:
-
 		if skip_error:
 			continue
 
