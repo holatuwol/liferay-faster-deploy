@@ -1,0 +1,91 @@
+#!/bin/bash
+
+compilemodules() {
+	if [ ! -f modules/build.gradle ]; then
+		return 0
+	fi
+
+	# Generate the source trie
+
+	echo "Identifying module structure..."
+
+	$(dirname "${BASH_SOURCE[0]}")/../sourcetrie
+
+	# Make sure any JARs providing TLDs are available
+
+	mkdir -p tools/sdk/dist
+
+	git ls-files modules | grep -F .tld | grep -F 'modules/apps' | grep -vF docroot > .redeploy/changes.txt
+	python $(dirname ${BASH_SOURCE[0]})/../gitchanges.py
+
+	if [ -f .redeploy/changes_gradle_2.txt ]; then
+		cat /dev/null > .redeploy/jsp_precompile.txt
+
+		for folder in $(cat .redeploy/changes_gradle_2.txt); do
+			copymodule $folder
+		done
+	fi
+
+	# Make sure the JARs providing .jsp files are available
+
+	sed -i.bak 's/jsp.precompile.enabled=false/jsp.precompile.enabled=true/g' .gradle/gradle.properties
+
+	git ls-files modules | grep -F .jsp | grep -F 'modules/apps' | grep -vF docroot > .redeploy/changes.txt
+	python $(dirname ${BASH_SOURCE[0]})/../gitchanges.py
+
+	if [ ! -f .redeploy/changes_gradle_2.txt ]; then
+		return 0
+	fi
+
+	cat /dev/null > .redeploy/jsp_precompile.txt
+
+	for folder in $(cat .redeploy/changes_gradle_2.txt); do
+		copymodule $folder
+	done
+
+	# Precompile all the JSPs
+
+	if [[ 0 -eq $(grep -c '^' .redeploy/jsp_precompile.txt) ]]; then
+		return 0
+	fi
+
+	pushd modules > /dev/null
+	cat ../.redeploy/jsp_precompile.txt | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":compileJSP" }' | xargs $(dirname ${BASH_SOURCE[0]})/../gw --continue -x jar
+	popd > /dev/null
+}
+
+copymodule() {
+	local BUNDLE_NAME=$(grep '^Bundle-SymbolicName:' $1/bnd.bnd | cut -d' ' -f 2)
+	local BUNDLE_VERSION=$(grep '^Bundle-Version:' $1/bnd.bnd | cut -d' ' -f 2)
+
+	if [ -f "tools/sdk/dist/${BUNDLE_NAME}-${BUNDLE_VERSION}.jar" ]; then
+		echo $1 >> .redeploy/jsp_precompile.txt
+		return 0
+	fi
+
+	if [ ! -f "$LIFERAY_HOME/osgi/modules/${BUNDLE_NAME}.jar" ]; then
+		return 1
+	fi
+
+	cp "$LIFERAY_HOME/osgi/modules/${BUNDLE_NAME}.jar" "tools/sdk/dist/${BUNDLE_NAME}-${BUNDLE_VERSION}.jar"
+	echo $1 >> .redeploy/jsp_precompile.txt
+}
+
+compileroot() {
+	local JSP_JAVA_VERSION=
+
+	if [[ $RELEASE_ID -lt 7000 ]]; then
+		JSP_JAVA_VERSION=1.6
+	else
+		JSP_JAVA_VERSION=1.8
+	fi
+
+	ant -f $(dirname ${BASH_SOURCE[0]})/precompile.xml \
+		-Dtomcat.home.dir="$CATALINA_HOME" -Dwebapp.home=${CATALINA_HOME}/webapps/ROOT -Dwebapp.work=${CATALINA_HOME}/work/Catalina/localhost/_ \
+		-Djsp.java.version=$JSP_JAVA_VERSION
+}
+
+. $(dirname ${BASH_SOURCE[0]})/releaseinfo
+
+compileroot
+compilemodules

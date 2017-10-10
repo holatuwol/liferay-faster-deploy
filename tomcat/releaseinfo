@@ -1,0 +1,43 @@
+#!/bin/bash
+
+releaseinfo() {
+	# If we are in the root of portal source, try to guess the Tomcat folder.
+	# Otherwise, if we are in a Tomcat folder, assume we've got the right one.
+
+	if [ "" == "$(pwd | grep -F '/tomcat-')" ]; then
+		. $(dirname ${BASH_SOURCE[0]})/../appserverprops
+	else
+		LIFERAY_HOME=$(dirname $(pwd | grep -o '.*/tomcat-[^/]*'))
+		TOMCAT_FOLDER=$(basename $(pwd | grep -o '.*/tomcat-[^/]*'))
+	fi
+
+	if [ "" == "$LIFERAY_HOME" ] || [ ! -d "$LIFERAY_HOME" ]; then
+		echo "Unable to determine liferay.home"
+		return 1
+	fi
+
+	if [ "" == "$TOMCAT_FOLDER" ]; then
+		echo "Could not determine which Tomcat to start!"
+		return 1
+	fi
+
+	CATALINA_HOME=$LIFERAY_HOME/$TOMCAT_FOLDER
+
+	if [ ! -d "$CATALINA_HOME" ]; then
+		echo "Could not find $CATALINA_HOME to start!"
+		return 1
+	fi
+
+	# Use portal-kernel/portal-service to determine the current
+	# Liferay version in order to decide on the Java version to use
+
+	RELEASE_INFO_JAR=$CATALINA_HOME/lib/ext/portal-kernel.jar
+
+	if [ ! -f $RELEASE_INFO_JAR ]; then
+		RELEASE_INFO_JAR=$CATALINA_HOME/lib/ext/portal-service.jar
+	fi
+
+	RELEASE_ID=$(groovy -classpath $RELEASE_INFO_JAR -e 'print com.liferay.portal.kernel.util.ReleaseInfo.getBuildNumber()')
+}
+
+releaseinfo

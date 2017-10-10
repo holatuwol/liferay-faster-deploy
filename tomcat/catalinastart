@@ -48,18 +48,6 @@ catalinaconf() {
 
 	tcnative $1
 
-	# Precompile JSPs
-
-	local JSP_JAVA_VERSION=1.8
-
-	if [[ $RELEASE_ID -lt 7000 ]]; then
-		JSP_JAVA_VERSION=1.6
-	fi
-
-	ant -f $(dirname ${BASH_SOURCE[0]})/precompile.xml \
-		-Dtomcat.home.dir="$CATALINA_HOME" -Dwebapp.home=ROOT -Dwebapp.work=_ \
-		-Djsp.java.version=$JSP_JAVA_VERSION
-
 	# Copy setenv.sh that knows how to adjust the default JPDA port
 	# and use more memory.
 
@@ -73,48 +61,14 @@ catalinaconf() {
 }
 
 catalinastart() {
-	# If we are in the root of portal source, try to guess the Tomcat folder.
-	# Otherwise, if we are in a Tomcat folder, assume we've got the right one.
-
-	if [ "" == "$(pwd | grep -F '/tomcat-')" ]; then
-		. $(dirname ${BASH_SOURCE[0]})/../appserverprops
-	else
-		LIFERAY_HOME=$(dirname $(pwd | grep -o '.*/tomcat-[^/]*'))
-		TOMCAT_FOLDER=$(basename $(pwd | grep -o '.*/tomcat-[^/]*'))
-	fi
-
-	if [ "" == "$LIFERAY_HOME" ] || [ ! -d "$LIFERAY_HOME" ]; then
-		echo "Unable to determine liferay.home"
-		return 1
-	fi
-
-	if [ "" == "$TOMCAT_FOLDER" ]; then
-		echo "Could not determine which Tomcat to start!"
-		return 1
-	fi
-
-	CATALINA_HOME=$LIFERAY_HOME/$TOMCAT_FOLDER
-
-	if [ ! -d "$CATALINA_HOME" ]; then
-		echo "Could not find $CATALINA_HOME to start!"
-		return 1
-	fi
-
-	# Use portal-kernel/portal-service to determine the current
-	# Liferay version in order to decide on the Java version to use
-
-	RELEASE_INFO_JAR=$CATALINA_HOME/lib/ext/portal-kernel.jar
-
-	if [ ! -f $RELEASE_INFO_JAR ]; then
-		RELEASE_INFO_JAR=$CATALINA_HOME/lib/ext/portal-service.jar
-	fi
+	. $(dirname ${BASH_SOURCE[0]})/releaseinfo
 
 	javahome 8
 
-	RELEASE_ID=$(groovy -classpath $RELEASE_INFO_JAR -e 'print com.liferay.portal.kernel.util.ReleaseInfo.getBuildNumber()')
-
 	if [[ $RELEASE_ID -lt 7000 ]]; then
 		javahome 6
+	else
+		javahome 8
 	fi
 
 	# If the server is already running, we won't need to start it.

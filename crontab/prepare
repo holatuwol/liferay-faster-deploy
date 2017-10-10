@@ -43,6 +43,9 @@ compile() {
 	if [[ $EXIT_CODE -ne 0 ]]; then
 		return $EXIT_CODE
 	fi
+
+	$SCRIPT_FOLDER/../tomcat/precompile
+	return 0
 }
 
 finish() {
