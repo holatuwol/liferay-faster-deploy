@@ -16,7 +16,7 @@ gettimes "$1" > times_old.csv
 if [ "" != "$2" ] && [ -f "$2" ]; then
 	gettimes "$2" > times_new.csv
 
-	python ${BASH_SOURCE[0]}).py
+	python ${BASH_SOURCE[0]}.py
 
 	grep -vF '#' times_compare.csv | grep -vF ' ' | \
 		grep -vF 'UpgradeProcess_' | grep -vF 'VerifyProcessSuite' | \
