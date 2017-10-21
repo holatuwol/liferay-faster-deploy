@@ -19,10 +19,19 @@ nameFilter.value = getParameter('nameFilter');
 var notableOnly = document.getElementById('notableOnly');
 notableOnly.checked = getParameter('notableOnly') == 'true';
 
+function isPermaLink(element) {
+	return element.getAttribute('data-original-title') == 'Permalink'
+};
+
 function checkPackageInfo() {
 	if (history.pushState) {
-		var newURL = window.location.protocol + "//" + window.location.host + window.location.pathname +
-			'?sourceVersion=' + select1.options[select1.selectedIndex].value + '&targetVersion=' + select2.options[select2.selectedIndex].value;
+		var baseURL = window.location.protocol + "//" + window.location.host + window.location.pathname;
+
+		if (window.location.pathname == '/share') {
+			baseURL = Array.from(document.getElementsByTagName('a')).filter(isPermaLink)[0].href;
+		}
+
+		var newURL = baseURL + '?sourceVersion=' + select1.options[select1.selectedIndex].value + '&targetVersion=' + select2.options[select2.selectedIndex].value;
 
 		if (nameFilter.value) {
 			newURL += '&nameFilter=' + nameFilter.value;

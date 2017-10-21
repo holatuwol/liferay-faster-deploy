@@ -17,12 +17,21 @@ var select2Value = getParameter('targetVersion');
 var nameFilter = document.getElementById('nameFilter');
 nameFilter.value = getParameter('nameFilter');
 
+function isPermaLink(element) {
+	return element.getAttribute('data-original-title') == 'Permalink'
+};
+
 function checkVersionInfo() {
 	// https://stackoverflow.com/questions/12508225/how-do-we-update-url-or-query-strings-using-javascript-jquery-without-reloading
 
 	if (history.pushState) {
-		var newURL = window.location.protocol + "//" + window.location.host + window.location.pathname +
-			'?sourceVersion=' + select1.options[select1.selectedIndex].value + '&targetVersion=' + select2.options[select2.selectedIndex].value;
+		var baseURL = window.location.protocol + "//" + window.location.host + window.location.pathname;
+
+		if (window.location.pathname == '/share') {
+			baseURL = Array.from(document.getElementsByTagName('a')).filter(isPermaLink)[0].href;
+		}
+
+		var newURL = baseURL + '?sourceVersion=' + select1.options[select1.selectedIndex].value + '&targetVersion=' + select2.options[select2.selectedIndex].value;
 
 		if (nameFilter.value) {
 			newURL += '&nameFilter=' + nameFilter.value;
