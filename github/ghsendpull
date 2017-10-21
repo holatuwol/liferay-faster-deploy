@@ -165,6 +165,10 @@ sendpull() {
 	if [ -f "$GIT_ROOT/release.properties" ]; then
 		pushd $GIT_ROOT > /dev/null
 
+		if [ "" != "$(grep setup-libs build.xml)" ]; then
+			ant setup-libs
+		fi
+
 		SUBREPO_ROOT=$SUBREPO_ROOT $(dirname ${BASH_SOURCE})/subrepos
 
 		. $(dirname "${BASH_SOURCE[0]}")/../gitchanges ${upstream_remote}/$BASE_BRANCH
