@@ -4,6 +4,7 @@ from __future__ import print_function
 from collections import defaultdict
 import csv
 import json
+import os
 import sys
 
 folder = sys.argv[1]
@@ -20,9 +21,21 @@ suffixes = [suffix if suffix[5:7] != 'de' else suffix[0:8] + suffix[8:].zfill(2)
 # Read the CSV file
 
 def read_file(file_name):
-	with open('%s/%s' % (folder, file_name), 'r') as f:
+	result = {}
+
+	with open('%s/metadata/%s' % (folder, file_name), 'r') as f:
 		reader = csv.reader(f)
-		return { row[3]: { 'group': row[0], 'name': row[1], 'version': row[2], 'package': row[3], 'packageVersion': row[4] } for row in reader }
+		result = { row[3]: { 'group': row[0], 'name': row[1], 'version': row[2], 'package': row[3], 'packageVersion': row[4] } for row in reader }
+
+	private_file_name = file_name[0:-4] + '-private' + file_name[-4:]
+
+	if os.path.isfile('%s/metadata/%s' % (folder, private_file_name)):
+		with open('%s/metadata/%s' % (folder, private_file_name), 'r') as f:
+			reader = csv.reader(f)
+			for row in reader:
+				result[row[3]] = { 'group': row[0], 'name': row[1], 'version': row[2], 'package': row[3], 'packageVersion': row[4] }
+
+	return result
 
 # Add another entry
 

@@ -13,33 +13,34 @@ from sourcetrie import SourceTrie
 
 excluded_packages = []
 
-with open('modules/core/portal-bootstrap/system.packages.extra.bnd') as f:
-	is_export = False
+if os.path.isfile('modules/core/portal-bootstrap/system.packages.extra.bnd'):
+	with open('modules/core/portal-bootstrap/system.packages.extra.bnd') as f:
+		is_export = False
 
-	for line in f.readlines():
-		if line.startswith('Export-Package:'):
-			is_export = True
-			continue
+		for line in f.readlines():
+			if line.startswith('Export-Package:'):
+				is_export = True
+				continue
 
-		if not line[0:1].isspace():
-			is_export = False
-			continue
+			if not line[0:1].isspace():
+				is_export = False
+				continue
 
-		if not is_export:
-			continue
+			if not is_export:
+				continue
 
-		line = line.strip()
+			line = line.strip()
 
-		if line[0] != '!':
-			continue
+			if line[0] != '!':
+				continue
 
-		x = 1
-		y = line.find(';')
+			x = 1
+			y = line.find(';')
 
-		if y < 0:
-			y = line.find(',')
+			if y < 0:
+				y = line.find(',')
 
-		excluded_packages.append(line[x:y])
+			excluded_packages.append(line[x:y])
 
 def is_excluded_package(package_name):
 	for excluded_package in excluded_packages:

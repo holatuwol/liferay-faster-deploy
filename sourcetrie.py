@@ -139,10 +139,10 @@ class SourceTrie:
 
 					module_path = file_name[0:pos]
 
-					if os.path.isfile('%s/build.xml' % module_path):
-						root.add_ant(module_path)
-					else:
+					if module_path.find('modules') == 0:
 						root.add_gradle(module_path)
+					else:
+						root.add_ant(module_path)
 
 			with open(pickle_file, 'wb') as f:
 				pickle.dump(root, f)
@@ -155,3 +155,6 @@ class SourceTrie:
 		sys.exit(1)
 
 	load=staticmethod(load)
+
+if __name__ == '__main__':
+	SourceTrie.load('.redeploy')
