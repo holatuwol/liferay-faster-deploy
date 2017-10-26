@@ -73,6 +73,30 @@ packageinfo() {
 	python $(dirname $0)/packageinfo.py $OUTPUT_FILE
 }
 
+requireschema() {
+	if ! checkfile $1 requireschema; then
+		return 0
+	fi
+
+	echo "Generating require schema versions for $1"
+
+	for bnd in $(git ls-files | grep -F -- '-service/bnd.bnd' | grep -vF '/sdk/'); do
+		local BUNDLE_NAME=$(grep -F Bundle-SymbolicName $bnd | cut -d' ' -f 2-)
+		local BUNDLE_VERSION=$(grep -F Bundle-Version $bnd | cut -d' ' -f 2-)
+
+		local IMPLICIT_SCHEMA_VERSION=$BUNDLE_VERSION
+		local EXPLICIT_SCHEMA_VERSION=$(grep -F Liferay-Require-SchemaVersion $bnd | cut -d' ' -f 2-)
+
+		local SCHEMA_VERSION=$IMPLICIT_SCHEMA_VERSION
+
+		if [ "" != "$EXPLICIT_SCHEMA_VERSION" ]; then
+			SCHEMA_VERSION=$EXPLICIT_SCHEMA_VERSION
+		fi
+
+		echo ${BUNDLE_NAME},${SCHEMA_VERSION} >> $OUTPUT_FILE
+	done
+}
+
 if [ -z "${PORTAL_SOURCE_ROOT}" ]; then
 	echo "Please set a PORTAL_SOURCE_ROOT for the build"
 	exit 1
@@ -100,6 +124,7 @@ git ls-remote -t git@github.com:liferay/liferay-portal-ee.git | \
 
 for tag_id in $(cat $OUTPUT_FOLDER/tags.txt); do
 	packageinfo $tag_id
+	requireschema $tag_id
 done
 
 popd > /dev/null

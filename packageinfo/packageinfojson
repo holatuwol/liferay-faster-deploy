@@ -33,20 +33,26 @@ popd > /dev/null
 # Generate the JSON files
 
 python $(dirname $0)/packageinfojson.py $(dirname $PORTAL_SOURCE_ROOT) $CE_RELEASE_COUNT $EE_RELEASE_COUNT
+python $(dirname $0)/requireschemajson.py $(dirname $PORTAL_SOURCE_ROOT) $CE_RELEASE_COUNT $EE_RELEASE_COUNT
 
-# Upload the JSON files to the designated bucket
+# Upload the files to the designated bucket
 
-for file in dxppackages.js dxpmodules.js; do
-	rm -f $file.gz
-	cp $(dirname ${BASH_SOURCE[0]})/$file .
-	gzip $file
-	aws s3 --profile $AWS_PROFILE cp $file.gz s3://$S3_BUCKET/$file --acl public-read --metadata-directive REPLACE --content-encoding gzip
-	gunzip $file.gz
-done
+for file in dxppackages dxpmodules dxpschemas; do
+	ext=json
 
-for file in dxppackages.json dxpmodules.json; do
-	rm -f $file.gz
-	gzip $file
-	aws s3 --profile $AWS_PROFILE cp $file.gz s3://$S3_BUCKET/$file --acl public-read --metadata-directive REPLACE --content-encoding gzip
-	gunzip $file.gz
+	rm -f ${file}.${ext}.gz
+	gzip ${file}.${ext}
+	aws s3 --profile $AWS_PROFILE cp ${file}.${ext}.gz s3://$S3_BUCKET/${file}.${ext} --acl public-read --metadata-directive REPLACE --content-encoding gzip
+	gunzip ${file}.${ext}.gz
+
+	pushd $(dirname ${BASH_SOURCE[0]}) > /dev/null
+
+	for ext in html js; do
+		rm -f ${file}.${ext}.gz
+		gzip ${file}.${ext}
+		aws s3 --profile $AWS_PROFILE cp ${file}.${ext}.gz s3://$S3_BUCKET/${file}.${ext} --acl public-read --metadata-directive REPLACE --content-encoding gzip
+		gunzip ${file}.${ext}.gz
+	done
+
+	popd > /dev/null
 done
