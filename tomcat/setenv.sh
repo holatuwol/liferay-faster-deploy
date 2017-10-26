@@ -1,5 +1,41 @@
 #!/bin/bash
 
+jrebel() {
+	if [ ! -d $HOME/.jrebel ]; then
+		return 0
+	fi
+
+	export REBEL_BASE="$HOME/.jrebel"
+	local AGENT_LIB_NAME=""
+
+	case $(uname) in
+	  'Linux')
+		AGENT_LIB_NAME=libjrebel64.so
+	    ;;
+	  'WindowsNT')
+		AGENT_LIB_NAME=jrebel64.dll
+	    ;;
+	  'Darwin')
+		AGENT_LIB_NAME=libjrebel64.dylib
+	    ;;
+	esac
+
+	local AGENT_LIB_PATH=
+
+	for ij_home in $(find $HOME -maxdepth 1 -type d -name '.IntelliJIdea*'); do
+		local POTENTIAL_AGENT_LIB_PATH=$(find $ij_home -name $AGENT_LIB_NAME)
+
+		if [ "" != "$POTENTIAL_AGENT_LIB_PATH" ]; then
+			AGENT_LIB_PATH=$POTENTIAL_AGENT_LIB_PATH
+		fi
+	done
+
+	export REBEL_HOME=$(dirname "$(dirname "$AGENT_LIB_PATH")")
+	export JAVA_OPTS="\"-agentpath:$AGENT_LIB_PATH\" $JAVA_OPTS"
+}
+
+jrebel
+
 if [ "" != "$JAVA_HOME" ]; then
 	export PATH=$JAVA_HOME/bin:$PATH
 fi
