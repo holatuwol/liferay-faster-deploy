@@ -87,7 +87,7 @@ requireschema() {
 		local IMPLICIT_SCHEMA_VERSION=$BUNDLE_VERSION
 		local EXPLICIT_SCHEMA_VERSION=$(grep -F Liferay-Require-SchemaVersion $bnd | cut -d' ' -f 2-)
 
-		local SCHEMA_VERSION=$IMPLICIT_SCHEMA_VERSION
+		local SCHEMA_VERSION="$IMPLICIT_SCHEMA_VERSION (implicit)"
 
 		if [ "" != "$EXPLICIT_SCHEMA_VERSION" ]; then
 			SCHEMA_VERSION=$EXPLICIT_SCHEMA_VERSION

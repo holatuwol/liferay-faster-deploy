@@ -72,6 +72,10 @@ function checkschemaInfo() {
 		var version1 = schemaInfo[name1];
 		var version2 = schemaInfo[name2];
 
+		if ((version1.indexOf('(implicit)') != -1) && (version2.indexOf('(implicit)') != -1)) {
+			return false;
+		}
+
 		return (version1 != '0.0.0') && (version2 != '0.0.0') && (version1 != version2);
 	};
 
