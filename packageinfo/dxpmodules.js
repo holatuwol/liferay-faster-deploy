@@ -9,6 +9,7 @@ function getParameter(name) {
 };
 
 var versionInfoList = null;
+var modifyState = history.pushState ? history.pushState.bind(history) : null;
 
 var select1 = document.getElementById('sourceVersion');
 var select1Value = getParameter('sourceVersion');
@@ -37,7 +38,8 @@ function checkVersionInfo() {
 			newURL += '&nameFilter=' + nameFilter.value;
 		}
 
-		history.pushState({path: newURL}, '', newURL);
+		modifyState({path: newURL}, '', newURL);
+		modifyState = history.replaceState.bind(history);
 	}
 
 	var name1 = 'version_' + select1.options[select1.selectedIndex].value;

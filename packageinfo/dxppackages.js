@@ -9,6 +9,7 @@ function getParameter(name) {
 };
 
 var packageInfoList = null;
+var modifyState = history.pushState ? history.pushState.bind(history) : null;
 
 var select1 = document.getElementById('sourceVersion');
 var select1Value = getParameter('sourceVersion');
@@ -24,6 +25,8 @@ function isPermaLink(element) {
 };
 
 function checkPackageInfo() {
+	// https://stackoverflow.com/questions/12508225/how-do-we-update-url-or-query-strings-using-javascript-jquery-without-reloading
+
 	if (history.pushState) {
 		var baseURL = window.location.protocol + "//" + window.location.host + window.location.pathname;
 
@@ -41,7 +44,8 @@ function checkPackageInfo() {
 			newURL += '&notableOnly=true';
 		}
 
-		history.pushState({path: newURL}, '', newURL);
+		modifyState({path: newURL}, '', newURL);
+		modifyState = history.replaceState.bind(history);
 	}
 
 	var name1 = 'packageVersion_' + select1.options[select1.selectedIndex].value;

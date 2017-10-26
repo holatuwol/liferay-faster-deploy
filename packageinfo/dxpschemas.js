@@ -9,6 +9,7 @@ function getParameter(name) {
 };
 
 var schemaInfoList = null;
+var modifyState = history.pushState ? history.pushState.bind(history) : null;
 
 var select1 = document.getElementById('sourceVersion');
 var select1Value = getParameter('sourceVersion');
@@ -24,7 +25,9 @@ function isPermaLink(element) {
 };
 
 function checkSchemaInfo() {
-	if (history.pushState) {
+	// https://stackoverflow.com/questions/12508225/how-do-we-update-url-or-query-strings-using-javascript-jquery-without-reloading
+
+	if (modifyState) {
 		var baseURL = window.location.protocol + "//" + window.location.host + window.location.pathname;
 
 		if (window.location.pathname == '/share') {
@@ -41,7 +44,8 @@ function checkSchemaInfo() {
 			newURL += '&notableOnly=true';
 		}
 
-		history.pushState({path: newURL}, '', newURL);
+		modifyState({path: newURL}, '', newURL);
+		modifyState = history.replaceState.bind(history);
 	}
 
 	var name1 = 'requireSchemaVersion_' + select1.options[select1.selectedIndex].value;
