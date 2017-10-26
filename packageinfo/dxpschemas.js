@@ -23,7 +23,7 @@ function isPermaLink(element) {
 	return element.getAttribute('data-original-title') == 'Permalink'
 };
 
-function checkschemaInfo() {
+function checkSchemaInfo() {
 	if (history.pushState) {
 		var baseURL = window.location.protocol + "//" + window.location.host + window.location.pathname;
 
@@ -140,7 +140,7 @@ function checkschemaInfo() {
 	filteredschemaInfoList.map(getRowData).forEach(addRow.bind(null, false));
 };
 
-checkschemaInfo = _.debounce(checkschemaInfo, 100);
+checkSchemaInfo = _.debounce(checkSchemaInfo, 100);
 
 var request = new XMLHttpRequest();
 var requestURL = 'https://s3-us-west-2.amazonaws.com/mdang.grow/dxpschemas.json';
@@ -188,13 +188,13 @@ request.onreadystatechange = function() {
 		setIndex(select1, select1Value);
 		setIndex(select2, select2Value);
 
-		select1.onchange = checkschemaInfo;
-		select2.onchange = checkschemaInfo;
-		nameFilter.oninput = checkschemaInfo;
-		nameFilter.onpropertychange = checkschemaInfo;
-		notableOnly.onchange = checkschemaInfo;
+		select1.onchange = checkSchemaInfo;
+		select2.onchange = checkSchemaInfo;
+		nameFilter.oninput = checkSchemaInfo;
+		nameFilter.onpropertychange = checkSchemaInfo;
+		notableOnly.onchange = checkSchemaInfo;
 
-		checkschemaInfo();
+		checkSchemaInfo();
 	};
 };
 
