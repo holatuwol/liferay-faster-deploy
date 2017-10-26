@@ -1,5 +1,7 @@
 #!/bin/bash
 
+SCRIPT_FOLDER="$(dirname $BASH_SOURCE[0])"
+
 dirnames() {
 	python $(dirname "${BASH_SOURCE[0]}")/dirnames.py
 }
@@ -75,21 +77,6 @@ unziposgijar() {
 		return 1
 	fi
 
-	# if the folder timestamp matches the jar timestamp, we do not
-	# need to repeat the unzip process
-
-	local old_timestamp=
-
-	if [ -d $MODULE_PATH/classes ]; then
-		old_timestamp=$(perl -MPOSIX -e 'print POSIX::strftime "%Y%m%d%H%M.%S", localtime((stat $ARGV[0])[9])' "$MODULE_PATH/classes")
-	fi
-
-	local new_timestamp=$(perl -MPOSIX -e 'print POSIX::strftime "%Y%m%d%H%M.%S", localtime((stat $ARGV[0])[9])' "$JAR_PATH")
-
-	if [ "$old_timestamp" == "$new_timestamp" ]; then
-		return 0
-	fi
-
 	# add a rebel.xml to the module jar if we see a .jrebel folder
 
 	if [ -d $HOME/.jrebel ]; then
@@ -109,6 +96,21 @@ unziposgijar() {
 		rm -f "$RESOURCE_PATH/rebel.xml.bak"
 
 		zip -ujqq "${JAR_PATH}" "${RESOURCE_PATH}/rebel.xml"
+	fi
+
+	# if the folder timestamp matches the jar timestamp, we do not
+	# need to repeat the unzip process
+
+	local old_timestamp=
+
+	if [ -d $MODULE_PATH/classes ]; then
+		old_timestamp=$(perl -MPOSIX -e 'print POSIX::strftime "%Y%m%d%H%M.%S", localtime((stat $ARGV[0])[9])' "$MODULE_PATH/classes")
+	fi
+
+	local new_timestamp=$(perl -MPOSIX -e 'print POSIX::strftime "%Y%m%d%H%M.%S", localtime((stat $ARGV[0])[9])' "$JAR_PATH")
+
+	if [ "$old_timestamp" == "$new_timestamp" ]; then
+		return 0
 	fi
 
 	# unzip the JAR to the classes folder
