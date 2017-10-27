@@ -1,7 +1,7 @@
 #!/bin/bash
 
-jrebel() {
-	if [ ! -d $HOME/.jrebel ]; then
+jrebelopts() {
+	if [ ! -f $HOME/.jrebel/jrebel.lic ] || [ ! -d $HOME/.jrebel/jrebel ]; then
 		return 0
 	fi
 
@@ -20,21 +20,12 @@ jrebel() {
 	    ;;
 	esac
 
-	local AGENT_LIB_PATH=
-
-	for ij_home in $(find $HOME -maxdepth 1 -type d -name '.IntelliJIdea*'); do
-		local POTENTIAL_AGENT_LIB_PATH=$(find $ij_home -name $AGENT_LIB_NAME)
-
-		if [ "" != "$POTENTIAL_AGENT_LIB_PATH" ]; then
-			AGENT_LIB_PATH=$POTENTIAL_AGENT_LIB_PATH
-		fi
-	done
-
+	local AGENT_LIB_PATH=$(find $HOME/.jrebel/jrebel -name $AGENT_LIB_NAME)
 	export REBEL_HOME=$(dirname "$(dirname "$AGENT_LIB_PATH")")
 	export JAVA_OPTS="\"-agentpath:$AGENT_LIB_PATH\" $JAVA_OPTS"
 }
 
-jrebel
+jrebelopts
 
 if [ "" != "$JAVA_HOME" ]; then
 	export PATH=$JAVA_HOME/bin:$PATH
