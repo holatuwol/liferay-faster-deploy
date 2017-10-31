@@ -289,7 +289,7 @@ getbuildname() {
 	if [[ "$BRANCH_ARCHIVE_MIRROR" == s3://* ]]; then
 		aws s3 ls $BRANCH_ARCHIVE_MIRROR/ | awk '{ print $4 }' | grep ${SHORT_NAME}'-[^"]*.tar.gz$' | sort | tail -1
 	else
-		curl -s --connect-timeout 2 $BRANCH_ARCHIVE_MIRROR/ | grep -o '<a href="'${SHORT_NAME}'-[^"]*.tar.gz">' | cut -d'"' -f 2 | sort | tail -1
+		curl -s --connect-timeout 2 $BRANCH_ARCHIVE_MIRROR/ | grep -o '<a href="'${SHORT_NAME}'-[0-9]*.tar.gz">' | cut -d'"' -f 2 | sort | tail -1
 	fi
 }
 
