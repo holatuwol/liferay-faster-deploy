@@ -77,7 +77,7 @@ export CATALINA_OPTS="$CATALINA_OPTS -Xms2g -Xmx2g -Xmn500m -Xss2m"
 JAVA_MAJOR_VERSION=$(java -version 2>&1 | head -1 | cut -d'"' -f 2 | cut -d'.' -f 2)
 
 if [ 8 -gt $JAVA_MAJOR_VERSION ]; then
-	export CATALINA_OPTS="$CATALINA_OPTS -XX:PermSize=256m -XX:MaxPermSize=256m"
+	export CATALINA_OPTS="$CATALINA_OPTS -XX:PermSize=384m -XX:MaxPermSize=384m"
 fi
 
 export CATALINA_OPTS="$CATALINA_OPTS -verbose:gc -XX:+UseSerialGC -XX:+PrintGCDateStamps -XX:+PrintGCTimeStamps -XX:+PrintGCDetails -Xloggc:$CATALINA_BASE/logs/gc.log"
