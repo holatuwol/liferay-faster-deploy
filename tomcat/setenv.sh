@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 jrebelopts() {
 	if [ ! -f $HOME/.jrebel/jrebel.lic ] || [ ! -d $HOME/.jrebel/jrebel ]; then
@@ -74,7 +74,9 @@ export CATALINA_OPTS="-DjvmRoute=$JVM_ROUTE"
 
 export CATALINA_OPTS="$CATALINA_OPTS -Xms2g -Xmx2g -Xmn500m -Xss2m"
 
-if [ ! -d $CATALINA_BASE/../osgi ]; then
+JAVA_MAJOR_VERSION=$(java -version 2>&1 | head -1 | cut -d'"' -f 2 | cut -d'.' -f 2)
+
+if [ 8 -gt $JAVA_MAJOR_VERSION ]; then
 	export CATALINA_OPTS="$CATALINA_OPTS -XX:PermSize=256m -XX:MaxPermSize=256m"
 fi
 
