@@ -9,8 +9,12 @@ loaddb() {
 		return 1
 	fi
 
-	lrfiles ${filename}
-	gunzip ${filename}
+	if [ ! -f ${filename} ]; then
+		rm ${1}-*.sql
+
+		lrfiles ${filename}
+		gunzip ${filename}
+	fi
 
 	local sqlname=$(echo ${filename} | rev | cut -d'.' -f 2- | rev)
 
@@ -41,8 +45,6 @@ if [ "" == "$BACKUP_FOLDER" ]; then
 fi
 
 cd $BACKUP_FOLDER
-
-rm *.sql
 
 loaddb customer_lportal customer
 loaddb developer_lportal lportal
