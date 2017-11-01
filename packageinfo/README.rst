@@ -6,13 +6,12 @@ Before using the scripts in this repository, you must have the following install
 * ``jq``: https://stedolan.github.io/jq/
 * ``nodejs``: https://nodejs.org/en/
 * ``python``: https://conda.io/miniconda.html
-
-  * ``dateparser``: https://pypi.python.org/pypi/dateparser
-  * ``jupyter``: http://jupyter.org/
-  * ``pandas``: http://pandas.pydata.org/
-  * ``pytz``: https://pypi.python.org/pypi/pytz
-  * ``semver``: https://pypi.python.org/pypi/semver
-  * ``ujson``: https://pypi.python.org/pypi/ujson
+* ``dateparser``: https://pypi.python.org/pypi/dateparser
+* ``jupyter``: http://jupyter.org/
+* ``pandas``: http://pandas.pydata.org/
+* ``pytz``: https://pypi.python.org/pypi/pytz
+* ``semver``: https://pypi.python.org/pypi/semver
+* ``ujson``: https://pypi.python.org/pypi/ujson
 
 Installation
 ============
@@ -33,9 +32,9 @@ Then, add this section to `.bash_aliases` (or the equivalent on whichever shell 
 		${MCD_RD_CLONE_PATH}/packageinfo/fixdeps
 	}
 
-  trackprop() {
-    ${MCD_RD_CLONE_PATH}/packageinfo/trackprop
-  }
+	trackprop() {
+		${MCD_RD_CLONE_PATH}/packageinfo/trackprop
+	}
 
 Track Portal Property Value
 ===========================
