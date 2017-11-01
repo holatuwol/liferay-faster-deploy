@@ -1,0 +1,12 @@
+#!/bin/bash
+
+trackprop() {
+	local propname=$1
+
+	for tag in fix-pack-base-7010 $(git tag | grep '^fix-pack-de-[0-9]*-7010$' | sort -t'-' -k4 -n); do
+		echo $tag
+		git show $tag:portal-impl/src/portal.properties | sed -n "/^ *${propname}=/,/^[^#]*[^\\#]$/p"
+	done
+}
+
+trackprop $@

@@ -33,6 +33,25 @@ Then, add this section to `.bash_aliases` (or the equivalent on whichever shell 
 		${MCD_RD_CLONE_PATH}/packageinfo/fixdeps
 	}
 
+  trackprop() {
+    ${MCD_RD_CLONE_PATH}/packageinfo/trackprop
+  }
+
+Track Portal Property Value
+===========================
+
+The following script will let you see the value of a portal property for every DE release that you have available locally as a tag.
+
+* `trackprop <trackprop>`__
+
+Users may need to update the value for ``module.framework.properties.org.osgi.framework.bootdelegation`` in order to get things working on different application servers and different databases, such as in `LPS-67662 <https://issues.liferay.com/browse/LPS-67662>`__.
+
+However, the default value of that property might change in each DE release as Liferay discovers bugs with the value being too inclusive, such as in `LPS-65488 <https://issues.liferay.com/browse/LPS-65488>`__, or as Liferay introduces new classes, such as in `LPS-69090 <https://issues.liferay.com/browse/LPS-69090>`__ (DE-8) and `LPS-68753 <https://issues.liferay.com/browse/LPS-68753>`__ (DE-10).
+
+As a side-effect, any customer overriding that property may suddenly discover that Liferay stops working correctly for them after they apply a new fix pack.
+
+We've also found that as Liferay updates the value to the property ``module.framework.web.generator.excluded.paths``, customer WAB plugins may also suddenly stop working, because the value will cause their WAB to use the Liferay exported package rather than the package provided by their bundle, which can cause problems for things like Hibernate.
+
 Update Gradle Dependencies
 ==========================
 
