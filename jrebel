@@ -46,9 +46,11 @@ jrebel() {
 	echo "Processing core and static modules..."
 
 	for folder in core static; do
-		for file in $(ls -1 $LIFERAY_HOME/osgi/$folder); do
-			unziposgijar $LIFERAY_HOME/osgi/$folder/$file
-		done
+		if [ -d $LIFERAY_HOME/osgi/$folder ]; then
+			for file in $(ls -1 $LIFERAY_HOME/osgi/$folder); do
+				unziposgijar $LIFERAY_HOME/osgi/$folder/$file
+			done
+		fi
 	done
 
 	popd > /dev/null
