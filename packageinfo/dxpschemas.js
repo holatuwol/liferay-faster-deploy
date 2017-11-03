@@ -30,8 +30,12 @@ function checkSchemaInfo() {
 	if (modifyState) {
 		var baseURL = window.location.protocol + "//" + window.location.host + window.location.pathname;
 
-		if (window.location.pathname == '/share') {
-			baseURL = Array.from(document.getElementsByTagName('a')).filter(isPermaLink)[0].href;
+		if (window.location.host == 'grow.liferay.com') {
+			var permaLinks = Array.from(document.getElementsByTagName('a')).filter(isPermaLink);
+
+			if (permaLinks.length > 0) {
+				baseURL = permaLinks[0].href;
+			}
 		}
 
 		var newURL = baseURL + '?sourceVersion=' + select1.options[select1.selectedIndex].value + '&targetVersion=' + select2.options[select2.selectedIndex].value;
