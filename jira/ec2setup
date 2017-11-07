@@ -1,0 +1,37 @@
+#!/bin/bash
+
+if [ -d /var/lib/docker ]; then
+	sudo mv /var/lib/docker /mnt/
+elif [ ! -d /mnt/docker ]; then
+	sudo mkdir /mnt/docker
+fi
+
+sudo ln -s /mnt/docker /var/lib/docker
+
+sudo apt-get install apache2 docker docker.io
+
+sudo service apache2 start
+sudo chown $USER:$USER /var/www/html
+sudo rm /var/www/html/index.html
+
+sudo service docker start
+sudo usermod -aG docker $USER
+
+sudo mkdir /mnt/github
+sudo chown $USER:$USER /mnt/github
+
+git clone https://github.com/holatuwol/liferay-faster-deploy.git /mnt/github/liferay-faster-deploy
+
+docker run --name jupyter --volume /mnt/github/liferay-faster-deploy/jira:/home/jovyan/jira \
+	--detach -p 127.0.0.1:8888:8888 jupyter/datascience-notebook \
+	start-notebook.sh --NotebookApp.token=''
+
+docker run --name lesadb \
+	-e 'MYSQL_ALLOW_EMPTY_PASSWORD=yes' -e 'MYSQL_USER=lportal' -e "MYSQL_PASSWORD=$(git config mysql.password)" \
+	--detach -p 3306:3306 mysql:5.7 --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+
+docker exec -t lesadb mkdir /data
+
+docker network create lesadata
+docker network connect --alias jupyter lesadata jupyter
+docker network connect --alias lesadb lesadata lesadb

@@ -1,43 +1,62 @@
 #!/bin/bash
 
-loaddb() {
-	lrfiles "" index.html
-
-	local filename=$(grep -o ">${1}-[^<]*" index.html | cut -d '>' -f 2 | sort -u | tail -1)
+getbackup() {
+	local filename=$(grep -o ">$1-[0-9A-Z_\-]*.sql.gz" index.html | cut -d '>' -f 2 | sort -u | tail -1)
 
 	if [ "" == "$filename" ]; then
 		return 1
 	fi
 
 	if [ ! -f ${filename} ]; then
-		rm ${1}-*.sql
-
-		lrfiles ${filename}
-		gunzip ${filename}
+		curl -O -u $(git config files.username):$(git config files.password) https://files.liferay.com/private/lrdcom/${filename}
 	fi
+
+	docker cp ${filename} lesadb:/data
+	echo "gunzip ${filename}" >> reload.sh
 
 	local sqlname=$(echo ${filename} | rev | cut -d'.' -f 2- | rev)
 
-	echo "
-	drop schema $2;
-	create schema $2;
-	use $2;
-	source ${sqlname};
-	" > reload.sql
-
-	mysql -u root < reload.sql > reload.out
-
-	rm reload.sql
-	rm reload.out
+	echo "drop schema if exists $2;
+create schema $2 default character set utf8mb4 default collate utf8mb4_unicode_ci;
+grant all on $2.* to 'lportal'@'%';
+use $2;
+source /data/${sqlname};
+" >> reload.sql
 }
 
-lrfiles() {
-	if [ "" == "$2" ]; then
-		curl -O -u $(git config files.username):$(git config files.password) https://files.liferay.com/private/lrdcom/$1
-	else
-		curl -u $(git config files.username):$(git config files.password) https://files.liferay.com/private/lrdcom/$1 > $2
-	fi
+reload() {
+	echo '#!/bin/bash
+
+cd /data
+rm -f *.sql
+' > reload.sh
+
+	curl -u $(git config files.username):$(git config files.password) https://files.liferay.com/private/lrdcom/ > index.html
+
+	echo '
+SET autocommit=0;
+SET unique_checks=0;
+' > reload.sql
+
+	getbackup customer_lportal customer
+	getbackup developer_lportal lportal
+
+	echo '
+COMMIT;
+' >> reload.sql
+
+	echo '
+service mysql start
+mysql --max_allowed_packet=2048M -u root < /data/reload.sql' >> reload.sh
+
+	docker cp reload.sql lesadb:/data
+	docker cp reload.sh lesadb:/data
+
+	docker exec -t lesadb chmod u+x /data/reload.sh
+	docker exec -t lesadb /data/reload.sh
 }
+
+# Make sure that we set a backup folder for the script
 
 if [ "" == "$BACKUP_FOLDER" ]; then
 	echo "Please specify a backup folder"
@@ -46,8 +65,7 @@ fi
 
 cd $BACKUP_FOLDER
 
-loaddb customer_lportal customer
-loaddb developer_lportal lportal
+reload
 
 if [ -d /var/www/html ]; then
 	date > /var/www/html/syncbackups.txt
