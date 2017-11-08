@@ -26,12 +26,7 @@ docker run --name jupyter --volume /mnt/github/liferay-faster-deploy/jira:/home/
 	--detach -p 127.0.0.1:8888:8888 jupyter/datascience-notebook \
 	start-notebook.sh --NotebookApp.token=''
 
-docker run --name lesadb \
-	-e 'MYSQL_ALLOW_EMPTY_PASSWORD=yes' -e 'MYSQL_USER=lportal' -e "MYSQL_PASSWORD=$(git config mysql.password)" \
-	--detach -p 3306:3306 mysql:5.7 --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
-
 docker exec -t lesadb mkdir /data
 
 docker network create lesadata
 docker network connect --alias jupyter lesadata jupyter
-docker network connect --alias lesadb lesadata lesadb

@@ -1,5 +1,30 @@
 #!/bin/bash
 
+cleanup() {
+	echo 'Removing previous container...'
+
+	docker kill lesadb
+	docker rm lesadb
+
+	echo 'Starting new container...'
+
+	docker run --name lesadb \
+		--health-cmd='mysqladmin ping --silent' \
+		-e 'MYSQL_ALLOW_EMPTY_PASSWORD=yes' -e 'MYSQL_USER=lportal' -e "MYSQL_PASSWORD=$(git config mysql.password)" \
+		--detach -p 3306:3306 mysql:5.7 --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+
+	docker network connect --alias lesadb lesadata lesadb
+
+	local HEALTH=$(docker inspect --format "{{json .State.Health.Status }}" lesadb | cut -d'"' -f 2)
+
+	while [ "healthy" != "$HEALTH" ]; do
+		HEALTH=$(docker inspect --format "{{json .State.Health.Status }}" lesadb | cut -d'"' -f 2)
+		sleep 1
+	done
+
+	echo 'Started new container!'
+}
+
 getbackup() {
 	local filename=$(grep -o ">$1-[0-9A-Z_\-]*.sql.gz" index.html | cut -d '>' -f 2 | sort -u | tail -1)
 
@@ -12,11 +37,15 @@ getbackup() {
 	fi
 
 	docker cp ${filename} lesadb:/data
+	echo "echo 'Unzipping ${filename}...'" >> reload.sh
 	echo "gunzip ${filename}" >> reload.sh
 
 	local sqlname=$(echo ${filename} | rev | cut -d'.' -f 2- | rev)
 
-	echo "drop schema if exists $2;
+	echo '\! echo "Restoring database '${1}'...";' >> reload.sql
+
+	echo "
+drop schema if exists $2;
 create schema $2 default character set utf8mb4 default collate utf8mb4_unicode_ci;
 grant all on $2.* to 'lportal'@'%';
 use $2;
@@ -25,6 +54,8 @@ source /data/${sqlname};
 }
 
 reload() {
+	docker exec -t lesadb mkdir -p /data
+
 	echo '#!/bin/bash
 
 cd /data
@@ -54,6 +85,8 @@ mysql --max_allowed_packet=2048M -u root < /data/reload.sql' >> reload.sh
 
 	docker exec -t lesadb chmod u+x /data/reload.sh
 	docker exec -t lesadb /data/reload.sh
+
+	echo 'Databases restored!'
 }
 
 # Make sure that we set a backup folder for the script
@@ -62,6 +95,10 @@ if [ "" == "$BACKUP_FOLDER" ]; then
 	echo "Please specify a backup folder"
 	exit 1
 fi
+
+# Restore from backup
+
+cleanup
 
 cd $BACKUP_FOLDER
 
