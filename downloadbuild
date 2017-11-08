@@ -94,7 +94,7 @@ downloadbranchbuild() {
 downloadbranchmirror() {
 	local REQUEST_URL=
 
-	if [[ "$BASE_BRANCH" == ee-* ]]; then
+	if [[ "$BASE_BRANCH" == ee-* ]] || [[ "$BASE_BRANCH" == *-private ]]; then
 		if [ "" == "$LIFERAY_FILES_MIRROR" ]; then
 			return 0
 		fi
@@ -102,7 +102,7 @@ downloadbranchmirror() {
 		REQUEST_URL="$LIFERAY_FILES_MIRROR/private/ee/portal/nightly-$BASE_BRANCH/"
 	else
 		if [ "" == "$LIFERAY_RELEASES_MIRROR" ]; then
-			return 0
+			LIFERAY_RELEASES_MIRROR=https://releases.liferay.com
 		fi
 
 		REQUEST_URL="$LIFERAY_RELEASES_MIRROR/portal/nightly-$BASE_BRANCH/"
@@ -234,7 +234,7 @@ extract() {
 			EXCLUDES="-x 'data/hypersonic/lportal.script' -x 'data/hypersonic/lportal.properties'"
 		fi
 
-		unzip $EXCLUDES "$HOME/.liferay/builds/${BUILD_NAME}"
+		unzip -qq $EXCLUDES "$HOME/.liferay/builds/${BUILD_NAME}"
 	fi
 
 	echo -n "$NEW_BASELINE" > "baseline.txt"
