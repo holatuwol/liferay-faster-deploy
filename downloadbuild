@@ -120,7 +120,7 @@ downloadbranchmirror() {
 
 	local BUILD_CANDIDATE=$(curl -s --connect-timeout 2 $REQUEST_URL | grep -o '<a href="[^"]*tomcat-7.0-[^"]*">' | cut -d'"' -f 2 | sort | tail -1)
 
-	if [ "" == "$BUILD_TIMESTAMP" ]; then
+	if [ "" == "$BUILD_CANDIDATE" ]; then
 		return 0
 	fi
 
