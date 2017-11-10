@@ -90,8 +90,8 @@ unziposgijar() {
 			cp -f "$SCRIPT_FOLDER/jrebel.xml" "$RESOURCE_PATH/rebel.xml"
 		fi
 
-		sed -i.bak "s@MODULE_CLASSES@${MODULE_PATH}/classes@g" "$RESOURCE_PATH/rebel.xml"
-		sed -i.bak "s@MODULE_RESOURCES@${RESOURCE_PATH}/META-INF/resources@g" "$RESOURCE_PATH/rebel.xml"
+		sed -i.bak "s@MODULE_CLASSES@${PWD}/${MODULE_PATH}/classes@g" "$RESOURCE_PATH/rebel.xml"
+		sed -i.bak "s@MODULE_RESOURCES@${PWD}/${RESOURCE_PATH}/META-INF/resources@g" "$RESOURCE_PATH/rebel.xml"
 
 		rm -f "$RESOURCE_PATH/rebel.xml.bak"
 
