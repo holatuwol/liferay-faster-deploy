@@ -51,7 +51,8 @@ catalinaconf() {
 	# Copy setenv.sh that knows how to adjust the default JPDA port
 	# and use more memory.
 
-	if [ ! -f setenv.sh ] || [[ "" != "$(grep 1024m setenv.sh)" ]]; then
+	if [ ! -f setenv.sh ] || [[ "" == "$(grep jrebel setenv.sh)" ]]; then
+		echo Enabling JRebel
 		cp $(dirname ${BASH_SOURCE[0]})/setenv.sh .
 	fi
 
