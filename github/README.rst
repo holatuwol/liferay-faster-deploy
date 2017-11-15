@@ -56,6 +56,12 @@ This function takes advantage of the fact that most of the logic is very similar
 
 * `github <github>`__
 
+An alternate way to use this is to add a configuration to your IDE. For IntelliJ, you would add an External Tool with the following configuration:
+
+* **Program**: ``${MCD_RD_CLONE_PATH}/github/github``
+* **Parameters**: ``$FileName$ $SelectionStartLine$ $SelectionEndLine$``
+* **Working Directory**: ``$FileDir$``
+
 Work with Pull Requests
 =======================
 
