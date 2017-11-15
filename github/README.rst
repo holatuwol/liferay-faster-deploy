@@ -56,7 +56,7 @@ This function takes advantage of the fact that most of the logic is very similar
 
 * `github <github>`__
 
-An alternate way to use this is to add a configuration to your IDE. For IntelliJ, you would add an External Tool with the following configuration:
+An alternate way to use this is to add a configuration to your IDE. For IntelliJ, you would add an External Tool with the following configuration (replace the ``${MCD_RD_CLONE_PATH}`` below with the actual path:
 
 * **Program**: ``${MCD_RD_CLONE_PATH}/github/github``
 * **Parameters**: ``$FileName$ $SelectionStartLine$ $SelectionEndLine$``
