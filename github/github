@@ -54,7 +54,17 @@ github() {
 		GIT_PATH=commit/$COMMIT
 	fi
 
-	python -m webbrowser "https://github.com/$REPO_NAME/$GIT_PATH"
+	local LINE_LINK=
+
+	if [ "" != "$2" ]; then
+		LINE_LINK="#L${2}"
+	fi
+
+	if [ "" != "$3" ]; then
+		LINE_LINK="${LINE_LINK}-L${3}"
+	fi
+
+	python -m webbrowser "https://github.com/$REPO_NAME/${GIT_PATH}${LINE_LINK}"
 }
 
 github $@
