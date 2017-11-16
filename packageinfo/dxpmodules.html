@@ -25,7 +25,7 @@
 
 <h2>Choose Your Comparison</h2>
 
-<p><strong>Note</strong>: If the values in the select boxes are the same, this will list the versions of all modules at the specified baseline rather than a comparison. Artifacts from the <code>com.liferay.portal</code> group are listed as snapshots, but you should use the non-snapshot .0 release instead.</p>
+<p><strong>Note</strong>: If the values in the select boxes are the same, this will list the versions of all modules at the specified baseline rather than a comparison. Artifacts from the <code>com.liferay.portal</code> group are listed as snapshots, because they really are snapshots (so the official artifact has not been released). If the version is listed as .1, use .0 at build time. If the version is listed as .0, you might be able to use .0 at build time if your package doesn't change before the actual .0 release, but you may have to use one minor version before the listed version at build time.
 
 <table class="table">
 <tbody>
