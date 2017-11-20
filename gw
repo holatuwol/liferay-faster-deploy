@@ -61,11 +61,9 @@ fixgradle() {
 		local OVERRIDE=$LIFERAY_HOME/osgi/marketplace/override
 
 		if [ "" == "$(grep -F "$OVERRIDE" build.gradle)" ]; then
-			echo "If you are absolutely sure you want to deploy to a release bundle with .lpkg files"
-			echo "(not recommended, because this may require a server restart after every deploy)"
-			echo "please add the following to build.gradle:"
+			echo "LPKG files detected. You might be attempting to deploy to a release bundle."
+			echo "If this really is a release bundle, please add the following to build.gradle:"
 			echo -e "\n\njar.archiveName = \"$JAR_NAME\"\n\nliferay {\n\tdeployDir = \"$OVERRIDE\"\n}"
-			return 0
 		fi
 	fi
 
