@@ -1,33 +1,13 @@
-Prerequisites
-=============
-
-Before using the scripts in this repository, you must have the following installed
-
-* ``jq``: https://stedolan.github.io/jq/
-* ``nodejs``: https://nodejs.org/en/
-* ``python``: https://conda.io/miniconda.html
-
-  * ``dateparser``: https://pypi.python.org/pypi/dateparser
-  * ``jupyter``: http://jupyter.org/
-  * ``pandas``: http://pandas.pydata.org/
-  * ``pytz``: https://pypi.python.org/pypi/pytz
-  * ``semver``: https://pypi.python.org/pypi/semver
-  * ``ujson``: https://pypi.python.org/pypi/ujson
-
 Installation
 ============
 
-Clone this repository.
+Make sure that you've followed the initial setup steps for this repository:
+
+* `Initial Setup <../SETUP.rst>`__
+
+Then, add this section to `.bash_aliases` (or the equivalent on whichever shell you're using) which calls the script.
 
 .. code-block:: bash
-
-	git clone git@github.com:holatuwol/liferay-faster-deploy.git
-
-Then, add this section to `.bash_aliases` (or the equivalent on whichever shell you're using) which calls the script, making sure to change `/path/to/clone/location` to wherever you cloned the repository.
-
-.. code-block:: bash
-
-	MCD_RD_CLONE_PATH=/path/to/clone/location
 
 	filtererror() {
 		${MCD_RD_CLONE_PATH}/logparse/filtererror $@
@@ -51,4 +31,14 @@ The file generates numbered files so that you can repeatedly call it with new ex
 Extract Upgrade Times
 =====================
 
-TODO
+Sometimes it's hard to know what you should prioritize when attempting to create an upgrade performance enhancement. This converts an upgrade log into a ``times_old.csv`` file that shows the time that elapsed for each upgrade step, which allows you to sort the upgrade times in descending order.
+
+.. code-block:: bash
+
+	upgradetimes FILE_NAME
+
+After you've completed your upgrade performance enhancements, you can confirm whether your code change has improved the performance of a previous upgrade, this script can also be used to compare upgrade times by providing two file names. The resulting output is a ``times_old.csv`` which shows the times of the first log, a ``times_new.csv`` which shows the times of the second log, and a ``times_compare.csv`` that allows you to compare the upgrade times for each step, and a ``times_compare_totals.csv`` that allows you to only compare the total time for each upgrade process.
+
+.. code-block:: bash
+
+	upgradetimes FILE_NAME_1 FILE_NAME_2
