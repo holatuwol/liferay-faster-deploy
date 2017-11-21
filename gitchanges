@@ -19,12 +19,12 @@ gitchanges() {
 
 	if [ "" != "$1" ] && [ "local" != "$1" ]; then
 		local COMPARE_HASH=$(git log -1 --pretty='%H' $1)
-		git diff ${COMPARE_HASH}..HEAD --name-only >> .redeploy/changes.txt
+		git diff ${COMPARE_HASH}..HEAD --name-only | grep -vF .iml | grep -vF rebel.xml | grep -vF yarn.lock >> .redeploy/changes.txt
 	fi
 
 	echo "Computing local changes..."
 
-	git status -s | grep -vF '.redeploy' | grep -vF 'yarn.lock' | awk '{print $2}' >> .redeploy/changes.txt
+	git status -s | grep -vF '??' | grep -vF '.redeploy' | grep -vF .iml | grep -vF rebel.xml | grep -vF 'yarn.lock' | awk '{print $2}' >> .redeploy/changes.txt
 
 	if [[ 0 -eq $(cat .redeploy/changes.txt | grep -c '^') ]]; then
 		echo 'No changes detected.'

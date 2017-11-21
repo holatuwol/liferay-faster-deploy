@@ -11,11 +11,7 @@ changed_modules = set()
 
 with open('.redeploy/changes.txt', 'r') as f:
 	for file_name in [line.strip() for line in f.readlines()]:
-		if file_name.endswith('.iml'):
-			continue
 		if file_name.startswith('portal-web') and file_name.endswith('.tld'):
-			continue
-		if file_name.endswith('rebel.xml'):
 			continue
 		if file_name.endswith('node_modules'):
 			continue
