@@ -1,97 +1,18 @@
 #!/bin/bash
 
 getparent() {
-	CURRENT_BRANCH=$(git symbolic-ref --short HEAD 2> /dev/null)
+	local PARENT=$(python "$(dirname "${BASH_SOURCE[0]}")/getparent.py" $@)
 
-	BASE_TAG=
-	BASE_BRANCH=
-
-	if isbuildbranch $CURRENT_BRANCH; then
-		BASE_BRANCH=$CURRENT_BRANCH
-		return 0
-	fi
-
-	local FULL_VERSION=
-	local MAJOR_VERSION=
-	local PORTAL_COMMIT=
-
-	if [ -f "release.properties" ]; then
-		FULL_VERSION=$(grep lp.version= "release.properties" | cut -d'=' -f 2)
-		MAJOR_VERSION=$(grep lp.version.major= "release.properties" | cut -d'=' -f 2)
-	elif [ -f "build.properties" ]; then
-		FULL_VERSION=$(grep lp.version= "build.properties" | cut -d'=' -f 2)
-		MAJOR_VERSION=$(echo "$FULL_VERSION" | cut -d'.' -f 1,2)
-	elif [ -f "git-commit-portal" ]; then
-		PORTAL_COMMIT=$(cat git-commit-portal)
-		FULL_VERSION=$(git show $PORTAL_COMMIT:release.properties | grep lp.version= | cut -d'=' -f 2)
-		MAJOR_VERSION=$(echo "$FULL_VERSION" | cut -d'.' -f 1,2)
-	fi
-
-	if [ "6.0" == "$MAJOR_VERSION" ]; then
-		BASE_BRANCH=ee-6.0.x
-	elif [ "6.1" == "$MAJOR_VERSION" ]; then
-		BASE_BRANCH=ee-6.1.x
-	elif [ "6.2" == "$MAJOR_VERSION" ]; then
-		BASE_BRANCH=ee-6.2.x
-	elif [ "7.0" == "$MAJOR_VERSION" ]; then
-		if [ -f "build.properties" ]; then
-			BASE_BRANCH=$(grep -F git.working.branch.name build.properties | cut -d'=' -f 2)
-		elif [ -f "git-commit-portal" ]; then
-			BASE_BRANCH=$(git show $PORTAL_COMMIT:build.properties | grep -F git.working.branch.name | cut -d'=' -f 2)
-		else
-			BASE_BRANCH=
-		fi
-
-		if [ "" == "$BASE_BRANCH" ] || [ "ee-7.0.x" == "$BASE_BRANCH" ]; then
-			BASE_BRANCH=7.0.x
-		fi
-
-		if [ -d modules/private ]; then
-			BASE_BRANCH=${BASE_BRANCH}-private
-		fi
-	fi
-
-	# If the branch isn't an ancestor, try to find a matching tag
-
-	git merge-base --is-ancestor $BASE_BRANCH HEAD
-
-	if [[ 0 -eq $? ]]; then
-		BASE_TAG=
-	else
-		BASE_TAG=$(git describe --tags HEAD --abbrev=0 2> /dev/null)
-
-		if [[ $BASE_TAG != fix-pack-* ]]; then
-			BASE_TAG=
-		fi
-	fi
-}
-
-isbuildbranch() {
-	if [ "master" == "$1" ]; then
-		return 0
-	elif [ "master-private" == "$1" ]; then
-		return 0
-	elif [ "7.0.x" == "$1" ]; then
-		return 0
-	elif [ "7.0.x-private" == "$1" ]; then
-		return 0
-	elif [ "ee-6.2.x" == "$1" ]; then
-		return 0
-	elif [ "ee-6.1.x" == "$1" ]; then
-		return 0
-	else
+	if [ "" == "${PARENT}" ]; then
 		return 1
 	fi
+
+	if [ "" != "$(git tag | grep -F ${PARENT} | head -1)" ]; then
+		BASE_TAG=${PARENT}
+		return 0
+	fi
+
+	BASE_BRANCH=${PARENT}
 }
 
-setopts() {
-	. $(dirname "${BASH_SOURCE[0]}")/setopts
-}
-
-setopts
-
-if [ "" != "$GIT_ROOT" ]; then
-	pushd $GIT_ROOT > /dev/null
-	getparent $@
-	popd > /dev/null
-fi
+getparent
