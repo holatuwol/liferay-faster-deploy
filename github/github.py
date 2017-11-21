@@ -7,7 +7,9 @@ sys.path.insert(0, dirname(dirname(abspath(inspect.getfile(inspect.currentframe(
 sys.path.insert(0, join(dirname(dirname(abspath(inspect.getfile(inspect.currentframe())))), 'gitcd'))
 
 from getparent import getparent
-from gitfind import find, git_root, repo
+import git
+from git import git_root
+from gitfind import find
 import webbrowser
 
 def get_relpath(needle):
@@ -42,7 +44,7 @@ def open_on_github(needle, selection_start=None, selection_end=None):
 	parent_ref = getparent(True)
 	parent_branch = getparent(False)
 
-	remote_refs = repo.git.for_each_ref('--format=%(refname)', 'refs/remotes/').split('\n')
+	remote_refs = git.for_each_ref('--format=%(refname)', 'refs/remotes/').split('\n')
 	candidate_refs = [remote_ref for remote_ref in remote_refs if remote_ref.find('/upstream') > -1 and remote_ref.find(parent_branch) != -1]
 
 	if len(candidate_refs) == 0:
@@ -54,7 +56,7 @@ def open_on_github(needle, selection_start=None, selection_end=None):
 	# Identify the name of the repository
 
 	matching_ref = candidate_refs[0].split('/')[2]
-	matching_remote_url = repo.git.remote('get-url', matching_ref)
+	matching_remote_url = git.remote('get-url', matching_ref)
 	matching_remote_path = matching_remote_url[matching_remote_url.find(':')+1:-4]
 
 	# Find the path to the matching file/folder, relative to the git root

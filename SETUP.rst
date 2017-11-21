@@ -18,7 +18,6 @@ Python Packages
 These scripts make use of the following Python libraries:
 
   * ``dateparser``: https://dateparser.readthedocs.io/en/stable/
-  * ``gitpython``: https://gitpython.readthedocs.io/en/stable/
   * ``jupyter``: http://jupyter.org/
   * ``pandas``: http://pandas.pydata.org/
   * ``semver``: https://pypi.python.org/pypi/semver
@@ -28,7 +27,7 @@ You can install all of these packages using the following commands:
 
 .. code-block:: bash
 
-	conda install -y gitpython jupyter pandas ujson
+	conda install -y jupyter pandas ujson
 	pip install dateparser semver
 
 Environment Variables

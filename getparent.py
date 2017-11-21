@@ -3,9 +3,7 @@
 import os
 from os.path import abspath, dirname, isdir, isfile, join, relpath
 import git
-
-repo = git.Repo(os.getcwd(), search_parent_directories=True)
-git_root = repo.git.rev_parse('--show-toplevel')
+from git import current_branch, git_root
 
 def get_file_property(file_name, property):
 	needle = '%s=' % property
@@ -16,17 +14,12 @@ def get_file_property(file_name, property):
 		return lines[0].split('=')[1]
 
 def get_git_file_property(commit, file_name, property):
-	lines = repo.git.show('%s:%s' % (commit, file_name)).split('\n')
+	lines = git.show('%s:%s' % (commit, file_name)).split('\n')
 	full_version = [line.strip() for line in lines if line.find(property) > -1][0].split('=')[1]
 
 def getparent(check_tags):
 
 	# Find the current branch, accounting for detached head
-
-	try:
-		current_branch = repo.active_branch.name
-	except:
-		current_branch = 'HEAD'
 
 	if current_branch in ['master', 'master-private', '7.0.x', '7.0.x-private', 'ee-6.2.x', 'ee-6.1.x', 'ee-6.0.x']:
 		return current_branch
@@ -85,12 +78,12 @@ def getparent(check_tags):
 	if base_branch in ['master', 'master-private']:
 		return base_branch
 
-	if len(repo.git.merge_base(base_branch, 'HEAD')) > 0:
+	if len(git.merge_base(base_branch, 'HEAD')) > 0:
 		return base_branch
 
 	# Find the closest matching tag
 
-	base_tag = repo.git.describe('--tags', 'HEAD', '--abbrev=0')
+	base_tag = git.describe('--tags', 'HEAD', '--abbrev=0')
 
 	if base_tag.find('fix-pack-de-') > -1 or base_tag.find('-ga') > -1:
 		return base_tag

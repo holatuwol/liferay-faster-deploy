@@ -9,9 +9,7 @@ sys.path.insert(0, dirname(dirname(abspath(inspect.getfile(inspect.currentframe(
 
 from dirnames import dirnames
 import git
-
-repo = git.Repo(os.getcwd(), search_parent_directories=True)
-git_root = repo.git.rev_parse('--show-toplevel')
+from git import git_root
 
 def find(needle):
 
@@ -39,7 +37,7 @@ def find(needle):
 def git_find(haystack, needle):
 	haystack = relpath(haystack, git_root)
 
-	file_list = [relpath(x, haystack) for x in repo.git.ls_files(haystack).split('\n')]
+	file_list = [relpath(x, haystack) for x in git.ls_files(haystack).split('\n')]
 	file_list = [file.replace('\\', '/') for file in file_list]
 
 	# First, assume that we're looking for a module root, so check for
