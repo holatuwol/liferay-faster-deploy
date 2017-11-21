@@ -40,6 +40,7 @@ def git_find(haystack, needle):
 	haystack = relpath(haystack, git_root)
 
 	file_list = [relpath(x, haystack) for x in repo.git.ls_files(haystack).split('\n')]
+	file_list = [file.replace('\\', '/') for file in file_list]
 
 	# First, assume that we're looking for a module root, so check for
 	# bnd.bnd, ivy.xml, and package.json
