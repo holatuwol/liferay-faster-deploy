@@ -92,10 +92,16 @@ sendpull() {
 
 	# Figure out where we are pushing our branch
 
+	local CURRENT_BRANCH=$(git symbolic-ref --short HEAD)
+
+	if [ "" == "$CURRENT_BRANCH" ]; then
+		echo "Cannot submit a pull request from a detached head"
+		return 1
+	fi
+
 	if [ -f "$GIT_ROOT/release.properties" ] || [ -f "$GIT_ROOT/build.properties" ] || [ -f "$GIT_ROOT/working.dir.properties" ]; then
 		. $(dirname "${BASH_SOURCE[0]}")/../getparent
 	else
-		CURRENT_BRANCH=$(git symbolic-ref --short HEAD)
 		BASE_BRANCH=master
 	fi
 
