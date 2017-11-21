@@ -3,8 +3,12 @@
 from __future__ import print_function
 import sys
 
-lines = [line[0:line.rfind('/')].strip() for line in sys.stdin.readlines() if line.strip() != '' and line.rfind('/') != -1]
-lines = [line for line in lines if line != '']
+def dirnames(entries):
+	entries = [entry[0:entry.rfind('/')].strip() for entry in entries if entry.strip() != '' and entry.rfind('/') != -1]
+	entries = [entry for entry in entries if entry != '']
+	return sorted(set(entries))
 
-if len(lines) > 0:
-	print('\n'.join(lines))
+if __name__ == '__main__':
+	lines = dirnames(sys.stdin.readlines())
+	if len(lines) > 0:
+		print('\n'.join(lines))
