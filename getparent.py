@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 
-import os
-from os.path import abspath, dirname, isdir, isfile, join, relpath
 import git
 from git import current_branch, git_root
+import os
+from os.path import abspath, dirname, isdir, isfile, join, relpath
+import subprocess
 
 def get_file_property(file_name, property):
 	needle = '%s=' % property
@@ -78,7 +79,9 @@ def getparent(check_tags):
 	if base_branch in ['master', 'master-private']:
 		return base_branch
 
-	if len(git.merge_base(base_branch, 'HEAD')) > 0:
+	exit_code = subprocess.call(['git', 'merge-base', '--is-ancestor', base_branch, 'HEAD'])
+
+	if exit_code == 0:
 		return base_branch
 
 	# Find the closest matching tag

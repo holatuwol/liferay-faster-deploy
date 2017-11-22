@@ -13,8 +13,8 @@ def _git(cmd, args):
 
 	return out.decode('UTF-8', 'replace').strip()
 
-def merge_base(*args):
-	return _git('merge-base' + args)
+def describe(*args):
+	return _git('describe', args)
 
 def for_each_ref(*args):
 	return _git('for-each-ref', args)
