@@ -145,22 +145,7 @@ fixpack() {
 		return 0
 	fi
 
-	# If we have an equivalent private tag, we should actually be building that,
-	# but because we have that logic, avoid building the private tag
-
-	if [[ $1 == *-private ]]; then
-		return 0
-	fi
-
-	local BUILT_PRIVATE=
-
-	if [ "" != "$(git for-each-ref --format='%(refname)' "refs/tags/${1}-private")" ]; then
-		BUILT_PRIVATE=true
-		checkout ${1}-private
-		setportalcommit
-	else
-		checkout $1
-	fi
+	checkout $1
 
 	# Execute the build
 
@@ -169,17 +154,6 @@ fixpack() {
 		ARCHIVE_FOLDER="/var/www/html/builds/fixpacks" \
 		TIMESTAMP="" \
 			$SCRIPT_FOLDER/prepare $1 80
-
-	# If we have an equivalent private tag, also copy our build there
-
-	if [ "" != "$BUILT_PRIVATE" ] && [ -f /var/www/html/builds/fixpacks/$1.tar.gz ]; then
-		cp /var/www/html/builds/fixpacks/$1.tar.gz /var/www/html/builds/fixpacks/$1-private.tar.gz
-		mv /var/www/html/builds/fixpacks/$1.log /var/www/html/builds/fixpacks/$1-private.log
-
-		echo "Git Hash:" > /var/www/html/builds/fixpacks/$1.log
-		cat git-commit-portal >> /var/www/html/builds/fixpacks/$1.log
-		tail -n +3 /var/www/html/builds/fixpacks/$1-private.log >> /var/www/html/builds/fixpacks/$1.log
-	fi
 
 	# Remove the temp folder where we were building to
 
