@@ -26,7 +26,5 @@ docker run --name jupyter --volume /mnt/github/liferay-faster-deploy/jira:/home/
 	--detach -p 127.0.0.1:8888:8888 jupyter/datascience-notebook \
 	start-notebook.sh --NotebookApp.token=''
 
-docker exec -t lesadb mkdir /data
-
 docker network create lesadata
 docker network connect --alias jupyter lesadata jupyter
