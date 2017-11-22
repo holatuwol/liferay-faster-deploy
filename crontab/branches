@@ -7,75 +7,46 @@ SCRIPT_FOLDER=$(pwd -P)
 popd > /dev/null
 
 branch() {
+	BASE_BRANCH=$1
+	local WORKING_DIR=$2
+	local PORT_PREFIX=$3
+
 	# If we've already built the branch today, no need to rebuild it
 
-	if [ -f "/var/www/html/builds/branches/${1}-${TIMESTAMP}.tar.gz" ]; then
+	if [ -f "/var/www/html/builds/branches/${WORKING_DIR}-${TIMESTAMP}.tar.gz" ]; then
 		return 0
 	fi
 
 	# We flag whether or not we want to build a branch by making a folder,
 	# so if that folder does not exist, don't bother
 
-	if [ ! -d "$BUILD_FOLDER_PREFIX/$1" ]; then
+	if [ ! -d "$BUILD_FOLDER_PREFIX/$WORKING_DIR" ]; then
 		return 0
 	fi
 
-	# Determine the actual base branch to use for building
-
-	if [ "master" == "$1" ]; then
-		BASE_BRANCH=$1
-	elif [ "$1" != "70x" ]; then
-		BASE_BRANCH=ee-$(echo $1 | sed 's/\([0-9]\)/\1./g')
-	else
-		BASE_BRANCH=$(echo $1 | sed 's/\([0-9]\)/\1./g')
-	fi
-
-	# If we have an equivalent private branch, we should actually be building that
-
-	local upstream_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
-
-	local BUILT_PRIVATE=
-
-	if [ "master" != "$1" ] && [ "" != "$(git for-each-ref --format='%(refname)' "refs/remotes/${upstream_remote}/${BASE_BRANCH}-private")" ]; then
-		BUILT_PRIVATE=true
-		checkout ${upstream_remote}/${BASE_BRANCH}-private
-		setportalcommit
-	else
-		checkout ${upstream_remote}/$BASE_BRANCH
-	fi
-
 	# Execute the build
+
+	checkout ${upstream_remote}/$BASE_BRANCH
 
 	BUILD_FOLDER_PREFIX="$BUILD_FOLDER_PREFIX" \
 		BUILD_FOLDER_SUFFIX="$TIMESTAMP" \
 		ARCHIVE_FOLDER="/var/www/html/builds/branches" \
 		TIMESTAMP="$TIMESTAMP" \
-			$SCRIPT_FOLDER/prepare $@
-
-	# If we have an equivalent private branch, also copy our build there
-
-	if [ "" != "$BUILT_PRIVATE" ] && [ -f /var/www/html/builds/branches/$1-${TIMESTAMP}.tar.gz ]; then
-		cp /var/www/html/builds/branches/$1-${TIMESTAMP}.tar.gz /var/www/html/builds/branches/$1-private-${TIMESTAMP}.tar.gz
-		mv /var/www/html/builds/branches/$1-${TIMESTAMP}.log /var/www/html/builds/branches/$1-private-${TIMESTAMP}.log
-
-		echo "Git Hash:" > /var/www/html/builds/branches/$1-${TIMESTAMP}.log
-		cat git-commit-portal >> /var/www/html/builds/branches/$1-${TIMESTAMP}.log
-		tail -n +3 /var/www/html/builds/branches/$1-private-${TIMESTAMP}.log >> /var/www/html/builds/branches/$1-${TIMESTAMP}.log
-	fi
+			$SCRIPT_FOLDER/prepare $WORKING_DIR $PORT_PREFIX
 
 	# Only retain last three builds
 
-	BUILD_COUNT=$(ls -1 "$BUILD_FOLDER_PREFIX/$1/" | grep -vF '.log' | grep -c '^')
+	BUILD_COUNT=$(ls -1 "$BUILD_FOLDER_PREFIX/$WORKING_DIR/" | grep -vF '.log' | grep -c '^')
 
 	if [[ $BUILD_COUNT -gt 3 ]]; then
-		for BUILD_ID in $(ls -1 "$BUILD_FOLDER_PREFIX/$1/" | grep -vF '.log' | sort | head -$(expr $BUILD_COUNT '-' 3)); do
-			rm -rf "$BUILD_FOLDER_PREFIX/$1/$BUILD_ID"
+		for BUILD_ID in $(ls -1 "$BUILD_FOLDER_PREFIX/$WORKING_DIR/" | grep -vF '.log' | sort | head -$(expr $BUILD_COUNT '-' 3)); do
+			rm -rf "$BUILD_FOLDER_PREFIX/$WORKING_DIR/$BUILD_ID"
 		done
 	fi
 
 	# Clean up old logs as well
 
-	rm -f $BUILD_FOLDER_PREFIX/$1/*.log
+	rm -f $BUILD_FOLDER_PREFIX/$WORKING_DIR/*.log
 }
 
 branches() {
@@ -102,13 +73,15 @@ branches() {
 
 	for folder in $REBUILD; do
 		if [ "master" == "$folder" ]; then
-			branch master 60
+			branch master-private master
+			branch master master 60
 		elif [ "70x" == "$folder" ]; then
-			branch 70x 70
+			branch 7.0.x 70x 70x
+			branch 7.0.x-private 70x 70
 		elif [ "62x" == "$folder" ]; then
-			branch 62x 62
+			branch ee-6.2.x 62x 62
 		elif [ "61x" == "$folder" ]; then
-			branch 61x 61
+			branch ee-6.1.x 61x 61
 		fi
 	done
 

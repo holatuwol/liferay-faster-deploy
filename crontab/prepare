@@ -108,7 +108,9 @@ finish() {
 
 	sed -i "s@#JAVA_HOME=@JAVA_HOME=$JAVA_HOME@g" $TOMCAT_FOLDER/bin/setenv.sh
 
-	switchport 80 $2
+	if [ "" != "$2" ]; then
+		switchport 80 $2
+	fi
 }
 
 javahome() {
