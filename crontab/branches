@@ -26,6 +26,7 @@ branch() {
 
 	# Execute the build
 
+	local upstream_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
 	checkout ${upstream_remote}/$BASE_BRANCH
 
 	BUILD_FOLDER_PREFIX="$BUILD_FOLDER_PREFIX" \
