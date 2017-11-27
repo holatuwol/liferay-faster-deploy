@@ -46,7 +46,7 @@ unziposgijar() {
 	mkdir -p .redeploy
 
 	if [ ! -f .redeploy/bnd_list.txt ]; then
-		git ls-files modules | grep -vF '/src/' | grep -F '/bnd.bnd' | xargs grep -F Bundle-SymbolicName | \
+		git ls-files modules | grep -vF '/src/' | grep -F '/bnd.bnd' | grep -vF -- '-test/' | xargs grep -F Bundle-SymbolicName | \
 			grep -vF '{' | sed 's/Bundle-SymbolicName: //g' > .redeploy/bnd_list.txt
 	fi
 
