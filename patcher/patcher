@@ -1,6 +1,7 @@
 #!/bin/bash
 
 patcher() {
+	. $(dirname "${BASH_SOURCE[0]}")/../setopts
 	. $(dirname "${BASH_SOURCE[0]}")/../getparent
 
 	if [ "" == "$BASE_TAG" ]; then
