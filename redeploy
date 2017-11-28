@@ -217,7 +217,7 @@ unzipportaljar() {
 			$(dirname "${BASH_SOURCE[0]}")/unzipportaljar $@
 }
 
-git clean -xdf -e '**/*.iml' -e '.idea' -e '.m2' -e 'lib' -e "app.server.$USER.properties" -e "build.$USER.properties"
+git clean -xdf -e '**/*.iml' -e '.gradle/gradle.properties' -e '.idea' -e '.m2' -e 'lib' -e "app.server.$USER.properties" -e "build.$USER.properties"
 
 CURRENT_HASH=$(git log -1 --pretty='%H')
 
