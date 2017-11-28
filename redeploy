@@ -120,6 +120,8 @@ deployant() {
 	# Make sure that we have registry-api and anything else that is
 	# part of the portal-pre profile
 
+	echo "Preparing initial portal snapshots..."
+
 	ant compile
 	checksnapshots
 
