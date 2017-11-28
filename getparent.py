@@ -29,12 +29,12 @@ def getparent(check_tags):
 
 	full_version = None
 
-	if isfile('release.properties'):
-		full_version = get_file_property('release.properties', 'lp.version')
-	elif isfile('build.properties'):
-		full_version = get_file_property('build.properties', 'lp.version')
-	elif isfile('git-commit-portal'):
-		with open('git-commit-portal', 'r') as file:
+	if isfile(join(git_root, 'release.properties')):
+		full_version = get_file_property(join(git_root, 'release.properties'), 'lp.version')
+	elif isfile(join(git_root, 'build.properties')):
+		full_version = get_file_property(join(git_root, 'build.properties'), 'lp.version')
+	elif isfile(join(git_root, 'git-commit-portal')):
+		with open(join(git_root, 'git-commit-portal'), 'r') as file:
 			commit = file.readlines()[0]
 			full_version = get_git_file_property(commit, 'release.properties', 'lp.version')
 	else:
@@ -57,11 +57,11 @@ def getparent(check_tags):
 
 	# Determine the base version using build.properties
 
-	if isfile('build.properties'):
-		base_branch = get_file_property('build.properties', 'git.working.branch.name')
+	if isfile(join(git_root, 'build.properties')):
+		base_branch = get_file_property(join(git_root, 'build.properties'), 'git.working.branch.name')
 
-	if base_branch is None and isfile('git-commit-portal'):
-		with open('git-commit-portal', 'r') as file:
+	if base_branch is None and isfile(join(git_root, 'git-commit-portal')):
+		with open(join(git_root, 'git-commit-portal'), 'r') as file:
 			commit = file.readlines()[0]
 			base_branch = get_git_file_property(commit, 'build.properties', 'git.working.branch.name')
 
@@ -88,7 +88,7 @@ def getparent(check_tags):
 
 	base_tag = git.describe('--tags', 'HEAD', '--abbrev=0')
 
-	if base_tag.find('fix-pack-de-') > -1 or base_tag.find('-ga') > -1:
+	if base_tag.find('fix-pack-base-') or base_tag.find('fix-pack-de-') > -1 or base_tag.find('-ga') > -1:
 		return base_tag
 
 	return base_branch
