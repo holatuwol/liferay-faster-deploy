@@ -171,10 +171,6 @@ sendpull() {
 	if [ -f "$GIT_ROOT/release.properties" ]; then
 		pushd $GIT_ROOT > /dev/null
 
-		if [ "" != "$(grep setup-libs build.xml)" ]; then
-			ant setup-libs
-		fi
-
 		SUBREPO_ROOT=$SUBREPO_ROOT $(dirname ${BASH_SOURCE})/subrepos
 
 		. $(dirname "${BASH_SOURCE[0]}")/../gitchanges ${upstream_remote}/$BASE_BRANCH
@@ -184,9 +180,19 @@ sendpull() {
 			return 0
 		fi
 
-		checkrepomode && fixdeps && baseline && formatsource && pmdreport
+		checkrepomode
 
 		EXIT_CODE=$?
+
+		if [[ 0 -eq $EXIT_CODE ]]; then
+			if [ "" != "$(grep setup-libs build.xml)" ]; then
+				ant setup-libs
+			fi
+
+			fixdeps && baseline && formatsource && pmdreport
+
+			EXIT_CODE=$?
+		fi
 
 		popd > /dev/null
 
