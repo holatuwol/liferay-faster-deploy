@@ -27,12 +27,10 @@ checkrepomode() {
 
 		SUBREPO_CHANGES="${SUBREPO_CHANGES}*${remote_location}\n"
 
-		for patch_file in $(git format-patch ${upstream_remote}/$BASE_BRANCH -- "$subrepo_folder/"); do
-			sed -i.bak "s@${subrepo_folder}/@@g" $patch_file
-			mv $patch_file $SUBREPO_ROOT/${remote_project}/
-			rm -f ${patch_file}.bak
+		pushd $subrepo_folder > /dev/null
 
-			SUBREPO_CHANGES="${SUBREPO_CHANGES}    $SUBREPO_ROOT/${remote_project}/${patch_file}\n"
+		for patch_file in $(git format-patch -o $SUBREPO_ROOT/${remote_project}/ --relative ${upstream_remote}/$BASE_BRANCH -- .); do
+			SUBREPO_CHANGES="${SUBREPO_CHANGES}    ${patch_file}\n"
 		done
 	done
 
