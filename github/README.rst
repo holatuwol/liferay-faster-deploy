@@ -1,3 +1,5 @@
+.. include:: ../SETUP.rst
+
 Installation
 ============
 
