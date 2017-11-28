@@ -1,10 +1,6 @@
 #!/bin/bash
 
 applychanges() {
-	# Start from a clean working directory
-
-	git clean -xdf -e '**/*.iml' -e '.idea' -e '.m2' -e 'lib'
-
 	# Set the modules that we are willing to deploy
 
 	$(dirname "${BASH_SOURCE[0]}")/skipmp
@@ -110,19 +106,6 @@ checksnapshots() {
 }
 
 deployant() {
-	# Make sure that we have registry-api and anything else that is
-	# part of the portal-pre profile
-
-	if [ ! -d tmp/lib-pre ]; then
-		deployportalpre
-	fi
-
-	if [ "" != "$(grep setup-libs build.xml)" ]; then
-		if [[ $(ls -1 "$GIT_ROOT/lib/portal" | grep -c '^') -lt $(cat "$GIT_ROOT/lib/portal/dependencies.properties" | grep -c '^') ]]; then
-			ant setup-libs
-		fi
-	fi
-
 	# Some of the builds (notably util-taglib) need the rest of the
 	# portal to have been built, so we can copy that from our bundle
 
@@ -134,6 +117,10 @@ deployant() {
 		fi
 	done
 
+	# Make sure that we have registry-api and anything else that is
+	# part of the portal-pre profile
+
+	ant compile
 	checksnapshots
 
 	# Finally, iterate over the folders that are listed for deployment
@@ -227,6 +214,8 @@ unzipportaljar() {
 		TOMCAT_FOLDER=$TOMCAT_FOLDER \
 			$(dirname "${BASH_SOURCE[0]}")/unzipportaljar $@
 }
+
+git clean -xdf -e '**/*.iml' -e '.idea' -e '.m2' -e 'lib' -e "app.server.$USER.properties" -e "build.$USER.properties"
 
 CURRENT_HASH=$(git log -1 --pretty='%H')
 
