@@ -1,8 +1,8 @@
 Initial Setup
 =============
 
-Prerequisites
--------------
+Binary Tools
+------------
 
 You will need to have the following programs installed for your operating system.
 
@@ -29,18 +29,3 @@ You can install all of these packages using the following commands:
 
 	conda install -y jupyter pandas ujson
 	pip install dateparser semver
-
-Environment Variables
----------------------
-
-Clone this repository.
-
-.. code-block:: bash
-
-	git clone git@github.com:holatuwol/liferay-faster-deploy.git
-
-Add the following environment variable to your ``.bash_aliases`` file, making sure to change `/path/to/clone/location` to wherever you cloned the repository:
-
-.. code-block:: bash
-
-	MCD_RD_CLONE_PATH=/path/to/clone/location
