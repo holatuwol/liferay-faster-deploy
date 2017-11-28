@@ -20,6 +20,10 @@ clean_docker() {
 	if [ "" != "$(docker images -a --filter=dangling=true -q)" ]; then
 		docker rmi $(docker images -a --filter=dangling=true -q)
 	fi
+
+	if [ "" != "$(docker volume ls -qf dangling=true)" ]; then
+		docker volume ls -qf dangling=true | xargs -r docker volume rm
+	fi
 }
 
 prep_bundle() {

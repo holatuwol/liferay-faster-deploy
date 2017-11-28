@@ -6,6 +6,10 @@ cleanup() {
 	docker kill lesadb
 	docker rm lesadb
 
+	if [ "" != "$(docker volume ls -qf dangling=true)" ]; then
+		docker volume ls -qf dangling=true | xargs -r docker volume rm
+	fi
+
 	echo 'Starting new container...'
 
 	docker run --name lesadb \
