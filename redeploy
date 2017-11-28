@@ -1,11 +1,15 @@
 #!/bin/bash
 
 applychanges() {
-	# Run cachenpm if needed
+	# Start from a clean working directory
+
+	git clean -xdf -e '**/*.iml' -e '.idea' -e '.m2' -e 'lib'
+
+	# Set the modules that we are willing to deploy
 
 	$(dirname "${BASH_SOURCE[0]}")/skipmp
 
-	# Compute all changes, not just the ones in modules (which is what cachenpm does)
+	# Compute all changes
 
 	if [ "" == "$BASE_TAG" ]; then
 		$(dirname "${BASH_SOURCE[0]}")/gitchanges $NEW_BASELINE $BASE_BRANCH

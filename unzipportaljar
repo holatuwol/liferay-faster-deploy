@@ -13,9 +13,7 @@ unzipportaljar() {
 		return 1
 	fi
 
-	if [ ! -f $1/$1.jar ]; then
-		cp ${JAR_PATH} $1
-	fi
+	cp -f ${JAR_PATH} $1
 
 	# check to see if the jar is out of date
 
@@ -35,8 +33,10 @@ unzipportaljar() {
 	mkdir -p $1/classes
 
 	pushd $1/classes > /dev/null
-	unzip -oqq "${JAR_PATH}"
+	unzip -fqq "${JAR_PATH}"
 	popd > /dev/null
+
+	rm $1/$1.jar
 
 	touch -t $new_timestamp "$1/classes"
 }
