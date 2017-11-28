@@ -33,6 +33,7 @@ getbackup() {
 	fi
 
 	if [ ! -f ${filename} ]; then
+		rm $1-*.sql.gz
 		curl -O -u $(git config files.username):$(git config files.password) https://files.liferay.com/private/lrdcom/${filename}
 	fi
 
