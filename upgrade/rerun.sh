@@ -8,22 +8,12 @@ clean_docker() {
 	echo 'Removing previous database...'
 
 	docker kill upgradedb
+	docker rm -v upgradedb
 
 	echo 'Removing container for previous upgrade...'
 
 	docker kill liferay
-
-	if [ "" != "$(docker ps --filter=status=exited --filter=status=created -q)" ]; then
-		docker rm $(docker ps --filter=status=exited --filter=status=created -q)
-	fi
-
-	if [ "" != "$(docker images -a --filter=dangling=true -q)" ]; then
-		docker rmi $(docker images -a --filter=dangling=true -q)
-	fi
-
-	if [ "" != "$(docker volume ls -qf dangling=true)" ]; then
-		docker volume ls -qf dangling=true | xargs -r docker volume rm
-	fi
+	docker rm -v liferay
 }
 
 prep_bundle() {
