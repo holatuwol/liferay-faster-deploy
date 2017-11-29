@@ -4,11 +4,7 @@ cleanup() {
 	echo 'Removing previous container...'
 
 	docker kill lesadb
-	docker rm lesadb
-
-	if [ "" != "$(docker volume ls -qf dangling=true)" ]; then
-		docker volume ls -qf dangling=true | xargs -r docker volume rm
-	fi
+	docker rm -v lesadb
 
 	echo 'Starting new container...'
 
