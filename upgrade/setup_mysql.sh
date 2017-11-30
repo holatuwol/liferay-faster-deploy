@@ -24,6 +24,8 @@ sudo apt-get install docker docker.io
 sudo service docker start
 sudo usermod -aG docker $USER
 
+docker build /mnt/github/lps-dockerfiles/nightly -t liferay-nightly-build
+
 sudo mkdir /mnt/build
 sudo chown $USER:$USER /mnt/build
 
@@ -50,5 +52,3 @@ ADD backup.sql /data/
 ' > /mnt/build/Dockerfile
 
 docker build /mnt/build/ -t dbsnapshot
-
-docker network create upgrade
