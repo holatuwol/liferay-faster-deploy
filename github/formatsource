@@ -25,7 +25,11 @@ antformatsource() {
 	pwd
 
 	echo ant format-source $ARGS
-	ant format-source $ARGS
+	ant format-source $ARGS | tee $GIT_ROOT/.redeploy/format.txt
+
+	if [ "" != "$(grep -F '[java]' $GIT_ROOT/.redeploy/format.txt | grep -F './')" ]; then
+		return 1
+	fi
 }
 
 checksnapshots() {
