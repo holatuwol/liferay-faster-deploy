@@ -38,7 +38,7 @@ source /data/backup.sql
 
 cat /mnt/backup/*.sql >> /mnt/build/backup.sql
 
-echo 'FROM mysql:5.7
+echo 'FROM mysql:5.6
 
 ENV MYSQL_ALLOW_EMPTY_PASSWORD yes
 ENV MYSQL_USER lportal
