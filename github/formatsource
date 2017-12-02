@@ -72,24 +72,28 @@ formatbranch() {
 
 	. $(dirname "${BASH_SOURCE[0]}")/../getparent
 
-	if [ "" == "$BASE_BRANCH" ]; then
+	local compare_branch=
+
+	if [ "" != "$BASE_TAG" ]; then
+		compare_branch=$BASE_TAG
+	elif [ "" == "$BASE_BRANCH" ]; then
 		echo Unable to identify base branch
 		return 1
-	fi
+	else
+		# Find the closest ancestor based on which one has the fewest commits
 
-	# Find the closest ancestor based on which one has the fewest commits
+		local origin_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/origin[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
+		local upstream_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
 
-	local origin_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/origin[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
-	local upstream_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
+		local compare_branch=${BASE_BRANCH}
 
-	local compare_branch=${BASE_BRANCH}
+		if [[ $(git log --pretty='%H' ${compare_branch}..HEAD | grep -c '^') -gt $(git log --pretty='%H' ${origin_remote}/${BASE_BRANCH}..HEAD | grep -c '^') ]]; then
+			compare_branch=${origin_remote}/$BASE_BRANCH
+		fi
 
-	if [[ $(git log --pretty='%H' ${compare_branch}..HEAD | grep -c '^') -gt $(git log --pretty='%H' ${origin_remote}/${BASE_BRANCH}..HEAD | grep -c '^') ]]; then
-		compare_branch=${origin_remote}/$BASE_BRANCH
-	fi
-
-	if [[ $(git log --pretty='%H' ${compare_branch}..HEAD | grep -c '^') -gt $(git log --pretty='%H' ${upstream_remote}/${BASE_BRANCH}..HEAD | grep -c '^') ]]; then
-		compare_branch=${upstream_remote}/$BASE_BRANCH
+		if [[ $(git log --pretty='%H' ${compare_branch}..HEAD | grep -c '^') -gt $(git log --pretty='%H' ${upstream_remote}/${BASE_BRANCH}..HEAD | grep -c '^') ]]; then
+			compare_branch=${upstream_remote}/$BASE_BRANCH
+		fi
 	fi
 
 	# Compute the changes
