@@ -61,7 +61,12 @@ def open_on_github(needle, selection_start=None, selection_end=None):
 
 	# Find the path to the matching file/folder, relative to the git root
 
-	path = relpath(join(os.getcwd(), get_relpath(needle)), git_root)
+	matching_path = get_relpath(needle)
+
+	if matching_path is None:
+		return
+
+	path = relpath(join(os.getcwd(), matching_path), git_root)
 	path_type = 'blob' if isfile(path) else 'tree'
 
 	# Compute the GitHub URL
