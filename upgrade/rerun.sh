@@ -6,12 +6,14 @@ if [ -f $HOME/backup_bucket.txt ]; then
 	BUCKET_PATH=$(cat $HOME/backup_bucket.txt)
 fi
 
-clean_docker() {
+clean_database() {
 	echo 'Removing previous database...'
 
 	docker kill ${NAME_PREFIX}upgradedb
 	docker rm -v ${NAME_PREFIX}upgradedb
+}
 
+clean_liferay() {
 	echo 'Removing container for previous upgrade...'
 
 	docker kill ${NAME_PREFIX}liferay
@@ -64,8 +66,8 @@ jdbc.default.password=lportal
 ' > ${LOCAL_LIFERAY_HOME}/tools/portal-tools-db-upgrade-client/portal-upgrade-database.properties
 	fi
 
-	if [ -f portal-ext.properties ]; then
-		cp portal-ext.properties ${LOCAL_LIFERAY_HOME}/tools/portal-tools-db-upgrade-client/portal-upgrade-ext.properties
+	if [ -f ${LOCAL_LIFERAY_HOME}/portal-ext.properties ]; then
+		cp -f ${LOCAL_LIFERAY_HOME}/portal-ext.properties ${LOCAL_LIFERAY_HOME}/tools/portal-tools-db-upgrade-client/portal-upgrade-ext.properties
 		echo '
 liferay.home=/opt/liferay' >> ${LOCAL_LIFERAY_HOME}/tools/portal-tools-db-upgrade-client/portal-upgrade-ext.properties
 	else
@@ -141,11 +143,23 @@ setenv() {
 start_upgrade() {
 	echo 'Starting upgrade...'
 
-	docker run --name ${NAME_PREFIX}liferay \
-		--network ${NAME_PREFIX}upgrade --network-alias liferay \
-		-e 'IS_UPGRADE=true' -e 'BUILD_NAME=liferay.tar.gz' \
-		-e "LIFERAY_FILES_MIRROR=${LIFERAY_FILES_MIRROR}" \
-		--volume ${LOCAL_LIFERAY_HOME}:/build liferay-nightly-build
+	if docker inspect ${NAME_PREFIX}liferay 2>&1 > /dev/null; then
+		docker start --attach ${NAME_PREFIX}liferay
+	else
+		docker run --name ${NAME_PREFIX}liferay \
+			--network ${NAME_PREFIX}upgrade --network-alias liferay \
+			-e 'IS_UPGRADE=true' -e 'BUILD_NAME=liferay.tar.gz' \
+			-e "LIFERAY_FILES_MIRROR=${LIFERAY_FILES_MIRROR}" \
+			--volume ${LOCAL_LIFERAY_HOME}:/build liferay-nightly-build
+	fi
+}
+
+stop_liferay() {
+	if [ "exited" == "$(docker inspect ${NAME_PREFIX}liferay --format "{{json .State.Status }}" | cut -d'"' -f 2)" ]; then
+		return 0
+	fi
+
+	docker stop ${NAME_PREFIX}liferay
 }
 
 waitfor_database() {
@@ -167,10 +181,18 @@ waitfor_database() {
 }
 
 if setenv; then
-	clean_docker
-	prep_database
-	prep_bundle
-	prep_upgrade_props
-	waitfor_database
+	if [ "clean" == "$1" ]; then
+		clean_database
+		clean_liferay
+		prep_database
+		prep_bundle
+		prep_upgrade_props
+		waitfor_database
+	else
+		prep_bundle
+		prep_upgrade_props
+		stop_liferay
+	fi
+
 	start_upgrade
 fi
