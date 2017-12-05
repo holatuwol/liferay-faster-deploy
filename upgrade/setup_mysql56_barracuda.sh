@@ -44,3 +44,9 @@ ADD backup.sql /data/
 " > /mnt/build/Dockerfile
 
 docker build /mnt/build/ -t dbsnapshot
+
+if [ ! -f /mnt/liferay/portal-ext.properties ] || [ "" == "$(grep -F database.string.index.max.length /mnt/liferay/portal-ext.properties)" ]; then
+	echo '
+database.string.index.max.length[mysql]=70
+' >> /mnt/liferay/portal-ext.properties
+fi
