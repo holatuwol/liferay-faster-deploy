@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BUCKET_PATH=$(cat bucket_path.txt)
+BUCKET_PATH=$(cat $HOME/backup_bucket.txt)
 
 sudo mkdir /mnt/backup
 sudo chown $USER:$USER /mnt/backup

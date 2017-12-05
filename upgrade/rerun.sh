@@ -1,5 +1,11 @@
 #!/bin/bash
 
+BUCKET_PATH=
+
+if [ -f $HOME/backup_bucket.txt ]; then
+	BUCKET_PATH=$(cat $HOME/backup_bucket.txt)
+fi
+
 clean_docker() {
 	echo 'Removing previous database...'
 
@@ -77,14 +83,8 @@ liferay.home=/opt/liferay' >> ${LOCAL_LIFERAY_HOME}/tools/portal-tools-db-upgrad
 }
 
 setenv() {
-	BUCKET_PATH=
-
-	if [ -f bucket_path.txt ]; then
-		BUCKET_PATH=$(cat bucket_path.txt)
-	fi
-
-	if [ -f liferay_auth.txt ]; then
-		LIFERAY_FILES_MIRROR=https://$(head -1 liferay_auth.txt):$(tail -1 liferay_auth.txt)@files.liferay.com/
+	if [ -f $HOME/liferay_auth.txt ]; then
+		LIFERAY_FILES_MIRROR=https://$(head -1 $HOME/liferay_auth.txt):$(tail -1 $HOME/liferay_auth.txt)@files.liferay.com/
 	else
 		LIFERAY_FILES_MIRROR=http://172.16.168.222/files.liferay.com/
 	fi
