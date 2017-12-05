@@ -26,3 +26,5 @@ sudo usermod -aG docker $USER
 
 sudo mkdir /mnt/build
 sudo chown $USER:$USER /mnt/build
+
+cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 30 | head -n 1 > $HOME/db_pass.txt
