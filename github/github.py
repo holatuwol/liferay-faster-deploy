@@ -28,7 +28,7 @@ def get_relpath(needle):
 		print('\n'.join(folders))
 		return None
 
-	if len(files) == 1:
+	if files is not None and len(files) == 1:
 		return files[0]
 
 	if len(folders) == 1:
