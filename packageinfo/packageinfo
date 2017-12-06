@@ -71,6 +71,51 @@ packageinfo() {
 	git ls-files modules | grep -F '/packageinfo' | grep -vF '/sdk/' | dirnames | sort >> .redeploy/packageinfo.txt
 
 	python $(dirname $0)/packageinfo.py $OUTPUT_FILE
+
+	# Handle portal-compat modules
+
+	packageinfo_compat
+}
+
+packageinfo_compat() {
+	if [ ! -d modules/core/portal-compat ]; then
+		return 0
+	fi
+
+	ant setup-sdk
+
+	for file in $(git ls-files modules/core/portal-compat | grep -F imported-files.properties); do
+		folder=$(dirname $file)
+
+		local bundle_artifact=
+		local bundle_name=$(grep -F 'Bundle-SymbolicName' $folder/bnd.bnd | cut -d' ' -f 2)
+		local bundle_version=
+
+		if [[ $bundle_name == com.liferay.portal.kernel* ]]; then
+			bundle_artifact=com.liferay.portal.kernel
+			bundle_version=$(grep -F 'com.liferay.portal.kernel' .gradle/gradle.properties | cut -d'=' -f 2)
+		elif [[ $bundle_name == com.liferay.portal.impl* ]]; then
+			bundle_artifact=com.liferay.portal.impl
+			bundle_version=$(grep -F 'com.liferay.portal.impl' .gradle/gradle.properties | cut -d'=' -f 2)
+		fi
+
+		if [ "" == "$bundle_artifact" ]; then
+			continue
+		fi
+
+		pushd $folder > /dev/null
+
+		$(dirname ${BASH_SOURCE[0]})/../gw classes
+
+		for packageinfofile in $(find classes -name packageinfo); do
+			local package_name=$(dirname $packageinfofile | tr '/' '.' | cut -d'.' -f 2-)
+			local package_version=$(cat $packageinfofile | cut -d' ' -f 2)
+
+			echo com.liferay.portal,${bundle_artifact},${bundle_version},${package_name},${package_version} >> $OUTPUT_FILE
+		done
+
+		popd > /dev/null
+	done
 }
 
 requireschema() {
@@ -102,6 +147,8 @@ if [ -z "${PORTAL_SOURCE_ROOT}" ]; then
 	exit 1
 fi
 
+. $(dirname ${BASH_SOURCE[0]})/../setopts
+
 checkpython pandas
 
 if [[ 0 -ne $? ]]; then
@@ -114,17 +161,22 @@ OUTPUT_FOLDER=$(dirname $PWD)/metadata
 
 mkdir -p $OUTPUT_FOLDER
 
-git ls-remote -t git@github.com:liferay/liferay-portal.git | \
-	awk '{ print $2 }' | grep ga | grep -vF sync | grep -vF 'private' | grep -F '/7.0' | \
-	sort | cut -d'/' -f 3 > $OUTPUT_FOLDER/tags.txt
+if [ "" == "$1" ]; then
+	git ls-remote -t git@github.com:liferay/liferay-portal.git | \
+		awk '{ print $2 }' | grep ga | grep -vF sync | grep -vF 'private' | grep -F '/7.0' | \
+		sort | cut -d'/' -f 3 > $OUTPUT_FOLDER/tags.txt
 
-git ls-remote -t git@github.com:liferay/liferay-portal-ee.git | \
-	awk '{ print $2 }' | grep 'fix-pack-\(base-70\|de-\)' | grep -v '\(test\|demo\)' | \
-	sort -t'-' -nk4,5 | cut -d'/' -f 3 >> $OUTPUT_FOLDER/tags.txt
+	git ls-remote -t git@github.com:liferay/liferay-portal-ee.git | \
+		awk '{ print $2 }' | grep 'fix-pack-\(base-70\|de-\)' | grep -v '\(test\|demo\)' | \
+		sort -t'-' -nk4,5 | cut -d'/' -f 3 >> $OUTPUT_FOLDER/tags.txt
 
-for tag_id in $(cat $OUTPUT_FOLDER/tags.txt); do
-	packageinfo $tag_id
-	requireschema $tag_id
-done
+	for tag_id in $(cat $OUTPUT_FOLDER/tags.txt); do
+		packageinfo $tag_id
+		requireschema $tag_id
+	done
+else
+	packageinfo $1
+	requireschema $1
+fi
 
 popd > /dev/null
