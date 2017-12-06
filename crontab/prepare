@@ -90,7 +90,7 @@ finish() {
 	unix2dos $TOMCAT_FOLDER/bin/startup.bat
 
 	if [ -d "${ARCHIVE_FOLDER}" ]; then
-		ls -1 ${ARCHIVE_FOLDER}/ | grep "${1}-[0-9]*.tar.gz" | xargs rm
+		find ${ARCHIVE_FOLDER} -name "${1}-[0-9]*.tar.gz" | xargs rm
 
 		if [ "" != "$TIMESTAMP" ]; then
 			tar -zcf ${ARCHIVE_FOLDER}/${1}-${TIMESTAMP}.tar.gz *
