@@ -37,7 +37,7 @@ def find(needle):
 def git_find(haystack, needle):
 	haystack = relpath(haystack, git_root)
 
-	file_list = [relpath(x, haystack) for x in git.ls_files(haystack).split('\n')]
+	file_list = [relpath(x, haystack) for x in git.ls_files(haystack).split('\n') if x.find(needle) != -1]
 	file_list = [file.replace('\\', '/') for file in file_list if file.find('.releng') == -1]
 
 	# First, assume that we're looking for a module root, so check for
