@@ -47,7 +47,7 @@ def git_find(haystack, needle):
 			filtered_list = [file for file in file_list if file.find(filter_needle) > -1]
 
 			if len(filtered_list) > 0:
-				return (filtered_list, None)
+				return (None, list(set([dirname(file) for file in filtered_list])))
 
 	for pattern in ['%s/', '/%s', '%s']:
 		for module_marker in ['bnd.bnd', 'ivy.xml', 'package.json']:
@@ -55,7 +55,7 @@ def git_find(haystack, needle):
 			filtered_list = [file for file in file_list if file.find(filter_needle) > -1 and file.find(module_marker) > -1]
 
 			if len(filtered_list) > 0:
-				return (filtered_list, None)
+				return (None, list(set([dirname(file) for file in filtered_list])))
 
 	# Next, check for a folder that isn't a module root, which can either be
 	# an exact match or a suffix match. Prefer in that order.
