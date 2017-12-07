@@ -76,9 +76,6 @@ def getparent(check_tags):
 	if not check_tags:
 		return base_branch
 
-	if base_branch in ['master', 'master-private']:
-		return base_branch
-
 	exit_code = subprocess.call(['git', 'merge-base', '--is-ancestor', base_branch, 'HEAD'])
 
 	if exit_code == 0:
