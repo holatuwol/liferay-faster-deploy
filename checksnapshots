@@ -75,7 +75,7 @@ checksnapshots() {
 
 	pushd $GIT_ROOT > /dev/null
 
-	if [ -d modules ] && [ ! -d tmp/lib-pre ]; then
+	if [ -d modules ]; then
 		cd modules
 		../gradlew -Dbuild.profile=portal-pre -Pforced.deploy.dir=${PWD}/../tmp/lib-pre deploy
 		cd ..
