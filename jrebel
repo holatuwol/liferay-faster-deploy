@@ -45,10 +45,14 @@ jrebel() {
 
 	echo "Processing core and static modules..."
 
+	for file in $(find $LIFERAY_HOME/$TOMCAT_FOLDER/lib/ext -type f -name 'com.liferay.*.jar'); do
+		unziposgijar $file
+	done
+
 	for folder in core static; do
 		if [ -d $LIFERAY_HOME/osgi/$folder ]; then
-			for file in $(ls -1 $LIFERAY_HOME/osgi/$folder); do
-				unziposgijar $LIFERAY_HOME/osgi/$folder/$file
+			for file in $(find $LIFERAY_HOME/osgi/$folder -type f); do
+				unziposgijar $file
 			done
 		fi
 	done
