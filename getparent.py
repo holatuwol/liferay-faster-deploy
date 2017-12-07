@@ -85,7 +85,7 @@ def getparent(check_tags):
 
 	base_tag = git.describe('--tags', 'HEAD', '--abbrev=0')
 
-	if base_tag.find('fix-pack-base-') or base_tag.find('fix-pack-de-') > -1 or base_tag.find('-ga') > -1:
+	if base_tag.find('fix-pack-base-') > -1 or base_tag.find('fix-pack-de-') > -1 or base_tag.find('-ga') > -1:
 		return base_tag
 
 	return base_branch
