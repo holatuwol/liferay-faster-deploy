@@ -4,36 +4,55 @@ gw() {
 	$(dirname $BASH_SOURCE[0])/../gw $@
 }
 
-BUNDLE_NAME=
+lwatch() {
+	local WORKING_DIR=$PWD
 
-if [ -f bnd.bnd ]; then
-	BUNDLE_NAME=$(grep '^Bundle-SymbolicName' bnd.bnd | cut -d':' -f 2 | tr -d ' ')
-fi
+	while [ ! -e "$WORKING_DIR/bnd.bnd" ] && [ ! -e "$WORKING_DIR/package.json" ] && [ "/" != "$WORKING_DIR" ]; do
+		WORKING_DIR=$(dirname "$WORKING_DIR")
+	done
 
-if [ "" == "$BUNDLE_NAME" ] && [ -f package.json ]; then
-	BUNDLE_NAME=$(cat package.json | jq .liferayTheme.distName | cut -d'"' -f 2)
-fi
+	echo $WORKING_DIR
 
-if [ "" == "$BUNDLE_NAME" ]; then
-	BUNDLE_NAME=$(basename $PWD)
-fi
+	if [ -e "$WORKING_DIR/bnd.bnd" ] || [ -e "$WORKING_DIR/package.json" ]; then
+		cd $WORKING_DIR > /dev/null
+		run_lwatch
+	fi
+}
 
-if [ ! -f package.json ]; then
-	echo '{ "name": "'$BUNDLE_NAME'", "liferayTheme": { "distName": "'$BUNDLE_NAME'" } }' > package.json
-fi
+run_lwatch() {
+	local BUNDLE_NAME=
 
-if [ ! -d build ] && [ ! -d classes ]; then
-	gw deploy
-fi
+	if [ -f bnd.bnd ]; then
+		BUNDLE_NAME=$(grep '^Bundle-SymbolicName' bnd.bnd | cut -d':' -f 2 | tr -d ' ')
+	fi
 
-if [ -d docroot ]; then
-	echo '{ "globClass": "docroot/**/*.class" }' > .lwatch.json
-elif [ -d classes ]; then
-	echo '{ "globClass": "classes/**/*.class" }' > .lwatch.json
-elif [[ 4 -lt $(gw --version | grep "^Gradle " | cut -d' ' -f 2 | cut -d'.' -f 1) ]]; then
-	echo '{ "globClass": "build/classes/main/**/*.class" }' > .lwatch.json
-else
-	echo '{ "globClass": "build/classes/java/main/**/*.class" }' > .lwatch.json
-fi
+	if [ "" == "$BUNDLE_NAME" ] && [ -f package.json ]; then
+		BUNDLE_NAME=$(cat package.json | jq .liferayTheme.distName | cut -d'"' -f 2)
+	fi
 
-REPO_PATH=$REPO_PATH $(dirname ${BASH_SOURCE[0]})/nodew lwatch liferay/liferay-osgi-watch $@
+	if [ "" == "$BUNDLE_NAME" ]; then
+		BUNDLE_NAME=$(basename $PWD)
+	fi
+
+	if [ ! -f package.json ]; then
+		echo '{ "name": "'$BUNDLE_NAME'", "liferayTheme": { "distName": "'$BUNDLE_NAME'" } }' > package.json
+	fi
+
+	if [ ! -d build ] && [ ! -d classes ]; then
+		gw deploy
+	fi
+
+	if [ -d docroot ]; then
+		echo '{ "globClass": "docroot/**/*.class" }' > .lwatch.json
+	elif [ -d classes ]; then
+		echo '{ "globClass": "classes/**/*.class" }' > .lwatch.json
+	elif [[ 4 -lt $(gw --version | grep "^Gradle " | cut -d' ' -f 2 | cut -d'.' -f 1) ]]; then
+		echo '{ "globClass": "build/classes/main/**/*.class" }' > .lwatch.json
+	else
+		echo '{ "globClass": "build/classes/java/main/**/*.class" }' > .lwatch.json
+	fi
+
+	REPO_PATH=$REPO_PATH $(dirname ${BASH_SOURCE[0]})/nodew lwatch liferay/liferay-osgi-watch $@
+}
+
+lwatch $@
