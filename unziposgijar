@@ -33,6 +33,13 @@ getmodulepath() {
 		return 0
 	fi
 
+	BND=$(grep -F "${1}/bnd.bnd" .redeploy/bndmatches.txt | cut -d':' -f 1)
+
+	if [ "" != "$BND" ] && [[ 1 -eq $(echo "$BND" | grep -c '^') ]]; then
+		MODULE_PATH=$(dirname $BND)
+		return 0
+	fi
+
 	# no exact guesses possible, so report that it is ambiguous
 
 	echo "$1 is ambiguous:"
