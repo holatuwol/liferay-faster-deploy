@@ -102,15 +102,15 @@ if __name__ == '__main__':
 
 	folders, files = find(needle)
 
-	if files is not None and len(files) > 1:
+	if files is not None and len(files) == 1:
+		print(files[0])
+	elif folders is not None and len(folders) == 1:
+		print(folders[0])
+	elif files is not None and len(files) > 1:
 		print('%s is ambiguous:' % needle)
 		print('\n'.join(files))
 	elif folders is not None and len(folders) > 1:
 		print('%s is ambiguous:' % needle)
 		print('\n'.join(folders))
-	elif files is not None and len(files) == 1:
-		print(files[0])
-	elif folders is not None and len(folders) == 1:
-		print(folders[0])
 	else:
 		print('Unable to find a file or folder matching %s' % needle)

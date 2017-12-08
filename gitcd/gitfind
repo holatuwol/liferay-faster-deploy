@@ -14,6 +14,8 @@ gitfind() {
 			FOLDER=$(dirname "$FIND_RESULT")
 		elif [ -d "$FIND_RESULT" ]; then
 			FOLDER=$FIND_RESULT
+		else
+			echo "$FIND_RESULT"
 		fi
 
 		MATCHING_FILES=$FILE
@@ -21,6 +23,8 @@ gitfind() {
 
 		return 0
 	fi
+
+	echo "$FIND_RESULT"
 
 	for result in $(echo "$FIND_RESULT" | tail -n +2); do
 		if [ -d $result ]; then
