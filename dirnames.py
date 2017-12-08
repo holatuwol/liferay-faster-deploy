@@ -4,6 +4,9 @@ from __future__ import print_function
 import sys
 
 def dirnames(entries):
+	if entries is None:
+		return []
+
 	entries = [entry[0:entry.rfind('/')].strip() for entry in entries if entry.strip() != '' and entry.rfind('/') != -1]
 	entries = [entry for entry in entries if entry != '']
 	return sorted(set(entries))

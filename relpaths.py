@@ -2,12 +2,17 @@
 
 from __future__ import print_function
 import os
-import os.path
+from os.path import relpath
 import sys
 
-cwd = os.getcwd()
+def relpaths(entries):
+	if entries is None:
+		return []
 
-lines = [os.path.relpath(line.strip(), cwd) for line in sys.stdin.readlines() if line.strip() != '']
+	cwd = os.getcwd()
+	return [relpath(entry.strip(), cwd) for entry in entries if entry.strip() != '']
 
-if len(lines) > 0:
-	print('\n'.join(lines))
+if __name__ == '__main__':
+	lines = relpaths(sys.stdin.readlines())
+	if len(lines) > 0:
+		print('\n'.join(lines))
