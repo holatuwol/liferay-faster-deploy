@@ -8,6 +8,7 @@ import sys
 sys.path.insert(0, dirname(dirname(abspath(inspect.getfile(inspect.currentframe())))))
 
 from dirnames import dirnames
+from relpaths import relpaths
 import git
 from git import git_root
 
@@ -23,9 +24,7 @@ def find(needle):
 	folders, files = nongit_find(git_root, needle)
 
 	if folders is not None or files is not None:
-		folders = None if folders is None else [relpath(join(git_root, folder), os.getcwd()) for folder in folders]
-		files = None if files is None else [relpath(join(git_root, file), os.getcwd()) for file in files]
-		return (folders, files)
+		return (git_root_relpaths(folders), git_root_relpaths(files))
 
 	# Attempt to find the file using git ls-files
 
@@ -35,12 +34,7 @@ def find(needle):
 		return (folders, files)
 
 	folders, files = git_find(git_root, needle)
-
-	folders = None if folders is None else [relpath(join(git_root, folder), os.getcwd()) for folder in folders]
-	files = None if files is None else [relpath(join(git_root, file), os.getcwd()) for file in files]
-
-	return (folders, files)
-
+	return (git_root_relpaths(folders), git_root_relpaths(files))
 
 def git_find(haystack, needle):
 	haystack = relpath(haystack, git_root)
@@ -87,6 +81,12 @@ def git_find(haystack, needle):
 			return (dirnames(filtered_list), filtered_list)
 
 	return (None, None)
+
+def git_root_relpaths(entries):
+	if entries is None:
+		return None
+
+	return relpaths([join(git_root, entry) for entry in entries])
 
 def nongit_find(haystack, needle):
 	if isdir(join(haystack, needle)):
