@@ -17,22 +17,30 @@ def find(needle):
 
 	folders, files = nongit_find(os.getcwd(), needle)
 
-	if folders is not None:
+	if folders is not None or files is not None:
 		return (folders, files)
 
 	folders, files = nongit_find(git_root, needle)
 
-	if folders is not None:
+	if folders is not None or files is not None:
+		folders = None if folders is None else [relpath(join(git_root, folder), os.getcwd()) for folder in folders]
+		files = None if files is None else [relpath(join(git_root, file), os.getcwd()) for file in files]
 		return (folders, files)
 
 	# Attempt to find the file using git ls-files
 
 	folders, files = git_find(os.getcwd(), needle)
 
-	if folders is not None:
+	if folders is not None or files is not None:
 		return (folders, files)
 
-	return git_find(git_root, needle)
+	folders, files = git_find(git_root, needle)
+
+	folders = None if folders is None else [relpath(join(git_root, folder), os.getcwd()) for folder in folders]
+	files = None if files is None else [relpath(join(git_root, file), os.getcwd()) for file in files]
+
+	return (folders, files)
+
 
 def git_find(haystack, needle):
 	haystack = relpath(haystack, git_root)
@@ -47,7 +55,7 @@ def git_find(haystack, needle):
 			filtered_list = [file for file in file_list if file.find(filter_needle) > -1]
 
 			if len(filtered_list) > 0:
-				return (None, list(set([dirname(file) for file in filtered_list])))
+				return (list(set([dirname(file) for file in filtered_list])), None)
 
 	for pattern in ['%s/', '/%s', '%s']:
 		for module_marker in ['bnd.bnd', 'ivy.xml', 'package.json']:
@@ -55,7 +63,7 @@ def git_find(haystack, needle):
 			filtered_list = [file for file in file_list if file.find(filter_needle) > -1 and file.find(module_marker) > -1]
 
 			if len(filtered_list) > 0:
-				return (None, list(set([dirname(file) for file in filtered_list])))
+				return (list(set([dirname(file) for file in filtered_list])), None)
 
 	# Next, check for a folder that isn't a module root, which can either be
 	# an exact match or a suffix match. Prefer in that order.
