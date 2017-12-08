@@ -41,19 +41,9 @@ applychanges() {
 		cp $file $LIFERAY_HOME/$TOMCAT_FOLDER/webapps/ROOT/WEB-INF/lib
 	done
 
-	# Check to see if there are any modules we need to deploy early
+	# Check to see if there is anything we need to deploy with ant
 
-	if [[ 0 -ne $(cat .redeploy/changes_gradle_1.txt | grep -c '^') ]]; then
-		deployportalpre
-
-		if [[ 0 -ne $? ]]; then
-			return 1
-		fi
-	fi
-
-	# Next, check to see if there is anything we need to deploy with ant
-
-	if [[ 0 -ne $(cat .redeploy/changes_ant.txt | grep -c '^') ]]; then
+	if [[ 0 -ne $(cat .redeploy/changes_gradle_1.txt | grep -c '^') ]] || [[ 0 -ne $(cat .redeploy/changes_ant.txt | grep -c '^') ]]; then
 		deployant
 
 		if [[ 0 -ne $? ]]; then
@@ -172,16 +162,6 @@ deploymodules() {
 
 	cd modules
 	cat ../.redeploy/deploy_gradle.txt | sort | xargs $(dirname "${BASH_SOURCE[0]}")/gw
-	cd ..
-}
-
-deployportalpre() {
-	if [ ! -d modules ]; then
-		return 0
-	fi
-
-	cd modules
-	gw -Dbuild.profile=portal-pre -Pforced.deploy.dir=${PWD}/../tmp/lib-pre deploy
 	cd ..
 }
 
