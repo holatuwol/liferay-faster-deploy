@@ -36,7 +36,10 @@ def show(*args):
 
 git_root = rev_parse('--show-toplevel')
 
-try:
-	current_branch = rev_parse('--abbrev-ref', 'HEAD')
-except:
-	current_branch = 'HEAD'
+if git_root is None or git_root == '':
+	git_root = None
+else:
+	try:
+		current_branch = rev_parse('--abbrev-ref', 'HEAD')
+	except:
+		current_branch = 'HEAD'

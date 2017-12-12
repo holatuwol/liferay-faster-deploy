@@ -18,7 +18,7 @@ def find(needle):
 
 	folders, files = nongit_find(os.getcwd(), needle)
 
-	if folders is not None or files is not None:
+	if git_root is None or folders is not None or files is not None:
 		return (folders, files)
 
 	folders, files = nongit_find(git_root, needle)
@@ -98,19 +98,20 @@ def nongit_find(haystack, needle):
 	return None, None
 
 if __name__ == '__main__':
-	needle = sys.argv[1]
+	if len(sys.argv) > 1:
+		needle = sys.argv[1]
 
-	folders, files = find(needle)
+		folders, files = find(needle)
 
-	if files is not None and len(files) == 1:
-		print(files[0])
-	elif folders is not None and len(folders) == 1:
-		print(folders[0])
-	elif files is not None and len(files) > 1:
-		print('%s is ambiguous:' % needle)
-		print('\n'.join(files))
-	elif folders is not None and len(folders) > 1:
-		print('%s is ambiguous:' % needle)
-		print('\n'.join(folders))
-	else:
-		print('Unable to find a file or folder matching %s' % needle)
+		if files is not None and len(files) == 1:
+			print(files[0])
+		elif folders is not None and len(folders) == 1:
+			print(folders[0])
+		elif files is not None and len(files) > 1:
+			print('%s is ambiguous:' % needle)
+			print('\n'.join(files))
+		elif folders is not None and len(folders) > 1:
+			print('%s is ambiguous:' % needle)
+			print('\n'.join(folders))
+		else:
+			print('Unable to find a file or folder matching %s' % needle)
