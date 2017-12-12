@@ -77,8 +77,13 @@ applychanges() {
 	# Undo changes to build-common.xml and modules/build.gradle
 
 	if [ -d modules ]; then
-		git checkout build-common.xml
-		git checkout modules/build.gradle
+		if [ ! -h build-common.xml ]; then
+			git checkout build-common.xml
+		fi
+
+		if [ ! -h modules/build.gradle ]; then
+			git checkout modules/build.gradle
+		fi
 	fi
 }
 
@@ -197,7 +202,11 @@ unzipportaljar() {
 			$(dirname "${BASH_SOURCE[0]}")/unzipportaljar $@
 }
 
-git clean -xdf -e '**/*.iml' -e '.gradle/gradle.properties' -e '.idea' -e '.m2' -e 'lib' -e "app.server.$USER.properties" -e "build.$USER.properties"
+if [ -f git-commit-portal-ee ]; then
+	git clean -xdf -e '**/*.iml' -e '.gradle/gradle.properties' -e '.idea' -e '.m2' -e 'lib' -e "app.server.$USER.properties" -e "build.$USER.properties"
+else
+	git clean -df
+fi
 
 CURRENT_HASH=$(git log -1 --pretty='%H')
 
