@@ -32,3 +32,11 @@ ADD backup.sql /data/
 " > /mnt/build/Dockerfile
 
 docker build /mnt/build/ -t dbsnapshot
+
+mkdir -p /mnt/liferay/tools/portal-tools-db-upgrade-client
+
+echo 'jdbc.default.driverClassName=com.mysql.jdbc.Driver
+jdbc.default.url=jdbc:mysql://upgradedb/lportal?characterEncoding=UTF-8&dontTrackOpenResources=true&holdResultsOpenOverStatementClose=true&useFastDateParsing=false&useUnicode=true
+jdbc.default.username=lportal
+jdbc.default.password=lportal
+' > /mnt/liferay/tools/portal-tools-db-upgrade-client/portal-upgrade-database.properties

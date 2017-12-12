@@ -58,14 +58,6 @@ portal.dir=/webapps/ROOT
 server.detector.server.id=tomcat
 ' > ${LOCAL_LIFERAY_HOME}/tools/portal-tools-db-upgrade-client/app-server.properties
 
-	if [ "" == "$(grep '^\s*jdbc' ${LOCAL_LIFERAY_HOME}/tools/portal-tools-db-upgrade-client/portal-upgrade-database.properties)" ]; then
-		echo 'jdbc.default.driverClassName=com.mysql.jdbc.Driver
-jdbc.default.url=jdbc:mysql://upgradedb/lportal?characterEncoding=UTF-8&dontTrackOpenResources=true&holdResultsOpenOverStatementClose=true&useFastDateParsing=false&useUnicode=true
-jdbc.default.username=lportal
-jdbc.default.password=lportal
-' > ${LOCAL_LIFERAY_HOME}/tools/portal-tools-db-upgrade-client/portal-upgrade-database.properties
-	fi
-
 	if [ -f ${LOCAL_LIFERAY_HOME}/portal-ext.properties ]; then
 		cp -f ${LOCAL_LIFERAY_HOME}/portal-ext.properties ${LOCAL_LIFERAY_HOME}/tools/portal-tools-db-upgrade-client/portal-upgrade-ext.properties
 		echo '
