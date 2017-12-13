@@ -1,6 +1,7 @@
 #!/bin/bash
 
-docker build /mnt/github/lps-dockerfiles/nightly -t liferay-nightly-build
+cd /mnt/github/lps-dockerfiles/nightly-jdk8
+./build.sh mcd-nightly
 
 echo "create schema lportal default charset utf8 default collate utf8_unicode_ci;
 grant all on lportal.* to 'lportal'@'%';

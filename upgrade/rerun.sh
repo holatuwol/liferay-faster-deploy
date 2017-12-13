@@ -105,10 +105,10 @@ setenv() {
 		fi
 	fi
 
-	if docker image inspect liferay-nightly-build 2>&1 > /dev/null; then
-		echo Found upgrade helper image: liferay-nightly-build
+	if docker image inspect mcd-nightly 2>&1 > /dev/null; then
+		echo Found upgrade helper image: mcd-nightly
 	else
-		echo Unable to find upgrade helper image: liferay-nightly-build
+		echo Unable to find upgrade helper image: mcd-nightly
 		echo Please follow the instructions at https://github.com/holatuwol/lps-dockerfiles/tree/master/nightly
 		return 1
 	fi
@@ -118,10 +118,6 @@ setenv() {
 	else
 		echo Unable to find database snapshot image: ${NAME_PREFIX}dbsnapshot
 		return 1
-	fi
-
-	if [ -d /mnt/github ]; then
-		docker build /mnt/github/lps-dockerfiles/nightly -t liferay-nightly-build
 	fi
 
 	if docker network inspect ${NAME_PREFIX}upgrade 2>&1 > /dev/null; then
@@ -142,7 +138,7 @@ start_upgrade() {
 			--network ${NAME_PREFIX}upgrade --network-alias liferay \
 			-e 'IS_UPGRADE=true' -e 'BUILD_NAME=liferay.tar.gz' \
 			-e "LIFERAY_FILES_MIRROR=${LIFERAY_FILES_MIRROR}" \
-			--volume ${LOCAL_LIFERAY_HOME}:/build liferay-nightly-build
+			--volume ${LOCAL_LIFERAY_HOME}:/build mcd-nightly
 	fi
 }
 
