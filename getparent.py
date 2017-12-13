@@ -17,6 +17,7 @@ def get_file_property(file_name, property):
 def get_git_file_property(commit, file_name, property):
 	lines = git.show('%s:%s' % (commit, file_name)).split('\n')
 	full_version = [line.strip() for line in lines if line.find(property) > -1][0].split('=')[1]
+	return full_version
 
 def getparent(check_tags):
 
@@ -35,7 +36,7 @@ def getparent(check_tags):
 		full_version = get_file_property(join(git_root, 'build.properties'), 'lp.version')
 	elif isfile(join(git_root, 'git-commit-portal')):
 		with open(join(git_root, 'git-commit-portal'), 'r') as file:
-			commit = file.readlines()[0]
+			commit = file.readlines()[0].strip()
 			full_version = get_git_file_property(commit, 'release.properties', 'lp.version')
 	else:
 		return current_branch
@@ -62,7 +63,7 @@ def getparent(check_tags):
 
 	if base_branch is None and isfile(join(git_root, 'git-commit-portal')):
 		with open(join(git_root, 'git-commit-portal'), 'r') as file:
-			commit = file.readlines()[0]
+			commit = file.readlines()[0].strip()
 			base_branch = get_git_file_property(commit, 'build.properties', 'git.working.branch.name')
 
 	if base_branch is None:
