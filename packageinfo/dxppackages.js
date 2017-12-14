@@ -18,7 +18,10 @@ var select2Value = getParameter('targetVersion');
 var nameFilter = document.getElementById('nameFilter');
 nameFilter.value = getParameter('nameFilter');
 var notableOnly = document.getElementById('notableOnly');
-notableOnly.checked = getParameter('notableOnly') == 'true';
+
+if (notableOnly) {
+	notableOnly.checked = getParameter('notableOnly') == 'true';
+}
 
 function isPermaLink(element) {
 	return element.getAttribute('data-original-title') == 'Permalink'
@@ -59,7 +62,7 @@ function checkPackageInfo() {
 	var header2 = select1.options[select2.selectedIndex].innerHTML;
 
 	var nameFilterValue = nameFilter.value;
-	var notableOnlyValue = notableOnly.checked;
+	var notableOnlyValue = notableOnly && notableOnly.checked;
 
 	var isDEVersionIncrease = (name2 > name1);
 
@@ -216,7 +219,10 @@ request.onreadystatechange = function() {
 		select2.onchange = checkPackageInfo;
 		nameFilter.oninput = checkPackageInfo;
 		nameFilter.onpropertychange = checkPackageInfo;
-		notableOnly.onchange = checkPackageInfo;
+
+		if (notableOnly) {
+			notableOnly.onchange = checkPackageInfo;
+		}
 
 		checkPackageInfo();
 	};

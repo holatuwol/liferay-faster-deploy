@@ -18,7 +18,10 @@ var select2Value = getParameter('targetVersion');
 var nameFilter = document.getElementById('nameFilter');
 nameFilter.value = getParameter('nameFilter');
 var notableOnly = document.getElementById('notableOnly');
-notableOnly.checked = getParameter('notableOnly') == 'true';
+
+if (notableOnly) {
+	notableOnly.checked = getParameter('notableOnly') == 'true';
+}
 
 function isPermaLink(element) {
 	return element.getAttribute('data-original-title') == 'Permalink'
@@ -59,7 +62,7 @@ function checkSchemaInfo() {
 	var header2 = select1.options[select2.selectedIndex].innerHTML;
 
 	var nameFilterValue = nameFilter.value;
-	var notableOnlyValue = notableOnly.checked;
+	var notableOnlyValue = notableOnly && notableOnly.checked;
 
 	var isDEVersionIncrease = (name2 > name1);
 
@@ -89,10 +92,10 @@ function checkSchemaInfo() {
 
 	var summary = document.getElementById('summary');
 
-	var filteredschemaInfoList = schemaInfoList.filter(isMatchingNameFilter).filter(isAvailableVersion);
+	var filteredSchemaInfoList = schemaInfoList.filter(isMatchingNameFilter).filter(isAvailableVersion);
 
 	if ((name1 != name2) && notableOnlyValue) {
-		filteredschemaInfoList = filteredschemaInfoList.filter(isNotableVersionChange);
+		filteredSchemaInfoList = filteredSchemaInfoList.filter(isNotableVersionChange);
 	}
 
 	summary.innerHTML = '';
@@ -145,7 +148,7 @@ function checkSchemaInfo() {
 		}
 	};
 
-	filteredschemaInfoList.map(getRowData).forEach(addRow.bind(null, false));
+	filteredSchemaInfoList.map(getRowData).forEach(addRow.bind(null, false));
 };
 
 checkSchemaInfo = _.debounce(checkSchemaInfo, 100);
@@ -200,7 +203,10 @@ request.onreadystatechange = function() {
 		select2.onchange = checkSchemaInfo;
 		nameFilter.oninput = checkSchemaInfo;
 		nameFilter.onpropertychange = checkSchemaInfo;
-		notableOnly.onchange = checkSchemaInfo;
+
+		if (notableOnly) {
+			notableOnly.onchange = checkSchemaInfo;
+		}
 
 		checkSchemaInfo();
 	};

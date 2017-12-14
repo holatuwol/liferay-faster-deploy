@@ -17,6 +17,11 @@ var select2 = document.getElementById('targetVersion');
 var select2Value = getParameter('targetVersion');
 var nameFilter = document.getElementById('nameFilter');
 nameFilter.value = getParameter('nameFilter');
+var notableOnly = document.getElementById('notableOnly');
+
+if (notableOnly) {
+	notableOnly.checked = getParameter('notableOnly') == 'true';
+}
 
 function isPermaLink(element) {
 	return element.getAttribute('data-original-title') == 'Permalink'
@@ -53,6 +58,7 @@ function checkVersionInfo() {
 	var header2 = select1.options[select2.selectedIndex].innerHTML;
 
 	var nameFilterValue = nameFilter.value;
+	var notableOnlyValue = notableOnly && notableOnly.checked;
 
 	var isMatchingNameFilter = function(versionInfo) {
 		return (versionInfo['group'].indexOf(nameFilterValue) != -1) || (versionInfo['name'].indexOf(nameFilterValue) != -1);
@@ -65,7 +71,20 @@ function checkVersionInfo() {
 		return (version1 != '0.0.0') || (version2 != '0.0.0');
 	};
 
+	var isNotableVersionChange = function(versionInfo) {
+		var name = versionInfo['name'];
+
+		var version1 = versionInfo[name1];
+		var version2 = versionInfo[name2];
+
+		return (version1 != version2);
+	};
+
 	var filteredVersionInfoList = versionInfoList.filter(isMatchingNameFilter).filter(isAvailableVersion);
+
+	if ((name1 != name2) && notableOnlyValue) {
+		filteredVersionInfoList = filteredVersionInfoList.filter(isNotableVersionChange);
+	}
 
 	var summary = document.getElementById('summary');
 	summary.innerHTML = '';
@@ -173,6 +192,10 @@ request.onreadystatechange = function() {
 		select2.onchange = checkVersionInfo;
 		nameFilter.oninput = checkVersionInfo;
 		nameFilter.onpropertychange = checkVersionInfo;
+
+		if (notableOnly) {
+			notableOnly.onchange = checkVersionInfo;
+		}
 
 		checkVersionInfo();
 	}
