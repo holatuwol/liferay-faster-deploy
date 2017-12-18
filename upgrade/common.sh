@@ -19,7 +19,7 @@ prep_bundle() {
 	fi
 
 	if [ "" == "${BUCKET_PATH}" ]; then
-		BUILD_NAME="$(ls /mnt/liferay/liferay-*.zip)"
+		BUILD_NAME=$(basename $(ls /mnt/liferay/liferay-*.zip))
 		return 0
 	fi
 
