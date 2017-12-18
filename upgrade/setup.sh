@@ -11,6 +11,7 @@ sudo chown $USER:$USER /mnt/github
 
 cd /mnt/github
 git clone https://github.com/holatuwol/lps-dockerfiles.git
+git clone https://github.com/holatuwol/liferay-faster-deploy.git
 cd -
 
 sudo mkdir /mnt/liferay
