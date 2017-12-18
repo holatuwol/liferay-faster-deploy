@@ -32,7 +32,7 @@ checkfile() {
 		fi
 	fi
 
-	git clean -xdf
+	git clean -xdf -e "app.server.$USER.properties" -e "build.$USER.properties"
 	git reset --hard
 	git checkout $1
 
