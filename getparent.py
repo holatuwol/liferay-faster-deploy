@@ -45,31 +45,29 @@ def getparent(check_tags):
 
 	short_version = '.'.join(full_version.split('.')[0:2])
 
-	if short_version == '6.0':
-		return 'ee-6.0.x'
-
-	if short_version == '6.1':
-		return 'ee-6.1.x'
-
-	if short_version == '6.2':
-		return 'ee-6.2.x'
-
 	base_branch = None
 
-	# Determine the base version using build.properties
+	if short_version == '6.0':
+		base_branch = 'ee-6.0.x'
+	elif short_version == '6.1':
+		base_branch = 'ee-6.1.x'
+	elif short_version == '6.2':
+		base_branch = 'ee-6.2.x'
+	else:
+		# Determine the base version using build.properties
 
-	if isfile(join(git_root, 'build.properties')):
-		base_branch = get_file_property(join(git_root, 'build.properties'), 'git.working.branch.name')
+		if isfile(join(git_root, 'build.properties')):
+			base_branch = get_file_property(join(git_root, 'build.properties'), 'git.working.branch.name')
 
-	if base_branch is None and isfile(join(git_root, 'git-commit-portal')):
-		with open(join(git_root, 'git-commit-portal'), 'r') as file:
-			commit = file.readlines()[0].strip()
-			base_branch = get_git_file_property(commit, 'build.properties', 'git.working.branch.name')
+		if base_branch is None and isfile(join(git_root, 'git-commit-portal')):
+			with open(join(git_root, 'git-commit-portal'), 'r') as file:
+				commit = file.readlines()[0].strip()
+				base_branch = get_git_file_property(commit, 'build.properties', 'git.working.branch.name')
 
-	if base_branch is None:
-		base_branch = current_branch
-	elif isdir(join(git_root, 'modules/private')):
-		base_branch = '%s-private' % base_branch
+		if base_branch is None:
+			base_branch = current_branch
+		elif isdir(join(git_root, 'modules/private')):
+			base_branch = '%s-private' % base_branch
 
 	# If this is master or master-private, or we've recently rebased to 7.0.x or 7.0.x-private,
 	# then use the branch instead of the tag
