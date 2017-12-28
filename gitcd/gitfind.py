@@ -36,7 +36,7 @@ def find(needle):
 	folders, files = git_find(git_root, needle)
 
 	if folders is not None or files is not None:
-		return (folders, files)
+		return (git_root_relpaths(folders), git_root_relpaths(files))
 
 	# Attempt to find the file using git ls-files --with-tree
 
