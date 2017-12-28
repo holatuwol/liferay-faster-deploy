@@ -34,11 +34,28 @@ def find(needle):
 		return (folders, files)
 
 	folders, files = git_find(git_root, needle)
+
+	if folders is not None or files is not None:
+		return (folders, files)
+
+	# Attempt to find the file using git ls-files --with-tree
+
+	git_commit_portal = join(git_root, 'git-commit-portal')
+
+	if isfile(git_commit_portal):
+		with open(git_commit_portal, 'r') as file:
+			commit = file.readline().strip()
+			folders, files = git_find(git_root, needle, commit)
+
 	return (git_root_relpaths(folders), git_root_relpaths(files))
 
-def git_find(haystack, needle):
+def git_find(haystack, needle, commit=None):
 	haystack = relpath(haystack, git_root)
-	file_list = [relpath(x, haystack).replace('\\', '/') for x in git.ls_files(haystack).split('\n') if x.find(needle) != -1 and x.find('.releng') == -1]
+
+	if commit is None:
+		file_list = [relpath(x, haystack).replace('\\', '/') for x in git.ls_files(haystack).split('\n') if x.find(needle) != -1 and x.find('.releng') == -1]
+	else:
+		file_list = [relpath(x, haystack).replace('\\', '/') for x in git.ls_files('--with-tree=%s' % commit, haystack).split('\n') if x.find(needle) != -1 and x.find('.releng') == -1]
 
 	# First, assume that we're looking for a module root, so check for
 	# bnd.bnd, ivy.xml, and package.json
