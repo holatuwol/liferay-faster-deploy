@@ -17,6 +17,12 @@ safeant() {
 		git clean -xdf
 		git reset --hard
 		popd > /dev/null
+	elif [ -d "$GIT_ROOT/../liferay-binaries-cache-2017" ]; then
+		echo 'Re-cloning liferay-binaries-cache-2017 because it is not a valid git repository'
+		pushd "$GIT_ROOT/.." > /dev/null
+		rm -rf liferay-binaries-cache-2017
+		git clone git@github.com:liferay/liferay-binaries-cache-2017.git
+		popd > /dev/null
 	fi
 
 	pushd $GIT_ROOT > /dev/null
