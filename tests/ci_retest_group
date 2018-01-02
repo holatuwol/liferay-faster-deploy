@@ -5,6 +5,23 @@ ci_retest() {
 		ant -f build-test.xml record-test-class-file-names
 	fi
 
+	antargs=$(echo "$@" | tr -d '\n' | tr ' ' '\n' | grep -- '^-D' | tr '\n' ' ')
+
+	local test_group_index=$(get_test_group $@)
+
+	if [ "LRSUPPORT" == "${test_group_index}" ]; then
+		echo generate_test_group $@
+	fi
+
+	if [ "" != "${test_group_index}" ]; then
+		cd portal-impl
+		echo ant test-class-group -Dtest.type=integration -Dtest.class.group.index=${test_group_index} $antargs
+	else
+		echo No tests matched the arguments: "$@"
+	fi
+}
+
+generate_test_group() {
 	if [ "" == "$(grep TEST_CLASS_GROUP_LRSUPPORT test.class.file.names.properties)" ]; then
 		cp -f "test.class.file.names.properties" "test.class.file.names.properties.orig"
 	else
@@ -12,8 +29,6 @@ ci_retest() {
 	fi
 
 	echo -e '\n\nTEST_CLASS_GROUP_LRSUPPORT=\\' >> test.class.file.names.properties
-
-	antargs=$(echo "$@" | tr -d '\n' | tr ' ' '\n' | grep -- '^-D' | tr '\n' ' ')
 
 	for regarg in $(echo "$@" | tr -d '\n' | tr ' ' '\n' | grep -v -- '^-D'); do
 		if [ -f "${GIT_ROOT}/$regarg" ]; then
@@ -35,12 +50,45 @@ ci_retest() {
 		fi
 	done
 
-	if [[ 1 -ne $(cat test.class.file.names.properties | grep -c '^') ]]; then
-		sed -i.bak '$s/,\\$//' test.class.file.names.properties
-		cd portal-impl
-		ant test-class-group -Dtest.type=integration -Dtest.class.group.index=LRSUPPORT $antargs
-	else
-		echo No tests matched the arguments: "$@"
+	sed -i.bak '$s/,\\$//' test.class.file.names.properties
+	rm test.class.file.names.properties.bak
+}
+
+get_test_group() {
+	local test_group_index=
+
+	for regarg in $(echo "$@" | tr -d '\n' | tr ' ' '\n' | grep -v -- '^-D'); do
+		if [ -f "${GIT_ROOT}/$regarg" ]; then
+			for file in $(grep -o "Running .*Test$" $regarg | cut -d' ' -f 2 | sed 's@\.@/@g' | awk '{ print $1 ".java" }'); do
+				if [ ! -f portal-impl/test/integration/$file ]; then
+					continue
+				fi
+
+				local candidate_test_group_index=$(grep -F "$(echo $file | sed 's/\.java$/.class/g')" test.class.file.names.properties | cut -d'=' -f 1 | cut -d'_' -f 4)
+
+				if [ "" == "${test_group_index}" ]; then
+					test_group_index=$candidate_test_group_index
+				elif [ "${test_group_index}" != "${candidate_test_group_index}" ]; then
+					test_group_index=LRSUPPORT
+					break
+				fi
+			done
+		else
+			for file in $(git ls-files portal-impl/test/integration | grep -F $regarg | cut -d'/' -f 4-); do
+				local candidate_test_group_index=$(grep -F "$(echo $file | sed 's/\.java$/.class/g')" test.class.file.names.properties | cut -d'=' -f 1 | cut -d'_' -f 4)
+
+				if [ "" == "${test_group_index}" ]; then
+					test_group_index=$candidate_test_group_index
+				elif [ "${test_group_index}" != "${candidate_test_group_index}" ]; then
+					test_group_index=LRSUPPORT
+					break
+				fi
+			done
+		fi
+	done
+
+	if [ "" != "${test_group_index}" ]; then
+		echo ${test_group_index}
 	fi
 }
 
