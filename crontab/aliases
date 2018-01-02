@@ -25,7 +25,7 @@ cr() {
 	local BUILD_NAME=$(ls /var/www/html/builds/branches | grep "^${1}-[0-9]*.tar.gz" | sort | tail -1)
 
 	if [ "" != "$BUILD_NAME" ]; then
-		local TIMESTAMP=$(echo "$BUILD_NAME" | sed 's/^${1}-//g' | cut -d'.' -f 1)
+		local TIMESTAMP=$(echo "$BUILD_NAME" | sed "s/^${1}-//g" | cut -d'.' -f 1)
 
 		if [ ! -d "$BUILD_FOLDER_PREFIX/$1/$TIMESTAMP" ]; then
 			mkdir -p $BUILD_FOLDER_PREFIX/$1/$TIMESTAMP
