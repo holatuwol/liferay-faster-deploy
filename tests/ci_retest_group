@@ -1,0 +1,46 @@
+#!/bin/bash
+
+ci_retest() {
+	if [ -f test.class.file.names.properties ] && [ "" == "$(grep TEST_CLASS_GROUP_LRSUPPORT test.class.file.names.properties)" ]; then
+		rm -f test.class.file.names.properties.bak
+		mv "test.class.file.names.properties" "test.class.file.names.properties"
+	fi
+
+	antargs=$(echo "$@" | tr -d '\n' | tr ' ' '\n' | grep -- '^-D' | tr '\n' ' ')
+
+	echo "TEST_CLASS_GROUP_LRSUPPORT=\\" > test.class.file.names.properties
+
+	for regarg in $(echo "$@" | tr -d '\n' | tr ' ' '\n' | grep -v -- '^-D'); do
+		if [ -f "${GIT_ROOT}/$regarg" ]; then
+			echo "Assuming $regarg refers to a file containing test results"
+			for file in $(grep -o "Running .*Test$" $regarg | cut -d' ' -f 2 | sed 's@\.@/@g' | awk '{ print $1 ".java" }'); do
+				if [ ! -f portal-impl/test/integration/$file ]; then
+					continue
+				fi
+
+				echo $file | sed 's/\.java$/.class/g' | awk '{ print "  " $1 ",\\" }' >> test.class.file.names.properties
+			done
+		else
+			echo "Assuming $regarg refers to a part of a test name"
+
+			for file in $(git ls-files portal-impl/test/integration | grep -F $regarg | cut -d'/' -f 4-); do
+				echo $file | sed 's/\.java$/.class/g' | awk '{ print "  " $1 ",\\" }' >> test.class.file.names.properties
+			done
+		fi
+	done
+
+	if [[ 1 -ne $(cat test.class.file.names.properties | grep -c '^') ]]; then
+		sed -i.bak '$s/,\\$//' test.class.file.names.properties
+		cd portal-impl
+		ant test-class-group -Dtest.type=integration -Dtest.class.group.index=LRSUPPORT $antargs
+	else
+		echo No tests matched the arguments: "$@"
+	fi
+}
+
+setopts() {
+	. "$(dirname "$(dirname "${BASH_SOURCE[0]}")")/setopts"
+}
+
+setopts
+ci_retest $@
