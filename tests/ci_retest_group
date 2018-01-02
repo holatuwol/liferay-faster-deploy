@@ -1,18 +1,24 @@
 #!/bin/bash
 
 ci_retest() {
-	if [ -f test.class.file.names.properties ] && [ "" == "$(grep TEST_CLASS_GROUP_LRSUPPORT test.class.file.names.properties)" ]; then
-		rm -f test.class.file.names.properties.bak
-		mv "test.class.file.names.properties" "test.class.file.names.properties"
+	if [ ! -f test.class.file.names.properties ]; then
+		ant -f build-test.xml record-test-class-file-names
 	fi
 
-	antargs=$(echo "$@" | tr -d '\n' | tr ' ' '\n' | grep -- '^-D' | tr '\n' ' ')
+	if [ "" == "$(grep TEST_CLASS_GROUP_LRSUPPORT test.class.file.names.properties)" ]; then
+		cp -f "test.class.file.names.properties" "test.class.file.names.properties.orig"
+	else
+		cp -f "test.class.file.names.properties.orig" "test.class.file.names.properties"
+	fi
 
-	echo "TEST_CLASS_GROUP_LRSUPPORT=\\" > test.class.file.names.properties
+	echo -e '\n\nTEST_CLASS_GROUP_LRSUPPORT=\\' >> test.class.file.names.properties
+
+	antargs=$(echo "$@" | tr -d '\n' | tr ' ' '\n' | grep -- '^-D' | tr '\n' ' ')
 
 	for regarg in $(echo "$@" | tr -d '\n' | tr ' ' '\n' | grep -v -- '^-D'); do
 		if [ -f "${GIT_ROOT}/$regarg" ]; then
 			echo "Assuming $regarg refers to a file containing test results"
+
 			for file in $(grep -o "Running .*Test$" $regarg | cut -d' ' -f 2 | sed 's@\.@/@g' | awk '{ print $1 ".java" }'); do
 				if [ ! -f portal-impl/test/integration/$file ]; then
 					continue
