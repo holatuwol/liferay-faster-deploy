@@ -1,5 +1,9 @@
 #!/bin/bash
 
+appserverprops() {
+	. "$(dirname "$(dirname "${BASH_SOURCE[0]}")")/appserverprops"
+}
+
 ci_retest() {
 	if [ ! -f test.class.file.names.properties ]; then
 		ant -f build-test.xml record-test-class-file-names
@@ -14,8 +18,8 @@ ci_retest() {
 	fi
 
 	if [ "" != "${test_group_index}" ]; then
-		cd portal-impl
 		echo ant test-class-group -Dtest.type=integration -Dtest.class.group.index=${test_group_index} $antargs
+		cd portal-impl && ant test-class-group -Dtest.type=integration -Dtest.class.group.index=${test_group_index} $antargs
 	else
 		echo No tests matched the arguments: "$@"
 	fi
@@ -92,9 +96,74 @@ get_test_group() {
 	fi
 }
 
-setopts() {
-	. "$(dirname "$(dirname "${BASH_SOURCE[0]}")")/setopts"
+start_testable_mysql56() {
+	echo 'Removing older Docker container...'
+	docker stop testable-mysql56
+	docker rm -v testable-mysql56
+
+	if [ "" != "$(netstat -ln | grep -F ':3306')" ]; then
+		echo "MySQL database already running, but not specified in ${LIFERAY_HOME}/portal-ext.properties"
+		return 1
+	fi
+
+	docker run --name testable-mysql56 -e 'MYSQL_ALLOW_EMPTY_PASSWORD=yes' -e 'MYSQL_DATABASE=lportal' \
+		--detach -p 127.0.0.1:3306:3306 mysql:5.6 --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+
+	echo -e '[mysqld]\ninnodb-file-format = Barracuda\ninnodb-file-per-table\ninnodb-large-prefix\ncharacter-set-server = utf8\ncollation-server = utf8_unicode_ci' > runtime.cnf
+	docker cp runtime.cnf testable-mysql56:/etc/mysql/conf.d/
+	rm runtime.cnf
+
+	docker restart testable-mysql56
+
+	if [ ! -f sql/create/create-mysql.sql ]; then
+		cd sql
+		ant build-db
+		cd -
+	fi
+
+	sed -i.bak 's/engine InnoDB/ROW_FORMAT=DYNAMIC ENGINE=InnoDB/g' sql/create/create-mysql.sql
+	docker cp sql/create/create-mysql.sql testable-mysql56:/
+
+	echo -e "grant all on lportal.* to ''@'%'; use lportal;\nsource /create-mysql.sql\n" > init-mysql.sql
+	echo -e '#!/bin/bash\ncat init-mysql.sql | mysql -u root' > init-mysql.sh
+
+	docker cp init-mysql.sql testable-mysql56:/
+	rm init-mysql.sql
+
+	docker cp init-mysql.sh testable-mysql56:/
+	rm init-mysql.sh
+
+	docker exec testable-mysql56 chmod u+x init-mysql.sh
+
+	echo 'Initializing tables with dynamic row format...'
+	docker exec testable-mysql56 ./init-mysql.sh
 }
 
-setopts
-ci_retest $@
+testprops() {
+	if [ -f portal-impl/test/portal-test-ext.properties ]; then
+		echo "Using database defined in portal-impl/test/portal-test-ext.properties"
+		return 0
+	fi
+
+	if [ -f "${LIFERAY_HOME}/portal-ext.properties" ] && [ "" != "$(grep -F jdbc.default "${LIFERAY_HOME}/portal-ext.properties")" ]; then
+		echo "Using database defined in ${LIFERAY_HOME}/portal-ext.properties"
+		grep -F jdbc.default "${LIFERAY_HOME}/portal-ext.properties" > portal-impl/test/portal-test-ext.properties
+		return 0
+	fi
+
+	if [ "6.2" == "$(grep -F lp.version.major release.properties | cut -d'=' -f 2)" ]; then
+		start_testable_mysql56
+		return $?
+	fi
+
+	echo 'Please specify a database to use in portal-impl/test/portal-test-ext.properties'
+	return 1
+}
+
+appserverprops
+
+if [ "${PWD}" != "${GIT_ROOT}" ]; then
+	cd "${GIT_ROOT}"
+fi
+
+testprops && ci_retest $@
