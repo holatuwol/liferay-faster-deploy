@@ -30,7 +30,7 @@ function isPermaLink(element) {
 function checkPackageInfo() {
 	// https://stackoverflow.com/questions/12508225/how-do-we-update-url-or-query-strings-using-javascript-jquery-without-reloading
 
-	if (history.pushState) {
+	if (modifyState) {
 		var baseURL = window.location.protocol + "//" + window.location.host + window.location.pathname;
 
 		if (window.location.host == 'grow.liferay.com') {
