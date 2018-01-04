@@ -8,7 +8,7 @@ bundleinfo() {
 	echo "Generating bundle info for $1"
 
 	for folder in $(ls -1 . | sort -u); do
-		if [ -f $folder/bnd.bnd ]; then
+		if [ -f "$folder/bnd.bnd" ]; then
 			local BUNDLE_NAME="com.liferay.$(echo $folder | tr '-' '.')"
 			local BUNDLE_VERSION=$(grep '^Bundle-Version' $folder/bnd.bnd | cut -d' ' -f 2-)
 
@@ -16,7 +16,7 @@ bundleinfo() {
 		fi
 	done
 
-	git ls-files modules | grep -F '/bnd.bnd' | \
+	git ls-files modules | grep -F '/.lfrbuild-portal' | \
 		grep -v '^modules/aspectj/' | \
 		grep -vF -- '-compat/' | \
 		grep -v '^modules/post-upgrade-fix/' | \
@@ -24,11 +24,15 @@ bundleinfo() {
 		grep -v '^modules/test/' | \
 		grep -v '^modules/third-party/' | \
 		grep -v '^modules/util/' | \
-		sort > .redeploy/bundleinfo.txt
+		dirnames | sort -u > .redeploy/bundleinfo.txt
 
-	for bnd in $(cat .redeploy/bundleinfo.txt); do
-		local BUNDLE_NAME=$(grep '^Bundle-SymbolicName' $bnd | cut -d' ' -f 2-)
-		local BUNDLE_VERSION=$(grep '^Bundle-Version' $bnd | cut -d' ' -f 2-)
+	for folder in $(cat .redeploy/bundleinfo.txt); do
+		if [ ! -f "$folder/bnd.bnd" ]; then
+			continue
+		fi
+
+		local BUNDLE_NAME=$(grep '^Bundle-SymbolicName' $folder/bnd.bnd | cut -d' ' -f 2-)
+		local BUNDLE_VERSION=$(grep '^Bundle-Version' $folder/bnd.bnd | cut -d' ' -f 2-)
 
 		echo "com.liferay,${BUNDLE_NAME},${BUNDLE_VERSION}" >> ${OUTPUT_FILE}
 	done
@@ -159,7 +163,18 @@ requireschema() {
 
 	echo "Generating require schema versions for $1"
 
-	for bnd in $(git ls-files | grep -F -- '-service/bnd.bnd' | grep -v '^modules/sdk/' | grep -v '^modules/test/' | grep -v '^modules/util/'); do
+	if [ "$1" == "7.0.0-ga1" ]; then
+		git ls-files modules | grep -F -- '-service/bnd.bnd' | grep -v '^modules/sdk/' | grep -v '^modules/test/' | grep -v '^modules/util/' | dirnames | sort -u > .redeploy/requireschema.txt
+	else
+		git ls-files modules | grep -F -- '-service/.lfrbuild-portal' | grep -v '^modules/sdk/' | grep -v '^modules/test/' | grep -v '^modules/util/' | dirnames | sort -u > .redeploy/requireschema.txt
+	fi
+
+	for folder in $(cat .redeploy/requireschema.txt); do
+		if [ ! -f "$folder/bnd.bnd" ]; then
+			continue
+		fi
+
+		local bnd=$folder/bnd.bnd
 		local BUNDLE_NAME=$(grep '^Bundle-SymbolicName' $bnd | cut -d' ' -f 2-)
 		local BUNDLE_VERSION=$(grep '^Bundle-Version' $bnd | cut -d' ' -f 2-)
 

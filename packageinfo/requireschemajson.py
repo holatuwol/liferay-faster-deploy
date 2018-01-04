@@ -11,12 +11,12 @@ folder = sys.argv[1]
 ce_releases = int(sys.argv[2])
 ee_releases = int(sys.argv[3])
 
-file_names = ['requireschema-7010-base.txt'] + \
-	['requireschema-70%s-ga%d.txt' % (str(i).zfill(2), i+1) for i in range(0, ce_releases)] + \
-	['requireschema-7010-de-%d.txt' % i for i in range(1, ee_releases + 1)]
+file_suffixes = ['7010-base'] + \
+	['70%s-ga%d' % (str(i).zfill(2), i+1) for i in range(0, ce_releases)] + \
+	['7010-de-%d' % i for i in range(1, ee_releases + 1)]
 
-suffixes = [file_name[14:-4] for file_name in file_names]
-suffixes = [suffix if suffix[5:7] != 'de' else suffix[0:8] + suffix[8:].zfill(2) for suffix in suffixes]
+file_names = ['requireschema-%s.txt' % file_suffix for file_suffix in file_suffixes]
+suffixes = [suffix if suffix[5:7] != 'de' else suffix[0:8] + suffix[8:].zfill(2) for suffix in file_suffixes]
 
 # Read the CSV file
 
