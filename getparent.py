@@ -66,7 +66,7 @@ def getparent(check_tags):
 
 		if base_branch is None:
 			base_branch = current_branch
-		elif isdir(join(git_root, 'modules/private')):
+		elif isdir(join(git_root, 'modules/private')) and len(git.ls_files('build.properties').strip()) == 0:
 			base_branch = '%s-private' % base_branch
 
 	# If this is master or master-private, or we've recently rebased to 7.0.x or 7.0.x-private,
@@ -75,10 +75,11 @@ def getparent(check_tags):
 	if not check_tags:
 		return base_branch
 
-	exit_code = subprocess.call(['git', 'merge-base', '--is-ancestor', base_branch, 'HEAD'])
+	if base_branch != 'ee-7.0.x':
+		exit_code = subprocess.call(['git', 'merge-base', '--is-ancestor', base_branch, 'HEAD'])
 
-	if exit_code == 0:
-		return base_branch
+		if exit_code == 0:
+			return base_branch
 
 	# Find the closest matching tag
 
