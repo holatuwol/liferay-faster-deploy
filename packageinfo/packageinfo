@@ -1,5 +1,39 @@
 #!/bin/bash
 
+bundleinfo() {
+	if ! checkfile $1 bundleinfo; then
+		return 0
+	fi
+
+	echo "Generating bundle info for $1"
+
+	for folder in $(ls -1 . | sort -u); do
+		if [ -f $folder/bnd.bnd ]; then
+			local BUNDLE_NAME="com.liferay.$(echo $folder | tr '-' '.')"
+			local BUNDLE_VERSION=$(grep '^Bundle-Version' $folder/bnd.bnd | cut -d' ' -f 2-)
+
+			echo "com.liferay.portal,${BUNDLE_NAME},${BUNDLE_VERSION}-SNAPSHOT" >> ${OUTPUT_FILE}
+		fi
+	done
+
+	git ls-files modules | grep -F '/bnd.bnd' | \
+		grep -v '^modules/aspectj/' | \
+		grep -vF -- '-compat/' | \
+		grep -v '^modules/post-upgrade-fix/' | \
+		grep -v '^modules/sdk/' | \
+		grep -v '^modules/test/' | \
+		grep -v '^modules/third-party/' | \
+		grep -v '^modules/util/' | \
+		sort > .redeploy/bundleinfo.txt
+
+	for bnd in $(cat .redeploy/bundleinfo.txt); do
+		local BUNDLE_NAME=$(grep '^Bundle-SymbolicName' $bnd | cut -d' ' -f 2-)
+		local BUNDLE_VERSION=$(grep '^Bundle-Version' $bnd | cut -d' ' -f 2-)
+
+		echo "com.liferay,${BUNDLE_NAME},${BUNDLE_VERSION}" >> ${OUTPUT_FILE}
+	done
+}
+
 checkfile() {
 	OUTPUT_FILE=
 
@@ -68,7 +102,7 @@ packageinfo() {
 
 	# Handle modules, which always have packageinfo files
 
-	git ls-files modules | grep -F '/packageinfo' | grep -vF '/sdk/' | dirnames | sort >> .redeploy/packageinfo.txt
+	git ls-files modules | grep -F '/packageinfo' | grep -v '^modules/sdk/' | grep -v '^modules/test/' | grep -v '^modules/util/' | dirnames | sort >> .redeploy/packageinfo.txt
 
 	python $(dirname $0)/packageinfo.py $OUTPUT_FILE
 
@@ -88,7 +122,7 @@ packageinfo_compat() {
 		folder=$(dirname $file)
 
 		local bundle_artifact=
-		local bundle_name=$(grep -F 'Bundle-SymbolicName' $folder/bnd.bnd | cut -d' ' -f 2)
+		local bundle_name=$(grep '^Bundle-SymbolicName' $folder/bnd.bnd | cut -d' ' -f 2)
 		local bundle_version=
 
 		if [[ $bundle_name == com.liferay.portal.kernel* ]]; then
@@ -125,12 +159,12 @@ requireschema() {
 
 	echo "Generating require schema versions for $1"
 
-	for bnd in $(git ls-files | grep -F -- '-service/bnd.bnd' | grep -vF '/sdk/'); do
-		local BUNDLE_NAME=$(grep -F Bundle-SymbolicName $bnd | cut -d' ' -f 2-)
-		local BUNDLE_VERSION=$(grep -F Bundle-Version $bnd | cut -d' ' -f 2-)
+	for bnd in $(git ls-files | grep -F -- '-service/bnd.bnd' | grep -v '^modules/sdk/' | grep -v '^modules/test/' | grep -v '^modules/util/'); do
+		local BUNDLE_NAME=$(grep '^Bundle-SymbolicName' $bnd | cut -d' ' -f 2-)
+		local BUNDLE_VERSION=$(grep '^Bundle-Version' $bnd | cut -d' ' -f 2-)
 
 		local IMPLICIT_SCHEMA_VERSION=$BUNDLE_VERSION
-		local EXPLICIT_SCHEMA_VERSION=$(grep -F Liferay-Require-SchemaVersion $bnd | cut -d' ' -f 2-)
+		local EXPLICIT_SCHEMA_VERSION=$(grep '^Liferay-Require-SchemaVersion' $bnd | cut -d' ' -f 2-)
 
 		local SCHEMA_VERSION="$IMPLICIT_SCHEMA_VERSION (implicit)"
 
@@ -171,10 +205,12 @@ if [ "" == "$1" ]; then
 		sort -t'-' -nk4,5 | cut -d'/' -f 3 >> $OUTPUT_FOLDER/tags.txt
 
 	for tag_id in $(cat $OUTPUT_FOLDER/tags.txt); do
+		bundleinfo $tag_id
 		packageinfo $tag_id
 		requireschema $tag_id
 	done
 else
+	bundleinfo $1
 	packageinfo $1
 	requireschema $1
 fi
