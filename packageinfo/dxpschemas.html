@@ -69,7 +69,7 @@
 
 <p>Essentially, this value is recorded inside of the database in the Release table once all the module upgrades complete. If the value in the database does not match the value in the bnd.bnd, certain things will fail to happen and the service builder services will <em>not</em> be provided to other modules.</p>
 
-<p>At a technical level, when Liferay initializes, the code responsible for injecting service builder services (or really, all Spring components) as OSGi components declares that it needs the value specified as a bnd.bnd as a dependency (thus the &quot;requires schema version&quot;), while the value in the database is what's actually published. This means that if the two do not match, service builder services will not be made available, thus creating a point of no return.</p>
+<p>At a technical level, when Liferay initializes, the code responsible for injecting service builder services (or really, all Spring components) as OSGi components declares that it needs the value specified in bnd.bnd as a dependency (thus the &quot;requires schema version&quot;), while the value in the database is what's actually published. This means that if the two do not match, service builder services will not be made available, thus creating a point of no return.</p>
 
 <ul>
 <li><a href="https://github.com/liferay/liferay-portal/blob/7.0.3-ga4/modules/sdk/ant-bnd/src/main/java/com/liferay/ant/bnd/spring/SpringDependencyAnalyzerPlugin.java#L87-L108">SpringDependencyAnalyzerPlugin</a></li>
