@@ -66,6 +66,8 @@ def getparent(check_tags):
 
 		if base_branch is None:
 			base_branch = current_branch
+		elif base_branch == 'ee-7.0.x':
+			base_branch = '7.0.x'
 		elif isdir(join(git_root, 'modules/private')) and len(git.ls_files('build.properties').strip()) == 0:
 			base_branch = '%s-private' % base_branch
 

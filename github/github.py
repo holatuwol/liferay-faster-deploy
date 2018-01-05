@@ -51,6 +51,7 @@ def open_on_github(needle, selection_start=None, selection_end=None):
 		candidate_refs = [remote_ref for remote_ref in remote_refs if remote_ref.find('/origin') > -1 and remote_ref.find(parent_branch) != -1]
 
 	if len(candidate_refs) == 0:
+		print('Unable to find remote for %s' % parent_branch)
 		return
 
 	# Identify the name of the repository
@@ -64,6 +65,7 @@ def open_on_github(needle, selection_start=None, selection_end=None):
 	matching_path = get_relpath(needle)
 
 	if matching_path is None:
+		print('No matching path')
 		return
 
 	path = relpath(join(os.getcwd(), matching_path), git_root)
