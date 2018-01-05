@@ -49,6 +49,11 @@ def find(needle):
 
 	return (git_root_relpaths(folders), git_root_relpaths(files))
 
+def get_filtered_folders(filtered_list, needle):
+	filtered_folders = list(set([dirname(file) for file in filtered_list]))
+	filtered_exact_folders = [folder for folder in filtered_folders if folder[-len(needle):] == needle]
+	return filtered_exact_folders if len(filtered_exact_folders) > 0 else filtered_folders
+
 def git_find(haystack, needle, commit=None):
 	haystack = relpath(haystack, git_root)
 
@@ -66,7 +71,7 @@ def git_find(haystack, needle, commit=None):
 			filtered_list = [file for file in file_list if file.find(filter_needle) > -1]
 
 			if len(filtered_list) > 0:
-				return (list(set([dirname(file) for file in filtered_list])), None)
+				return (get_filtered_folders(filtered_list, needle), None)
 
 	for pattern in ['%s/', '/%s', '%s']:
 		for module_marker in ['bnd.bnd', 'ivy.xml', 'package.json']:
@@ -74,7 +79,7 @@ def git_find(haystack, needle, commit=None):
 			filtered_list = [file for file in file_list if file.find(filter_needle) > -1 and file.find(module_marker) > -1]
 
 			if len(filtered_list) > 0:
-				return (list(set([dirname(file) for file in filtered_list])), None)
+				return (get_filtered_folders(filtered_list, needle), None)
 
 	# Next, check for a folder that isn't a module root, which can either be
 	# an exact match or a suffix match. Prefer in that order.
@@ -84,7 +89,7 @@ def git_find(haystack, needle, commit=None):
 		filtered_list = [file for file in file_list if file.find(filter_needle) > -1]
 
 		if len(filtered_list) > 0:
-			return (filtered_list, None)
+			return (get_filtered_folders(filtered_list, needle), None)
 
 	# Finally, assume that maybe the person is looking for a folder containing
 	# a file and is using the file name as an abbreviated way at getting there.
@@ -95,7 +100,7 @@ def git_find(haystack, needle, commit=None):
 		filtered_list = [file for file in file_list if file.find(filter_needle) > -1]
 
 		if len(filtered_list) > 0:
-			return (dirnames(filtered_list), filtered_list)
+			return (get_filtered_folders(filtered_list, needle), filtered_list)
 
 	return (None, None)
 
