@@ -36,6 +36,15 @@ prep_bundle() {
 }
 
 setenv() {
+	if [ -f ${HOME}/db_type.txt ]; then
+		DB_TYPE=$(cat ${HOME}/db_type.txt)
+	fi
+
+	if [ "" == "${DB_TYPE}" ]; then
+		echo "DB_TYPE unknown. Please set as an environment variable or create the file ${HOME}/db_type.txt"
+		return 1
+	fi
+
 	NAME_PREFIX=
 	LOCAL_LIFERAY_HOME=/mnt/liferay
 

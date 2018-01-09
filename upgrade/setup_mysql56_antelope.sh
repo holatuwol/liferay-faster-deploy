@@ -55,3 +55,5 @@ jdbc.default.url=jdbc:mysql://upgradedb/lportal?characterEncoding=UTF-8&dontTrac
 jdbc.default.username=lportal
 jdbc.default.password=lportal
 ' > /mnt/liferay/tools/portal-tools-db-upgrade-client/portal-upgrade-database.properties
+
+echo -n 'mysql' > ${HOME}/db_type.txt

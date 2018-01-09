@@ -17,3 +17,5 @@ fi
 sed -i.bak 's/--start-period=5m //g' 11.2.0.2/Dockerfile.xe
 
 ./buildDockerImage.sh -v 11.2.0.2 -x
+
+echo -n 'oracle' > ${HOME}/db_type.txt

@@ -69,32 +69,6 @@ start_upgrade() {
 	fi
 }
 
-stop_liferay() {
-	if [ "exited" == "$(docker inspect ${NAME_PREFIX}liferay --format "{{json .State.Status }}" | cut -d'"' -f 2)" ]; then
-		return 0
-	fi
-
-	docker stop ${NAME_PREFIX}liferay
-}
-
-waitfor_database() {
-	echo 'Waiting for database reload to complete...'
-
-	local HEALTH=$(docker inspect --format "{{json .State.Health.Status }}" ${NAME_PREFIX}upgradedb | cut -d'"' -f 2)
-
-	while [ "healthy" != "$HEALTH" ]; do
-		sleep 1
-		HEALTH=$(docker inspect --format "{{json .State.Health.Status }}" ${NAME_PREFIX}upgradedb | cut -d'"' -f 2)
-	done
-
-	HEALTH=$(docker logs ${NAME_PREFIX}upgradedb 2>&1 | grep -F Ready)
-
-	while [ "" == "$HEALTH" ]; do
-		sleep 1
-		HEALTH=$(docker logs ${NAME_PREFIX}upgradedb 2>&1 | grep -F Ready)
-	done
-}
-
 if setenv; then
 	if [ "continue" == "$1" ]; then
 		prep_bundle
@@ -108,7 +82,7 @@ if setenv; then
 		if prep_database; then
 			prep_bundle
 			prep_upgrade_props
-			waitfor_database
+			./waitfor_${DB_TYPE}.sh
 			start_upgrade
 		fi
 	fi

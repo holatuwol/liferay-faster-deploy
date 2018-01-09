@@ -29,3 +29,5 @@ sudo mkdir /mnt/build
 sudo chown $USER:$USER /mnt/build
 
 cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 30 | head -n 1 > $HOME/db_pass.txt
+
+echo 'You will need to logout before you can run the database-specific setup.'
