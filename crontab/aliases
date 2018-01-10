@@ -30,17 +30,17 @@ cr() {
 		if [ ! -d "$BUILD_FOLDER_PREFIX/$1/$TIMESTAMP" ]; then
 			mkdir -p $BUILD_FOLDER_PREFIX/$1/$TIMESTAMP
 			tar -zxf /var/www/html/builds/branches/$BUILD_NAME -C $BUILD_FOLDER_PREFIX/$1/$TIMESTAMP/
-
-			if [ "$1" == "61x" ]; then
-				switchport 80 61
-			elif [ "$1" == "62x" ]; then
-				switchport 80 62
-			elif [ "$1" == "70x-private" ]; then
-				switchport 80 70
-			fi
 		fi
 
 		CATALINA_HOME=$(find $BUILD_FOLDER_PREFIX/$1/$TIMESTAMP -type d -name 'tomcat*' | sort -u | tail -1)
+
+		if [ "$1" == "61x" ]; then
+			switchport 80 61
+		elif [ "$1" == "62x" ]; then
+			switchport 80 62
+		elif [ "$1" == "70x-private" ]; then
+			switchport 80 70
+		fi
 	fi
 
 	if [ "" == "$CATALINA_HOME" ]; then
