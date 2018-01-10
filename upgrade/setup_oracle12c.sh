@@ -1,21 +1,9 @@
 #!/bin/bash
 
-BUCKET_PATH=$(cat $HOME/installer_bucket.txt)
+ORACLE_VERSION='12.2.0.1'
+ORACLE_INSTALLERS='linuxx64_12201_database.zip'
 
-cd /mnt/github
+ORACLE_VERSION_ARGS='-s'
+ORACLE_VERSION_FILE='se2'
 
-if [ ! -d oracle-docker-images ]; then
-	git clone https://github.com/oracle/docker-images.git oracle-docker-images
-fi
-
-cd oracle-docker-images/OracleDatabase/dockerfiles
-
-if [ ! -f 12.2.0.1/linuxx64_12201_database.zip ]; then
-	aws s3 cp ${BUCKET_PATH}/linuxx64_12201_database.zip 12.2.0.1/
-fi
-
-sed -i.bak 's/--start-period=5m //g' 12.2.0.1/Dockerfile.se2
-
-./buildDockerImage.sh -v 12.2.0.1 -s
-
-echo -n 'oracle' > ${HOME}/db_type.txt
+. ./setup_oracle.sh
