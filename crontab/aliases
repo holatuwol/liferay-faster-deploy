@@ -83,22 +83,11 @@ cx() {
 	fi
 
 	if [ "all" == "$1" ]; then
-		if [ "" != "$(ps -ef | grep catalina.base | grep -v grep | awk '{ print $2 }')" ]; then
-			ps -ef | grep catalina.base | grep -v grep | awk '{ print $2 }' | xargs kill -9
-		fi
-
+		ps -ef | grep catalina.base | grep -v grep | awk '{ print $2 }' | xargs kill -9
 		return 0
 	fi
 
-	if [ -d $BUILD_FOLDER_PREFIX/$1 ]; then
-		BUILD_ID=$(ls -1 $BUILD_FOLDER_PREFIX/$1 | grep -vF '.log' | sort | tail -1)
-		CATALINA_HOME=$(find $BUILD_FOLDER_PREFIX/$1 -type d -name 'tomcat*')
-	else
-		echo "Unable to identify which Tomcat to shutdown"
-		return 0
-	fi
-
-	ps -ef | grep $CATALINA_HOME | grep -v grep | awk '{ print $2 }' | xargs kill -9
+	ps -ef | grep -F $BUILD_FOLDER_PREFIX/$1 | grep catalina.base | grep -v grep | awk '{ print $2 }' | xargs kill -9
 }
 
 ct() {
