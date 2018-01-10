@@ -3,7 +3,7 @@
 create_reload_sql() {
 
 	echo "
-create schema lportal default charset utf8 default collate utf8_unicode_ci;
+create schema lportal default charset utf8mb4 default collate utf8mb4_unicode_ci;
 grant all on lportal.* to 'lportal'@'%';
 use lportal;
 
@@ -28,7 +28,7 @@ source /data/backup.sql
 create table Configuration_ (
 	configurationId VARCHAR(${PRIMKEY_LENGTH}) not null primary key,
 	dictionary TEXT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 " >> /mnt/build/backup.sql
 
 	fi
@@ -43,8 +43,8 @@ innodb-file-format    = ${INNODB_FILE_FORMAT}
 innodb-file-per-table
 innodb-large-prefix
 
-character-set-server  = utf8
-collation-server      = utf8_unicode_ci
+character-set-server  = utf8mb4
+collation-server      = utf8mb4_unicode_ci
 " > /mnt/build/runtime.cnf
 
 }
