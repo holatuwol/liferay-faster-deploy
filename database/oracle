@@ -1,0 +1,99 @@
+#!/bin/bash
+
+appserverprops() {
+	. $(dirname ${BASH_SOURCE[0]})/../appserverprops
+}
+
+startdatabase() {
+	if docker inspect ${CONTAINER_NAME} 2>&1 > /dev/null; then
+		echo "Using existing container ${CONTAINER_NAME}"
+		docker start ${CONTAINER_NAME}
+		return 0
+	fi
+
+	if ! docker image inspect ${ORACLE_VERSION} 2>&1 > /dev/null; then
+		echo "Please build the Oracle image for ${ORACLE_VERSION}"
+		echo 'https://github.com/oracle/docker-images'
+		return 1
+	fi
+
+	mkdir -p ${LIFERAY_HOME}/oracle
+
+	echo "
+ALTER SESSION SET container = orcl;
+CREATE TABLESPACE lportal DATAFILE 'lportal.dbf' SIZE 64m AUTOEXTEND ON NEXT 32m MAXSIZE UNLIMITED;
+
+CREATE USER lportal IDENTIFIED BY lportal DEFAULT TABLESPACE lportal;
+GRANT create session, resource, unlimited tablespace TO lportal;
+
+CREATE UNDO TABLESPACE lportal_undo DATAFILE 'lportal_undo.dpf' SIZE 64m AUTOEXTEND ON NEXT 32m MAXSIZE UNLIMITED;
+ALTER TABLESPACE lportal_undo RETENTION GUARANTEE;
+ALTER SYSTEM SET UNDO_TABLESPACE=lportal_undo SCOPE=BOTH;
+" > ${LIFERAY_HOME}/oracle/init.sql
+
+	docker run --name ${CONTAINER_NAME} \
+		-e 'ORACLE_PDB=orcl' \
+		-v ${LIFERAY_HOME}/oracle:/opt/oracle/scripts/startup \
+		--detach --expose 1521 ${ORACLE_VERSION}
+}
+
+updateprops() {
+	local IP_ADDRESS=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${CONTAINER_NAME})
+	echo "Oracle database is started with IP address ${IP_ADDRESS}"
+
+	echo "Updating ${LIFERAY_HOME}/portal-ext.properties with database connection information"
+
+	if [ -f ${LIFERAY_HOME}/portal-ext.properties ]; then
+		if [ "" != "$(grep -F ${IP_ADDRESS} ${LIFERAY_HOME}/portal-ext.properties | grep -vF '#')" ]; then
+			return 0
+		fi
+
+		sed -i.bak 's/^jdbc.default/#jdbc.default/g' ${LIFERAY_HOME}/portal-ext.properties
+	fi
+
+	echo "
+jdbc.default.driverClassName=oracle.jdbc.OracleDriver
+jdbc.default.url=jdbc:oracle:thin:@${IP_ADDRESS}:1521:orcl
+jdbc.default.username=lportal
+jdbc.default.password=lportal
+" >> ${LIFERAY_HOME}/portal-ext.properties
+}
+
+waitfor_database() {
+	echo 'Waiting for database startup to complete...'
+
+	local HEALTH=$(docker inspect --format "{{json .State.Health.Status }}" ${CONTAINER_NAME} | cut -d'"' -f 2)
+
+	while [ "healthy" != "$HEALTH" ]; do
+		sleep 1
+		HEALTH=$(docker inspect --format "{{json .State.Health.Status }}" ${CONTAINER_NAME} | cut -d'"' -f 2)
+	done
+
+	echo 'Database startup complete!'
+
+	rm -f ${LIFERAY_HOME}/oracle/init.sql
+}
+
+if [ "" == "${LIFERAY_HOME}" ]; then
+	echo 'Please either define LIFERAY_HOME or navigate to a portal source folder'
+	exit 1
+fi
+
+appserverprops
+
+ORACLE_VERSION='oracle/database:12.2.0.1-se2'
+
+if [ "" == "$1" ]; then
+	CONTAINER_NAME=$(git rev-parse --abbrev-ref HEAD)
+
+	if [ "" == "${CONTAINER_NAME}" ]; then
+		echo 'Unable to determine branch name from detached head'
+		exit 1
+	fi
+
+	echo "No container name specified, using current branch ${CONTAINER_NAME}"
+else
+	CONTAINER_NAME=$1
+fi
+
+startdatabase && updateprops && waitfor_database
