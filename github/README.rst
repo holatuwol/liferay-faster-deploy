@@ -30,6 +30,10 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 		${MCD_RD_CLONE_PATH}/github/pushorigin "$1" "$2"
 	}
 
+	itest() {
+		${MCD_RD_CLONE_PATH}/github/ci_retest_group
+	}
+
 Open GitHub In Web Browser
 ==========================
 
@@ -104,3 +108,14 @@ For Git histories involving commits with many files, GitHub won't allow you to e
 .. code-block:: bash
 
 	pushorigin BRANCH_NAME UPSTREAM_NAME
+
+Run Test Group
+==============
+
+This script makes it easier to re-run Liferay 6.2 integration tests by automatically identifying the test group (generated from ``ant -f build-test.xml record-test-class-file-names``) instead of having you find it manually.
+
+.. code-block:: bash
+
+	itest TestClassName
+
+The script also copies database properties from an existing ``${LIFERAY_HOME}/portal-ext.properties``, or will automatically create a Docker container with MySQL 5.6 and a clean database if no such file is present, which is what the integration tests attempt to use by default.
