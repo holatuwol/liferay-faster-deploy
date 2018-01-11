@@ -20,28 +20,34 @@ downloadbranch() {
 
 	# Rebase against the acquired hash if necessary
 
-	if [ "$CURRENT_BRANCH" != "$BASE_BRANCH" ]; then
-		BASE_HASH=$(git log -1 --pretty='%H' $BASE_BRANCH)
+	BASE_HASH=$(git log -1 --pretty='%H' $BASE_BRANCH)
 
-		if [ "$BASE_HASH" != "$NEW_BASELINE" ]; then
-			NEEDS_STASH=$(git status -s | grep -v '??')
+	if [ "$BASE_HASH" != "$NEW_BASELINE" ]; then
+		NEEDS_STASH=$(git status -s | grep -v '??')
 
-			if [ "" != "$NEEDS_STASH" ]; then
-				git stash
-			fi
+		if [ "" != "$NEEDS_STASH" ]; then
+			git stash
+		fi
 
-			git checkout -f $BASE_BRANCH && git rebase $NEW_BASELINE && git reset --hard $NEW_BASELINE && git checkout $CURRENT_BRANCH
+		if [ "$CURRENT_BRANCH" != "$BASE_BRANCH" ]; then
+			git checkout -f $BASE_BRANCH
+		fi
 
-			REBASE_STATUS=$?
+		git rebase $NEW_BASELINE && git reset --hard $NEW_BASELINE
 
-			if [ "" != "$NEEDS_STASH" ]; then
-				git stash pop
-			fi
+		REBASE_STATUS=$?
 
-			if [[ 0 -ne $REBASE_STATUS ]]; then
-				echo "Failed to update base branch"
-				return $REBASE_STATUS
-			fi
+		if [ "$CURRENT_BRANCH" != "$BASE_BRANCH" ]; then
+			git checkout $CURRENT_BRANCH
+		fi
+
+		if [ "" != "$NEEDS_STASH" ]; then
+			git stash pop
+		fi
+
+		if [[ 0 -ne $REBASE_STATUS ]]; then
+			echo "Failed to update base branch"
+			return $REBASE_STATUS
 		fi
 	fi
 }
@@ -384,10 +390,7 @@ isbuildbranch() {
 }
 
 rebasebranch() {
-	git merge-base --is-ancestor $NEW_BASELINE $CURRENT_HASH
-
-	if [[ 0 -eq $? ]]; then
-		echo "$CURRENT_BRANCH is already rebased against $SHORT_NAME ($NEW_BASELINE)"
+	if rollbackbranch; then
 		return 0
 	fi
 
@@ -414,6 +417,67 @@ rebasebranch() {
 	fi
 
 	return $EXIT_STATUS
+}
+
+rollbackbranch() {
+	git merge-base --is-ancestor $NEW_BASELINE $CURRENT_HASH
+
+	if [[ 0 -ne $? ]]; then
+		return 1
+	fi
+
+	local CLOSEST_ANCESTOR=${SHORT_NAME}
+	local CLOSEST_COUNT=$(git log --pretty='%H' ${NEW_BASELINE}..${CURRENT_HASH} | wc -l)
+
+	for remote in $(git remote); do
+		local ANCESTOR=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/${remote}/${SHORT_NAME}$" | cut -d'/' -f 3,4)
+
+		if [ "" == "$ANCESTOR" ]; then
+			continue
+		fi
+
+		local COUNT=$(git log --pretty='%H' ${ANCESTOR}..${CURRENT_HASH} | wc -l)
+
+		if [[ $COUNT -lt $CLOSEST_COUNT ]]; then
+			CLOSEST_ANCESTOR=$ANCESTOR
+			CLOSEST_COUNT=$COUNT
+		fi
+	done
+
+	if [ "$SHORT_NAME" == "$CLOSEST_ANCESTOR" ]; then
+		echo "$CURRENT_BRANCH is already rebased against $SHORT_NAME ($NEW_BASELINE)"
+		return 0
+	fi
+
+	echo "Detected a large deviation from the build reference commit ${NEW_BASELINE} due to rebase against ${CLOSEST_ANCESTOR}"
+	echo "Saving existing $CURRENT_BRANCH to ${CURRENT_BRANCH}-old in case of failure"
+
+	git branch -m ${CURRENT_BRANCH} ${CURRENT_BRANCH}-old
+
+	echo "Attempting to rollback to reference commit ${NEW_BASELINE}"
+
+	git checkout -b ${CURRENT_BRANCH}
+	git format-patch --relative ${CLOSEST_ANCESTOR}
+	git reset --hard ${SHORT_NAME}
+
+	set -o pipefail
+	ls -1 *.patch | sort | xargs git am
+	EXIT_STATUS=$?
+	set +o pipefail
+
+	rm *.patch
+
+	if [[ 0 -eq $EXIT_STATUS ]]; then
+		echo "Rollback to reference commit succeeded, deleting ${CURRENT_BRANCH}-old"
+		git branch -D ${CURRENT_BRANCH}-old
+		return 0
+	fi
+
+	echo "Rollback to reference commit failed. Build may end up being as slow as a regular ant all!"
+
+	git checkout -f ${CURRENT_BRANCH}-old
+	git branch -D ${CURRENT_BRANCH}
+	git branch -m ${CURRENT_BRANCH}-old ${CURRENT_BRANCH}
 }
 
 updatetags() {
