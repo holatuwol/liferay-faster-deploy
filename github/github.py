@@ -31,7 +31,7 @@ def get_relpath(needle):
 	if files is not None and len(files) == 1:
 		return files[0]
 
-	if len(folders) == 1:
+	if folders is not None and len(folders) == 1:
 		return folders[0]
 
 	print('Unable to find a file or folder matching %s' % needle)
