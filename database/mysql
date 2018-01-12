@@ -1,12 +1,6 @@
 #!/bin/bash
 
-appserverprops() {
-	. $(dirname ${BASH_SOURCE[0]})/../appserverprops
-}
-
-getparent() {
-	. $(dirname ${BASH_SOURCE[0]})/../getparent
-}
+. "$(dirname ${BASH_SOURCE[0]})/common"
 
 startdatabase() {
 	if docker inspect ${CONTAINER_NAME} 2>&1 > /dev/null; then
@@ -85,14 +79,7 @@ waitfor_database() {
 	echo 'Database startup complete!'
 }
 
-appserverprops
-
-if [ "" == "${LIFERAY_HOME}" ]; then
-	echo 'Please either define LIFERAY_HOME or navigate to a portal source folder'
-	exit 1
-fi
-
-getparent
+DB_TYPE='mysql'
 
 if [ "ee-6.0.x" == "${BASE_BRANCH}" ] || [ "ee-6.1.x" == "${BASE_BRANCH}" ]; then
 	MYSQL_VERSION='5.5'
@@ -102,15 +89,4 @@ else
 	MYSQL_VERSION='5.7'
 fi
 
-if [ "" == "$1" ]; then
-	CONTAINER_NAME=$(git rev-parse --abbrev-ref HEAD)
-
-	if [ "" == "${CONTAINER_NAME}" ]; then
-		echo 'Unable to determine branch name from detached head'
-		exit 1
-	fi
-else
-	CONTAINER_NAME=$1
-fi
-
-startdatabase && updateprops && waitfor_database
+runcontainer

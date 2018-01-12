@@ -1,0 +1,51 @@
+#!/bin/bash
+
+appserverprops() {
+	. $(dirname ${BASH_SOURCE[0]})/../appserverprops
+}
+
+containername() {
+	if [ "" != "$1" ]; then
+		CONTAINER_NAME=${1}-${DB_TYPE}
+		return
+	fi
+
+	local BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
+
+	if [[ ${BRANCH_NAME} == LPS-* ]] || [[ ${BRANCH_NAME} == LPE-* ]] || [[ ${BRANCH_NAME} == LPP-* ]] || [[ ${BRANCH_NAME} == BPR-* ]]; then
+		BRANCH_NAME=$(echo "${BRANCH_NAME}" | grep -o '^[^-]*-[0-9]*')
+	else
+		BRANCH_NAME=
+	fi
+
+	local SUFFIX=
+
+	if [[ ${BASE_BRANCH} == ee-* ]]; then
+		SUFFIX=$(echo ${BASE_BRANCH} | cut -d'-' -f 2- | tr -d '.')-${DB_TYPE}
+	else
+		SUFFIX=$(echo ${BASE_BRANCH} | cut -d'-' -f 1 | tr -d '.')-${DB_TYPE}
+	fi
+
+	if [ "" == "${BRANCH_NAME}" ]; then
+		CONTAINER_NAME=${SUFFIX}
+	else
+		CONTAINER_NAME="${BRANCH_NAME}-${SUFFIX}"
+	fi
+}
+
+getparent() {
+	. $(dirname ${BASH_SOURCE[0]})/../getparent
+}
+
+runcontainer() {
+	containername $1 && startdatabase && updateprops && waitfor_database
+}
+
+appserverprops
+
+if [ "" == "${LIFERAY_HOME}" ]; then
+	echo 'Please either define LIFERAY_HOME or navigate to a portal source folder'
+	exit 1
+fi
+
+getparent

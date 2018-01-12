@@ -1,8 +1,6 @@
 #!/bin/bash
 
-appserverprops() {
-	. $(dirname ${BASH_SOURCE[0]})/../appserverprops
-}
+. "$(dirname ${BASH_SOURCE[0]})/common"
 
 startdatabase() {
 	if docker inspect ${CONTAINER_NAME} 2>&1 > /dev/null; then
@@ -74,26 +72,7 @@ waitfor_database() {
 	rm -f ${LIFERAY_HOME}/oracle/init.sql
 }
 
-if [ "" == "${LIFERAY_HOME}" ]; then
-	echo 'Please either define LIFERAY_HOME or navigate to a portal source folder'
-	exit 1
-fi
-
-appserverprops
-
+DB_TYPE='oracle'
 ORACLE_VERSION='oracle/database:12.2.0.1-se2'
 
-if [ "" == "$1" ]; then
-	CONTAINER_NAME=$(git rev-parse --abbrev-ref HEAD)
-
-	if [ "" == "${CONTAINER_NAME}" ]; then
-		echo 'Unable to determine branch name from detached head'
-		exit 1
-	fi
-
-	echo "No container name specified, using current branch ${CONTAINER_NAME}"
-else
-	CONTAINER_NAME=$1
-fi
-
-startdatabase && updateprops && waitfor_database
+runcontainer
