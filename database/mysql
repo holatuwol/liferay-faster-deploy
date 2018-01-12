@@ -4,6 +4,10 @@ appserverprops() {
 	. $(dirname ${BASH_SOURCE[0]})/../appserverprops
 }
 
+getparent() {
+	. $(dirname ${BASH_SOURCE[0]})/../getparent
+}
+
 startdatabase() {
 	if docker inspect ${CONTAINER_NAME} 2>&1 > /dev/null; then
 		echo "Using existing container ${CONTAINER_NAME}"
@@ -17,15 +21,21 @@ startdatabase() {
 		--detach --expose 3306 mysql:${MYSQL_VERSION} \
 		--character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
 
-	echo '
+	local INNODB_FILE_FORMAT='Barracuda'
+
+	if [ "5.5" == "${MYSQL_VERSION}" ]; then
+		INNODB_FILE_FORMAT='Antelope'
+	fi
+
+	echo "
 [mysqld]
-innodb-file-format    = Barracuda
+innodb-file-format    = ${INNODB_FILE_FORMAT}
 innodb-file-per-table
 innodb-large-prefix
 
 character-set-server  = utf8mb4
 collation-server      = utf8mb4_unicode_ci
-' > runtime.cnf
+" > runtime.cnf
 
 	docker cp runtime.cnf ${CONTAINER_NAME}:/etc/mysql/conf.d/
 	rm runtime.cnf
@@ -82,24 +92,25 @@ if [ "" == "${LIFERAY_HOME}" ]; then
 	exit 1
 fi
 
-if [ "" == "$1" ]; then
+getparent
+
+if [ "ee-6.0.x" == "${BASE_BRANCH}" ] || [ "ee-6.1.x" == "${BASE_BRANCH}" ]; then
+	MYSQL_VERSION='5.5'
+elif [ "ee-6.2.x" == "${BASE_BRANCH}" ]; then
+	MYSQL_VERSION='5.6'
+else
 	MYSQL_VERSION='5.7'
+fi
+
+if [ "" == "$1" ]; then
 	CONTAINER_NAME=$(git rev-parse --abbrev-ref HEAD)
 
 	if [ "" == "${CONTAINER_NAME}" ]; then
 		echo 'Unable to determine branch name from detached head'
 		exit 1
 	fi
-
-	echo 'No MySQL version specified, assuming MySQL 5.7'
-	echo "No container name specified, using current branch ${CONTAINER_NAME}"
-elif [ "" == "$2" ]; then
-	echo 'No MySQL version specified, assuming MySQL 5.7'
-	MYSQL_VERSION='5.7'
-	CONTAINER_NAME=$1
 else
-	MYSQL_VERSION=$1
-	CONTAINER_NAME=$2
+	CONTAINER_NAME=$1
 fi
 
 startdatabase && updateprops && waitfor_database
