@@ -94,3 +94,4 @@ def getparent(check_tags):
 
 if __name__ == '__main__':
 	print(getparent(True))
+	print(getparent(False))

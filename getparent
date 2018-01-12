@@ -1,18 +1,14 @@
 #!/bin/bash
 
 getparent() {
-	local PARENT=$(python "$(dirname "${BASH_SOURCE[0]}")/getparent.py")
+	local PARENTS=$(python "$(dirname "${BASH_SOURCE[0]}")/getparent.py")
 
-	if [ "" == "${PARENT}" ]; then
-		return 1
+	BASE_TAG=$(echo "${PARENTS}" | head -1)
+	BASE_BRANCH=$(echo "${PARENTS}" | tail -1)
+
+	if [ "${BASE_TAG}" == "${BASE_BRANCH}" ]; then
+		BASE_TAG=
 	fi
-
-	if [ "" != "$(git tag | grep -F ${PARENT} | head -1)" ]; then
-		BASE_TAG=${PARENT}
-		return 0
-	fi
-
-	BASE_BRANCH=${PARENT}
 }
 
 getparent
