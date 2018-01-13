@@ -1,14 +1,20 @@
 import os
-import subprocess
+from subprocess import Popen, PIPE
+
+try:
+	from subprocess import DEVNULL
+except ImportError:
+	import os
+	DEVNULL = open(os.devnull, 'wb')
 
 global git_root
 git_root = None
 
-def _git(cmd, args):
+def _git(cmd, args, stderr=PIPE):
 	global git_root
 
 	cwd = os.getcwd() if git_root is None else git_root
-	pipe = subprocess.Popen(['git', cmd] + list(args), cwd=cwd, stdout=subprocess.PIPE)
+	pipe = Popen(['git', cmd] + list(args), cwd=cwd, stdout=PIPE, stderr=stderr)
 	out, err = pipe.communicate()
 
 	return out.decode('UTF-8', 'replace').strip()
@@ -40,6 +46,6 @@ if git_root is None or git_root == '':
 	git_root = None
 else:
 	try:
-		current_branch = rev_parse('--abbrev-ref', 'HEAD')
+		current_branch = rev_parse('--abbrev-ref', 'HEAD', DEVNULL)
 	except:
 		current_branch = 'HEAD'
