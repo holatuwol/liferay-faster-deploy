@@ -10,12 +10,22 @@ buildopts() {
 	ANT_OPTS='-Xms2g -Xmx2g'
 
 	if [[ 8 -gt $JAVA_VERSION ]]; then
-		ANT_OPTS="$ANT_OPTS -XX:MaxPermSize=1g"
+		ANT_OPTS="$ANT_OPTS -XX:MaxPermSize=512m"
 	fi
 
 	export ANT_OPTS
 
-	GRADLE_OPTS='-Xms4g -Xmx4g -Dorg.gradle.workers.max=1'
+	local TOTAL_MEMORY=10000000
+
+	if [ "" != "$(which vmstat)" ]; then
+		TOTAL_MEMORY=$(vmstat -s | grep -F 'total memory' | awk '{ print $1 }')
+	fi
+
+	if [ "" == "${TOTAL_MEMORY}" ] || [ 10000000 -gt $TOTAL_MEMORY ]; then
+		GRADLE_OPTS='-Xms3g -Xmx3g -Dorg.gradle.workers.max=1'
+	else
+		GRADLE_OPTS='-Xms4g -Xmx4g -Dorg.gradle.workers.max=1'
+	fi
 
 	if [[ 8 -gt $JAVA_VERSION ]]; then
 		GRADLE_OPTS="$GRADLE_OPTS -XX:MaxPermSize=512m"
