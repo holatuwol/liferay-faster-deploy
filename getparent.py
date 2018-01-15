@@ -12,12 +12,12 @@ def get_file_property(file_name, property):
 	with open(file_name, 'r') as file:
 		lines = file.readlines()
 		lines = [line.strip() for line in lines if line.find(needle) > -1]
-		return lines[0].split('=')[1]
+		return lines[0].split('=')[1] if len(lines) > 0 else None
 
 def get_git_file_property(commit, file_name, property):
 	lines = git.show('%s:%s' % (commit, file_name)).split('\n')
-	full_version = [line.strip() for line in lines if line.find(property) > -1][0].split('=')[1]
-	return full_version
+	lines = [line.strip() for line in lines if line.find(property) > -1]
+	return lines[0].split('=')[1] if len(lines) > 0 else None
 
 def getparent(check_tags):
 
@@ -65,7 +65,7 @@ def getparent(check_tags):
 				base_branch = get_git_file_property(commit, 'build.properties', 'git.working.branch.name')
 
 		if base_branch is None:
-			base_branch = current_branch
+			base_branch = current_branch if current_branch != 'HEAD' else '7.0.x'
 		elif base_branch == 'ee-7.0.x':
 			base_branch = '7.0.x'
 		elif isdir(join(git_root, 'modules/private')) and len(git.ls_files('build.properties').strip()) == 0:
