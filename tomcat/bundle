@@ -1,0 +1,32 @@
+#!/bin/bash
+
+docker stop test
+docker rm -v test
+
+if [ ! -d $HOME/.liferay/release ]; then
+	mkdir -p $HOME/.liferay/release
+fi
+
+if [ "$PWD" != "$HOME" ] && [ "" == "${LIFERAY_HOME_VOLUME}" ]; then
+	if [ -f portal-ext.properties ]; then
+		LIFERAY_HOME_VOLUME="-v ${PWD}:/build"
+	elif [ -d drivers ]; then
+		LIFERAY_HOME_VOLUME="-v ${PWD}:/build"
+	elif [ -d patches ]; then
+		LIFERAY_HOME_VOLUME="-v ${PWD}:/build"
+	elif [ -d bundles ]; then
+		LIFERAY_HOME_VOLUME="-v ${PWD}/bundles:/build"
+	fi
+fi
+
+LIFERAY_HOME_MOUNT=
+
+if [ "" != "${LIFERAY_HOME_VOLUME}" ]; then
+	LIFERAY_HOME_MOUNT="-v ${LIFERAY_HOME_VOLUME}"
+fi
+
+if [ $1 == portal-* ] || [ $1 == *-6210 ] || [ $1 == *-6210.zip ]; then
+	docker run --name test ${LIFERAY_HOME_MOUNT} -v $HOME/.liferay/release:/release mcd-nightly-jdk7 $1
+else
+	docker run --name test ${LIFERAY_HOME_MOUNT} -v $HOME/.liferay/release:/release mcd-nightly-jdk8 $1
+fi
