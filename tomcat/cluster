@@ -90,7 +90,7 @@ preparenode() {
 	echo "
 include-and-override=$LIFERAY_HOME/portal-ext.properties
 
-cluster.link.autodetect.address=127.0.0.1:80
+cluster.link.autodetect.address=
 
 cluster.link.enabled=true
 cluster.link.channel.properties.control=tcp.xml
@@ -102,12 +102,13 @@ index.read.only=false
 lucene.replicate.write=true
 portal.instance.protocol=http
 portal.instance.http.port=8${1}80
+portal.instance.inet.socket.address=localhost:8${1}80
 cluster.link.node.bootup.response.timeout=300000
 " > ${NODE_ROOT}/portal-ext.properties
 
 	mkdir -p ${NODE_ROOT}/deploy
 
-	echo "pushd ${NODE_ROOT}/$TOMCAT_FOLDER/bin; rm -f ../logs/*; ./startup.sh; popd; sleep 5" >> ${LIFERAY_HOME}/start_cluster
+	echo "pushd ${NODE_ROOT}/$TOMCAT_FOLDER/bin; rm -f ../logs/*; ./startup.sh; popd" >> ${LIFERAY_HOME}/start_cluster
 	echo "pushd ${NODE_ROOT}/$TOMCAT_FOLDER/bin; ./shutdown.sh; popd" >> ${LIFERAY_HOME}/stop_cluster
 
 	chmod u+x ${NODE_ROOT}/${TOMCAT_FOLDER}/bin/*.sh

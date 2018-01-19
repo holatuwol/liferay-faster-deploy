@@ -72,7 +72,7 @@ catalinastart() {
 		javahome 8
 	fi
 
-	if [ -f $LIFERAY_HOME/start_cluster ]; then
+	if [ "init" != "$1" ] && [ -f $LIFERAY_HOME/start_cluster ]; then
 		$LIFERAY_HOME/start_cluster
 		return 0
 	fi
@@ -154,4 +154,4 @@ tcnative() {
 	./configure --with-apr=/usr --prefix=$CATALINA_HOME/lib/apr && make && make install
 }
 
-catalinastart
+catalinastart $@
