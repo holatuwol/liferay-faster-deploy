@@ -121,8 +121,9 @@ cluster.link.node.bootup.response.timeout=300000
 	echo "
 JPDA_ADDRESS=localhost:8${1}00" >> ${NODE_ROOT}/${TOMCAT_FOLDER}/bin/setenv.sh
 
-	echo -n 'CATALINA_OPTS="${CATALINA_OPTS} -Djgroups.bind_addr=127.0.0.1 -Djgroups.tcpping.initial_hosts=' >> ${NODE_ROOT}/${TOMCAT_FOLDER}/bin/setenv.sh
+	echo 'CATALINA_OPTS="${CATALINA_OPTS} -DjvmRoute=node'${1}'"' >> ${NODE_ROOT}/${TOMCAT_FOLDER}/bin/setenv.sh
 
+	echo -n 'CATALINA_OPTS="${CATALINA_OPTS} -Djgroups.bind_addr=127.0.0.1 -Djgroups.tcpping.initial_hosts=' >> ${NODE_ROOT}/${TOMCAT_FOLDER}/bin/setenv.sh
 	seq -f '78%02g' $(expr $NODE_COUNT '*' 2) | awk '{ print "localhost[" $1 "]" }' | perl -pne 'chomp if eof' | tr '\n' ',' >> ${NODE_ROOT}/${TOMCAT_FOLDER}/bin/setenv.sh
 
 	echo '"' >> ${NODE_ROOT}/${TOMCAT_FOLDER}/bin/setenv.sh
