@@ -3,7 +3,7 @@
 buildopts() {
 	JAVA_VERSION=0
 
-	if [ "" != "$(which java)" ]; then
+	if [ "" != "$(which java 2> /dev/null)" ]; then
 		JAVA_VERSION=$(java -version 2>&1 | head -1 | cut -d'"' -f 2 | cut -d'.' -f 2)
 	fi
 
@@ -17,7 +17,7 @@ buildopts() {
 
 	local TOTAL_MEMORY=10000000
 
-	if [ "" != "$(which vmstat)" ]; then
+	if [ "" != "$(which vmstat 2> /dev/null)" ]; then
 		TOTAL_MEMORY=$(vmstat -s | grep -F 'total memory' | awk '{ print $1 }')
 	fi
 
@@ -44,7 +44,7 @@ checkjava() {
 	if [[ $MINIMUM_JAVA_VERSION -gt $JAVA_VERSION ]]; then
 		javahome $MINIMUM_JAVA_VERSION
 
-		if [ "" != "$(which java)" ]; then
+		if [ "" != "$(which java 2> /dev/null)" ]; then
 			buildopts
 		fi
 	fi
