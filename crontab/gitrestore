@@ -11,3 +11,7 @@ rm source.tar
 cd source
 git checkout .
 git gc
+
+cd ../liferay-binaries-cache-2017
+git checkout .
+git gc

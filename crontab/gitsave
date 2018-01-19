@@ -21,6 +21,15 @@ if [ ! -d source/.git ]; then
 	(git tag | xargs git tag -d) > /dev/null
 fi
 
+if [ -d liferay-binaries-cache-2017/.git ]; then
+
+	# Download from mirrors
+
+	wget http://mirrors/github.com/liferay/liferay-binaries-cache-2017.tar.gz
+	tar -zxf liferay-binaries-cache-2017.tar.gz
+	rm liferay-binaries-cache-2017.tar.gz
+fi
+
 # Create a new archive
 
 cd source
@@ -28,6 +37,6 @@ git clean -xdf
 git gc
 cd ..
 
-tar -cf source.tar source/.git
+tar -cf source.tar source/.git liferay-binaries-cache-2017/.git
 aws s3 cp source.tar s3://$S3_BUCKET/gh/
 rm source.tar
