@@ -72,6 +72,11 @@ catalinastart() {
 		javahome 8
 	fi
 
+	if [ -f $LIFERAY_HOME/start_cluster ]; then
+		$LIFERAY_HOME/start_cluster
+		return 0
+	fi
+
 	# If the server is already running, we won't need to start it.
 	# Check if the server is running.
 

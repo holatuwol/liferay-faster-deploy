@@ -1,0 +1,129 @@
+#!/bin/bash
+
+appserverprops() {
+	. $(dirname ${BASH_SOURCE[0]})/../appserverprops
+}
+
+cluster() {
+	CLUSTER_ROOT=$(dirname $LIFERAY_HOME)
+
+	for file in $(ls -1 $LIFERAY_HOME | grep '^tomcat'); do
+		TOMCAT_FOLDER=$file
+	done
+
+	modjk
+
+	echo > $LIFERAY_HOME/start_cluster
+	echo > $LIFERAY_HOME/stop_cluster
+
+	chmod u+x $LIFERAY_HOME/start_cluster
+	chmod u+x $LIFERAY_HOME/stop_cluster
+
+	for i in $(seq $NODE_COUNT); do
+		preparenode $i
+	done
+
+	sudo service apache2 reload
+}
+
+modjk() {
+	echo '
+<VirtualHost liferay:80>
+	SetOutputFilter DEFLATE
+	JkMount / balancer
+	JkMount /c balancer
+	JkMount /c/* balancer
+	JkMount /combo balancer
+	JkMount /combo/* balancer
+	JkMount /image/* balancer
+	JkMount /documents/* balancer
+	JkMount /o/* balancer
+	JkMount /web/* balancer
+	JkMount /group/* balancer
+	JkMount /user/* balancer
+	JkMount /html/* balancer
+</VirtualHost>
+' > /etc/apache2/sites-available/001-liferay.conf
+
+	echo '
+worker.list=balancer,status
+worker.status.type=status
+
+worker.template.type=ajp13
+worker.template.socket_keepalive=true
+worker.template.lbfactor=1
+' > /etc/libapache2-mod-jk/workers.properties
+
+	NODE_LIST=$()
+
+	echo -n '
+worker.balancer.type=lb
+worker.balancer.sticky_session=1
+worker.balancer.balance_workers=' >> /etc/libapache2-mod-jk/workers.properties
+
+	seq $NODE_COUNT | awk '{ print "node" $1 }' | perl -pne 'chomp if eof' | tr '\n' ',' >> /etc/libapache2-mod-jk/workers.properties
+
+	for i in $(seq $NODE_COUNT); do
+		echo "
+worker.node${i}.reference=worker.template
+worker.node${i}.host=127.0.0.1
+worker.node${i}.port=8${i}09
+" >> /etc/libapache2-mod-jk/workers.properties
+	done
+}
+
+preparenode() {
+	local NODE_ROOT=${CLUSTER_ROOT}/node${1}
+
+	rm -rf ${NODE_ROOT}
+
+	mkdir -p ${NODE_ROOT}
+
+	cp -R ${LIFERAY_HOME}/$TOMCAT_FOLDER ${NODE_ROOT}/
+
+	if [ -d $LIFERAY_HOME/osgi ]; then
+		cp -R $LIFERAY_HOME/osgi ${NODE_ROOT}/
+	fi
+
+	sed -i "s/\"80/\"8${i}/g" ${NODE_ROOT}/${TOMCAT_FOLDER}/conf/server.xml
+
+	echo "
+include-and-override=$LIFERAY_HOME/portal-ext.properties
+
+cluster.link.autodetect.address=127.0.0.1:80
+
+cluster.link.enabled=true
+cluster.link.channel.properties.control=tcp.xml
+cluster.link.channel.properties.transport.0=tcp.xml
+
+ehcache.cluster.link.replication.enabled=true
+
+index.read.only=false
+lucene.replicate.write=true
+portal.instance.protocol=http
+portal.instance.http.port=8${1}80
+cluster.link.node.bootup.response.timeout=300000
+" > ${NODE_ROOT}/portal-ext.properties
+
+	mkdir -p ${NODE_ROOT}/deploy
+
+	echo "pushd ${NODE_ROOT}/$TOMCAT_FOLDER/bin; rm -f ../logs/*; ./startup.sh; popd; sleep 5" >> ${LIFERAY_HOME}/start_cluster
+	echo "pushd ${NODE_ROOT}/$TOMCAT_FOLDER/bin; ./shutdown.sh; popd" >> ${LIFERAY_HOME}/stop_cluster
+
+	chmod u+x ${NODE_ROOT}/${TOMCAT_FOLDER}/bin/*.sh
+
+	echo -n '
+CATALINA_OPTS="${CATALINA_OPTS} -Djgroups.bind_addr=127.0.0.1 -Djgroups.tcpping.initial_hosts=' >> ${NODE_ROOT}/${TOMCAT_FOLDER}/bin/setenv.sh
+
+	seq -f '78%02g' $(expr $NODE_COUNT '*' 2) | awk '{ print "localhost[" $1 "]" }' | perl -pne 'chomp if eof' | tr '\n' ',' >> ${NODE_ROOT}/${TOMCAT_FOLDER}/bin/setenv.sh
+
+	echo '"' >> ${NODE_ROOT}/${TOMCAT_FOLDER}/bin/setenv.sh
+}
+
+NODE_COUNT=$1
+
+if [ "" == "$NODE_COUNT" ]; then
+	NODE_COUNT=2
+fi
+
+appserverprops && cluster
