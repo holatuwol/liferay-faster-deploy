@@ -108,6 +108,11 @@ cluster.link.node.bootup.response.timeout=300000
 
 	mkdir -p ${NODE_ROOT}/deploy
 
+	rm -rf ${NODE_ROOT}/data/document_library
+
+	mkdir -p ${NODE_ROOT}/data
+	ln -s ${LIFERAY_HOME}/data/document_library ${NODE_ROOT}/data/document_library
+
 	echo "pushd ${NODE_ROOT}/$TOMCAT_FOLDER/bin; rm -f ../logs/*; ./startup.sh; popd" >> ${LIFERAY_HOME}/start_cluster
 	echo "pushd ${NODE_ROOT}/$TOMCAT_FOLDER/bin; ./shutdown.sh; popd" >> ${LIFERAY_HOME}/stop_cluster
 
