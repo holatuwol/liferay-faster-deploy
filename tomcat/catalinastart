@@ -7,21 +7,23 @@ catalinaconf() {
 
 	# Identify a usable port
 
-	for prefix in {80..99..1}; do
-		export TOMCAT_PORT_PREFIX=$prefix
-		TOMCAT_PORT_SUFFIX=80
-		TOMCAT_PORT=$TOMCAT_PORT_PREFIX$TOMCAT_PORT_SUFFIX
+	if [ "" != "$(which lsof 2> /dev/null)" ]; then
+		for prefix in {80..99..1}; do
+			export TOMCAT_PORT_PREFIX=$prefix
+			TOMCAT_PORT_SUFFIX=80
+			TOMCAT_PORT=$TOMCAT_PORT_PREFIX$TOMCAT_PORT_SUFFIX
 
-		PROCESS_ID=$(lsof -b -a -i :$TOMCAT_PORT -t -c java)
+			PROCESS_ID=$(lsof -b -a -i :$TOMCAT_PORT -t -c java)
 
-		if [ "" != "$PROCESS_ID" ]; then
-			PROCESS_ID=$(ps --no-headers $PROCESS_ID | grep tomcat | sed 's/^ *//g' | cut -d' ' -f 1)
-		fi
+			if [ "" != "$PROCESS_ID" ]; then
+				PROCESS_ID=$(ps --no-headers $PROCESS_ID | grep tomcat | sed 's/^ *//g' | cut -d' ' -f 1)
+			fi
 
-		if [ "" == "$PROCESS_ID" ]; then
-			break
-		fi
-	done
+			if [ "" == "$PROCESS_ID" ]; then
+				break
+			fi
+		done
+	fi
 
 	# Update the port in server.xml to the usable prot
 

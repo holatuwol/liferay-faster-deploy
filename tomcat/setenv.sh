@@ -69,8 +69,13 @@ fi
 
 mkdir -p $CATALINA_BASE/../deploy
 
-export JVM_ROUTE="$(hostname -s).$(pwd | cut -d'/' -f 4)"
-export CATALINA_OPTS="-DjvmRoute=$JVM_ROUTE"
+if hostname -s 2> /dev/null; then
+	export JVM_ROUTE="$(hostname -s).$(pwd | cut -d'/' -f 4)"
+	export CATALINA_OPTS="-DjvmRoute=$JVM_ROUTE"
+	IP_ADDRESS=$(hostname -I | cut -d' ' -f 1)
+else
+	IP_ADDRESS='127.0.0.1'
+fi
 
 export CATALINA_OPTS="$CATALINA_OPTS -Xms2g -Xmx2g -Xmn500m -Xss2m"
 
@@ -91,7 +96,5 @@ export JPDA_OPTS="-Xdebug -Xrunjdwp:transport=dt_socket,address=$DEBUG_PORT,serv
 
 JMX_PORT_SUFFIX=99
 JMX_PORT=$TOMCAT_PORT_PREFIX$JMX_PORT_SUFFIX
-
-IP_ADDRESS=$(hostname -I | cut -d' ' -f 1)
 
 export CATALINA_OPTS="$CATALINA_OPTS -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=$JMX_PORT -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false"
