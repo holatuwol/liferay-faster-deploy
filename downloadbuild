@@ -1,5 +1,9 @@
 #!/bin/bash
 
+appserverprops() {
+	. $(dirname "${BASH_SOURCE[0]}")/appserverprops
+}
+
 downloadbranch() {
 	SHORT_NAME=$(echo $BASE_BRANCH | sed 's/ee-//g' | sed 's/\.//g')
 	NEW_BASELINE=
@@ -302,17 +306,8 @@ getbuildname() {
 gettargetfolder() {
 	CURRENT_BRANCH=$(git symbolic-ref --short HEAD 2> /dev/null)
 
-	# Check for app.server.$USER.properties
-
-	if [ ! -f $GIT_ROOT/app.server.$USER.properties ]; then
-		echo "Missing $GIT_ROOT/app.server.$USER.properties"
-		return 1
-	fi
-
-	LIFERAY_HOME=$(grep '^\s*app.server.parent.dir=' "$GIT_ROOT/app.server.$USER.properties" | cut -d'=' -f 2)
-
 	if [ "" == "$LIFERAY_HOME" ]; then
-		echo "Did not set LIFERAY_HOME in app.server.$USER.properties"
+		echo "Did not set LIFERAY_HOME"
 		return 1
 	fi
 
@@ -508,5 +503,7 @@ updatetags() {
 }
 
 CURRENT_HASH=$(git log -1 --pretty='%H')
+
+appserverprops
 
 downloadbuild $@
