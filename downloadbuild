@@ -385,17 +385,21 @@ isbuildbranch() {
 }
 
 rebasebranch() {
-	if rollbackbranch; then
-		return 0
-	fi
-
-	echo "Rebasing against $SHORT_NAME ($NEW_BASELINE)"
-
 	local STASH=$(git status -s | grep -v '??')
 
 	if [ "" != "$STASH" ]; then
 		git stash
 	fi
+
+	if rollbackbranch; then
+		if [ "" != "$STASH" ]; then
+			git stash pop
+		fi
+
+		return 0
+	fi
+
+	echo "Rebasing against $SHORT_NAME ($NEW_BASELINE)"
 
 	git rebase $NEW_BASELINE
 	EXIT_STATUS=$?
