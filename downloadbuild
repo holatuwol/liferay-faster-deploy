@@ -262,7 +262,7 @@ getbuild() {
 	fi
 
 	if [ "" != "$2" ]; then
-		mv ${LOCAL_NAME} $2
+		mv ${LOCAL_NAME}.tmp $2
 	else
 		mv ${LOCAL_NAME}.tmp ${LOCAL_NAME}
 	fi
