@@ -5,9 +5,9 @@ checkpackage() {
 		return 0
 	fi
 
-	if [ "" != "$(which conda)" ]; then
+	if [ "" != "$(which conda 2> /dev/null)" ]; then
 		conda install $package
-	elif [ "" != "$(which pip)" ]; then
+	elif [ "" != "$(which pip 2> /dev/null)" ]; then
 		pip install $package
 	else
 		echo "Neither pip nor conda are available on the path"

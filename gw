@@ -29,8 +29,8 @@ findgradle() {
 
 	echo 'Unable to find the gradlew binary'
 
-	if [ "" != "$(which gradle)" ]; then
-		echo "Falling back to gradle on the path: $(which gradle)"
+	if [ "" != "$(which gradle 2> /dev/null)" ]; then
+		echo "Falling back to gradle on the path: $(which gradle 2> /dev/null)"
 		return 0
 	fi
 

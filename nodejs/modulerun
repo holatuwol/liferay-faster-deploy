@@ -33,7 +33,7 @@ modulerungw() {
 }
 
 modulerunyarn() {
-	if [ "" == "$(which yarn)" ]; then
+	if [ "" == "$(which yarn 2> /dev/null)" ]; then
 		return 0
 	fi
 

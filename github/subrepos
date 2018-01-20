@@ -59,7 +59,7 @@ if [ "" == "$SUBREPO_ROOT" ]; then
 	exit 1
 fi
 
-if [ "" == "$(which hub)" ]; then
+if [ "" == "$(which hub 2> /dev/null)" ]; then
 	echo 'Please make sure hub is available on the path'
 	echo 'https://github.com/github/hub'
 	exit 1

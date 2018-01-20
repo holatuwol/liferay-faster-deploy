@@ -36,7 +36,7 @@ buildprops() {
 
 	# If we're on an older CentOS server, we can't use the node.js SASS compiler
 
-	if [ "" != "$(which rpm)" ]; then
+	if [ "" != "$(which rpm 2> /dev/null)" ]; then
 		echo 'sass.compiler.class.name=ruby' >> $GIT_ROOT/build.$USER.properties
 	fi
 

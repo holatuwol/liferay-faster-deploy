@@ -2,13 +2,13 @@
 
 nodew() {
 	if [ "" == "$REPO_PATH" ]; then
-		if [ "" == "$(which $1)" ]; then
+		if [ "" == "$(which $1 2> /dev/null)" ]; then
 			echo 'Please clone the https://github.com/$2 repository'
 			echo 'and specify the path to the local directory where you cloned it'
 			return 1
 		fi
 
-		$(which $1) $@
+		$(which $1 2> /dev/null) $@
 		return $?
 	fi
 
@@ -22,7 +22,7 @@ nodew() {
 	if [ -f gulpfile.js ]; then
 		npm install
 		node_modules/gulp/bin/gulp.js build
-	elif [ "" == "$(which yarn)" ]; then
+	elif [ "" == "$(which yarn 2> /dev/null)" ]; then
 		npm install
 	else
 		yarn

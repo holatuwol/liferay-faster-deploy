@@ -171,8 +171,8 @@ setopts() {
 }
 
 tac() {
-	if [ "" != "$(which tac)" ]; then
-		$(which tac) $@
+	if [ "" != "$(which tac 2> /dev/null)" ]; then
+		$(which tac 2> /dev/null) $@
 	else
 		tail -r $@
 	fi
