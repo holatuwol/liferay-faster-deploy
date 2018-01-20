@@ -461,11 +461,16 @@ rollbackbranch() {
 	git reset --hard ${SHORT_NAME}
 
 	set -o pipefail
-	ls -1 *.patch | sort | xargs git am
-	EXIT_STATUS=$?
-	set +o pipefail
 
-	rm *.patch
+	EXIT_STATUS=0
+
+	if [ "" != "$(ls -1 | grep '\.patch$')" ]; then
+		ls -1 *.patch | sort | xargs git am
+		EXIT_STATUS=$?
+		rm -f *.patch
+	fi
+
+	set +o pipefail
 
 	if [[ 0 -eq $EXIT_STATUS ]]; then
 		echo "Rollback to reference commit succeeded, deleting ${CURRENT_BRANCH}-old"
