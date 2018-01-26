@@ -7,7 +7,6 @@
 	"fix-pack-base-6210-sp10": 4426578,
 	"fix-pack-base-6210-sp13": 13865311,
 	"fix-pack-base-6210-sp15": 41179606,
-	"fix-pack-base-6210-sp18": 82149622,
 	"fix-pack-base-6210-sp20": 71047949,
 	"fix-pack-base-7010": 47145401,
 	"fix-pack-de-1-7010": 46916878,
@@ -54,5 +53,7 @@
 	"fix-pack-de-35-7010": 85875955,
 	"fix-pack-de-35-7010-private": 85875954,
 	"fix-pack-de-36-7010": 86305560,
-	"fix-pack-de-36-7010-private": 86305559
+	"fix-pack-de-36-7010-private": 86305559,
+	"fix-pack-de-37-7010": 87090957,
+	"fix-pack-de-37-7010-private": 87090956
 }
