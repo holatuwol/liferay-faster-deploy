@@ -1,16 +1,7 @@
 #!/bin/bash
 
-patcher() {
-	. $(dirname "${BASH_SOURCE[0]}")/../setopts
-	. $(dirname "${BASH_SOURCE[0]}")/../getparent
-
-	if [ "" == "$BASE_TAG" ]; then
-		echo Could not identify baseline.
-		return 1
-	fi
-
+checkcommonerrors() {
 	local PATCHER_JSON=$(dirname "${BASH_SOURCE[0]}")/patcher.json
-
 	local BASELINE_ID=$(cat $PATCHER_JSON | jq '.["'$BASE_TAG'"]')
 
 	if [ "" == "$BASELINE_ID" ]; then
@@ -18,11 +9,9 @@ patcher() {
 		return 1
 	fi
 
-	local UPSTREAM=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/ee-${BASE_BRANCH}$" | cut -d'/' -f 3)
-
 	for TAG in $(cat $PATCHER_JSON | jq 'keys | .[]' | cut -d'"' -f 2); do
 		if [ "" == "$(git for-each-ref --format='%(refname)' refs/tags/$TAG)" ]; then
-			echo git fetch --no-tags $UPSTREAM tags/$TAG:refs/tags/$TAG
+			git fetch --no-tags git@github.com:liferay/liferay-portal-ee.git tags/$TAG:refs/tags/$TAG
 		fi
 	done
 
@@ -77,10 +66,23 @@ patcher() {
 		echo ""
 		return 1
 	fi
+}
 
-	# All pre-checks complete, launch a web browser
+patcher() {
+	. $(dirname "${BASH_SOURCE[0]}")/../setopts
+	. $(dirname "${BASH_SOURCE[0]}")/../getparent
 
-	local BRANCH=$(git symbolic-ref --short HEAD)
+	if [ "" == "$BASE_TAG" ]; then
+		echo Could not identify baseline.
+		return 1
+	fi
+
+	if ! checkcommonerrors; then
+		return 1
+	fi
+
+	# Check if there's a pre-existing patch in patcher portal
+
 	local ORIGIN=$(git remote -v | grep liferay-portal-ee | grep -vF ':liferay/' | cut -f 2 | cut -d' ' -f 1 | uniq)
 
 	if [ "" == "$(git for-each-ref --format='%(refname)' refs/$ORIGIN/$BRANCH)" ]; then
@@ -89,25 +91,7 @@ patcher() {
 		git push -f $ORIGIN $BRANCH
 	fi
 
-	local BASE_URL=
-
-	if [ "" != "$1" ]; then
-		BASE_URL="https://patcher.liferay.com/group/guest/patching/-/osb_patcher/fixes/$1/edit"
-	else
-		BASE_URL=https://patcher.liferay.com/group/guest/patching/-/osb_patcher/fixes/create
-	fi
-
-	local PATCHER_FIX_NAME=$(echo $BRANCH | grep -o "LP[EPS]-[0-9]*")
-
-	NS=_1_WAR_osbpatcherportlet_
-
-	if [[ "$BASE_TAG" == fix-pack-base-6130* ]] || [[ "$BASE_TAG" == fix-pack-base-6210* ]]; then
-		PRODUCT_VERSION=1
-	else
-		PRODUCT_VERSION=2
-	fi
-
-	python -m webbrowser "${BASE_URL}?${NS}productVersion=${PRODUCT_VERSION}&${NS}patcherProjectVersionId=${BASELINE_ID}&${NS}committish=${BRANCH}&${NS}patcherFixName=${PATCHER_FIX_NAME}&${NS}gitRemoteURL=$ORIGIN" &
+	python "$(dirname ${BASH_SOURCE[0]})/patcher.py" "${ORIGIN}"
 }
 
 patcher $@
