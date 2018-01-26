@@ -19,33 +19,39 @@ def _git(cmd, args, stderr=PIPE):
 
 	return out.decode('UTF-8', 'replace').strip()
 
-def describe(*args):
-	return _git('describe', args)
+def config(*args, stderr=PIPE):
+	return _git('config', args, stderr=stderr)
 
-def for_each_ref(*args):
-	return _git('for-each-ref', args)
+def describe(*args, stderr=PIPE):
+	return _git('describe', args, stderr=stderr)
 
-def ls_files(*args):
-	return _git('ls-files', args)
+def for_each_ref(*args, stderr=PIPE):
+	return _git('for-each-ref', args, stderr=stderr)
 
-def merge_base(*args):
-	return _git('merge-base', args)
+def log(*args, stderr=PIPE):
+	return _git('log', args, stderr=stderr)
 
-def remote(*args):
-	return _git('remote', args)
+def ls_files(*args, stderr=PIPE):
+	return _git('ls-files', args, stderr=stderr)
 
-def rev_parse(*args):
-	return _git('rev-parse', args)
+def merge_base(*args, stderr=PIPE):
+	return _git('merge-base', args, stderr=stderr)
 
-def show(*args):
-	return _git('show', args)
+def remote(*args, stderr=PIPE):
+	return _git('remote', args, stderr=stderr)
 
-git_root = rev_parse('--show-toplevel')
+def rev_parse(*args, stderr=PIPE):
+	return _git('rev-parse', args, stderr=stderr)
+
+def show(*args, stderr=PIPE):
+	return _git('show', args, stderr=stderr)
+
+git_root = rev_parse('--show-toplevel', stderr=DEVNULL)
 
 if git_root is None or git_root == '':
 	git_root = None
 else:
 	try:
-		current_branch = rev_parse('--abbrev-ref', 'HEAD', DEVNULL)
+		current_branch = rev_parse('--abbrev-ref', 'HEAD', stderr=DEVNULL)
 	except:
 		current_branch = 'HEAD'
