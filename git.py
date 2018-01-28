@@ -19,32 +19,32 @@ def _git(cmd, args, stderr=PIPE):
 
 	return out.decode('UTF-8', 'replace').strip()
 
-def config(*args, stderr=PIPE):
-	return _git('config', args, stderr=stderr)
+def config(*args, **kwargs):
+	return _git('config', args, **kwargs)
 
-def describe(*args, stderr=PIPE):
-	return _git('describe', args, stderr=stderr)
+def describe(*args, **kwargs):
+	return _git('describe', args, **kwargs)
 
-def for_each_ref(*args, stderr=PIPE):
-	return _git('for-each-ref', args, stderr=stderr)
+def for_each_ref(*args, **kwargs):
+	return _git('for-each-ref', args, **kwargs)
 
-def log(*args, stderr=PIPE):
-	return _git('log', args, stderr=stderr)
+def log(*args, **kwargs):
+	return _git('log', args, **kwargs)
 
-def ls_files(*args, stderr=PIPE):
-	return _git('ls-files', args, stderr=stderr)
+def ls_files(*args, **kwargs):
+	return _git('ls-files', args, **kwargs)
 
-def merge_base(*args, stderr=PIPE):
-	return _git('merge-base', args, stderr=stderr)
+def merge_base(*args, **kwargs):
+	return _git('merge-base', args, **kwargs)
 
-def remote(*args, stderr=PIPE):
-	return _git('remote', args, stderr=stderr)
+def remote(*args, **kwargs):
+	return _git('remote', args, **kwargs)
 
-def rev_parse(*args, stderr=PIPE):
-	return _git('rev-parse', args, stderr=stderr)
+def rev_parse(*args, **kwargs):
+	return _git('rev-parse', args, **kwargs)
 
-def show(*args, stderr=PIPE):
-	return _git('show', args, stderr=stderr)
+def show(*args, **kwargs):
+	return _git('show', args, **kwargs)
 
 git_root = rev_parse('--show-toplevel', stderr=DEVNULL)
 
