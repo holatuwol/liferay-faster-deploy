@@ -21,6 +21,9 @@ def get_git_file_property(commit, file_name, property):
 
 def getparent(check_tags):
 
+	if git_root is None:
+		return current_branch
+
 	# Find the current branch, accounting for detached head
 
 	if current_branch in ['master', 'master-private', '7.0.x', '7.0.x-private', 'ee-6.2.x', 'ee-6.1.x', 'ee-6.0.x']:
