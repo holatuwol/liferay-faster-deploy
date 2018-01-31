@@ -13,8 +13,10 @@ deletebranches() {
 		echo "$remote_branches" | grep -v '/master$' | grep -v '/ee-[0-9]*\.[0-9]*\.x$'
 	elif [ "git@github.com:liferay/liferay-plugins-ee.git" == "$remote_url" ]; then
 		echo "$remote_branches" | grep -v '/ee-[0-9]*\.[0-9]*\.x$' | grep -v '/ee-[0-9]*\.[0-9]*\.[0-9]*$'
-	else
+	elif [[ "$remote_url" == git@github.com:liferay/* ]]; then
 		echo "$remote_branches" | grep -v '/master$' | grep -v '/master-private$' | grep -v '/7.0.x-private$'
+	else
+		echo "$remote_branches" | grep -v '/master$'
 	fi
 }
 
@@ -23,7 +25,7 @@ fixupstream() {
 
 	for remote in $(git remote | grep upstream); do
 		local remote_url=$(git remote -v | grep "^${remote}\s" | awk '{ print $2 }' | uniq)
-		delete_branches=$(deletebranches $remote | cut -d'/' -f 4)
+		delete_branches=$(deletebranches $remote | cut -d'/' -f 4-)
 
 		for delete_branch in $delete_branches; do
 			git branch -d -r $remote/$delete_branch
