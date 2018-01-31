@@ -21,16 +21,19 @@ findbuild() {
 		echo "Downloading $FIX_NAME to check fixpack_documentation.xml"
 		echo $FILES_MIRROR/private/ee/fix-packs/$VERSION/hotfix/$FIX_NAME.zip
 		curl -s -O "$FILES_MIRROR/private/ee/fix-packs/$VERSION/hotfix/$FIX_NAME.zip"
-		DELETE_ZIP=true
 	fi
 
 	local BUILD_ID=$(unzip -p $FIX_NAME.zip fixpack_documentation.xml | grep -F '<build-id>' | cut -d'>' -f 2 | cut -d'<' -f 1)
 
-	if [ "" != "$DELETE_ZIP" ]; then
-		rm $FIX_NAME.zip
+	if [ "" != "${BUILD_ID}" ]; then
+		python -m webbrowser "https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/$BUILD_ID"
+		return 0
 	fi
 
-	python -m webbrowser "https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/$BUILD_ID"
+	local ACCOUNT_ID=$(unzip -p $FIX_NAME.zip fixpack_documentation.xml | grep -F '<built-for>' | cut -d'>' -f 2 | cut -d'<' -f 1)
+	python -m webbrowser "https://patcher.liferay.com/group/guest/patching/-/osb_patcher/accounts/view?_1_WAR_osbpatcherportlet_patcherBuildAccountEntryCode=${ACCOUNT_ID}"
+
+	unzip -p $FIX_NAME.zip fixpack_documentation.xml | grep -F '<build-name>' | cut -d'>' -f 2 | cut -d'<' -f 1
 }
 
 findbuild $@
