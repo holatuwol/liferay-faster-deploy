@@ -10,7 +10,7 @@ clean_database() {
 }
 
 prep_database() {
-	if docker image inspect ${NAME_PREFIX}dbsnapshot 2>&1 > /dev/null; then
+	if docker image inspect ${NAME_PREFIX}dbsnapshot 1>/dev/null 2>/dev/null; then
 		echo Found database snapshot image: ${NAME_PREFIX}dbsnapshot
 	else
 		echo Unable to find database snapshot image: ${NAME_PREFIX}dbsnapshot
@@ -59,7 +59,7 @@ liferay.home=/opt/liferay' >> ${LOCAL_LIFERAY_HOME}/tools/portal-tools-db-upgrad
 start_upgrade() {
 	echo 'Starting upgrade...'
 
-	if docker inspect ${NAME_PREFIX}liferay 2>&1 > /dev/null; then
+	if docker inspect ${NAME_PREFIX}liferay 1>/dev/null 2>/dev/null; then
 		docker start --attach ${NAME_PREFIX}liferay
 	else
 		docker run --name ${NAME_PREFIX}liferay \

@@ -3,7 +3,7 @@
 . "$(dirname ${BASH_SOURCE[0]})/common"
 
 startdatabase() {
-	if docker inspect ${CONTAINER_NAME} 2>&1 > /dev/null; then
+	if docker inspect ${CONTAINER_NAME} 1>/dev/null 2>/dev/null; then
 		echo "Using existing container ${CONTAINER_NAME}"
 		docker start ${CONTAINER_NAME}
 		return 0

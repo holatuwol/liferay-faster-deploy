@@ -22,7 +22,7 @@ ProxyPass "/" "ajp://'${LIFERAY_IP}':8009/"
 start_liferay() {
 	echo 'Starting Liferay...'
 
-	if docker inspect ${NAME_PREFIX}liferay 2>&1 > /dev/null; then
+	if docker inspect ${NAME_PREFIX}liferay 1>/dev/null 2>/dev/null; then
 		docker start --attach ${NAME_PREFIX}liferay
 	else
 		docker run --name ${NAME_PREFIX}liferay --detach \

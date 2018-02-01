@@ -67,7 +67,7 @@ setenv() {
 		fi
 	fi
 
-	if docker image inspect mcd-nightly 2>&1 > /dev/null; then
+	if docker image inspect mcd-nightly 1>/dev/null 2>/dev/null; then
 		echo Found upgrade helper image: mcd-nightly
 	else
 		echo Unable to find upgrade helper image: mcd-nightly
@@ -75,7 +75,7 @@ setenv() {
 		return 1
 	fi
 
-	if docker network inspect ${NAME_PREFIX}upgrade 2>&1 > /dev/null; then
+	if docker network inspect ${NAME_PREFIX}upgrade 1>/dev/null 2>/dev/null; then
 		echo Upgrade-related containers will join the existing ${NAME_PREFIX}upgrade network.
 	else
 		echo Upgrade-related containers will join a newly-created ${NAME_PREFIX}upgrade network.

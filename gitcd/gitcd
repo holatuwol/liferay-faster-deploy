@@ -4,7 +4,7 @@ gitcd() {
 	FOLDER=
 	MATCHING_FOLDERS=
 
-	if git rev-parse --show-top-level > /dev/null 2>&1; then
+	if git rev-parse --show-top-level 1>/dev/null 2>/dev/null; then
 		. "$(dirname "${BASH_SOURCE[0]}")/gitfind" "$*"
 	fi
 
