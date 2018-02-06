@@ -28,6 +28,15 @@ def describe(*args, **kwargs):
 def for_each_ref(*args, **kwargs):
 	return _git('for-each-ref', args, **kwargs)
 
+def is_ancestor(*args, **kwargs):
+	global git_root
+
+	cwd = os.getcwd() if git_root is None else git_root
+	pipe = Popen(['git', 'merge-base', '--is-ancestor'] + list(args), cwd=cwd, stdout=DEVNULL, stderr=DEVNULL)
+	out, err = pipe.communicate()
+
+	return pipe.returncode == 0
+
 def log(*args, **kwargs):
 	return _git('log', args, **kwargs)
 

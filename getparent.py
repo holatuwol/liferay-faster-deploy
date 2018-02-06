@@ -42,7 +42,7 @@ def getparent(check_tags):
 			commit = file.readlines()[0].strip()
 			full_version = get_git_file_property(commit, 'release.properties', 'lp.version')
 	else:
-		return current_branch
+		return getparent_origin()
 
 	# If the short version is 6.x, then we have a shortcut
 
@@ -94,6 +94,33 @@ def getparent(check_tags):
 		return base_tag
 
 	return base_branch
+
+def getparent_origin():
+	branches = [
+		ref[len('refs/remotes/'):]
+			for ref in git.for_each_ref('--format=%(refname)', 'refs/remotes/').split('\n')
+				if ref.find('refs/remotes/origin') == 0 or ref.find('refs/remotes/upstream') == 0
+	]
+
+	closest_branch = None
+	closest_branch_diff = -1
+
+	for branch in branches:
+		short_branch = branch[branch.find('/')+1:]
+
+		if short_branch == current_branch or short_branch == closest_branch or not git.is_ancestor(branch, current_branch):
+			continue
+
+		branch_diff = len(git.log('--pretty=%H', '%s..%s' % (branch, current_branch)))
+
+		if closest_branch is None or branch_diff < closest_branch_diff:
+			closest_branch = short_branch
+			closest_branch_diff = branch_diff
+
+	if closest_branch is None:
+		return current_branch
+
+	return closest_branch
 
 if __name__ == '__main__':
 	print(getparent(True))
