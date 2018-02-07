@@ -1,7 +1,7 @@
 #!/bin/bash
 
-docker stop test
-docker rm -v test
+docker stop test 1> /dev/null 2> /dev/null
+docker rm -v test 1> /dev/null 2> /dev/null
 
 if [ "$PWD" != "$HOME" ] && [ "" == "${LIFERAY_HOME_MOUNT}" ]; then
 	if [ -f portal-ext.properties ]; then
@@ -12,6 +12,9 @@ if [ "$PWD" != "$HOME" ] && [ "" == "${LIFERAY_HOME_MOUNT}" ]; then
 		LIFERAY_HOME_MOUNT="-v ${PWD}:/build"
 	elif [ -d bundles ]; then
 		LIFERAY_HOME_MOUNT="-v ${PWD}/bundles:/build"
+	elif [ "" == "$1" ] && [ -f app.server.$USER.properties ]; then
+		. $(dirname $(dirname ${BASH_SOURCE[0]}))/appserverprops
+		LIFERAY_HOME_MOUNT="-v ${LIFERAY_HOME}:/build"
 	fi
 fi
 
