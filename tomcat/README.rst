@@ -18,7 +18,8 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 	MCD_RD_CLONE_PATH=/path/to/clone/location
 
 	bundle() {
-		${MCD_RD_CLONE_PATH}/tomcat/bundle $@
+		LIFERAY_PASSWORD= \
+			${MCD_RD_CLONE_PATH}/tomcat/bundle $@
 	}
 
 	cluster() {
@@ -33,6 +34,12 @@ Docker Bundle
 =============
 
 Simple wrapper script that recreates a Docker container named ``test`` by passing arguments to the initialization of a `nightly build downloader <https://github.com/holatuwol/lps-dockerfiles/tree/master/nightly>`__ Docker image. This allows the user to quickly spin up release bundles, patched Liferay bundles, or the latest successful nightly build of different Liferay branches for "does this bug still exist" validation testing.
+
+The alias allows you to pass in whatever password you wish to use for the portal instance. If it is not set, it will randomly generate one, which you can extract by checking ``portal-setup-wizard.properties`` inside of the home folder inside of the container.
+
+.. code-block:: bash
+
+	docker exec test grep default.admin.password= /home/liferay/portal-setup-wizard.properties
 
 If the current folder contains a ``portal-ext.properties`` file or any of the alternate folders listed in the **Provide Additional Files** section of the nightly build downloader documentation, the current working directory will be automatically mounts the local folder so that its contents can be copied to ``LIFERAY_HOME``. If none of the above apply, but there is a ``bundles`` folder as a child of the current working folder, that ``bundles`` folder will be automatically mounted so that its contents can be copied to ``LIFERAY_HOME``.
 

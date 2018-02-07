@@ -22,7 +22,7 @@ fi
 LIFERAY_RELEASE_MOUNT="-v ${HOME}/.liferay/release:/release"
 
 if [[ $1 == portal-* ]] || [[ $1 == *-6210 ]] || [[ $1 == *-6210.zip ]]; then
-	docker run --name test ${LIFERAY_HOME_MOUNT} ${LIFERAY_RELEASE_MOUNT} mcd-nightly-jdk7 $1
+	docker run --name test ${LIFERAY_HOME_MOUNT} ${LIFERAY_RELEASE_MOUNT} -e LIFERAY_PASSWORD=${LIFERAY_PASSWORD} mcd-nightly-jdk7 $1
 else
-	docker run --name test ${LIFERAY_HOME_MOUNT} ${LIFERAY_RELEASE_MOUNT} mcd-nightly-jdk8 $1
+	docker run --name test ${LIFERAY_HOME_MOUNT} ${LIFERAY_RELEASE_MOUNT} -e LIFERAY_PASSWORD=${LIFERAY_PASSWORD} mcd-nightly-jdk8 $1
 fi
