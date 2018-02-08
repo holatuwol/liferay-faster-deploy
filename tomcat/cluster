@@ -5,6 +5,8 @@ appserverprops() {
 }
 
 cluster() {
+	mkdir -p ${LIFERAY_HOME}/data/document_library
+
 	CLUSTER_ROOT=$(dirname $LIFERAY_HOME)
 
 	for file in $(ls -1 $LIFERAY_HOME | grep '^tomcat'); do
@@ -13,13 +15,21 @@ cluster() {
 
 	modjk
 
-	echo > $LIFERAY_HOME/start_cluster
-	echo > $LIFERAY_HOME/stop_cluster
+	echo '#!/bin/bash' > $LIFERAY_HOME/start_cluster
+	echo '#!/bin/bash' > $LIFERAY_HOME/stop_cluster
 
 	chmod u+x $LIFERAY_HOME/start_cluster
 	chmod u+x $LIFERAY_HOME/stop_cluster
 
-	for i in $(seq $NODE_COUNT); do
+	preparenode 1
+
+	echo '
+while [ "" == "$(grep '"'"'Server startup'"'"' '${CLUSTER_ROOT}'/node1/'${TOMCAT_FOLDER}'/logs/catalina.out)" ]; do
+	sleep 1
+done
+' >> $LIFERAY_HOME/start_cluster
+
+	for i in $(seq 2 $NODE_COUNT); do
 		preparenode $i
 	done
 
@@ -72,6 +82,10 @@ worker.node${i}.port=8${i}09
 	done
 }
 
+mysql() {
+	. $(dirname ${BASH_SOURCE[0]})/../database/mysql
+}
+
 preparenode() {
 	local NODE_ROOT=${CLUSTER_ROOT}/node${1}
 
@@ -85,7 +99,7 @@ preparenode() {
 		cp -R $LIFERAY_HOME/osgi ${NODE_ROOT}/
 	fi
 
-	sed -i "s/\"80/\"8${i}/g" ${NODE_ROOT}/${TOMCAT_FOLDER}/conf/server.xml
+	sed -i.bak "s/\"80/\"8${1}/g" ${NODE_ROOT}/${TOMCAT_FOLDER}/conf/server.xml
 
 	echo "
 include-and-override=$LIFERAY_HOME/portal-ext.properties
@@ -135,4 +149,4 @@ if [ "" == "$NODE_COUNT" ]; then
 	NODE_COUNT=2
 fi
 
-appserverprops && cluster
+appserverprops && mysql && cluster
