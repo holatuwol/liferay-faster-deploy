@@ -7,18 +7,18 @@ baseline() {
 checkrepomode() {
 	local SUBREPO_CHANGES=
 
-	cat .redeploy/changes_ant.txt .redeploy/changes_gradle_1.txt .redeploy/changes_gradle_2.txt > .redeploy/central.txt
+	cat ${GIT_ROOT}/.redeploy/changes_ant.txt ${GIT_ROOT}/.redeploy/changes_gradle_1.txt ${GIT_ROOT}/.redeploy/changes_gradle_2.txt > ${GIT_ROOT}/.redeploy/central.txt
 
 	for subrepo_folder in $(git ls-files modules | grep -F '.gitrepo' | xargs grep -Fl 'mode = pull' | dirnames); do
-		if [ "" == "$(grep -F $subrepo_folder .redeploy/changes_gradle_2.txt)" ]; then
+		if [ "" == "$(grep -F $subrepo_folder ${GIT_ROOT}/.redeploy/changes_gradle_2.txt)" ]; then
 			continue
 		fi
 
 		# Make sure to exclude it from the known changes in central
 
-		grep -vF $subrepo_folder .redeploy/central.txt > .redeploy/central.txt.tmp
-		rm .redeploy/central.txt
-		mv .redeploy/central.txt.tmp .redeploy/central.txt
+		grep -vF $subrepo_folder ${GIT_ROOT}/.redeploy/central.txt > ${GIT_ROOT}/.redeploy/central.txt.tmp
+		rm ${GIT_ROOT}/.redeploy/central.txt
+		mv ${GIT_ROOT}/.redeploy/central.txt.tmp ${GIT_ROOT}/.redeploy/central.txt
 
 		# Generate patch files and remember what we generated
 
@@ -40,9 +40,9 @@ checkrepomode() {
 
 	echo -e "\nThis pull request must be split between repositories\n"
 
-	if [[ 0 -ne $(cat .redeploy/central.txt | grep -c '^') ]]; then
+	if [[ 0 -ne $(cat ${GIT_ROOT}/.redeploy/central.txt | grep -c '^') ]]; then
 		echo "* $(git remote -v | grep "^${upstream_remote}\s" | awk '{ print $2 }' | uniq)"
-		cat .redeploy/central.txt | awk '{ print "'"'"'" $1 "/'"'"'" }' | xargs git format-patch ${upstream_remote}/$BASE_BRANCH -- | awk '{ print "    ./" $1 }'
+		cat ${GIT_ROOT}/.redeploy/central.txt | awk '{ print "'"'"'" $1 "/'"'"'" }' | xargs git format-patch ${upstream_remote}/$BASE_BRANCH -- | awk '{ print "    ./" $1 }'
 	fi
 
 	echo -e "$SUBREPO_CHANGES"
@@ -170,7 +170,7 @@ sendpull() {
 
 		. $(dirname "${BASH_SOURCE[0]}")/../gitchanges ${upstream_remote}/$BASE_BRANCH
 
-		if [[ 0 -eq $(cat .redeploy/changes.txt | grep -c '^') ]]; then
+		if [[ 0 -eq $(cat ${GIT_ROOT}/.redeploy/changes.txt | grep -c '^') ]]; then
 			echo No changes detected.
 			return 0
 		fi
@@ -206,7 +206,7 @@ sendpull() {
 
 		. $(dirname "${BASH_SOURCE[0]}")/../gitchanges ${upstream_remote}/$BASE_BRANCH
 
-		if [[ 0 -eq $(cat .redeploy/changes.txt | grep -c '^') ]]; then
+		if [[ 0 -eq $(cat ${GIT_ROOT}/.redeploy/changes.txt | grep -c '^') ]]; then
 			echo No changes detected.
 			return 0
 		fi

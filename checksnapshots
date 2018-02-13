@@ -9,22 +9,6 @@ checksnapshots() {
 		return 0
 	fi
 
-	# Run the pre-checks for ant
-
-	if [ "" != "$(grep setup-libs build.xml)" ]; then
-		if [[ $(ls -1 "$GIT_ROOT/lib/portal" | grep -c '^') -lt $(cat "$GIT_ROOT/lib/portal/dependencies.properties" | grep -c '^') ]]; then
-			pushd $GIT_ROOT > /dev/null
-			ant setup-libs
-			popd > /dev/null
-		fi
-	fi
-
-	if [ ! -f "$GIT_ROOT/.gradle/gradle.properties" ] || [ ! -d "$GIT_ROOT/tools/sdk" ]; then
-		pushd $GIT_ROOT > /dev/null
-		ant setup-sdk
-		popd > /dev/null
-	fi
-
 	# Identify the Maven repository where we are installing artifacts
 
 	local repository_root=
@@ -75,15 +59,15 @@ checksnapshots() {
 
 	pushd $GIT_ROOT > /dev/null
 
-	if [ -d modules ]; then
-		cd modules
-		../gradlew -Dbuild.profile=portal-pre -Pforced.deploy.dir=${PWD}/../tmp/lib-pre deploy
-		cd ..
+	# Run the pre-checks for ant
+
+	if [ -d "${GIT_ROOT}/modules" ]; then
+		pushd $GIT_ROOT > /dev/null
+		ant compile
+		popd > /dev/null
 	fi
 
-	ant setup-libs
-
-	for candidate_folder in $(sed -n '/target name="deploy"/,/\/target/p' build.xml | grep -F 'ant dir' | grep -F 'target="deploy"' | cut -d'"' -f 2); do
+	for candidate_folder in $(sed -n '/target name="deploy"/,/\/target/p' ${GIT_ROOT}/build.xml | grep -F 'ant dir' | grep -F 'target="deploy"' | cut -d'"' -f 2); do
 		for artifact in $missing_artifact; do
 			local folder=$(echo $artifact | cut -d'.' -f 3- | tr '.' '-')
 
@@ -92,7 +76,7 @@ checksnapshots() {
 			fi
 
 			pushd $folder > /dev/null
-			ant compile install-portal-snapshot
+			ant install-portal-snapshot
 			popd > /dev/null
 		done
 	done

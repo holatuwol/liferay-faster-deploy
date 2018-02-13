@@ -1,8 +1,16 @@
 #!/bin/bash
 
-mkdir -p .redeploy
+setopts() {
+	. $(dirname "${BASH_SOURCE[0]}")/setopts
+}
 
-if [ ! -f .redeploy/sourcetrie.pickle ]; then
-	git ls-files | grep '/\(bnd.bnd\|package.json\|build.xml\)$' | grep -vF '/src/' | grep -vF '/test/integration/' > .redeploy/sourcetrie.txt
+setopts
+
+mkdir -p ${GIT_ROOT}/.redeploy
+
+if [ ! -f ${GIT_ROOT}/.redeploy/sourcetrie.pickle ]; then
+	cd ${GIT_ROOT}
+	git ls-files | grep '/\(bnd.bnd\|package.json\|build.xml\)$' | grep -vF '/src/' | grep -vF '/test/integration/' > ${GIT_ROOT}/.redeploy/sourcetrie.txt
 	python $(dirname "${BASH_SOURCE[0]}")/sourcetrie.py
+	cd -
 fi

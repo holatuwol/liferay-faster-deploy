@@ -1,15 +1,16 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
-from sourcetrie import SourceTrie
+from git import git_root
+from sourcetrie import SourceTrie, get_rd_file
 import os.path
 
-module_paths = SourceTrie.load('.redeploy')
+module_paths = SourceTrie.load(get_rd_file())
 changed_modules = set()
 
 # Scan modules
 
-with open('.redeploy/changes.txt', 'r') as f:
+with open(get_rd_file('changes.txt'), 'r') as f:
 	for file_name in [line.strip() for line in f.readlines()]:
 		if file_name.startswith('portal-web') and file_name.endswith('.tld'):
 			continue
@@ -57,14 +58,14 @@ def priority(x):
 
 changed_modules = sorted([priority(x) for x in changed_modules])
 
-with open('.redeploy/changes_ant.txt', 'w') as f:
+with open(get_rd_file('changes_ant.txt'), 'w') as f:
 	for module in [x[1] for x in changed_modules if x[0] != 0 and x[0] != 4]:
 		f.write('%s\n' % module)
 
-with open('.redeploy/changes_gradle_1.txt', 'w') as f:
+with open(get_rd_file('changes_gradle_1.txt'), 'w') as f:
 	for module in [x[1] for x in changed_modules if x[0] == 0]:
 		f.write('%s\n' % module)
 
-with open('.redeploy/changes_gradle_2.txt', 'w') as f:
+with open(get_rd_file('changes_gradle_2.txt'), 'w') as f:
 	for module in [x[1] for x in changed_modules if x[0] == 4]:
 		f.write('%s\n' % module)

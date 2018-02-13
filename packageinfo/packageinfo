@@ -24,9 +24,9 @@ bundleinfo() {
 		grep -v '^modules/test/' | \
 		grep -v '^modules/third-party/' | \
 		grep -v '^modules/util/' | \
-		dirnames | sort -u > .redeploy/bundleinfo.txt
+		dirnames | sort -u > ${GIT_ROOT}/.redeploy/bundleinfo.txt
 
-	for folder in $(cat .redeploy/bundleinfo.txt); do
+	for folder in $(cat ${GIT_ROOT}/.redeploy/bundleinfo.txt); do
 		if [ ! -f "$folder/bnd.bnd" ]; then
 			continue
 		fi
@@ -54,7 +54,7 @@ checkfile() {
 		return 1
 	fi
 
-	if [ -f .redeploy/$1 ]; then
+	if [ -f ${GIT_ROOT}/.redeploy/$1 ]; then
 		return 0
 	fi
 
@@ -74,8 +74,8 @@ checkfile() {
 	git reset --hard
 	git checkout $1
 
-	mkdir -p .redeploy
-	touch .redeploy/$1
+	mkdir -p ${GIT_ROOT}/.redeploy
+	touch ${GIT_ROOT}/.redeploy/$1
 	$(dirname $0)/../sourcetrie
 }
 
@@ -94,19 +94,19 @@ packageinfo() {
 
 	echo "Generating bundle packageinfo for $1"
 
-	cat /dev/null > .redeploy/packageinfo.txt
+	cat /dev/null > ${GIT_ROOT}/.redeploy/packageinfo.txt
 
 	# Handle root projects, which might not have packageinfo files
 
 	for folder in $(ls -1 . | sort -u); do
 		if [ -f $folder/bnd.bnd ]; then
-			find "$folder/src" -type f -printf '%h\n' | sort -u >> .redeploy/packageinfo.txt
+			find "$folder/src" -type f -printf '%h\n' | sort -u >> ${GIT_ROOT}/.redeploy/packageinfo.txt
 		fi
 	done
 
 	# Handle modules, which always have packageinfo files
 
-	git ls-files modules | grep -F '/packageinfo' | grep -v '^modules/sdk/' | grep -v '^modules/test/' | grep -v '^modules/util/' | dirnames | sort >> .redeploy/packageinfo.txt
+	git ls-files modules | grep -F '/packageinfo' | grep -v '^modules/sdk/' | grep -v '^modules/test/' | grep -v '^modules/util/' | dirnames | sort >> ${GIT_ROOT}/.redeploy/packageinfo.txt
 
 	python $(dirname $0)/packageinfo.py $OUTPUT_FILE
 
@@ -164,12 +164,12 @@ requireschema() {
 	echo "Generating require schema versions for $1"
 
 	if [ "$1" == "7.0.0-ga1" ]; then
-		git ls-files modules | grep -F -- '-service/bnd.bnd' | grep -v '^modules/sdk/' | grep -v '^modules/test/' | grep -v '^modules/util/' | dirnames | sort -u > .redeploy/requireschema.txt
+		git ls-files modules | grep -F -- '-service/bnd.bnd' | grep -v '^modules/sdk/' | grep -v '^modules/test/' | grep -v '^modules/util/' | dirnames | sort -u > ${GIT_ROOT}/.redeploy/requireschema.txt
 	else
-		git ls-files modules | grep -F -- '-service/.lfrbuild-portal' | grep -v '^modules/sdk/' | grep -v '^modules/test/' | grep -v '^modules/util/' | dirnames | sort -u > .redeploy/requireschema.txt
+		git ls-files modules | grep -F -- '-service/.lfrbuild-portal' | grep -v '^modules/sdk/' | grep -v '^modules/test/' | grep -v '^modules/util/' | dirnames | sort -u > ${GIT_ROOT}/.redeploy/requireschema.txt
 	fi
 
-	for folder in $(cat .redeploy/requireschema.txt); do
+	for folder in $(cat ${GIT_ROOT}/.redeploy/requireschema.txt); do
 		if [ ! -f "$folder/bnd.bnd" ]; then
 			continue
 		fi

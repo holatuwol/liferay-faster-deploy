@@ -32,7 +32,7 @@ baseline() {
 
 	$(dirname "${BASH_SOURCE[0]}")/../gitchanges $CHANGE_ID
 
-	if [[ 0 -eq $(cat .redeploy/changes.txt | grep -c '^') ]]; then
+	if [[ 0 -eq $(cat ${GIT_ROOT}/.redeploy/changes.txt | grep -c '^') ]]; then
 		echo No changes detected.
 		return 0
 	fi

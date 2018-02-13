@@ -110,11 +110,11 @@ transitiveexcludes() {
 	old_count=0
 	new_count=$(cat .excludes | sort -u | grep -c '^')
 
-	git ls-files modules | grep -vF '/src/' > .redeploy/lsfiles.txt
-	cat .redeploy/lsfiles.txt | grep -F '/build.gradle' > .redeploy/gradle_list.txt
+	git ls-files modules | grep -vF '/src/' > ${GIT_ROOT}/.redeploy/lsfiles.txt
+	cat .redeploy/lsfiles.txt | grep -F '/build.gradle' > ${GIT_ROOT}/.redeploy/gradle_list.txt
 
 	git ls-files modules | grep -vF '/src/' | grep -F '/bnd.bnd' | xargs grep -F Bundle-SymbolicName | \
-		grep -vF '{' | sed 's/Bundle-SymbolicName: //g' > .redeploy/bnd_list.txt
+		grep -vF '{' | sed 's/Bundle-SymbolicName: //g' > ${GIT_ROOT}/.redeploy/bnd_list.txt
 
 	while [[ $old_count -ne $new_count ]]; do
 		old_count=$new_count
@@ -125,14 +125,14 @@ transitiveexcludes() {
 		cat /dev/null > .excludes_transitive
 
 		if [ "" != "$project_dependencies" ]; then
-			cat .redeploy/gradle_list.txt | xargs grep -l "project(\"\($project_dependencies\)\")" | dirnames >> .excludes_transitive
+			cat ${GIT_ROOT}/.redeploy/gradle_list.txt | xargs grep -l "project(\"\($project_dependencies\)\")" | dirnames >> .excludes_transitive
 		fi
 
 		app_folders=$(echo "$old_files" | xargs | sed 's/ /\\|/g')
-		library_dependencies=$(grep "\(${app_folders}\)" .redeploy/bnd_list.txt | cut -d ':' -f 2 | xargs | sed 's/ /\\|/g')
+		library_dependencies=$(grep "\(${app_folders}\)" ${GIT_ROOT}/.redeploy/bnd_list.txt | cut -d ':' -f 2 | xargs | sed 's/ /\\|/g')
 
 		if [ "" != "$library_dependencies" ]; then
-			cat .redeploy/gradle_list.txt | xargs grep -l "\"\($library_dependencies\)\"" | dirnames >> .excludes_transitive
+			cat ${GIT_ROOT}/.redeploy/gradle_list.txt | xargs grep -l "\"\($library_dependencies\)\"" | dirnames >> .excludes_transitive
 		fi
 
 		mv .excludes .excludes_old

@@ -5,11 +5,14 @@ import csv
 import os.path
 import semver
 
+sys.path.insert(1, os.path.join(sys.path[0], '..'))
+from sourcetrie import get_rd_file
+
 packageinfos = dict()
 
 # Load the new packageinfo values
 
-with open('.redeploy/changes.txt') as f:
+with open(get_rd_file('changes.txt'), 'r') as f:
 	for filename in f.readlines():
 		pos = filename.find('src/')
 
@@ -68,7 +71,7 @@ def get_semver(import_version_string):
 packages = dict()
 manifests = dict()
 
-with open('.redeploy/checkdeps.txt') as f:
+with open(get_rd_file('checkdeps.txt', 'r')) as f:
 	reader = csv.reader(f, delimiter=',', quotechar='"')
 
 	for row in reader:
@@ -91,7 +94,7 @@ with open('.redeploy/checkdeps.txt') as f:
 
 # Use the parsed manifests to decide what needs to be updated
 
-with open('.redeploy/fixdeps.txt', 'w') as f:
+with open(get_rd_file('fixdeps.txt'), 'w') as f:
 	for folder, manifest in manifests.items():
 		for package, version in packageinfos.items():
 			if manifest is None:

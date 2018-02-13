@@ -9,8 +9,8 @@ checkfiles() {
 	local module=$2
 	local package=$3
 
-	local expression=$(cat .redeploy/gradle.txt | awk '{ print $1 "/build.gradle" }' | xargs grep -Fl '"'$module'"' | dirnames | tr '\n' '|' | tr -d '\r' | sed 's@|$@@g' | sed 's@|@\\|@g' | awk '{ print "\\(" $1 "\\)" }')
-	grep -h "$expression" .redeploy/java.txt .redeploy/jsp.txt | xargs grep -Fl "$package" | grep -o '.*/src/main/' | sed 's@/src/main/@@g' | sort -u | awk '{ print $1 ",'$module','$package'" }' >> .redeploy/checkdeps.txt
+	local expression=$(cat ${GIT_ROOT}/.redeploy/gradle.txt | awk '{ print $1 "/build.gradle" }' | xargs grep -Fl '"'$module'"' | dirnames | tr '\n' '|' | tr -d '\r' | sed 's@|$@@g' | sed 's@|@\\|@g' | awk '{ print "\\(" $1 "\\)" }')
+	grep -h "$expression" ${GIT_ROOT}/.redeploy/java.txt ${GIT_ROOT}/.redeploy/jsp.txt | xargs grep -Fl "$package" | grep -o '.*/src/main/' | sed 's@/src/main/@@g' | sort -u | awk '{ print $1 ",'$module','$package'" }' >> ${GIT_ROOT}/.redeploy/checkdeps.txt
 }
 
 checkpython() {
@@ -56,15 +56,15 @@ fixdeps() {
 	# Record all the possible module locations that we have to evaluate
 
 	if [ -d modules ]; then
-		git ls-files modules | grep -vF 'modules/sdk/' > .redeploy/lsfiles.txt
+		git ls-files modules | grep -vF 'modules/sdk/' > ${GIT_ROOT}/.redeploy/lsfiles.txt
 	else
-		git ls-files . > .redeploy/lsfiles.txt
+		git ls-files . > ${GIT_ROOT}/.redeploy/lsfiles.txt
 	fi
 
-	grep -F build.gradle .redeploy/lsfiles.txt | grep -vF '/src/' | dirnames > .redeploy/gradle.txt
+	grep -F build.gradle ${GIT_ROOT}/.redeploy/lsfiles.txt | grep -vF '/src/' | dirnames > ${GIT_ROOT}/.redeploy/gradle.txt
 
-	cat .redeploy/gradle.txt | awk '{ print $1 "/src/main/java" }' | xargs git ls-files | grep -F .java > .redeploy/java.txt
-	cat .redeploy/gradle.txt | awk '{ print $1 "/src/main/resources/META-INF/resources" }' | xargs git ls-files | grep -F .jsp > .redeploy/jsp.txt
+	cat ${GIT_ROOT}/.redeploy/gradle.txt | awk '{ print $1 "/src/main/java" }' | xargs git ls-files | grep -F .java > ${GIT_ROOT}/.redeploy/java.txt
+	cat ${GIT_ROOT}/.redeploy/gradle.txt | awk '{ print $1 "/src/main/resources/META-INF/resources" }' | xargs git ls-files | grep -F .jsp > ${GIT_ROOT}/.redeploy/jsp.txt
 
 	# Generate the source trie
 
@@ -72,10 +72,10 @@ fixdeps() {
 
 	# Identify the package info files that changed since the latest branch
 
-	git diff --name-only $base_remote/$BASE_BRANCH..HEAD > .redeploy/diff.txt
-	grep -F packageinfo .redeploy/diff.txt > .redeploy/changes.txt
+	git diff --name-only $base_remote/$BASE_BRANCH..HEAD > ${GIT_ROOT}/.redeploy/diff.txt
+	grep -F packageinfo ${GIT_ROOT}/.redeploy/diff.txt > ${GIT_ROOT}/.redeploy/changes.txt
 
-	if [[ 0 -eq $(cat .redeploy/changes.txt | grep -c '^') ]]; then
+	if [[ 0 -eq $(cat ${GIT_ROOT}/.redeploy/changes.txt | grep -c '^') ]]; then
 		echo No changes detected.
 		return 0
 	fi
@@ -84,21 +84,21 @@ fixdeps() {
 
 	# Loop over the modules and packages that changed to identify where the packages are used
 
-	cat /dev/null > .redeploy/checkdeps.txt
+	cat /dev/null > ${GIT_ROOT}/.redeploy/checkdeps.txt
 
-	for folder in $(cat .redeploy/changes_ant.txt); do
+	for folder in $(cat ${GIT_ROOT}/.redeploy/changes_ant.txt); do
 		local module=$(grep -F '"manifest.bundle.symbolic.name"' $folder/build.xml | grep -o 'value="[^";]*' | cut -d'"' -f 2)
 
-		for package in $(grep -F "$folder" .redeploy/changes.txt | sed "s@$folder/src/@@g" | dirnames | tr '/' '.'); do
+		for package in $(grep -F "$folder" ${GIT_ROOT}/.redeploy/changes.txt | sed "s@$folder/src/@@g" | dirnames | tr '/' '.'); do
 			echo $module $package
 			checkfiles $folder $module $package
 		done
 	done
 
-	for folder in $(cat .redeploy/changes_gradle_1.txt .redeploy/changes_gradle_2.txt); do
+	for folder in $(cat ${GIT_ROOT}/.redeploy/changes_gradle_1.txt ${GIT_ROOT}/.redeploy/changes_gradle_2.txt); do
 		local module=$(grep -F 'Bundle-SymbolicName:' "$folder/bnd.bnd" | cut -d' ' -f 2)
 
-		for package in $(grep -F "$folder" .redeploy/changes.txt | sed "s@$folder/src/main/java/@@g" | sed "s@$folder/src/main/resources/@@g" | dirnames | tr '/' '.'); do
+		for package in $(grep -F "$folder" ${GIT_ROOT}/.redeploy/changes.txt | sed "s@$folder/src/main/java/@@g" | sed "s@$folder/src/main/resources/@@g" | dirnames | tr '/' '.'); do
 			echo $module $package
 			checkfiles $folder $module $package
 		done
@@ -110,20 +110,20 @@ fixdeps() {
 
 	# Mass compile check
 
-	if [ -d modules ] && [[ 0 -ne $(cat .redeploy/checkdeps.txt | grep -c '^') ]]; then
+	if [ -d modules ] && [[ 0 -ne $(cat ${GIT_ROOT}/.redeploy/checkdeps.txt | grep -c '^') ]]; then
 		cachenpm $base_remote/$BASE_BRANCH
 
 		cd modules
-		cat ../.redeploy/checkdeps.txt | cut -d',' -f 1 | sort -u | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":compileJSP :" $1 ":jar" }' | xargs $(dirname "${BASH_SOURCE[0]}")/../gw --continue | tee ../.redeploy/compile.txt
+		cat ${GIT_ROOT}/.redeploy/checkdeps.txt | cut -d',' -f 1 | sort -u | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":compileJSP :" $1 ":jar" }' | xargs $(dirname "${BASH_SOURCE[0]}")/../gw --continue | tee ${GIT_ROOT}/.redeploy/compile.txt
 		cd -
 	else
 		local project_prefix=$(grep -F 'project.path.prefix=' gradle.properties | cut -d'=' -f 2)
-		cat .redeploy/checkdeps.txt | cut -d',' -f 1 | sort -u | cut -d'/' -f 2- | tr '/' ':' | awk '{ print "'${project_prefix}':" $1 ":compileJSP '${project_prefix}':" $1 ":jar" }' | xargs $(dirname "${BASH_SOURCE[0]}")/../gw --continue | tee .redeploy/compile.txt
+		cat ${GIT_ROOT}/.redeploy/checkdeps.txt | cut -d',' -f 1 | sort -u | cut -d'/' -f 2- | tr '/' ':' | awk '{ print "'${project_prefix}':" $1 ":compileJSP '${project_prefix}':" $1 ":jar" }' | xargs $(dirname "${BASH_SOURCE[0]}")/../gw --continue | tee ${GIT_ROOT}/.redeploy/compile.txt
 	fi
 
 	# Convert the manifest to a CSV file that we can parse
 
-	for folder in $(cat .redeploy/checkdeps.txt | cut -d',' -f 1 | sort -u); do
+	for folder in $(cat ${GIT_ROOT}/.redeploy/checkdeps.txt | cut -d',' -f 1 | sort -u); do
 		local INPUT_FILE=$folder/build/tmp/jar/MANIFEST.MF
 
 		if [ -f "$INPUT_FILE" ]; then
@@ -137,14 +137,14 @@ fixdeps() {
 
 	# Modify the build.gradle that needed to change
 
-	grep -F bnd.bnd .redeploy/lsfiles.txt | grep -vF '/src/' | xargs grep Bundle-SymbolicName | grep -vF '{' | sed 's/Bundle-SymbolicName: //g' > .redeploy/bnd.txt
+	grep -F bnd.bnd ${GIT_ROOT}/.redeploy/lsfiles.txt | grep -vF '/src/' | xargs grep Bundle-SymbolicName | grep -vF '{' | sed 's/Bundle-SymbolicName: //g' > ${GIT_ROOT}/.redeploy/bnd.txt
 
 	local FORMAT_SOURCE=
 
-	for line in $(cat .redeploy/fixdeps.txt | sort -u); do
+	for line in $(cat ${GIT_ROOT}/.redeploy/fixdeps.txt | sort -u); do
 		local folder=$(echo "$line" | cut -d',' -f 1)
 		local module=$(echo "$line" | cut -d',' -f 2)
-		local project=$(grep ":$module$" .redeploy/bnd.txt | cut -d':' -f 1 | sed 's@modules@@' | tr '\\' '/' | dirnames | tr '/' ':')
+		local project=$(grep ":$module$" ${GIT_ROOT}/.redeploy/bnd.txt | cut -d':' -f 1 | sed 's@modules@@' | tr '\\' '/' | dirnames | tr '/' ':')
 
 		if [[ $module == com.liferay.portal* ]]; then
 			sed -i.bak -e '/name: "'$module'"/ s/version: "[^"]*"/version: "default"/' $folder/build.gradle
@@ -158,7 +158,7 @@ fixdeps() {
 		echo $FORMAT_SOURCE | xargs $(dirname "${BASH_SOURCE[0]}")/../gw --continue -DformatSource.format.local.changes=true
 	fi
 
-	local FAILED_COMPILE=$(grep 'compile\(JSP\|Java\) FAILED' .redeploy/compile.txt | sort)
+	local FAILED_COMPILE=$(grep 'compile\(JSP\|Java\) FAILED' ${GIT_ROOT}/.redeploy/compile.txt | sort)
 
 	if [ "" == "$FAILED_COMPILE" ]; then
 		return 0
@@ -169,9 +169,9 @@ fixdeps() {
 	FORMAT_SOURCE=
 
 	for target_gradle in $(echo "$FAILED_COMPILE" | cut -d' ' -f 1 | sed 's@:compile\(JSP\|Java\)@@g' | sort -u | tr ':' '/' | awk '{ print "modules" $1 "/build.gradle" }'); do
-		for folder in $(cat .redeploy/changes_gradle_1.txt .redeploy/changes_gradle_2.txt); do
+		for folder in $(cat ${GIT_ROOT}/.redeploy/changes_gradle_1.txt ${GIT_ROOT}/.redeploy/changes_gradle_2.txt); do
 			local module=$(grep 'Bundle-SymbolicName' $folder/bnd.bnd | cut -d' ' -f 2)
-			local project=$(grep ":$module$" .redeploy/bnd.txt | cut -d':' -f 1 | sed 's@modules@@' | tr '\\' '/' | dirnames | tr '/' ':')
+			local project=$(grep ":$module$" ${GIT_ROOT}/.redeploy/bnd.txt | cut -d':' -f 1 | sed 's@modules@@' | tr '\\' '/' | dirnames | tr '/' ':')
 
 			if [[ $module == com.liferay.portal* ]]; then
 				sed -i.bak -e '/name: "'$module'"/ s/version: "[^"]*"/version: "default"/' $target_gradle
@@ -185,10 +185,10 @@ fixdeps() {
 	local RECOMPILE=$(echo $FAILED_COMPILE | cut -d' ' -f 1)
 
 	pushd modules > /dev/null
-	echo "$RECOMPILE" "$FORMAT_SOURCE" | xargs $(dirname "${BASH_SOURCE[0]}")/../gw --continue -DformatSource.format.local.changes=true | tee ../.redeploy/compile.txt
+	echo "$RECOMPILE" "$FORMAT_SOURCE" | xargs $(dirname "${BASH_SOURCE[0]}")/../gw --continue -DformatSource.format.local.changes=true | tee ${GIT_ROOT}/.redeploy/compile.txt
 	popd > /dev/null
 
-	FAILED_COMPILE=$(grep 'compile\(JSP\|Java\) FAILED' .redeploy/compile.txt | sort)
+	FAILED_COMPILE=$(grep 'compile\(JSP\|Java\) FAILED' ${GIT_ROOT}/.redeploy/compile.txt | sort)
 
 	if [ "" == "$FAILED_COMPILE" ]; then
 		return 0

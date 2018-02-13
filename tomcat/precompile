@@ -15,13 +15,13 @@ compilemodules() {
 
 	mkdir -p tools/sdk/dist
 
-	git ls-files modules | grep -F .tld | grep -F 'modules/apps' | grep -vF docroot > .redeploy/changes.txt
+	git ls-files modules | grep -F .tld | grep -F 'modules/apps' | grep -vF docroot > ${GIT_ROOT}/.redeploy/changes.txt
 	python $(dirname ${BASH_SOURCE[0]})/../gitchanges.py
 
-	if [ -f .redeploy/changes_gradle_2.txt ]; then
-		cat /dev/null > .redeploy/jsp_precompile.txt
+	if [ -f ${GIT_ROOT}/.redeploy/changes_gradle_2.txt ]; then
+		cat /dev/null > ${GIT_ROOT}/.redeploy/jsp_precompile.txt
 
-		for folder in $(cat .redeploy/changes_gradle_2.txt); do
+		for folder in $(cat ${GIT_ROOT}/.redeploy/changes_gradle_2.txt); do
 			copymodule $folder
 		done
 	fi
@@ -30,27 +30,27 @@ compilemodules() {
 
 	sed -i.bak 's/jsp.precompile.enabled=false/jsp.precompile.enabled=true/g' .gradle/gradle.properties
 
-	git ls-files modules | grep -F .jsp | grep -F 'modules/apps' | grep -vF docroot > .redeploy/changes.txt
+	git ls-files modules | grep -F .jsp | grep -F 'modules/apps' | grep -vF docroot > ${GIT_ROOT}/.redeploy/changes.txt
 	python $(dirname ${BASH_SOURCE[0]})/../gitchanges.py
 
-	if [ ! -f .redeploy/changes_gradle_2.txt ]; then
+	if [ ! -f ${GIT_ROOT}/.redeploy/changes_gradle_2.txt ]; then
 		return 0
 	fi
 
-	cat /dev/null > .redeploy/jsp_precompile.txt
+	cat /dev/null > ${GIT_ROOT}/.redeploy/jsp_precompile.txt
 
-	for folder in $(cat .redeploy/changes_gradle_2.txt); do
+	for folder in $(cat ${GIT_ROOT}/.redeploy/changes_gradle_2.txt); do
 		copymodule $folder
 	done
 
 	# Precompile all the JSPs
 
-	if [[ 0 -eq $(grep -c '^' .redeploy/jsp_precompile.txt) ]]; then
+	if [[ 0 -eq $(grep -c '^' ${GIT_ROOT}/.redeploy/jsp_precompile.txt) ]]; then
 		return 0
 	fi
 
 	pushd modules > /dev/null
-	cat ../.redeploy/jsp_precompile.txt | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":compileJSP" }' | xargs $(dirname ${BASH_SOURCE[0]})/../gw --continue -x jar
+	cat ${GIT_ROOT}/.redeploy/jsp_precompile.txt | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":compileJSP" }' | xargs $(dirname ${BASH_SOURCE[0]})/../gw --continue -x jar
 	popd > /dev/null
 }
 
@@ -59,7 +59,7 @@ copymodule() {
 	local BUNDLE_VERSION=$(grep '^Bundle-Version:' $1/bnd.bnd | cut -d' ' -f 2)
 
 	if [ -f "tools/sdk/dist/${BUNDLE_NAME}-${BUNDLE_VERSION}.jar" ]; then
-		echo $1 >> .redeploy/jsp_precompile.txt
+		echo $1 >> ${GIT_ROOT}/.redeploy/jsp_precompile.txt
 		return 0
 	fi
 
@@ -68,7 +68,7 @@ copymodule() {
 	fi
 
 	cp "$LIFERAY_HOME/osgi/modules/${BUNDLE_NAME}.jar" "tools/sdk/dist/${BUNDLE_NAME}-${BUNDLE_VERSION}.jar"
-	echo $1 >> .redeploy/jsp_precompile.txt
+	echo $1 >> ${GIT_ROOT}/.redeploy/jsp_precompile.txt
 }
 
 compileroot() {
@@ -84,6 +84,12 @@ compileroot() {
 		-Dtomcat.home.dir="$CATALINA_HOME" -Dwebapp.home=${CATALINA_HOME}/webapps/ROOT -Dwebapp.work=${CATALINA_HOME}/work/Catalina/localhost/_ \
 		-Djsp.java.version=$JSP_JAVA_VERSION
 }
+
+setopts() {
+	. $(dirname "${BASH_SOURCE[0]}")/../setopts
+}
+
+setopts
 
 . $(dirname ${BASH_SOURCE[0]})/releaseinfo
 

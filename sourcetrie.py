@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
+from git import git_root
 import os.path
 try:
     import cPickle as pickle
@@ -156,5 +157,11 @@ class SourceTrie:
 
 	load=staticmethod(load)
 
+def get_rd_file(name=None):
+	if name is None:
+		return os.path.join(git_root, '.redeploy')
+	else:
+		return os.path.join(git_root, '.redeploy', name)
+
 if __name__ == '__main__':
-	SourceTrie.load('.redeploy')
+	SourceTrie.load(get_rd_file())

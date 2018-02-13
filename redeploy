@@ -17,40 +17,40 @@ applychanges() {
 	# one of the version range macros, make sure to fix it
 
 	for folder in $(git ls-files modules | grep build.gradle | xargs grep -l 'version: "\[' | dirnames); do
-		if [ "" != "$(grep -F "$folder" .redeploy/changes_gradle_2.txt)" ]; then
+		if [ "" != "$(grep -F "$folder" ${GIT_ROOT}/.redeploy/changes_gradle_2.txt)" ]; then
 			$(dirname "${BASH_SOURCE[0]}")/fixbnd $folder
 		fi
 	done
 
 	echo ""
 	echo "Deploying folders:"
-	cat .redeploy/changes_ant.txt | awk '{ print " * " $1 }'
+	cat ${GIT_ROOT}/.redeploy/changes_ant.txt | awk '{ print " * " $1 }'
 
 	echo ""
 	echo "Deploying modules:"
-	cat .redeploy/changes_gradle_1.txt .redeploy/changes_gradle_2.txt | awk '{ print " * " $1 }'
+	cat ${GIT_ROOT}/.redeploy/changes_gradle_1.txt ${GIT_ROOT}/.redeploy/changes_gradle_2.txt | awk '{ print " * " $1 }'
 	echo ""
 
 	# First, deploy portal libraries and global libraries
 
-	for file in $(grep '^lib/global/' .redeploy/changes.txt); do
+	for file in $(grep '^lib/global/' ${GIT_ROOT}/.redeploy/changes.txt); do
 		cp $file $LIFERAY_HOME/$TOMCAT_FOLDER/lib/ext
 	done
 
-	for file in $(grep '^lib/portal/' .redeploy/changes.txt); do
+	for file in $(grep '^lib/portal/' ${GIT_ROOT}/.redeploy/changes.txt); do
 		cp $file $LIFERAY_HOME/$TOMCAT_FOLDER/webapps/ROOT/WEB-INF/lib
 	done
 
 	# Check to see if there is anything we need to deploy with ant
 
-	if [[ 0 -ne $(cat .redeploy/changes_gradle_1.txt | grep -c '^') ]] || [[ 0 -ne $(cat .redeploy/changes_ant.txt | grep -c '^') ]]; then
+	if [[ 0 -ne $(cat ${GIT_ROOT}/.redeploy/changes_gradle_1.txt | grep -c '^') ]] || [[ 0 -ne $(cat ${GIT_ROOT}/.redeploy/changes_ant.txt | grep -c '^') ]]; then
 		deployant
 
 		if [[ 0 -ne $? ]]; then
 			return 1
 		fi
 
-		if [ "" != "$(grep -F packageinfo .redeploy/changes.txt | grep -vF modules)" ]; then
+		if [ "" != "$(grep -F packageinfo ${GIT_ROOT}/.redeploy/changes.txt | grep -vF modules)" ]; then
 			cd modules/core/portal-bootstrap
 			gw deploy
 			cd -
@@ -59,7 +59,7 @@ applychanges() {
 
 	# Finally, check to see if there is anything we need to deploy with gradle
 
-	if [[ 0 -ne $(cat .redeploy/changes_gradle_2.txt | grep -c '^') ]]; then
+	if [[ 0 -ne $(cat ${GIT_ROOT}/.redeploy/changes_gradle_2.txt | grep -c '^') ]]; then
 		$(dirname "${BASH_SOURCE[0]}")/nodejs/cachenpm $NEW_BASELINE
 		deploymodules
 
@@ -68,7 +68,7 @@ applychanges() {
 		fi
 	fi
 
-	if [ -f .redeploy/changes_ant.txt ] && [ "" != "$(grep util .redeploy/changes_ant.txt)" ]; then
+	if [ -f ${GIT_ROOT}/.redeploy/changes_ant.txt ] && [ "" != "$(grep util ${GIT_ROOT}/.redeploy/changes_ant.txt)" ]; then
 		if [ "ee-6.1.x" != "$BASE_BRANCH" ] && [ "ee-6.2.x" != "$BASE_BRANCH" ]; then
 			echo "Modified util-*.jar, must clear the osgi/state folder for WABs to be rebuilt"
 		fi
@@ -77,23 +77,26 @@ applychanges() {
 	# Undo changes to build-common.xml and modules/build.gradle
 
 	if [ -d modules ]; then
-		if [ ! -h build-common.xml ]; then
+		if [ ! -h build-common.xml ] && [ -f build-common.xml ]; then
 			git checkout build-common.xml
 		fi
 
-		if [ ! -h modules/build.gradle ]; then
+		if [ ! -h modules/build.gradle ] && [ -f modules/build.gradle ]; then
 			git checkout modules/build.gradle
 		fi
 	fi
 }
 
 cdroot() {
-	if [ ! -f "$GIT_ROOT/release.properties" ]; then
+	if [ -f "$GIT_ROOT/release.properties" ]; then
+		builtin cd $GIT_ROOT
+	elif [ -f "${GIT_ROOT}/build-working-dir.xml" ]; then
+		builtin cd $GIT_ROOT
+		ant -f build-working-dir.xml
+	else
 		echo "Unable to find release.properties at version control root"
 		return 1
 	fi
-
-	builtin cd $GIT_ROOT
 }
 
 checksnapshots() {
@@ -122,7 +125,7 @@ deployant() {
 
 	# Finally, iterate over the folders that are listed for deployment
 
-	for folder in $(cat .redeploy/changes_ant.txt); do
+	for folder in $(cat ${GIT_ROOT}/.redeploy/changes_ant.txt); do
 		echo -e "\nBuilding $folder"
 
 		pushd $folder > /dev/null
@@ -146,27 +149,27 @@ deployant() {
 }
 
 deploymodules() {
-	cat /dev/null > .redeploy/changes_gradle_3.txt
+	cat /dev/null > ${GIT_ROOT}/.redeploy/changes_gradle_3.txt
 
-	for folder in $(cat .redeploy/changes_gradle_2.txt); do
+	for folder in $(cat ${GIT_ROOT}/.redeploy/changes_gradle_2.txt); do
 		if [ -f $folder/.lfrbuild-portal ]; then
-			echo $folder >> .redeploy/changes_gradle_3.txt
+			echo $folder >> ${GIT_ROOT}/.redeploy/changes_gradle_3.txt
 			unziposgijar $folder
 		fi
 	done
 
-	cat /dev/null > .redeploy/deploy_gradle.txt
+	cat /dev/null > ${GIT_ROOT}/.redeploy/deploy_gradle.txt
 
-	cat .redeploy/changes_gradle_3.txt | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":deploy" }' > .redeploy/deploy_gradle.txt
+	cat ${GIT_ROOT}/.redeploy/changes_gradle_3.txt | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":deploy" }' > ${GIT_ROOT}/.redeploy/deploy_gradle.txt
 
-	for module in $(cat .redeploy/changes_gradle_3.txt); do
+	for module in $(cat ${GIT_ROOT}/.redeploy/changes_gradle_3.txt); do
 		if [ "" != "$(git ls-files $module | grep -F .jsp)" ]; then
-			echo "$module" | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":compileJSP" }' >> .redeploy/deploy_gradle.txt
+			echo "$module" | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":compileJSP" }' >> ${GIT_ROOT}/.redeploy/deploy_gradle.txt
 		fi
 	done
 
 	cd modules
-	cat ../.redeploy/deploy_gradle.txt | sort | xargs $(dirname "${BASH_SOURCE[0]}")/gw
+	cat ${GIT_ROOT}/.redeploy/deploy_gradle.txt | sort | xargs $(dirname "${BASH_SOURCE[0]}")/gw
 	cd ..
 }
 

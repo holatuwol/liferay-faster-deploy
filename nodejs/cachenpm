@@ -83,7 +83,7 @@ findmodules() {
 		else
 			$(dirname "${BASH_SOURCE[0]}")/../gitchanges $@
 
-			cp .redeploy/changes_gradle_2.txt .includes
+			cp ${GIT_ROOT}/.redeploy/changes_gradle_2.txt .includes
 		fi
 
 		if [[ 0 -ne $(cat .includes | grep -c '^') ]]; then
@@ -118,8 +118,8 @@ transitiveincludes() {
 	old_count=0
 	new_count=$(cat .includes | sort -u | grep -c '^')
 
-	git ls-files modules | grep -F '/build.gradle' | grep -vF '/src/' > .redeploy/gradle_list.txt
-	git ls-files modules | grep -F '/bnd.bnd' | grep -vF '/src/' | xargs grep Bundle-SymbolicName | grep -vF '{' | sed 's/Bundle-SymbolicName: //g' > .redeploy/bnd_list.txt
+	git ls-files modules | grep -F '/build.gradle' | grep -vF '/src/' > ${GIT_ROOT}/.redeploy/gradle_list.txt
+	git ls-files modules | grep -F '/bnd.bnd' | grep -vF '/src/' | xargs grep Bundle-SymbolicName | grep -vF '{' | sed 's/Bundle-SymbolicName: //g' > ${GIT_ROOT}/.redeploy/bnd_list.txt
 
 	while [[ $old_count -ne $new_count ]]; do
 		old_count=$new_count
@@ -134,7 +134,7 @@ transitiveincludes() {
 		library_dependencies=$(echo "$old_files" | awk '{ print $1 "/build.gradle" }' | xargs grep -o 'name: "com.liferay[^"]*"' | cut -d'"' -f 2 | xargs | sed 's/ /\\|/g')
 
 		if [ "" != "$library_dependencies" ]; then
-			grep "\(${library_dependencies}\)" .redeploy/bnd_list.txt | dirnames >> .includes_transitive
+			grep "\(${library_dependencies}\)" ${GIT_ROOT}/.redeploy/bnd_list.txt | dirnames >> .includes_transitive
 		fi
 
 		mv .includes .includes_old

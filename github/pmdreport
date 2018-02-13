@@ -38,7 +38,7 @@ pmdreport() {
 
 	# Make sure there are changes that we need to scan
 
-	CHANGES="$(grep -F '.java' .redeploy/changes.txt)"
+	CHANGES="$(grep -F '.java' ${GIT_ROOT}/.redeploy/changes.txt)"
 
 	CHANGE_COUNT=0
 
@@ -55,5 +55,11 @@ pmdreport() {
 	cat pmd-reports/pmd-report.text
 	return 1
 }
+
+setopts() {
+	. $(dirname "${BASH_SOURCE[0]}")/../setopts
+}
+
+setopts
 
 pmdreport $@

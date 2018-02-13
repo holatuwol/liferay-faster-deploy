@@ -15,23 +15,23 @@ gitchanges() {
 		echo "Computing changes between HEAD and $2..."
 	fi
 
-	cat /dev/null > .redeploy/changes.txt
+	cat /dev/null > ${GIT_ROOT}/.redeploy/changes.txt
 
 	if [ "" != "$1" ] && [ "local" != "$1" ]; then
 		local COMPARE_HASH=$(git log -1 --pretty='%H' $1)
-		git diff ${COMPARE_HASH}..HEAD --name-only | grep -vF .iml | grep -vF rebel.xml | grep -vF yarn.lock >> .redeploy/changes.txt
+		git diff ${COMPARE_HASH}..HEAD --name-only | grep -vF .iml | grep -vF rebel.xml | grep -vF yarn.lock >> ${GIT_ROOT}/.redeploy/changes.txt
 	fi
 
 	echo "Computing local changes..."
 
-	git status -s | grep -vF '??' | grep -vF '.redeploy' | grep -vF .iml | grep -vF rebel.xml | grep -vF 'yarn.lock' | awk '{print $2}' >> .redeploy/changes.txt
+	git status -s | grep -vF '??' | grep -vF '.redeploy' | grep -vF .iml | grep -vF rebel.xml | grep -vF 'yarn.lock' | awk '{print $2}' >> ${GIT_ROOT}/.redeploy/changes.txt
 
-	if [[ 0 -eq $(cat .redeploy/changes.txt | grep -c '^') ]]; then
+	if [[ 0 -eq $(cat ${GIT_ROOT}/.redeploy/changes.txt | grep -c '^') ]]; then
 		echo 'No changes detected.'
 
-		cat /dev/null > .redeploy/changes_ant.txt
-		cat /dev/null > .redeploy/changes_gradle_1.txt
-		cat /dev/null > .redeploy/changes_gradle_2.txt
+		cat /dev/null > ${GIT_ROOT}/.redeploy/changes_ant.txt
+		cat /dev/null > ${GIT_ROOT}/.redeploy/changes_gradle_1.txt
+		cat /dev/null > ${GIT_ROOT}/.redeploy/changes_gradle_2.txt
 
 		return 0
 	fi
@@ -45,4 +45,8 @@ gitchanges() {
 	echo "Change detection completed."
 }
 
-gitchanges $@
+setopts() {
+	. $(dirname "${BASH_SOURCE[0]}")/setopts
+}
+
+setopts && gitchanges $@

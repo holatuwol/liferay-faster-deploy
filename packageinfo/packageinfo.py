@@ -7,7 +7,8 @@ import pandas as pd
 import sys
 
 sys.path.insert(1, os.path.join(sys.path[0], '..'))
-from sourcetrie import SourceTrie
+from git import git_root
+from sourcetrie import SourceTrie, get_rd_file
 
 # Identify excluded packages
 
@@ -61,10 +62,10 @@ def is_excluded_package(package_name):
 
 # Process the packageinfo.txt
 
-module_paths = SourceTrie.load('.redeploy')
+module_paths = SourceTrie.load(get_rd_file())
 module_versions = []
 
-with open('.redeploy/packageinfo.txt', 'r') as f:
+with open(get_rd_file('packageinfo.txt'), 'r') as f:
 	for folder_name in [line.strip() for line in f.readlines()]:
 		node = module_paths.find_leaf(folder_name)
 

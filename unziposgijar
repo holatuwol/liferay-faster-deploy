@@ -7,11 +7,11 @@ dirnames() {
 }
 
 getmodulepath() {
-	grep -F $1 .redeploy/bnd_list.txt > .redeploy/bndmatches.txt
+	grep -F $1 ${GIT_ROOT}/.redeploy/bnd_list.txt > ${GIT_ROOT}/.redeploy/bndmatches.txt
 
 	# search the bnds for the symbolic name
 
-	if [[ 0 -eq $(cat .redeploy/bndmatches.txt | grep -c '^') ]]; then
+	if [[ 0 -eq $(cat ${GIT_ROOT}/.redeploy/bndmatches.txt | grep -c '^') ]]; then
 		echo "Could not find Bundle-SymbolicName $1"
 		return 1
 	fi
@@ -19,21 +19,21 @@ getmodulepath() {
 	# at this point, we know we have at least a partial match
 	# now to find out if there is an exact guess we can make
 
-	local BND=$(cat .redeploy/bndmatches.txt | cut -d':' -f 1)
+	local BND=$(cat ${GIT_ROOT}/.redeploy/bndmatches.txt | cut -d':' -f 1)
 
 	if [[ 1 -eq $(echo "$BND" | grep -c '^') ]]; then
 		MODULE_PATH=$(dirname $BND)
 		return 0
 	fi
 
-	BND=$(grep -F "$1" .redeploy/bndmatches.txt | cut -d':' -f 1)
+	BND=$(grep -F "$1" ${GIT_ROOT}/.redeploy/bndmatches.txt | cut -d':' -f 1)
 
 	if [ "" != "$BND" ] && [[ 1 -eq $(echo "$BND" | grep -c '^') ]]; then
 		MODULE_PATH=$(dirname $BND)
 		return 0
 	fi
 
-	BND=$(grep -F "${1}/bnd.bnd" .redeploy/bndmatches.txt | cut -d':' -f 1)
+	BND=$(grep -F "${1}/bnd.bnd" ${GIT_ROOT}/.redeploy/bndmatches.txt | cut -d':' -f 1)
 
 	if [ "" != "$BND" ] && [[ 1 -eq $(echo "$BND" | grep -c '^') ]]; then
 		MODULE_PATH=$(dirname $BND)
@@ -43,18 +43,18 @@ getmodulepath() {
 	# no exact guesses possible, so report that it is ambiguous
 
 	echo "$1 is ambiguous:"
-	cat .redeploy/bndmatches.txt | cut -d':' -f 2
+	cat ${GIT_ROOT}/.redeploy/bndmatches.txt | cut -d':' -f 2
 	return 1
 }
 
 unziposgijar() {
 	# generate a cache that maps between the bundle symbolic name and a module path
 
-	mkdir -p .redeploy
+	mkdir -p ${GIT_ROOT}/.redeploy
 
-	if [ ! -f .redeploy/bnd_list.txt ]; then
+	if [ ! -f ${GIT_ROOT}/.redeploy/bnd_list.txt ]; then
 		git ls-files modules | grep -vF '/src/' | grep -F '/bnd.bnd' | grep -vF -- '-test/' | xargs grep -F Bundle-SymbolicName | \
-			grep -vF '{' | sed 's/Bundle-SymbolicName: //g' > .redeploy/bnd_list.txt
+			grep -vF '{' | sed 's/Bundle-SymbolicName: //g' > ${GIT_ROOT}/.redeploy/bnd_list.txt
 	fi
 
 	local BASE_PATH=
@@ -66,7 +66,7 @@ unziposgijar() {
 		BASE_PATH=$(dirname $1)
 		JAR_PATH=$1
 		BUNDLE_SYMBOLICNAME=$(basename $JAR_PATH | sed 's/.jar$//g')
-		MODULE_PATH=$(grep ":${BUNDLE_SYMBOLICNAME}$" .redeploy/bnd_list.txt | cut -d':' -f 1 | dirnames)
+		MODULE_PATH=$(grep ":${BUNDLE_SYMBOLICNAME}$" ${GIT_ROOT}/.redeploy/bnd_list.txt | cut -d':' -f 1 | dirnames)
 	elif getmodulepath $1; then
 		BUNDLE_SYMBOLICNAME=$(grep 'Bundle-SymbolicName' $MODULE_PATH/bnd.bnd | cut -d' ' -f 2)
 		JAR_PATH=$(find $LIFERAY_HOME/osgi -name $BUNDLE_SYMBOLICNAME.jar)
@@ -132,6 +132,10 @@ unziposgijar() {
 	touch -t $new_timestamp "$MODULE_PATH/classes"
 }
 
+setopts() {
+	. $(dirname "${BASH_SOURCE[0]}")/setopts
+}
+
 if [ "" != "$1" ]; then
-	unziposgijar $1
+	setopts && unziposgijar $1
 fi
