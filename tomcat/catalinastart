@@ -66,6 +66,10 @@ catalinaconf() {
 catalinastart() {
 	. $(dirname ${BASH_SOURCE[0]})/releaseinfo
 
+	if [ "" == "${RELEASE_ID}" ]; then
+		return 1
+	fi
+
 	javahome 8
 
 	if [[ $RELEASE_ID -lt 7000 ]]; then

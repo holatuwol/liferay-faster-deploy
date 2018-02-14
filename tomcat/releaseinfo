@@ -37,6 +37,11 @@ releaseinfo() {
 		RELEASE_INFO_JAR=$CATALINA_HOME/lib/ext/portal-service.jar
 	fi
 
+	if [ ! -f $RELEASE_INFO_JAR ]; then
+		echo "Unable to find portal-kernel.jar or portal-service.jar in ${CATALINA_HOME}"
+		return 1
+	fi
+
 	RELEASE_ID=$(groovy -classpath $RELEASE_INFO_JAR -e 'print com.liferay.portal.kernel.util.ReleaseInfo.getBuildNumber()')
 }
 
