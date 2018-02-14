@@ -6,9 +6,15 @@ csvmanifest() {
 		return 1
 	fi
 
-	sed -n "/${1}-Package/,/^[^ ]/p" ${2} | sed '$d' | sed "1s/${1}-Package://" | tr -d '[:space:]' | \
+	local MANIFEST="cat $2"
+
+	if [[ $2 == *.jar ]]; then
+		MANIFEST="unzip -p $2 META-INF/MANIFEST.MF"
+	fi
+
+	${MANIFEST} | sed -n "/${1}-Package/,/^[^ ]/p" | sed '$d' | sed "1s/${1}-Package://" | tr -d '[:space:]' | \
 		sed 's/",/"\n/g' | sed 's/;uses:="[^"]*"//g' | sed 's/;version=/,/g' | sed 's/,\([^"0-9]\)/\n\1/g' | \
-		sort > "$2.csv"
+		sort | tee "${2}.csv"
 }
 
 csvmanifest $@
