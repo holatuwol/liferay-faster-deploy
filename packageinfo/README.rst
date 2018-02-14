@@ -17,6 +17,10 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 
 	MCD_RD_CLONE_PATH=/path/to/clone/location
 
+	csvmanifest() {
+		${MCD_RD_CLONE_PATH}/packageinfo/csvmanifest
+	}
+
 	fixdeps() {
 		${MCD_RD_CLONE_PATH}/packageinfo/fixdeps
 	}
@@ -24,6 +28,19 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 	trackprop() {
 		${MCD_RD_CLONE_PATH}/packageinfo/trackprop
 	}
+
+Extract Import/Export Package from Manifest
+===========================================
+
+It's not immediately obvious what packages are imported/exported from the build artifact, because the generated MANIFEST.MF is not formatted in a human-readable way (it line wraps every 72 characters). To make things human readable, you could use the ``headers`` command via Gogo shell, but everything is still all gathered together on one line.
+
+A little bit of stream editing, and you can convert the manifest into a CSV file.
+
+.. code-block:: bash
+
+	csvmanifest com.liferay.portal.template.freemarker.jar
+	csvmanifest Export com.liferay.portal.template.freemarker.jar
+	csvmanifest modules/core/portal-bootstrap/system.packages.extra.mf
 
 Track Portal Property Value
 ===========================
@@ -33,6 +50,10 @@ The following script will let you see the value of a portal property for every D
 * `trackprop <trackprop>`__
 
 Users may need to update the value for ``module.framework.properties.org.osgi.framework.bootdelegation`` in order to get things working on different application servers and different databases, such as in `LPS-67662 <https://issues.liferay.com/browse/LPS-67662>`__.
+
+.. code-block:: bash
+
+	trackprop module.framework.properties.org.osgi.framework.bootdelegation
 
 However, the default value of that property might change in each DE release as Liferay discovers bugs with the value being too inclusive, such as in `LPS-65488 <https://issues.liferay.com/browse/LPS-65488>`__, or as Liferay introduces new classes, such as in `LPS-69090 <https://issues.liferay.com/browse/LPS-69090>`__ (DE-8) and `LPS-68753 <https://issues.liferay.com/browse/LPS-68753>`__ (DE-10).
 

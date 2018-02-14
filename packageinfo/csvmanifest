@@ -1,20 +1,33 @@
 #!/bin/bash
 
 csvmanifest() {
-	if [ ! -f "$2" ]; then
-		echo $2 could not be found
+	if [ "" == "$1" ]; then
+		echo 'Usage: csvmanifest [Import|Export] </path/to/manifest|/path/to/bundle>'
 		return 1
 	fi
 
-	local MANIFEST="cat $2"
+	local HEADER=$1
+	local INPUT_FILE=$2
 
-	if [[ $2 == *.jar ]]; then
-		MANIFEST="unzip -p $2 META-INF/MANIFEST.MF"
+	if [ "" == "$2" ]; then
+		HEADER='Import'
+		INPUT_FILE=$1
 	fi
 
-	${MANIFEST} | sed -n "/${1}-Package/,/^[^ ]/p" | sed '$d' | sed "1s/${1}-Package://" | tr -d '[:space:]' | \
+	if [ ! -f "${INPUT_FILE}" ]; then
+		echo ${INPUT_FILE} could not be found
+		return 1
+	fi
+
+	local MANIFEST="cat ${INPUT_FILE}"
+
+	if [[ ${INPUT_FILE} == *.jar ]]; then
+		MANIFEST="unzip -p ${INPUT_FILE} META-INF/MANIFEST.MF"
+	fi
+
+	${MANIFEST} | sed -n "/${HEADER}-Package/,/^[^ ]/p" | sed '$d' | sed "1s/${HEADER}-Package://" | tr -d '[:space:]' | \
 		sed 's/",/"\n/g' | sed 's/;uses:="[^"]*"//g' | sed 's/;version=/,/g' | sed 's/,\([^"0-9]\)/\n\1/g' | \
-		sort | tee "${2}.csv"
+		sort | tee "${INPUT_FILE}.csv"
 }
 
 csvmanifest $@
