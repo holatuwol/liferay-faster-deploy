@@ -27,8 +27,6 @@ function addBreakpoints() {
   var rows = table.find('tbody tr');
   var breakpoints = [];
 
-  console.log(orderBy);
-
   if ((orderBy == 'project') || (orderBy == 'issuekey')) {
     var issues = rows.toArray().map((x) => jQuery(x).find('td.issuekey').text().trim());
     breakpoints = issues.map((x) => x.substring(0, x.indexOf('-')));
