@@ -19,7 +19,7 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 
 	bundle() {
 		LIFERAY_PASSWORD= \
-			${MCD_RD_CLONE_PATH}/tomcat/bundle $@
+			${MCD_RD_CLONE_PATH}/tomcat/bundle "$@"
 	}
 
 	cluster() {
