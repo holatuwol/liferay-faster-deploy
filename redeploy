@@ -33,13 +33,23 @@ applychanges() {
 
 	# First, deploy portal libraries and global libraries
 
-	for file in $(grep '^lib/global/' ${GIT_ROOT}/.redeploy/changes.txt); do
-		cp $file $LIFERAY_HOME/$TOMCAT_FOLDER/lib/ext
-	done
+	if [ "" != "$(grep '^lib/' ${GIT_ROOT}/.redeploy/changes.txt)" ]; then
+		echo "Deploying updated libraries"
 
-	for file in $(grep '^lib/portal/' ${GIT_ROOT}/.redeploy/changes.txt); do
-		cp $file $LIFERAY_HOME/$TOMCAT_FOLDER/webapps/ROOT/WEB-INF/lib
-	done
+		if [ "" != "$(grep -F deploy-additional-jars ${GIT_ROOT}/build.xml)" ]; then
+			cd ${GIT_ROOT}
+			ant deploy-additional-jars
+			cd -
+		else
+			for file in $(grep '^lib/global/' ${GIT_ROOT}/.redeploy/changes.txt); do
+				cp $file $LIFERAY_HOME/$TOMCAT_FOLDER/lib/ext
+			done
+
+			for file in $(grep '^lib/portal/' ${GIT_ROOT}/.redeploy/changes.txt); do
+				cp $file $LIFERAY_HOME/$TOMCAT_FOLDER/webapps/ROOT/WEB-INF/lib
+			done
+		fi
+	fi
 
 	# Check to see if there is anything we need to deploy with ant
 
