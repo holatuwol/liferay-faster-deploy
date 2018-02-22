@@ -26,12 +26,15 @@ def get_liferay_content(base_url, params=None, method='get'):
 	authenticate(base_url, params)
 
 	if method == 'get':
-		query_string = '&'.join(['%s=%s' % (key, value) for key, value in params.items()])
-
-		if base_url.find('?') == -1:
-			full_url = '%s?%s' % (base_url, query_string)
+		if params is None:
+			full_url = base_url
 		else:
-			full_url = '%s&%s' % (base_url, query_string)
+			query_string = '&'.join(['%s=%s' % (key, value) for key, value in params.items()])
+
+			if base_url.find('?') == -1:
+				full_url = '%s?%s' % (base_url, query_string)
+			else:
+				full_url = '%s&%s' % (base_url, query_string)
 
 		r = session.get(full_url, data=params)
 	else:

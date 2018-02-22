@@ -22,6 +22,9 @@ def get_baseline_id():
 		return patcher_json[base_tag]
 
 def get_fix_id(workaround=False):
+	if len(sys.argv) == 3:
+		return sys.argv[2]
+
 	base_url = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher'
 	fix_name = get_fix_name()
 
@@ -75,6 +78,11 @@ def get_fix_id(workaround=False):
 	return None
 
 def get_fix_name():
+	fix_name = get_fix_name_from_id()
+
+	if fix_name is not None:
+		return fix_name
+
 	pattern = re.compile('LP[EPS]-[0-9]*')
 
 	if current_branch.find('LPE-') == 0 or current_branch.find('LPP-') == 0 or current_branch.find('LPS-') == 0:
@@ -86,6 +94,21 @@ def get_fix_name():
 		fixes.update(pattern.findall(line))
 
 	return ','.join(sorted(fixes))
+
+def get_fix_name_from_id():
+	if len(sys.argv) < 2:
+		return None
+
+	base_url = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/fixes/%s/edit' % sys.argv[2]
+	fix_html = get_liferay_content(base_url)
+	soup = BeautifulSoup(fix_html, 'html.parser')
+
+	textarea = soup.find('textarea', {'id': '_1_WAR_osbpatcherportlet_patcherFixName'})
+
+	if textarea is None:
+		return None
+
+	return textarea.text.strip()
 
 def open_patcher_portal():
 	print('Checking patcher portal for existing fix...')
