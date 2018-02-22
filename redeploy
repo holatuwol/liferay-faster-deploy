@@ -136,6 +136,10 @@ deployant() {
 	# Finally, iterate over the folders that are listed for deployment
 
 	for folder in $(cat ${GIT_ROOT}/.redeploy/changes_ant.txt); do
+		if [ "" == "$(grep -F deploy $folder/build.xml)" ]; then
+			continue
+		fi
+
 		echo -e "\nBuilding $folder"
 
 		pushd $folder > /dev/null
