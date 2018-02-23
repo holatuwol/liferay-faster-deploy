@@ -74,7 +74,7 @@ baseline() {
 		fi
 	fi
 
-	if [[ 0 -ne $(grep -v modules "$GIT_ROOT/.redeploy/changes_ant.txt" | grep -F '.java' | grep -c '^') ]]; then
+	if [[ 0 -ne $(cat "$GIT_ROOT/.redeploy/changes_ant.txt" | grep -c '^') ]]; then
 		for folder in $(cat "$GIT_ROOT/.redeploy/changes_ant.txt"); do
 			if [ "" == "$(grep -F "$folder" $GIT_ROOT/.redeploy/changes.txt | grep -F '.java')" ]; then
 				continue
