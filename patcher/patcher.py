@@ -22,7 +22,7 @@ def get_baseline_id():
 		return patcher_json[base_tag]
 
 def get_fix_id(workaround=False):
-	if len(sys.argv) == 3:
+	if len(sys.argv) == 3 and len(sys.argv[2]) > 0:
 		return sys.argv[2]
 
 	base_url = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher'
