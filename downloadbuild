@@ -479,6 +479,7 @@ rollbackbranch() {
 
 	echo "Rollback to reference commit failed. Build may end up being as slow as a regular ant all!"
 
+	git am --abort
 	git checkout -f ${CURRENT_BRANCH}-old
 	git branch -D ${CURRENT_BRANCH}
 	git branch -m ${CURRENT_BRANCH}-old ${CURRENT_BRANCH}
