@@ -34,7 +34,8 @@ skipmp() {
 
 		if [ -d modules/private ]; then
 			sed -i.bak '$s/$/,\\/g' build.$USER.properties
-			sed -n '/#build.include.dirs/,/[^\\]$/p' build.properties | grep -F 'apps/' | cut -d'#' -f 2 | sed 's@^    apps/@    private/apps/@g' | sed '$s/,\\//g' >> build.$USER.properties
+			sed -n '/#build.include.dirs/,/[^\\]$/p' build.properties | grep -F 'apps/' | cut -d'#' -f 2 | sed 's@^    apps/@    private/apps/@g' >> build.$USER.properties
+			echo oauth saml | tr ' ' '\n' | xargs -I {} echo '    private/apps/'{}',\' | sed '$s/,\\//g' >> build.$USER.properties
 		fi
 
 		return 0
