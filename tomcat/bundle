@@ -14,10 +14,6 @@ docker rm -v ${CONTAINER_NAME} 1> /dev/null 2> /dev/null
 if [ "$PWD" != "$HOME" ] && [ "" == "${LIFERAY_HOME_MOUNT}" ]; then
 	if [ -f portal-ext.properties ]; then
 		LIFERAY_HOME_MOUNT="-v ${PWD}:/build"
-	elif [ -d drivers ]; then
-		LIFERAY_HOME_MOUNT="-v ${PWD}:/build"
-	elif [ -d patches ]; then
-		LIFERAY_HOME_MOUNT="-v ${PWD}:/build"
 	elif [ -d bundles ]; then
 		LIFERAY_HOME_MOUNT="-v ${PWD}/bundles:/build"
 	elif [ "" == "$1" ] && [ -f app.server.$USER.properties ]; then
