@@ -1,17 +1,36 @@
 #!/bin/bash
 
-if [ "" == "${CONTAINER_NAME}" ]; then
-	if [[ $(basename "$PWD") =~ ^[A-Z]*-[0-9]*$ ]]; then
-		CONTAINER_NAME=$(basename "$PWD")
-	else
-		CONTAINER_NAME='test'
+create_network() {
+	NETWORK_METADATA=
+
+	if [ "" == "${NETWORK_NAME}" ]; then
+		return 0
 	fi
-fi
 
-docker stop ${CONTAINER_NAME} 1> /dev/null 2> /dev/null
-docker rm -v ${CONTAINER_NAME} 1> /dev/null 2> /dev/null
+	if docker network inspect ${NETWORK_NAME} 1> /dev/null 2> /dev/null; then
+		echo ${NETWORK_NAME} containers will join the existing ${NETWORK_NAME} network.
+	else
+		echo ${NETWORK_NAME} containers will join a newly-created ${NETWORK_NAME} network.
+		docker network create ${NETWORK_NAME}
+	fi
 
-if [ "$PWD" != "$HOME" ] && [ "" == "${LIFERAY_HOME_MOUNT}" ]; then
+	NETWORK_METADATA="--network ${NETWORK_NAME} --network-alias liferay1"
+}
+
+remove_container() {
+	docker stop ${CONTAINER_NAME} 1> /dev/null 2> /dev/null
+	docker rm -v ${CONTAINER_NAME} 1> /dev/null 2> /dev/null
+}
+
+set_container_mounts() {
+	mkdir -p ${HOME}/.liferay/release
+
+	LIFERAY_RELEASE_MOUNT="-v ${HOME}/.liferay/release:/release"
+
+	if [ "$PWD" == "$HOME" ] || [ "" != "${LIFERAY_HOME_MOUNT}" ]; then
+		return 0
+	fi
+
 	if [ -f portal-ext.properties ]; then
 		LIFERAY_HOME_MOUNT="-v ${PWD}:/build"
 	elif [ -d bundles ]; then
@@ -20,15 +39,30 @@ if [ "$PWD" != "$HOME" ] && [ "" == "${LIFERAY_HOME_MOUNT}" ]; then
 		. $(dirname $(dirname ${BASH_SOURCE[0]}))/appserverprops
 		LIFERAY_HOME_MOUNT="-v ${LIFERAY_HOME}:/build"
 	fi
-fi
+}
 
-if [ ! -d ${HOME}/.liferay/release ]; then
-	mkdir -p ${HOME}/.liferay/release
-fi
+set_container_name() {
+	if [ "" != "${CONTAINER_NAME}" ]; then
+		return 0
+	fi
 
-LIFERAY_RELEASE_MOUNT="-v ${HOME}/.liferay/release:/release"
+	if [ "true" != "${DERIVE_CONTAINER_NAME,,}" ]; then
+		CONTAINER_NAME='test'
+	elif [ "" != "${NETWORK_NAME}" ]; then
+		CONTAINER_NAME=${NETWORK_NAME}_liferay1
+	elif [[ $(basename "$PWD") =~ ^[A-Z]*-[0-9]*$ ]]; then
+		NETWORK_NAME=$(basename "$PWD" | grep -o '[A-Z]*')
+		CONTAINER_NAME=${NETWORK_NAME}_liferay1
+	else
+		CONTAINER_NAME='test'
+	fi
+}
 
-if [ "" == "${IMAGE_NAME}" ]; then
+set_image_name() {
+	if [ "" != "${IMAGE_NAME}" ]; then
+		return 0
+	fi
+
 	if [ "" != "$2" ]; then
 		IMAGE_NAME="mcd-nightly-$2"
 	elif [[ $1 == portal-* ]] || [[ $1 == *-6210 ]] || [[ $1 == *-6210.zip ]]; then
@@ -36,15 +70,26 @@ if [ "" == "${IMAGE_NAME}" ]; then
 	else
 		IMAGE_NAME='mcd-nightly-jdk8'
 	fi
-fi
+}
+
+start_liferay() {
+	GLOBAL_BIND="$(echo 8009 8080 8443 | tr ' ' '\n' | awk '{ print  "--publish " $1 ":" $1 }' | xargs)"
+	LOCAL_BIND="$(echo 8000 11311 | tr ' ' '\n' | awk '{ print  "--publish 127.0.0.1:" $1 ":" $1 }' | xargs)"
+	EXPOSE_ONLY="$(echo 7800 7801 | tr ' ' '\n' | awk '{ print  "--expose " $1 }' | xargs)"
+
+	echo docker run ${GLOBAL_BIND} ${LOCAL_BIND} ${EXPOSE_ONLY} \
+		${LIFERAY_HOME_MOUNT} ${LIFERAY_RELEASE_MOUNT} \
+		-e LIFERAY_PASSWORD=${LIFERAY_PASSWORD} \
+		--name ${CONTAINER_NAME} ${NETWORK_METADATA} \
+		${IMAGE_NAME} $1
+}
+
+set_container_name
+remove_container
+set_container_mounts $1
+create_network
+set_image_name $1
 
 echo "Using Docker image ${IMAGE_NAME}"
 
-GLOBAL_BIND="$(echo 8009 8080 8443 | tr ' ' '\n' | awk '{ print  "--publish " $1 ":" $1 }' | xargs)"
-LOCAL_BIND="$(echo 8000 11311 | tr ' ' '\n' | awk '{ print  "--publish 127.0.0.1:" $1 ":" $1 }' | xargs)"
-EXPOSE_ONLY="$(echo 7800 7801 | tr ' ' '\n' | awk '{ print  "--expose " $1 }' | xargs)"
-
-docker run ${GLOBAL_BIND} ${LOCAL_BIND} ${EXPOSE_ONLY} \
-	${LIFERAY_HOME_MOUNT} ${LIFERAY_RELEASE_MOUNT} \
-	-e LIFERAY_PASSWORD=${LIFERAY_PASSWORD} \
-	--name ${CONTAINER_NAME} ${IMAGE_NAME} $1
+start_liferay $1
