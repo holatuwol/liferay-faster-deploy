@@ -1,6 +1,8 @@
 #!/bin/bash
 
 baseline() {
+	echo "Running baseline check"
+
 	$(dirname "${BASH_SOURCE[0]}")/baseline
 }
 
@@ -64,14 +66,20 @@ findreviewer() {
 }
 
 fixdeps() {
+	echo "Fixing dependencies"
+
 	$(dirname "${BASH_SOURCE[0]}")/../packageinfo/fixdeps
 }
 
 formatsource() {
+	echo "Running source formatter"
+
 	$(dirname "${BASH_SOURCE[0]}")/formatsource
 }
 
 pmdreport() {
+	echo "Running PMD report"
+
 	$(dirname "${BASH_SOURCE[0]}")/pmdreport
 }
 
