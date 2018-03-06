@@ -18,6 +18,10 @@ compile() {
 	ARCHIVE_HOME="$HOME/.liferay/tomcat" \
 		$SCRIPT_FOLDER/../appserverprops
 
+	# Mass change timestamps
+
+	$(dirname ${PWD})/../githashtime
+
 	# Begin building
 
 	echo 'Git Hash:' | tee "${LIFERAY_HOME}.log"
