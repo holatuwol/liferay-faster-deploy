@@ -1,0 +1,116 @@
+#!/bin/bash
+
+checkdeps() {
+	cd "$GIT_ROOT"
+
+	# Identify the base branch
+
+	. $(dirname "${BASH_SOURCE[0]}")/../getparent
+
+	if [ "" == "$BASE_BRANCH" ]; then
+		echo Unable to identify base branch
+		return 1
+	fi
+
+	# Find the closest ancestor based on which one has the fewest commits
+
+	local origin_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/origin[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
+	local upstream_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
+	local base_remote=
+
+	if [[ $(git log --pretty='%H' ${origin_remote}/${BASE_BRANCH}..HEAD | grep -c '^') -gt $(git log --pretty='%H' ${upstream_remote}/${BASE_BRANCH}..HEAD | grep -c '^') ]]; then
+		base_remote=$upstream_remote
+	else
+		base_remote=$origin_remote
+	fi
+
+	# Record all the possible module locations that we have to evaluate
+
+	if [ -d modules ]; then
+		git ls-files modules | grep -vF 'modules/sdk/' > ${GIT_ROOT}/.redeploy/lsfiles.txt
+	else
+		git ls-files . > ${GIT_ROOT}/.redeploy/lsfiles.txt
+	fi
+
+	grep -F build.gradle ${GIT_ROOT}/.redeploy/lsfiles.txt | grep -vF '/src/' | dirnames > ${GIT_ROOT}/.redeploy/gradle.txt
+
+	cat ${GIT_ROOT}/.redeploy/gradle.txt | awk '{ print $1 "/src/main/java" }' | xargs git ls-files | grep -F .java > ${GIT_ROOT}/.redeploy/java.txt
+	cat ${GIT_ROOT}/.redeploy/gradle.txt | awk '{ print $1 "/src/main/resources/META-INF/resources" }' | xargs git ls-files | grep -F .jsp > ${GIT_ROOT}/.redeploy/jsp.txt
+
+	# Generate the source trie
+
+	$(dirname "${BASH_SOURCE[0]}")/../sourcetrie
+
+	# Identify the package info files that changed since the latest branch
+
+	git diff --name-only $base_remote/$BASE_BRANCH..HEAD > ${GIT_ROOT}/.redeploy/diff.txt
+	grep -F packageinfo ${GIT_ROOT}/.redeploy/diff.txt > ${GIT_ROOT}/.redeploy/changes.txt
+
+	if [[ 0 -eq $(cat ${GIT_ROOT}/.redeploy/changes.txt | grep -c '^') ]]; then
+		echo No changes detected.
+		return 0
+	fi
+
+	python $(dirname "${BASH_SOURCE[0]}")/../gitchanges.py
+
+	# Loop over the modules and packages that changed to identify where the packages are used
+
+	cat /dev/null > ${GIT_ROOT}/.redeploy/usages.txt
+
+	for folder in $(cat ${GIT_ROOT}/.redeploy/changes_ant.txt); do
+		local module=$(grep -F '"manifest.bundle.symbolic.name"' $folder/build.xml | grep -o 'value="[^";]*' | cut -d'"' -f 2)
+
+		for package in $(grep -F "$folder" ${GIT_ROOT}/.redeploy/changes.txt | sed "s@$folder/src/@@g" | dirnames | tr '/' '.'); do
+			echo $module $package
+			checkfiles $folder $module $package
+		done
+	done
+
+	for folder in $(cat ${GIT_ROOT}/.redeploy/changes_gradle_1.txt ${GIT_ROOT}/.redeploy/changes_gradle_2.txt); do
+		local module=$(grep -F 'Bundle-SymbolicName:' "$folder/bnd.bnd" | cut -d' ' -f 2)
+
+		for package in $(grep -F "$folder" ${GIT_ROOT}/.redeploy/changes.txt | sed "s@$folder/src/main/java/@@g" | sed "s@$folder/src/main/resources/@@g" | dirnames | tr '/' '.'); do
+			echo $module $package
+			checkfiles $folder $module $package
+		done
+	done
+
+	# Make sure that we have the right libraries in place
+
+	checksnapshots
+
+	python $(dirname "${BASH_SOURCE[0]}")/checkdeps.py
+}
+
+checkfiles() {
+	local folder=$1
+	local module=$2
+	local package=$3
+
+	local expression=$(cat ${GIT_ROOT}/.redeploy/gradle.txt | awk '{ print $1 "/build.gradle" }' | xargs grep -Fl '"'${module}'"' | dirnames | tr '\n' '|' | tr -d '\r' | sed 's@|$@@g' | sed 's@|@\\|@g' | awk '{ print "\\(" $1 "\\)" }')
+	grep -h "$expression" ${GIT_ROOT}/.redeploy/java.txt ${GIT_ROOT}/.redeploy/jsp.txt | xargs grep -l "[[:space:]]${package}" | grep -o '.*/src/main/' | sed 's@/src/main/@@g' | sort -u | awk '{ print $1 ",'${module}','${package}'" }' >> ${GIT_ROOT}/.redeploy/usages.txt
+}
+
+checkpython() {
+	$(dirname ${BASH_SOURCE[0]})/../checkpython $@
+}
+
+checksnapshots() {
+	. $(dirname "${BASH_SOURCE[0]}")/../checksnapshots
+}
+
+dirnames() {
+	python $(dirname "${BASH_SOURCE[0]}")/../dirnames.py
+}
+
+setopts() {
+	. $(dirname "${BASH_SOURCE[0]}")/../setopts
+}
+
+checkpython semver
+
+if [[ 0 -ne $? ]]; then
+	exit 1
+fi
+
+setopts && checkdeps

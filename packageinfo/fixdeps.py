@@ -4,6 +4,7 @@ from __future__ import print_function
 import csv
 import os.path
 import semver
+import sys
 
 sys.path.insert(1, os.path.join(sys.path[0], '..'))
 from sourcetrie import get_rd_file
