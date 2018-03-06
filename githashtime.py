@@ -18,7 +18,18 @@ def git_hash_time(hash, folders):
 	for folder in folders:
 		folder = folder.strip()
 
-		for file in git.ls_files('%s/src/main/java' % folder).split('\n'):
+		source_folder = '%s/src/main/java' % folder
+
+		if not os.path.isdir(source_folder):
+			source_folder = '%s/docroot/WEB-INF/src' % folder
+
+		if not os.path.isdir(source_folder):
+			source_folder = '%s/src' % folder
+
+		if not os.path.isdir(source_folder):
+			continue
+
+		for file in git.ls_files(source_folder).split('\n'):
 			if file not in changes and os.path.isfile(file):
 				os.utime(file, (mtime, mtime))
 
