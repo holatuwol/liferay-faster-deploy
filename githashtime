@@ -8,6 +8,12 @@ githashtime() {
 	python $(dirname ${BASH_SOURCE[0]})/githashtime.py $1
 }
 
+setopts() {
+	. $(dirname ${BASH_SOURCE[0]})/setopts
+}
+
+setopts
+
 HASH=$1
 
 if [ "" == "$1" ]; then
@@ -16,4 +22,7 @@ fi
 
 echo "Resetting timestamps to reference hash ${HASH}..."
 
-git ls-files modules | grep -F .lfrbuild-portal | dirnames | githashtime ${HASH}
+(
+	sed -n '/target name="deploy"/,/\/target/p' ${GIT_ROOT}/build.xml | grep -F 'ant dir' | grep -F 'target="deploy"' | cut -d'"' -f 2
+	git ls-files ${GIT_ROOT}/modules | grep -F .lfrbuild-portal | dirnames
+) | githashtime ${HASH}
