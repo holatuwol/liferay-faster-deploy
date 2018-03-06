@@ -1,0 +1,19 @@
+#!/bin/bash
+
+dirnames() {
+	python $(dirname "${BASH_SOURCE[0]}")/dirnames.py
+}
+
+githashtime() {
+	python $(dirname ${BASH_SOURCE[0]})/githashtime.py $1
+}
+
+HASH=$1
+
+if [ "" == "$1" ]; then
+	HASH=$(git log -1 --pretty='%H')
+fi
+
+echo "Resetting timestamps to reference hash ${HASH}..."
+
+git ls-files modules | grep -F .lfrbuild-portal | dirnames | githashtime ${HASH}
