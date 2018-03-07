@@ -67,7 +67,9 @@ set_image_name() {
 		return 0
 	fi
 
-	if [[ $1 == portal-* ]] || [[ $1 == *-6210 ]] || [[ $1 == *-6210.zip ]]; then
+	if [[ $1 == 6.1.* ]] || [[ $1 == *-6130 ]] || [[ $1 == *-6130.zip ]]; then
+		IMAGE_NAME='mcd-nightly-jdk7'
+	elif [[ $1 == portal-* ]] || [[ $1 == 6.2.* ]] || [[ $1 == *-6210 ]] || [[ $1 == *-6210.zip ]]; then
 		IMAGE_NAME='mcd-nightly-jdk7'
 	else
 		IMAGE_NAME='mcd-nightly-jdk8'
