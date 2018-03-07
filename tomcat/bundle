@@ -50,15 +50,8 @@ set_container_name() {
 		CONTAINER_NAME="test$1"
 	elif [ "" != "$1" ]; then
 		CONTAINER_NAME="$1"
-	elif [ "true" != "${DERIVE_CONTAINER_NAME,,}" ]; then
-		CONTAINER_NAME='test'
-	elif [ "" != "${NETWORK_NAME}" ]; then
-		CONTAINER_NAME=${NETWORK_NAME}_liferay1
-	elif [[ $(basename "$PWD") =~ ^[A-Z]*-[0-9]*$ ]]; then
-		NETWORK_NAME=$(basename "$PWD" | grep -o '[A-Z]*')
-		CONTAINER_NAME=${NETWORK_NAME}_liferay1
 	else
-		CONTAINER_NAME='test'
+		CONTAINER_NAME='test8080'
 	fi
 }
 
