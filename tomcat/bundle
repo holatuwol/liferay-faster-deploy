@@ -46,7 +46,9 @@ set_container_name() {
 		return 0
 	fi
 
-	if [ "true" != "${DERIVE_CONTAINER_NAME,,}" ]; then
+	if [ "" != "$1" ]; then
+		CONTAINER_NAME="$1"
+	elif [ "true" != "${DERIVE_CONTAINER_NAME,,}" ]; then
 		CONTAINER_NAME='test'
 	elif [ "" != "${NETWORK_NAME}" ]; then
 		CONTAINER_NAME=${NETWORK_NAME}_liferay1
@@ -63,9 +65,7 @@ set_image_name() {
 		return 0
 	fi
 
-	if [ "" != "$2" ]; then
-		IMAGE_NAME="mcd-nightly-$2"
-	elif [[ $1 == portal-* ]] || [[ $1 == *-6210 ]] || [[ $1 == *-6210.zip ]]; then
+	if [[ $1 == portal-* ]] || [[ $1 == *-6210 ]] || [[ $1 == *-6210.zip ]]; then
 		IMAGE_NAME='mcd-nightly-jdk7'
 	else
 		IMAGE_NAME='mcd-nightly-jdk8'
@@ -84,7 +84,7 @@ start_liferay() {
 		${IMAGE_NAME} $1
 }
 
-set_container_name
+set_container_name $2
 remove_container
 set_container_mounts $1
 create_network
