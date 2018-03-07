@@ -46,8 +46,10 @@ set_container_name() {
 		return 0
 	fi
 
-	if [ "" != "$1" ]; then
-		CONTAINER_NAME="$1"
+	if [ "" != "$1" ] && [[ $1 =~ ^[0-9]*$ ]]; then
+		CONTAINER_NAME="test$1"
+	elif [ "" != "$1" ]; then
+		CONTAINER_NAME="test$1"
 	elif [ "true" != "${DERIVE_CONTAINER_NAME,,}" ]; then
 		CONTAINER_NAME='test'
 	elif [ "" != "${NETWORK_NAME}" ]; then
@@ -73,9 +75,15 @@ set_image_name() {
 }
 
 start_liferay() {
-	GLOBAL_BIND="$(echo 8009 8080 8443 | tr ' ' '\n' | awk '{ print  "--publish " $1 ":" $1 }' | xargs)"
-	LOCAL_BIND="$(echo 8000 11311 | tr ' ' '\n' | awk '{ print  "--publish 127.0.0.1:" $1 ":" $1 }' | xargs)"
-	EXPOSE_ONLY="$(echo 7800 7801 | tr ' ' '\n' | awk '{ print  "--expose " $1 }' | xargs)"
+	local INCREMENT=0
+
+	if [ "" != "$2" ] && [[ $2 =~ ^[0-9]*$ ]]; then
+		INCREMENT=$(expr $2 '-' 8080)
+	fi
+
+	local GLOBAL_BIND="$(echo 8009 8080 8443 | tr ' ' '\n' | awk '{ print  "--publish " $1+'${INCREMENT}' ":" $1 }' | xargs)"
+	local LOCAL_BIND="$(echo 8000 11311 | tr ' ' '\n' | awk '{ print  "--publish 127.0.0.1:" $1+'${INCREMENT}' ":" $1 }' | xargs)"
+	local EXPOSE_ONLY="$(echo 7800 7801 | tr ' ' '\n' | awk '{ print  "--expose " $1 }' | xargs)"
 
 	docker run ${GLOBAL_BIND} ${LOCAL_BIND} ${EXPOSE_ONLY} \
 		${LIFERAY_HOME_MOUNT} ${LIFERAY_RELEASE_MOUNT} \
@@ -92,4 +100,4 @@ set_image_name $1
 
 echo "Using Docker image ${IMAGE_NAME}"
 
-start_liferay $1
+start_liferay $1 $2
