@@ -73,7 +73,6 @@ The script used to do the former, but now does the latter. Given that, the only 
 	gpr https://github.com/brianchandotcom/liferay-portal/pull/1
 	gpr https://github.com/brianchandotcom/liferay-portal/pull/1 LPS-18273
 
-
 Open GitHub Pull Request
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -107,7 +106,7 @@ For Git histories involving commits with many files, GitHub won't allow you to e
 
 .. code-block:: bash
 
-	pushorigin BRANCH_NAME UPSTREAM_NAME
+	pushorigin <BRANCH_NAME> <UPSTREAM_NAME> [ORIGIN_NAME]
 
 Run Test Group
 ==============

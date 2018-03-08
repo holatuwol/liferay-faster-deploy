@@ -4,37 +4,39 @@ pushorigin() {
 	local origin_name=origin
 	local upstream_name=upstream
 
-	if [ "" != "$2" ]; then
-		if [[ "$2" == origin* ]]; then
-			origin_name=$2
+	if [ "" == "$2" ]; then
+		return 1
+	fi
 
-			local origin_url=$(git remote -v | grep "^${2}\s" | awk '{ print $2 }' | uniq)
+	upstream_name=$2
 
-			if [ "" == "$origin_url" ]; then
-				echo "Unable to determine upstream corresponding to $2/$1"
-				return 1
-			fi
+	if [[ "$3" == origin* ]]; then
+		origin_name=$3
 
-			upstream_name=$(git remote -v | grep -F $(echo $origin_url | cut -d'/' -f 2) | grep -vF $origin_url | awk '{ print $1 }' | uniq)
+		local origin_url=$(git remote -v | grep "^${2}\s" | awk '{ print $2 }' | uniq)
 
-			if [ "" == "$upstream_name" ]; then
-				return 0
-			fi
-		else
-			upstream_name=$2
+		if [ "" == "$origin_url" ]; then
+			echo "Unable to determine upstream corresponding to $2/$1"
+			return 1
+		fi
 
-			local upstream_url=$(git remote -v | grep "^${2}\s" | awk '{ print $2 }' | uniq)
+		upstream_name=$(git remote -v | grep -F $(echo $origin_url | cut -d'/' -f 2) | grep -vF $origin_url | awk '{ print $1 }' | uniq)
 
-			if [ "" == "$upstream_url" ]; then
-				echo "Unable to determine origin corresponding to $2/$1"
-				return 1
-			fi
+		if [ "" == "$upstream_name" ]; then
+			return 0
+		fi
+	else
+		local upstream_url=$(git remote -v | grep "^${2}\s" | awk '{ print $2 }' | uniq)
 
-			origin_name=$(git remote -v | grep -F $(echo $upstream_url | cut -d'/' -f 2) | grep -vF $upstream_url | awk '{ print $1 }' | uniq)
+		if [ "" == "$upstream_url" ]; then
+			echo "Unable to determine origin corresponding to $2/$1"
+			return 1
+		fi
 
-			if [ "" == "$origin_name" ]; then
-				return 0
-			fi
+		origin_name=$(git remote -v | grep -F $(echo $upstream_url | cut -d'/' -f 2) | grep -vF $upstream_url | awk '{ print $1 }' | uniq)
+
+		if [ "" == "$origin_name" ]; then
+			return 0
 		fi
 	fi
 
