@@ -4,8 +4,6 @@ if [ "" == "$AWS_PROFILE" ]; then
 	AWS_PROFILE=default
 fi
 
-cd /tmp
-
 if [ -z "${PORTAL_SOURCE_ROOT}" ]; then
 	echo "Please set a PORTAL_SOURCE_ROOT for the build"
 	exit 1
@@ -22,8 +20,7 @@ fi
 
 # Make sure the packageinfo files are up to date
 
-PORTAL_SOURCE_ROOT="$PORTAL_SOURCE_ROOT" \
-	$(dirname $0)/packageinfo
+. $(dirname $0)/packageinfo
 
 pushd "$PORTAL_SOURCE_ROOT" > /dev/null
 CE_RELEASE_COUNT=$(git tag | grep 'ga' | grep '7.0.' | grep -c '^')
@@ -32,18 +29,18 @@ popd > /dev/null
 
 # Generate the JSON files
 
-python $(dirname $0)/packageinfojson.py $(dirname $PORTAL_SOURCE_ROOT) $CE_RELEASE_COUNT $EE_RELEASE_COUNT
-python $(dirname $0)/requireschemajson.py $(dirname $PORTAL_SOURCE_ROOT) $CE_RELEASE_COUNT $EE_RELEASE_COUNT
+cd $(dirname $0)
+
+python packageinfojson.py $(dirname $PORTAL_SOURCE_ROOT) $CE_RELEASE_COUNT $EE_RELEASE_COUNT
+python requireschemajson.py $(dirname $PORTAL_SOURCE_ROOT) $CE_RELEASE_COUNT $EE_RELEASE_COUNT
 
 # Upload the files to the designated bucket
 
 for file in dxppackages dxpmodules dxpschemas; do
-	ext=json
-
-	rm -f ${file}.${ext}.gz
-	gzip ${file}.${ext}
-	aws s3 --profile $AWS_PROFILE cp ${file}.${ext}.gz s3://$S3_BUCKET/${file}.${ext} --acl public-read --metadata-directive REPLACE --content-encoding gzip
-	gunzip ${file}.${ext}.gz
+	rm -f ${file}.json.gz
+	gzip ${file}.json
+	aws s3 --profile $AWS_PROFILE cp ${file}.json.gz s3://$S3_BUCKET/${file}.json --acl public-read --metadata-directive REPLACE --content-encoding gzip
+	rm -f ${file}.json.gz
 
 	pushd $(dirname ${BASH_SOURCE[0]}) > /dev/null
 
@@ -56,3 +53,5 @@ for file in dxppackages dxpmodules dxpschemas; do
 
 	popd > /dev/null
 done
+
+cd -
