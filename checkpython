@@ -1,14 +1,14 @@
 #!/bin/bash
 
 checkpackage() {
-	if $(python -c "import $package"); then
+	if $(python -c "import $package" 2> /dev/null); then
 		return 0
 	fi
 
 	if [ "" != "$(which conda 2> /dev/null)" ]; then
-		conda install $package
+		conda install -y $package
 	elif [ "" != "$(which pip 2> /dev/null)" ]; then
-		pip install $package
+		yes | pip install $package
 	else
 		echo "Neither pip nor conda are available on the path"
 		return 1
