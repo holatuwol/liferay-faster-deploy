@@ -219,6 +219,12 @@ unzipportaljar() {
 			$(dirname "${BASH_SOURCE[0]}")/unzipportaljar $@
 }
 
+setopts && cdroot
+
+if [[ 0 -ne $? ]]; then
+	exit $?
+fi
+
 if [ -f git-commit-portal-ee ]; then
 	git clean -xdf -e '**/*.iml' -e '.gradle/gradle.properties' -e '.idea' -e '.m2' -e 'lib' -e "app.server.$USER.properties" -e "build.$USER.properties"
 else
@@ -226,12 +232,6 @@ else
 fi
 
 CURRENT_HASH=$(git log -1 --pretty='%H')
-
-setopts && cdroot
-
-if [[ 0 -ne $? ]]; then
-	exit $?
-fi
 
 . $(dirname "${BASH_SOURCE[0]}")/appserverprops
 
