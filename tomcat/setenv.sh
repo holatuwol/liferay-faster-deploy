@@ -87,7 +87,7 @@ fi
 
 export CATALINA_OPTS="$CATALINA_OPTS -verbose:gc -XX:+UseSerialGC -XX:+PrintGCDateStamps -XX:+PrintGCTimeStamps -XX:+PrintGCDetails -Xloggc:$CATALINA_BASE/logs/gc.log"
 
-TOMCAT_PORT_PREFIX=$(grep -o "port=\"[89][0-9]05\"" $CATALINA_BASE/conf/server.xml | cut -d'"' -f 2 | grep -o "^[89][0-9]")
+TOMCAT_PORT_PREFIX=$(grep -o "port=\"[0-9]*05\"" $CATALINA_BASE/conf/server.xml | cut -d'"' -f 2 | sed 's/05$//')
 
 DEBUG_PORT_SUFFIX=00
 DEBUG_PORT=$TOMCAT_PORT_PREFIX$DEBUG_PORT_SUFFIX

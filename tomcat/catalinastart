@@ -7,23 +7,8 @@ catalinaconf() {
 
 	# Identify a usable port
 
-	if [ "" != "$(which lsof 2> /dev/null)" ]; then
-		for prefix in {80..99..1}; do
-			export TOMCAT_PORT_PREFIX=$prefix
-			TOMCAT_PORT_SUFFIX=80
-			TOMCAT_PORT=$TOMCAT_PORT_PREFIX$TOMCAT_PORT_SUFFIX
-
-			PROCESS_ID=$(lsof -b -a -i :$TOMCAT_PORT -t -c java)
-
-			if [ "" != "$PROCESS_ID" ]; then
-				PROCESS_ID=$(ps --no-headers $PROCESS_ID | grep tomcat | sed 's/^ *//g' | cut -d' ' -f 1)
-			fi
-
-			if [ "" == "$PROCESS_ID" ]; then
-				break
-			fi
-		done
-	fi
+	local TOMCAT_PORT=$(python $(dirname ${BASH_SOURCE[0]})/getport.py)
+	export TOMCAT_PORT_PREFIX=$(echo "${TOMCAT_PORT}" | sed 's/80$//')
 
 	# Update the port in server.xml to the usable prot
 
@@ -123,6 +108,12 @@ javahome() {
 }
 
 tcnative() {
+	# If this isn't Linux, don't try to compile it
+
+	if [ "" == "$(which apt 2> /dev/null)" ] && [ "" == "$(which yum 2> /dev/null)" ]; then
+		return 0
+	fi
+
 	# If we already generated tcnative, then we don't have to do anything.
 
 	if [ -d $CATALINA_HOME/lib/apr ]; then
