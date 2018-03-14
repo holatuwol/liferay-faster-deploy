@@ -32,6 +32,9 @@ skipmp() {
 
 		sed -n '/#build.include.dirs/,/[^\\]$/p' build.properties | cut -d'#' -f 2 >> build.$USER.properties
 
+		sed -i.bak '$s/$/,\\/g' build.$USER.properties
+		echo portal-search-elasticsearch6 | tr ' ' '\n' | xargs -I {} echo '    apps/'{}',\' | sed '$s/,\\//g' >> build.$USER.properties
+
 		if [ -d modules/private ]; then
 			sed -i.bak '$s/$/,\\/g' build.$USER.properties
 			sed -n '/#build.include.dirs/,/[^\\]$/p' build.properties | grep -F 'apps/' | cut -d'#' -f 2 | sed 's@^    apps/@    private/apps/@g' >> build.$USER.properties
