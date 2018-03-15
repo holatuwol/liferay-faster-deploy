@@ -94,11 +94,8 @@ applychanges() {
 }
 
 cdroot() {
-	if [ -f "$GIT_ROOT/release.properties" ]; then
+	if [ -f "$GIT_ROOT/release.properties" ] || [ -f "${GIT_ROOT}/build-working-dir.xml" ]; then
 		builtin cd $GIT_ROOT
-	elif [ -f "${GIT_ROOT}/build-working-dir.xml" ]; then
-		builtin cd $GIT_ROOT
-		ant -f build-working-dir.xml
 	else
 		echo "Unable to find release.properties at version control root"
 		return 1

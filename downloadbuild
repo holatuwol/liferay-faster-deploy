@@ -4,6 +4,18 @@ appserverprops() {
 	. $(dirname "${BASH_SOURCE[0]}")/appserverprops
 }
 
+buildworkingdir() {
+	if [[ ${BASE_BRANCH} == *-private ]] && [ -f build-working-dir.xml ]; then
+		echo "Build downloaded, ensuring non-private modules are up to date"
+		ant -f build-working-dir.xml
+	elif [ -d modules/private ]; then
+		pushd modules/private > /dev/null
+		git clean -xdf
+		popd > /dev/null
+		rmdir modules/private
+	fi
+}
+
 downloadbranch() {
 	SHORT_NAME=$(echo $BASE_BRANCH | sed 's/ee-//g' | sed 's/\.//g')
 	NEW_BASELINE=
@@ -167,15 +179,15 @@ downloadbuild() {
 		if [ "" != "$(ps -f $TOMCAT_PID | grep -F $LIFERAY_HOME)" ]; then
 			echo "Tomcat is already running, skipping bundle update"
 			NEW_BASELINE=$(cat "$LIFERAY_HOME/baseline.txt")
-			return 0
+			return 1
 		fi
 	done
 
 	if [ "" != "$BASE_TAG" ]; then
-		downloadtag && extract
+		downloadtag && extract && buildworkingdir
 		return $?
 	elif [ "" != "$BASE_BRANCH" ]; then
-		downloadbranch && rebasebranch && extract
+		downloadbranch && rebasebranch && extract && buildworkingdir
 		return $?
 	else
 		echo "Unable to identify base branch or tag"
