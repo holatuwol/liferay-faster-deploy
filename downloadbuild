@@ -103,8 +103,8 @@ downloadbranchbuild() {
 
 	# If we're going to download the new build, then delete older builds
 
-	find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.tar.gz*" -delete
-	find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.zip*" -delete
+	find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.tar.gz*" -exec rm {} +
+	find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.zip*" -exec rm {} +
 
 	# Download the build if we haven't done so already, making
 	# sure to clean up past builds to not take up too much space
