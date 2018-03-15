@@ -91,8 +91,8 @@ downloadbranchbuild() {
 
 	# If we're going to download the new build, then delete older builds
 
-	find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.tar.gz*" | xargs rm
-	find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.zip*" | xargs rm
+	find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.tar.gz*" -delete
+	find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.zip*" -delete
 
 	# Download the build if we haven't done so already, making
 	# sure to clean up past builds to not take up too much space
@@ -289,7 +289,7 @@ getbuildhash() {
 
 		aws s3api get-object --bucket $BUCKET_NAME --key $KEY_NAME/${BUILD_LOG} --range bytes=0-49 githash.txt > /dev/null
 		tail -1 githash.txt | tee "$HOME/.liferay/builds/${BUILD_NAME}.githash"
-		rm githash.txt
+		rm -f githash.txt
 	else
 		curl -r 0-49 -s ${BRANCH_ARCHIVE_MIRROR}/${BUILD_LOG} | tail -1 | tee "$HOME/.liferay/builds/${BUILD_NAME}.githash"
 	fi

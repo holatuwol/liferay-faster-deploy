@@ -86,15 +86,11 @@ applychanges() {
 
 	# Undo changes to build-common.xml and modules/build.gradle
 
-	if [ -d modules ]; then
-		if [ ! -h build-common.xml ] && [ -f build-common.xml ]; then
-			git checkout build-common.xml
+	for file in build-common.xml modules/build.gradle; do
+		if [ ! -h $file ] && [ "" != "$(git ls-files $file)" ]; then
+			git checkout $file
 		fi
-
-		if [ ! -h modules/build.gradle ] && [ -f modules/build.gradle ]; then
-			git checkout modules/build.gradle
-		fi
-	fi
+	done
 }
 
 cdroot() {
