@@ -72,7 +72,7 @@ def get_semver(import_version_string):
 packages = dict()
 manifests = dict()
 
-with open(get_rd_file('checkdeps.txt', 'r')) as f:
+with open(get_rd_file('checkdeps.txt'), 'r') as f:
 	reader = csv.reader(f, delimiter=',', quotechar='"')
 
 	for row in reader:
