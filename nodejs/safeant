@@ -1,5 +1,25 @@
 #!/bin/bash
 
+fixdefaults() {
+	local PUBLIC_PACKAGE_JSON=$(git ls-files modules | grep -F package.json | grep -vF '/src/' | grep -c '^')
+	local PUBLIC_PACKAGE_LOCK_JSON=$(git ls-files modules | grep -F package-lock.json | grep -vF '/src/' | grep -c '^')
+
+	local PRIVATE_PACKAGE_JSON=0
+	local PRIVATE_PACKAGE_LOCK_JSON=0
+
+	if [ -f git-commit-portal ]; then
+		PRIVATE_PACKAGE_JSON=${PUBLIC_PACKAGE_JSON}
+		PRIVATE_PACKAGE_LOCK_JSON=${PUBLIC_PACKAGE_LOCK_JSON}
+
+		PUBLIC_PACKAGE_JSON=$(git ls-tree -r --name-only $(cat git-commit-portal) -- modules | grep -F package.json | grep -vF '/src/' | grep -c '^')
+		PUBLIC_PACKAGE_LOCK_JSON=$(git ls-tree -r $(cat git-commit-portal) -- modules | grep -F package-lock.json | grep -vF '/src/' | grep -c '^')
+	fi
+
+	if [[ $(expr ${PUBLIC_PACKAGE_JSON} '+' ${PRIVATE_PACKAGE_JSON}) -ne $(expr ${PUBLIC_PACKAGE_LOCK_JSON} '+' ${PRIVATE_PACKAGE_LOCK_JSON}) ]]; then
+		sed -i.bak '/com.liferay.gradle.plugins.defaults/s/version: "[^"]*"/version: "5.3.29"/' modules/build-buildscript.gradle
+	fi
+}
+
 safeant() {
 	GIT_ROOT=
 
@@ -27,6 +47,8 @@ safeant() {
 
 	pushd $GIT_ROOT > /dev/null
 
+	fixdefaults
+
 	# Record the start time
 
 	echo "Started $(date)" | tee $GIT_ROOT/.redeploy/compile.txt
@@ -51,10 +73,8 @@ safeant() {
 		if [ "" != "$(git ls-files | grep '.\(gradle\|properties\)$' | xargs grep -Fl cdn.lfrs.sl)" ]; then
 			GRADLE_ARGS="$GRADLE_ARGS --no-daemon -Drepository.url=http://repository.liferay.com/nexus/content/groups/public"
 
-			pushd $GIT_ROOT > /dev/null
 			git ls-files | grep '.\(gradle\|properties\)$' | xargs grep -Fl cdn.lfrs.sl | xargs git update-index --assume-unchanged
 			git ls-files | grep '.\(gradle\|properties\)$' | xargs grep -Fl cdn.lfrs.sl | xargs sed -i.bak 's@https://cdn.lfrs.sl/@http://@g'
-			popd > /dev/null
 		fi
 	fi
 

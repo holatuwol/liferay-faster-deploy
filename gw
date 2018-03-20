@@ -37,6 +37,30 @@ findgradle() {
 	return 1
 }
 
+fixdefaults() {
+	pushd ${GIT_ROOT} > /dev/null
+
+	local PUBLIC_PACKAGE_JSON=$(git ls-files modules | grep -F package.json | grep -vF '/src/' | grep -c '^')
+	local PUBLIC_PACKAGE_LOCK_JSON=$(git ls-files modules | grep -F package-lock.json | grep -vF '/src/' | grep -c '^')
+
+	local PRIVATE_PACKAGE_JSON=0
+	local PRIVATE_PACKAGE_LOCK_JSON=0
+
+	if [ -f git-commit-portal ]; then
+		PRIVATE_PACKAGE_JSON=${PUBLIC_PACKAGE_JSON}
+		PRIVATE_PACKAGE_LOCK_JSON=${PUBLIC_PACKAGE_LOCK_JSON}
+
+		PUBLIC_PACKAGE_JSON=$(git ls-tree -r --name-only $(cat git-commit-portal) -- modules | grep -F package.json | grep -vF '/src/' | grep -c '^')
+		PUBLIC_PACKAGE_LOCK_JSON=$(git ls-tree -r $(cat git-commit-portal) -- modules | grep -F package-lock.json | grep -vF '/src/' | grep -c '^')
+	fi
+
+	if [[ $(expr ${PUBLIC_PACKAGE_JSON} '+' ${PRIVATE_PACKAGE_JSON}) -ne $(expr ${PUBLIC_PACKAGE_LOCK_JSON} '+' ${PRIVATE_PACKAGE_LOCK_JSON}) ]]; then
+		sed -i.bak '/com.liferay.gradle.plugins.defaults/s/version: "[^"]*"/version: "5.3.29"/' modules/build-buildscript.gradle
+	fi
+
+	popd > /dev/null
+}
+
 fixgradle() {
 	echo 'Checking for common Gradle problems'
 
@@ -94,6 +118,8 @@ fixgradle() {
 		ant deploy
 		cd -
 	fi
+
+	fixdefaults
 }
 
 gw() {

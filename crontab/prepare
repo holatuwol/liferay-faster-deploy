@@ -9,7 +9,6 @@ compile() {
 	GIT_HASH=$(git log -1 --pretty='%H')
 
 	sed -i 's/\${env.ANT_OPTS}/${env.GRADLE_OPTS}/g' build-common.xml
-	git update-index --assume-unchanged build-common.xml
 
 	# Setup properties
 
@@ -31,6 +30,8 @@ compile() {
 	if [ -f working.dir.properties ] && [ -f build-working-dir.xml ]; then
 		ant -f build-working-dir.xml
 	fi
+
+	fixdefaults
 
 	if [ -f modules/build.gradle ]; then
 		$SCRIPT_FOLDER/../skipmp | tee -a "${LIFERAY_HOME}.log"
@@ -114,6 +115,26 @@ finish() {
 
 	if [ "" != "$2" ]; then
 		switchport 80 $2
+	fi
+}
+
+fixdefaults() {
+	local PUBLIC_PACKAGE_JSON=$(git ls-files modules | grep -F package.json | grep -vF '/src/' | grep -c '^')
+	local PUBLIC_PACKAGE_LOCK_JSON=$(git ls-files modules | grep -F package-lock.json | grep -vF '/src/' | grep -c '^')
+
+	local PRIVATE_PACKAGE_JSON=0
+	local PRIVATE_PACKAGE_LOCK_JSON=0
+
+	if [ -f git-commit-portal ]; then
+		PRIVATE_PACKAGE_JSON=${PUBLIC_PACKAGE_JSON}
+		PRIVATE_PACKAGE_LOCK_JSON=${PUBLIC_PACKAGE_LOCK_JSON}
+
+		PUBLIC_PACKAGE_JSON=$(git ls-tree -r --name-only $(cat git-commit-portal) -- modules | grep -F package.json | grep -vF '/src/' | grep -c '^')
+		PUBLIC_PACKAGE_LOCK_JSON=$(git ls-tree -r $(cat git-commit-portal) -- modules | grep -F package-lock.json | grep -vF '/src/' | grep -c '^')
+	fi
+
+	if [[ $(expr ${PUBLIC_PACKAGE_JSON} '+' ${PRIVATE_PACKAGE_JSON}) -ne $(expr ${PUBLIC_PACKAGE_LOCK_JSON} '+' ${PRIVATE_PACKAGE_LOCK_JSON}) ]]; then
+		sed -i '/com.liferay.gradle.plugins.defaults/s/version: "[^"]*"/version: "5.3.29"/' modules/build-buildscript.gradle
 	fi
 }
 
