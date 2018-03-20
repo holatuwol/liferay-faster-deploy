@@ -207,7 +207,6 @@ sendpull() {
 
 		if [ "" != "$HAS_CHANGES" ]; then
 			echo "Detected files modified during sanity check, please commit them before sending a pull request"
-			return 1
 		fi
 	else
 		pushd $GIT_ROOT > /dev/null
