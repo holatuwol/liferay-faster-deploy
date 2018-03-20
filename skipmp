@@ -4,6 +4,24 @@ dirnames() {
 	python $(dirname "${BASH_SOURCE[0]}")/dirnames.py
 }
 
+getparent() {
+	. $(dirname "${BASH_SOURCE[0]}")/getparent
+}
+
+lsfiles() {
+	git ls-files modules | grep -vF '/src/' > ${GIT_ROOT}/.redeploy/lsfiles.txt
+
+	if [ -f git-commit-portal ]; then
+		#ant -f build-working-dir.xml
+		git ls-tree -r $(cat git-commit-portal) --name-only -- modules | grep -vF '/src/' >> ${GIT_ROOT}/.redeploy/lsfiles.txt
+	fi
+
+	cat .redeploy/lsfiles.txt | grep -F '/build.gradle' > ${GIT_ROOT}/.redeploy/gradle_list.txt
+
+	cat .redeploy/lsfiles.txt | grep -vF '/src/' | grep -F '/bnd.bnd' | xargs grep -F Bundle-SymbolicName | \
+		grep -vF '{' | sed 's/Bundle-SymbolicName: //g' > ${GIT_ROOT}/.redeploy/bnd_list.txt
+}
+
 setopts() {
 	. $(dirname "${BASH_SOURCE[0]}")/setopts
 }
@@ -27,47 +45,29 @@ skipmp() {
 		fi
 	fi
 
-	if [ "" != "$(grep -F build.include.dirs build.properties)" ]; then
-		echo >> build.$USER.properties
-
-		sed -n '/#build.include.dirs/,/[^\\]$/p' build.properties | cut -d'#' -f 2 >> build.$USER.properties
-
-		sed -i.bak '$s/$/,\\/g' build.$USER.properties
-		echo portal-search-elasticsearch6 | tr ' ' '\n' | xargs -I {} echo '    apps/'{}',\' | sed '$s/,\\//g' >> build.$USER.properties
-
-		if [ -d modules/private ]; then
-			sed -i.bak '$s/$/,\\/g' build.$USER.properties
-			sed -n '/#build.include.dirs/,/[^\\]$/p' build.properties | grep -F 'apps/' | cut -d'#' -f 2 | sed 's@^    apps/@    private/apps/@g' >> build.$USER.properties
-			echo oauth saml | tr ' ' '\n' | xargs -I {} echo '    private/apps/'{}',\' | sed '$s/,\\//g' >> build.$USER.properties
-		fi
-
-		return 0
-	fi
-
-	if [ ! -f build.$USER.properties ] || [ "" != "$(grep -F build.include.dirs build.properties)" ]; then
-		echo "Restricting build to the following applications (detected via app.bnd)"
-
-		if [ -f $HOME/lpkgs.txt ]; then
-			cat $HOME/lpkgs.txt | tr '\n' ',' | sed 's/,/, /g'
-		else
-			echo -en 'Collaboration\nForms and Workflow\nFoundation\nStatic\nWeb Experience' | tr '\n' ',' | sed 's/,/, /g'
-		fi
-
-		echo -en "\n\n"
-	fi
-
 	git ls-files -v | grep '^h ' | cut -d' ' -f 2 | grep -F '.lfrbuild-portal' | xargs git update-index --no-assume-unchanged
 	git status | grep -F deleted | grep -F '.lfrbuild-portal' | cut -d':' -f 2 | xargs git checkout
 
+	getparent
+
 	if [ -f $HOME/lpkgs.txt ]; then
 		BUNDLE_APPS=$(cat $HOME/lpkgs.txt)
+	elif [ "7.0.x" == "${BASE_BRANCH}" ] || [ "7.0.x-private" == "${BASE_BRANCH}" ]; then
+		BUNDLE_APPS=$(echo -e 'Collaboration\nForms and Workflow\nFoundation\nStatic\nWeb Experience\nSAML 2.0 Provider')
 	else
-		BUNDLE_APPS=$(echo -e 'Collaboration\nForms and Workflow\nFoundation\nStatic\nWeb Experience')
+		BUNDLE_APPS=$(echo -e 'Collaboration\nForms and Workflow\nFoundation\nStatic\nWeb Experience\nSAML 2.0 Provider\nElasticsearch 6 Search Engine')
 	fi
+
+	echo "Restricting build to the following applications:"
+	echo "${BUNDLE_APPS}"
+
+	echo -en "\n\n"
+
+	lsfiles
 
 	cat /dev/null > .excludes
 
-	for file in $(git ls-files modules | grep -F app.bnd); do
+	for file in $(grep -F app.bnd ${GIT_ROOT}/.redeploy/lsfiles.txt); do
 		app=$(grep Liferay-Releng-App-Title $file | cut -d' ' -f 3-)
 		is_bundled=$(echo "$BUNDLE_APPS" | grep "^\s*${app}\s*\$")
 
@@ -83,7 +83,7 @@ skipmp() {
 		fi
 	done
 
-	for file in $(git ls-files modules/private | grep -F .lfrbuild-portal | grep -F -- '-dxp'); do
+	for file in $(grep -F modules/private ${GIT_ROOT}/.redeploy/lsfiles.txt | grep -F .lfrbuild-portal | grep -F -- '-dxp'); do
 		public_app=$(echo $file | sed 's@/private/@/@g' | sed 's@-dxp@@g' | dirnames)
 
 		if [ -d $public_app ]; then
@@ -94,11 +94,12 @@ skipmp() {
 	if [[ 0 -ne $(cat .excludes | grep -c '^') ]]; then
 		transitiveexcludes
 
-		exclude=$(cat .excludes | xargs git ls-files | grep -F .lfrbuild-portal | sort -u)
+		local all_excludes=$(grep -Ff .excludes ${GIT_ROOT}/.redeploy/lsfiles.txt | grep -F .lfrbuild-portal | sort -u)
+		local git_excludes=$(cat .excludes | xargs git ls-files | grep -F .lfrbuild-portal | sort -u)
 
-		echo "$exclude" | dirnames | awk '{ print "Excluding " $1 }'
-		echo "$exclude" | xargs git update-index --assume-unchanged
-		echo "$exclude" | xargs rm -f
+		echo "$all_excludes" | dirnames | awk '{ print "Excluding " $1 }'
+		echo "$git_excludes" | xargs git update-index --assume-unchanged
+		echo "$all_excludes" | xargs rm -f
 	fi
 
 	rm -f .excludes
@@ -114,34 +115,27 @@ transitiveexcludes() {
 	old_count=0
 	new_count=$(cat .excludes | sort -u | grep -c '^')
 
-	git ls-files modules | grep -vF '/src/' > ${GIT_ROOT}/.redeploy/lsfiles.txt
-	cat .redeploy/lsfiles.txt | grep -F '/build.gradle' > ${GIT_ROOT}/.redeploy/gradle_list.txt
-
-	git ls-files modules | grep -vF '/src/' | grep -F '/bnd.bnd' | xargs grep -F Bundle-SymbolicName | \
-		grep -vF '{' | sed 's/Bundle-SymbolicName: //g' > ${GIT_ROOT}/.redeploy/bnd_list.txt
-
 	while [[ $old_count -ne $new_count ]]; do
 		old_count=$new_count
-		old_files=$(cat .excludes_transitive)
-
-		project_dependencies=$(echo "$old_files" | sed 's@^modules/private@@g' | sed 's@^modules@@g' | tr '/' ':' | tr '\n' ' ' | tr -d '\r' | sed 's/ /\\|/g')
 
 		cat /dev/null > .excludes_transitive
 
-		if [ "" != "$project_dependencies" ]; then
-			cat ${GIT_ROOT}/.redeploy/gradle_list.txt | xargs grep -l "project(\"\($project_dependencies\)\")" | dirnames >> .excludes_transitive
+		sed 's@^modules/private@@g' .excludes | sed 's@^modules@@g' | tr '/' ':' | sort -u | awk '{ print "project(\"" $1 ":" }' > .excludes_project
+		sed 's@^modules/private@@g' .excludes | sed 's@^modules@@g' | tr '/' ':' | sort -u | awk '{ print "project(\"" $1 "\"" }' >> .excludes_project
+
+		if [[ 0 -ne "$(grep -c '^' .excludes_project)" ]]; then
+			cat ${GIT_ROOT}/.redeploy/gradle_list.txt | xargs grep -lFf .excludes_project | dirnames >> .excludes_transitive
 		fi
 
-		app_folders=$(echo "$old_files" | xargs | sed 's/ /\\|/g')
-		library_dependencies=$(grep "\(${app_folders}\)" ${GIT_ROOT}/.redeploy/bnd_list.txt | cut -d ':' -f 2 | xargs | sed 's/ /\\|/g')
+		grep -Ff .excludes ${GIT_ROOT}/.redeploy/bnd_list.txt | cut -d ':' -f 2 > .excludes_library
 
-		if [ "" != "$library_dependencies" ]; then
-			cat ${GIT_ROOT}/.redeploy/gradle_list.txt | xargs grep -l "\"\($library_dependencies\)\"" | dirnames >> .excludes_transitive
+		if [[ 0 -ne "$(grep -c '^' .excludes_library)" ]]; then
+			cat ${GIT_ROOT}/.redeploy/gradle_list.txt | xargs grep -lFf .excludes_library | dirnames >> .excludes_transitive
 		fi
 
 		mv .excludes .excludes_old
 		cat .excludes_old .excludes_transitive | sort -u > .excludes
-		rm .excludes_old
+		rm .excludes_old .excludes_project .excludes_library
 
 		new_count=$(cat .excludes | grep -c '^')
 	done
