@@ -68,11 +68,14 @@ SET unique_checks=0;
 ' > reload.sql
 
 	getbackup customer_lportal customer
-	getbackup developer_lportal lportal
+	getbackup developer_lportal web
 
-	echo '
+	echo "
 COMMIT;
-' >> reload.sql
+
+USE sys
+CALL create_synonym_db('web', 'lportal');
+" >> reload.sql
 
 	echo 'cat reload.sql | mysql --max_allowed_packet=2048M' >> reload.sh
 
