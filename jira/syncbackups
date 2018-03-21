@@ -75,6 +75,7 @@ COMMIT;
 
 USE sys
 CALL create_synonym_db('web', 'lportal');
+grant all on lportal.* to 'lportal'@'%';
 " >> reload.sql
 
 	echo 'cat reload.sql | mysql --max_allowed_packet=2048M' >> reload.sh
