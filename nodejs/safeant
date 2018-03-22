@@ -80,9 +80,31 @@ safeant() {
 
 	popd > /dev/null
 
+	local IS_SNAPSHOT=
+
+	if [ "${GIT_ROOT}" != "${PWD}" ]; then
+		for ARG in $@; do
+			if [ "install-portal-snapshot" == "${ARG}" ]; then
+				IS_SNAPSHOT=true
+			fi
+		done
+	fi
+
 	# Execute the actual build
 
+	if [ "" == "${IS_SNAPSHOT}" ]; then
+		pushd ${GIT_ROOT} > /dev/null
+		git ls-files | grep -vF modules | grep -F bnd.bnd | xargs rm -f
+		popd > /dev/null
+	fi
+
 	ANT_OPTS="$ANT_OPTS" ant $@ | tee -a $GIT_ROOT/.redeploy/compile.txt
+
+	if [ "" == "${IS_SNAPSHOT}" ]; then
+		pushd ${GIT_ROOT} > /dev/null
+		git ls-files | grep -vF modules | grep -F bnd.bnd | xargs git checkout
+		popd > /dev/null
+	fi
 
 	# Report the completion time
 
