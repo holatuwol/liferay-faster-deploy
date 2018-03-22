@@ -69,14 +69,15 @@ cleanappserver() {
 	fi
 
 	TOMCAT_FOLDER=tomcat-${TOMCAT_VERSION}
+	CATALINA_HOME=${LIFERAY_HOME}/${TOMCAT_FOLDER}
 
 	if [ "" != "$CURRENT_HASH" ]; then
 		return 0
 	fi
 
 	if [ "" == "$ARCHIVE_HOME" ]; then
-		if [ ! -d $LIFERAY_HOME/$TOMCAT_FOLDER ]; then
-			echo "Missing $LIFERAY_HOME/$TOMCAT_FOLDER"
+		if [ ! -d ${CATALINA_HOME} ]; then
+			echo "Missing ${CATALINA_HOME}"
 			ant -f build-dist.xml unzip-tomcat
 		fi
 
@@ -99,7 +100,7 @@ cleanappserver() {
 
 	# cleanup the existing folder so that we can have a clean slate
 
-	rm -rf "$LIFERAY_HOME/$TOMCAT_FOLDER"
+	rm -rf "${CATALINA_HOME}"
 	mkdir -p "$LIFERAY_HOME"
 
 	pushd "$LIFERAY_HOME" > /dev/null

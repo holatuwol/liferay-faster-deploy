@@ -1,0 +1,146 @@
+#!/bin/bash
+
+. "$(dirname ${BASH_SOURCE[0]})/common"
+
+startdatabase() {
+	if docker inspect ${CONTAINER_NAME} 1>/dev/null 2>/dev/null; then
+		echo "Using existing container ${CONTAINER_NAME}"
+		docker start ${CONTAINER_NAME}
+		return 0
+	fi
+
+	docker run --name ${CONTAINER_NAME} \
+		--detach --expose 5000 --expose 5001 nguoianphu/docker-sybase
+
+	echo "Waiting for initial database startup..."
+
+	HEALTH=
+
+	while [ "" == "$HEALTH" ]; do
+		sleep 1
+		HEALTH=$(docker logs ${CONTAINER_NAME} 2>&1 | grep -F 'Master device size')
+	done
+
+	echo "Applying recommended database settings..."
+
+	docker exec ${CONTAINER_NAME} /bin/bash -c '. /opt/sybase/SYBASE.sh; charset -PmyPassword -SMYSYBASE binary.srt utf8' > /dev/null
+
+	echo "
+use master
+go
+
+disk resize name=\"master\", size=\"2000M\"
+go
+
+create database lportal
+go
+
+alter database lportal
+on default=1400
+go
+
+alter database lportal
+with override
+go
+
+exec sp_dboption 'lportal', 'allow nulls by default' , true
+go
+
+exec sp_dboption 'lportal', 'select into/bulkcopy/pllsort' , true
+go
+
+sp_configure 'select for update', 1
+go
+
+sp_configure 'default character set id', 190
+go
+
+sp_configure 'default sortorder id', 50, 'utf8'
+go
+
+sp_logiosize
+go
+
+sp_logiosize \"16\"
+go
+
+use lportal
+go
+
+sp_logiosize \"16\"
+go
+" > init.sql
+
+	docker cp init.sql ${CONTAINER_NAME}:/
+	rm init.sql
+
+	docker exec ${CONTAINER_NAME} /bin/bash -c '. /opt/sybase/SYBASE.sh; isql -U sa -P myPassword -S MYSYBASE -i /init.sql' > /dev/null
+	docker exec ${CONTAINER_NAME} rm /init.sql
+
+	docker restart ${CONTAINER_NAME}
+
+	echo "Waiting for UTF-8 character set to install..."
+
+	HEALTH=
+
+	while [ "" == "$HEALTH" ]; do
+		sleep 1
+		HEALTH=$(docker logs ${CONTAINER_NAME} 2>&1 | grep -F 'Default Sort Order successfully changed')
+	done
+
+	docker restart ${CONTAINER_NAME}
+}
+
+updateprops() {
+	local IP_ADDRESS=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${CONTAINER_NAME})
+	echo "Sybase database is started with IP address ${IP_ADDRESS}"
+
+	echo "Updating ${LIFERAY_HOME}/portal-ext.properties with database connection information"
+
+	if [ -f ${LIFERAY_HOME}/portal-ext.properties ]; then
+		if [ "" != "$(grep -F ${IP_ADDRESS} ${LIFERAY_HOME}/portal-ext.properties | grep -vF '#')" ]; then
+			return 0
+		fi
+
+		sed -i.bak 's/^jdbc.default/#jdbc.default/g' ${LIFERAY_HOME}/portal-ext.properties
+	fi
+
+	echo "
+jdbc.default.driverClassName=com.sybase.jdbc4.jdbc.SybDriver
+jdbc.default.url=jdbc:sybase:Tds:${IP_ADDRESS}:5000/lportal
+jdbc.default.username=sa
+jdbc.default.password=myPassword
+
+hibernate.dialect=com.liferay.portal.dao.orm.hibernate.SybaseASE157Dialect
+custom.sql.function.isnull=CONVERT(VARCHAR,?) IS NULL
+custom.sql.function.isnotnull=CONVERT(VARCHAR,?) IS NOT NULL
+
+# c3po
+
+jdbc.default.acquireIncrement=1
+jdbc.default.acquireRetryDelay=1000
+jdbc.default.acquireRetryAttempts=1
+jdbc.default.initialPoolSize=4
+jdbc.default.maxPoolSize=10
+jdbc.default.minPoolSize=2
+jdbc.default.numHelperThreads=2
+
+# tomcat
+
+jdbc.default.maxActive=10
+jdbc.default.minIdle=2
+
+# hikaricp
+
+jdbc.default.maximumPoolSize=10
+" >> ${LIFERAY_HOME}/portal-ext.properties
+}
+
+waitfor_database() {
+	echo 'Database startup complete!'
+}
+
+DB_TYPE='sybase'
+DRIVER='jconn4.jar'
+
+runcontainer

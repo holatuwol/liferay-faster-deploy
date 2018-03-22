@@ -18,9 +18,16 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 	MCD_RD_CLONE_PATH=/path/to/clone/location
 
 	mysql() {
-		${MCD_RD_CLONE_PATH}/database/mysql
+		DRIVERS_FOLDER=/path/to/jdbc/drivers \
+			${MCD_RD_CLONE_PATH}/database/mysql
 	}
 
 	oracle() {
-		${MCD_RD_CLONE_PATH}/database/oracle
+		DRIVERS_FOLDER=/path/to/jdbc/drivers \
+			${MCD_RD_CLONE_PATH}/database/oracle
+	}
+
+	sybase() {
+		DRIVERS_FOLDER=/path/to/jdbc/drivers \
+			${MCD_RD_CLONE_PATH}/database/sybase
 	}
