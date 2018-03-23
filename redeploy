@@ -102,10 +102,6 @@ cdroot() {
 	fi
 }
 
-checksnapshots() {
-	. $(dirname "${BASH_SOURCE[0]}")/checksnapshots
-}
-
 deployant() {
 	# Make sure that we have registry-api and anything else that is
 	# part of the portal-pre profile
@@ -113,7 +109,6 @@ deployant() {
 	echo "Preparing initial portal snapshots..."
 
 	safeant compile
-	checksnapshots
 
 	# Finally, iterate over the folders that are listed for deployment
 
@@ -127,11 +122,11 @@ deployant() {
 		pushd $folder > /dev/null
 
 		if [ -f bnd.bnd ] && [ "" != "$(grep -F 'Bundle-Name' bnd.bnd)" ]; then
-			ant deploy install-portal-snapshot
+			safeant deploy
 		elif [ "" != "$(grep -F deploy-fast build.xml)" ]; then
-			ant deploy-fast
+			safeant deploy-fast
 		else
-			ant deploy
+			safeant deploy
 		fi
 
 		EXIT_STATUS=$?
