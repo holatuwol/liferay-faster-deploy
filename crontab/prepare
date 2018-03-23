@@ -54,6 +54,10 @@ compile() {
 }
 
 finish() {
+	if [ -d tmp/lib-pre ]; then
+		cp -R tmp/lib-pre ${LIFERAY_HOME}/osgi/
+	fi
+
 	local TOMCAT_VERSION=$(grep -F app.server.tomcat.version= app.server.properties | cut -d'=' -f 2)
 	TOMCAT_FOLDER=$LIFERAY_HOME/tomcat-${TOMCAT_VERSION}
 
