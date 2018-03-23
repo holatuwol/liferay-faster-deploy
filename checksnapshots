@@ -6,6 +6,10 @@ checksnapshots() {
 	popd > /dev/null
 }
 
+safeant() {
+	. $(dirname "${BASH_SOURCE[0]}")/nodejs/safeant $@
+}
+
 setopts() {
 	. $(dirname "${BASH_SOURCE[0]}")/setopts
 }
@@ -46,16 +50,19 @@ updatesnapshots() {
 		local source_folder=$(echo $artifact | cut -d'.' -f 3- | tr '.' '-')
 		local artifact_folder=${repository_root}/com/liferay/portal/${artifact}/${artifact_version}
 
-		if [ -d "${artifact_folder}" ]; then
-			local update_hash=$(git log -1 --pretty='%H'c -- ${source_folder})
+		local update_hash=$(git log -1 --pretty='%H' -- ${source_folder})
+		local snapshot_hash=
 
-			if [ -f ${artifact_folder}/.githash ] && [ "${update_hash}" == "$(cat ${artifact_folder}/.githash)" ]; then
-				continue
+		if [ -f ${artifact_folder}/${artifact}-${artifact_version}.jar ]; then
+			if [ -f ${artifact_folder}/.githash ]; then
+				snapshot_hash=$(cat ${artifact_folder}/.githash)
 			fi
 		fi
 
-		echo "Outdated snapshot for $artifact (${artifact_version})"
-		missing_artifact="$missing_artifact $artifact"
+		if [ "${update_hash}" != "${snapshot_hash}" ]; then
+			echo "Outdated snapshot for $artifact (${artifact_version} - ${update_hash} vs. ${snapshot_hash})"
+			missing_artifact="$missing_artifact $artifact"
+		fi
 	done
 
 	if [ "" == "$missing_artifact" ]; then
@@ -67,7 +74,7 @@ updatesnapshots() {
 	# Run the pre-checks for ant
 
 	if [ -d "modules" ]; then
-		ant compile
+		safeant compile
 	fi
 
 	for candidate_folder in $(sed -n '/target name="deploy"/,/\/target/p' build.xml | grep -F 'ant dir' | grep -F 'target="deploy"' | cut -d'"' -f 2); do
@@ -88,9 +95,10 @@ updatesnapshots() {
 		local artifact_version=$(grep -F "${artifact}.version" .gradle/gradle.properties | cut -d'=' -f 2)
 		local artifact_folder=${repository_root}/com/liferay/portal/${artifact}/${artifact_version}
 
-		local source_folder=$(echo $artifact | cut -d'.' -f 3- | tr '.' '-')
-
-		git log -1 --pretty='%H' -- ${source_folder} > ${artifact_folder}/.githash
+		if [ -f ${artifact_folder}/${artifact}-${artifact_version}.jar ]; then
+			local source_folder=$(echo $artifact | cut -d'.' -f 3- | tr '.' '-')
+			git log -1 --pretty='%H' -- ${source_folder} > ${artifact_folder}/.githash
+		fi
 	done
 }
 
