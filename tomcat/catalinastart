@@ -39,7 +39,7 @@ catalinaconf() {
 	# and use more memory.
 
 	if [ ! -f setenv.sh ] || [[ "" == "$(grep jrebel setenv.sh)" ]]; then
-		echo Enabling JRebel
+		echo 'Adding JRebel-aware setenv.sh'
 		cp $(dirname ${BASH_SOURCE[0]})/setenv.sh .
 	fi
 
