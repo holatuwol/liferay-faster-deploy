@@ -38,6 +38,10 @@ findgradle() {
 }
 
 fixdefaults() {
+	if [ "" != "$(grep -F useNpmCI "${GIT_ROOT}/modules/build.gradle")" ]; then
+		return 0
+	fi
+
 	pushd ${GIT_ROOT} > /dev/null
 
 	local PUBLIC_PACKAGE_JSON=$(git ls-files modules | grep -F package.json | grep -vF '/src/' | grep -c '^')

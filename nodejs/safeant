@@ -58,6 +58,10 @@ fixclasspath() {
 }
 
 fixdefaults() {
+	if [ "" != "$(grep -F useNpmCI modules/build.gradle)" ]; then
+		return 0
+	fi
+
 	local PUBLIC_PACKAGE_JSON=$(git ls-files modules | grep -F package.json | grep -vF '/src/' | grep -c '^')
 	local PUBLIC_PACKAGE_LOCK_JSON=$(git ls-files modules | grep -F package-lock.json | grep -vF '/src/' | grep -c '^')
 
