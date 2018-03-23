@@ -107,23 +107,12 @@ checksnapshots() {
 }
 
 deployant() {
-	# Some of the builds (notably util-taglib) need the rest of the
-	# portal to have been built, so we can copy that from our bundle
-
-	echo "Unzipping compiled root level folders from bundle..."
-
-	for folder in $(ls -1); do
-		if [ -f $folder/build.xml ]; then
-			unzipportaljar $folder
-		fi
-	done
-
 	# Make sure that we have registry-api and anything else that is
 	# part of the portal-pre profile
 
 	echo "Preparing initial portal snapshots..."
 
-	ant compile
+	safeant compile
 	checksnapshots
 
 	# Finally, iterate over the folders that are listed for deployment
@@ -194,6 +183,10 @@ gw() {
 
 redeploy() {
 	downloadbuild $1 && applychanges
+}
+
+safeant() {
+	. $(dirname "${BASH_SOURCE[0]}")/nodejs/safeant $@
 }
 
 setopts() {
