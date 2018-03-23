@@ -10,26 +10,10 @@ containername() {
 		return
 	fi
 
-	local BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
-
-	if [[ ${BRANCH_NAME} == LPS-* ]] || [[ ${BRANCH_NAME} == LPE-* ]] || [[ ${BRANCH_NAME} == LPP-* ]] || [[ ${BRANCH_NAME} == BPR-* ]]; then
-		BRANCH_NAME=$(echo "${BRANCH_NAME}" | grep -o '^[^-]*-[0-9]*')
-	else
-		BRANCH_NAME=
-	fi
-
-	local SUFFIX=
-
 	if [[ ${BASE_BRANCH} == ee-* ]]; then
-		SUFFIX=$(echo ${BASE_BRANCH} | cut -d'-' -f 2- | tr -d '.')-${DB_TYPE}
+		CONTAINER_NAME=$(echo ${BASE_BRANCH} | cut -d'-' -f 2- | tr -d '.')-${DB_TYPE}
 	else
-		SUFFIX=$(echo ${BASE_BRANCH} | cut -d'-' -f 1 | tr -d '.')-${DB_TYPE}
-	fi
-
-	if [ "" == "${BRANCH_NAME}" ]; then
-		CONTAINER_NAME=${SUFFIX}
-	else
-		CONTAINER_NAME="${BRANCH_NAME}-${SUFFIX}"
+		CONTAINER_NAME=$(echo ${BASE_BRANCH} | cut -d'-' -f 1 | tr -d '.')-${DB_TYPE}
 	fi
 }
 
