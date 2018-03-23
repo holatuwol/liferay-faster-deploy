@@ -130,14 +130,16 @@ unziposgijar() {
 
 	# unzip the JAR to the classes folder
 
-	rm -rf $MODULE_PATH/classes
-	mkdir -p $MODULE_PATH/classes
+	if [ ! -d ${MODULE_PATH}/classes ]; then
+		rm -rf $MODULE_PATH/classes
+		mkdir -p $MODULE_PATH/classes
 
-	pushd $MODULE_PATH/classes > /dev/null
-	unzip -qq "${JAR_PATH}"
-	popd > /dev/null
+		pushd $MODULE_PATH/classes > /dev/null
+		unzip -qq "${JAR_PATH}"
+		popd > /dev/null
+	fi
 
-	if [ -f $MODULE_PATH/.lfrbuild-portal-pre ]; then
+	if [ -f $MODULE_PATH/.lfrbuild-portal-pre ] && [ ! -f tmp/lib-pre/${BUNDLE_SYMBOLICNAME}.jar ]; then
 		mkdir -p tmp/lib-pre
 		cp ${JAR_PATH} tmp/lib-pre/
 	fi
