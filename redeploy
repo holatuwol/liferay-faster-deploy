@@ -180,12 +180,12 @@ deploymodules() {
 	cd ..
 }
 
-downloadbuild() {
-	. $(dirname "${BASH_SOURCE[0]}")/downloadbuild $1
-}
-
 dirnames() {
 	python $(dirname "${BASH_SOURCE[0]}")/dirnames.py
+}
+
+downloadbuild() {
+	. $(dirname "${BASH_SOURCE[0]}")/downloadbuild $1
 }
 
 gw() {
@@ -201,15 +201,11 @@ setopts() {
 }
 
 unziposgijar() {
-	LIFERAY_HOME=$LIFERAY_HOME \
-		TOMCAT_FOLDER=$TOMCAT_FOLDER \
-			$(dirname "${BASH_SOURCE[0]}")/unziposgijar $@
+	. $(dirname "${BASH_SOURCE[0]}")/unziposgijar $@
 }
 
 unzipportaljar() {
-	LIFERAY_HOME=$LIFERAY_HOME \
-		TOMCAT_FOLDER=$TOMCAT_FOLDER \
-			$(dirname "${BASH_SOURCE[0]}")/unzipportaljar $@
+	. $(dirname "${BASH_SOURCE[0]}")/unzipportaljar $@
 }
 
 setopts && cdroot

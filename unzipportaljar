@@ -1,14 +1,18 @@
 #!/bin/bash
 
 unzipportaljar() {
+	if [ -d $1/classes ] && [ -f $1/$1.jar ]; then
+		return 0
+	fi
+
 	local JAR_PATH=
 
 	# find the JAR in ROOT/WEB-INF/lib or lib/ext
 
-	if [ -f $LIFERAY_HOME/$TOMCAT_FOLDER/webapps/ROOT/WEB-INF/lib/$1.jar ]; then
-		JAR_PATH=$LIFERAY_HOME/$TOMCAT_FOLDER/webapps/ROOT/WEB-INF/lib/$1.jar
-	elif [ -f $LIFERAY_HOME/$TOMCAT_FOLDER/lib/ext/$1.jar ]; then
-		JAR_PATH=$LIFERAY_HOME/$TOMCAT_FOLDER/lib/ext/$1.jar
+	if [ -f ${CATALINA_HOME}/webapps/ROOT/WEB-INF/lib/$1.jar ]; then
+		JAR_PATH=${CATALINA_HOME}/webapps/ROOT/WEB-INF/lib/$1.jar
+	elif [ -f ${CATALINA_HOME}/lib/ext/$1.jar ]; then
+		JAR_PATH=${CATALINA_HOME}/lib/ext/$1.jar
 	else
 		return 1
 	fi
@@ -17,28 +21,12 @@ unzipportaljar() {
 
 	# check to see if the jar is out of date
 
-	local old_timestamp=
-
-	if [ -d $1/classes ]; then
-		old_timestamp=$(perl -MPOSIX -e 'print POSIX::strftime "%Y%m%d%H%M.%S", localtime((stat $ARGV[0])[9])' "$1/classes")
-	fi
-
-	local new_timestamp=$(perl -MPOSIX -e 'print POSIX::strftime "%Y%m%d%H%M.%S", localtime((stat $ARGV[0])[9])' "$JAR_PATH")
-
-	if [ "$old_timestamp" == "$new_timestamp" ]; then
-		return 0
-	fi
-
 	rm -rf $1/classes
-	mkdir -p $1/classes
+	mkdir $1/classes
 
 	pushd $1/classes > /dev/null
-	unzip -fqq "${JAR_PATH}"
+	unzip -oqq ../$1.jar
 	popd > /dev/null
-
-	rm $1/$1.jar
-
-	touch -t $new_timestamp "$1/classes"
 }
 
 if [ "" != "$1" ]; then
