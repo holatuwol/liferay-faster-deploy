@@ -1,5 +1,62 @@
 #!/bin/bash
 
+dirnames() {
+	python $(dirname "${BASH_SOURCE[0]}")/../dirnames.py
+}
+
+fixclasspath() {
+	pushd ${GIT_ROOT} > /dev/null
+
+	echo "Checking portal dependency libraries..."
+
+	for folder in development global portal; do
+		if [ ! -f lib/$folder/dependencies.properties ]; then
+			continue
+		fi
+
+		for dependency in $(cat lib/$folder/dependencies.properties); do
+			local lib_jar=lib/$folder/$(echo $dependency | cut -d'=' -f 1).jar
+
+			local group_gradle=$(echo $dependency | cut -d'=' -f 2 | cut -d':' -f 1)
+			local group_maven=$(echo $group_gradle | tr '.' '/')
+			local name=$(echo $dependency | cut -d'=' -f 2 | cut -d':' -f 2)
+			local version=$(echo $dependency | cut -d'=' -f 2 | cut -d':' -f 3)
+
+			local gradle_path=../liferay-binaries-cache-2017/.gradle/caches/modules-2/files-2.1/${group_gradle}/${name}/${version}
+
+			if [ -d $gradle_path ]; then
+				local gradle_jar=$(find $gradle_path -name ${name}-${version}.jar | head -1)
+
+				if [ "" != "$gradle_jar" ]; then
+					cp $gradle_jar $lib_jar
+				fi
+			fi
+		done
+	done
+
+	echo "Unzipping compiled root level folders from bundle..."
+
+	for folder in $(ls -1); do
+		if [ -f $folder/build.xml ]; then
+			unzipportaljar $folder
+		fi
+	done
+
+	echo "Copying portal-pre modules from bundle..."
+
+	if [ -f git-commit-portal ]; then
+		for folder in $(git ls-tree -r --name-only $(cat git-commit-portal) | grep -F .lfrbuild-portal-pre | dirnames); do
+			unziposgijar $folder
+		done
+	else
+		for folder in $(git ls-files modules | grep -F .lfrbuild-portal-pre | dirnames); do
+			unziposgijar $folder
+		done
+	fi
+
+	popd > /dev/null
+}
+
 fixdefaults() {
 	local PUBLIC_PACKAGE_JSON=$(git ls-files modules | grep -F package.json | grep -vF '/src/' | grep -c '^')
 	local PUBLIC_PACKAGE_LOCK_JSON=$(git ls-files modules | grep -F package-lock.json | grep -vF '/src/' | grep -c '^')
@@ -53,6 +110,8 @@ safeant() {
 
 	echo "Started $(date)" | tee $GIT_ROOT/.redeploy/compile.txt
 
+	fixclasspath
+
 	# Building older tags might not work due to version range
 	# dependencies and the corresponding bnd.bnd
 
@@ -80,9 +139,11 @@ safeant() {
 
 	popd > /dev/null
 
-	local IS_SNAPSHOT=
+	local IS_SNAPSHOT=true
 
 	if [ "${GIT_ROOT}" != "${PWD}" ]; then
+		IS_SNAPSHOT=
+
 		for ARG in $@; do
 			if [ "install-portal-snapshot" == "${ARG}" ]; then
 				IS_SNAPSHOT=true
@@ -113,6 +174,14 @@ safeant() {
 
 setopts() {
 	. $(dirname ${BASH_SOURCE[0]})/../setopts
+}
+
+unziposgijar() {
+	. $(dirname "${BASH_SOURCE[0]}")/../unziposgijar $@
+}
+
+unzipportaljar() {
+	. $(dirname "${BASH_SOURCE[0]}")/../unzipportaljar $@
 }
 
 time safeant $@
