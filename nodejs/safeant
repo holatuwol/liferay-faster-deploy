@@ -5,6 +5,10 @@ dirnames() {
 }
 
 fixclasspath() {
+	if [ "" == "${CATALINA_HOME}" ] || [ ! -d ${CATALINA_HOME} ]; then
+		return 0
+	fi
+
 	pushd ${GIT_ROOT} > /dev/null
 
 	echo "Checking portal dependency libraries..."
