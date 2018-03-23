@@ -46,7 +46,9 @@ buildprops() {
 
 	# Make sure nodejs arguments are set
 
-	grep -F '#nodejs.npm.args' build.properties | sed 's/^\s*#//g' >> $GIT_ROOT/build.$USER.properties
+	if [ -f build.properties ]; then
+		grep -F '#nodejs.npm.args' build.properties | sed 's/^\s*#//g' >> $GIT_ROOT/build.$USER.properties
+	fi
 
 	# Ensure we have an up-to-date repository password for private repositories
 
