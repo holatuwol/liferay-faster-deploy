@@ -1,11 +1,21 @@
 #!/bin/bash
 
 checksnapshots() {
-	if [ ! -f "$GIT_ROOT/build.properties" ]; then
+	pushd ${GIT_ROOT} > /dev/null
+	updatesnapshots
+	popd > /dev/null
+}
+
+setopts() {
+	. $(dirname "${BASH_SOURCE[0]}")/setopts
+}
+
+updatesnapshots() {
+	if [ ! -f "build.properties" ]; then
 		return 0
 	fi
 
-	if [ ! -f "$GIT_ROOT/build.xml" ] || [ "" == "$(grep -F setup-sdk "$GIT_ROOT/build.xml")" ]; then
+	if [ ! -f "build.xml" ] || [ "" == "$(grep -F setup-sdk "build.xml")" ]; then
 		return 0
 	fi
 
@@ -13,12 +23,12 @@ checksnapshots() {
 
 	local repository_root=
 
-	if [ -f "$GIT_ROOT/build.$USER.properties" ]; then
-		repository_root=$(grep -F 'build.repository.local.dir=' "$GIT_ROOT/build.$USER.properties" | cut -d'=' -f 2 | sed 's@${project.dir}/@'$GIT_ROOT'/@g' | sed 's@${user.home}/@'$HOME'/@g')
+	if [ -f "build.$USER.properties" ]; then
+		repository_root=$(grep -F 'build.repository.local.dir=' "build.$USER.properties" | cut -d'=' -f 2 | sed 's@${project.dir}/@'$GIT_ROOT'/@g' | sed 's@${user.home}/@'$HOME'/@g')
 	fi
 
 	if [ "" == "$repository_root" ]; then
-		repository_root=$(grep -F 'build.repository.local.dir=' "$GIT_ROOT/build.properties" | cut -d'=' -f 2 | sed 's@${project.dir}/@'$GIT_ROOT'/@g' | sed 's@${user.home}/@'$HOME'/@g')
+		repository_root=$(grep -F 'build.repository.local.dir=' "build.properties" | cut -d'=' -f 2 | sed 's@${project.dir}/@'$GIT_ROOT'/@g' | sed 's@${user.home}/@'$HOME'/@g')
 	fi
 
 	if [ "" == "$repository_root" ]; then
@@ -29,26 +39,23 @@ checksnapshots() {
 
 	# Check for missing artifacts
 
-	local artifacts=$(grep -F version $GIT_ROOT/.gradle/gradle.properties | grep -F 'com.liferay' | cut -d'=' -f 1 | sed 's/\.version$//g')
+	local artifacts=$(grep -F version .gradle/gradle.properties | grep -F 'com.liferay' | cut -d'=' -f 1 | sed 's/\.version$//g')
 
 	for artifact in $artifacts; do
-		local artifact_version=$(grep -F "${artifact}.version" $GIT_ROOT/.gradle/gradle.properties | cut -d'=' -f 2)
-		local folder=$(echo $artifact | cut -d'.' -f 3- | tr '.' '-')
+		local artifact_version=$(grep -F "${artifact}.version" .gradle/gradle.properties | cut -d'=' -f 2)
+		local source_folder=$(echo $artifact | cut -d'.' -f 3- | tr '.' '-')
+		local artifact_folder=${repository_root}/com/liferay/portal/${artifact}/${artifact_version}
 
-		if [ -d "${repository_root}/com/liferay/portal/${artifact}/${artifact_version}" ]; then
-			local change_time=$(modifiedtime $folder)
-			local cache_time=$(modifiedtime "${repository_root}/com/liferay/portal/${artifact}/${artifact_version}")
+		if [ -d "${artifact_folder}" ]; then
+			local update_hash=$(git log -1 --pretty='%H'c -- ${source_folder})
 
-			if [ "$change_time" == "$cache_time" ]; then
+			if [ -f ${artifact_folder}/.githash ] && [ "${update_hash}" == "$(cat ${artifact_folder}/.githash)" ]; then
 				continue
 			fi
-
-			echo "Outdated snapshot for $artifact (${artifact_version}), last modified: ${change_time}, last built: ${cache_time}"
-			missing_artifact="$missing_artifact $artifact"
-		else
-			echo "Missing snapshot for $artifact (${artifact_version})"
-			missing_artifact="$missing_artifact $artifact"
 		fi
+
+		echo "Outdated snapshot for $artifact (${artifact_version})"
+		missing_artifact="$missing_artifact $artifact"
 	done
 
 	if [ "" == "$missing_artifact" ]; then
@@ -57,49 +64,34 @@ checksnapshots() {
 
 	echo "Running install-portal-snapshot to ensure all snapshots are available"
 
-	pushd $GIT_ROOT > /dev/null
-
 	# Run the pre-checks for ant
 
-	if [ -d "${GIT_ROOT}/modules" ]; then
-		pushd $GIT_ROOT > /dev/null
+	if [ -d "modules" ]; then
 		ant compile
-		popd > /dev/null
 	fi
 
-	for candidate_folder in $(sed -n '/target name="deploy"/,/\/target/p' ${GIT_ROOT}/build.xml | grep -F 'ant dir' | grep -F 'target="deploy"' | cut -d'"' -f 2); do
+	for candidate_folder in $(sed -n '/target name="deploy"/,/\/target/p' build.xml | grep -F 'ant dir' | grep -F 'target="deploy"' | cut -d'"' -f 2); do
 		for artifact in $missing_artifact; do
-			local folder=$(echo $artifact | cut -d'.' -f 3- | tr '.' '-')
+			local source_folder=$(echo $artifact | cut -d'.' -f 3- | tr '.' '-')
 
-			if [ "$candidate_folder" != "$folder" ]; then
+			if [ "$candidate_folder" != "$source_folder" ]; then
 				continue
 			fi
 
-			pushd $folder > /dev/null
+			pushd $source_folder > /dev/null
 			ant install-portal-snapshot
 			popd > /dev/null
 		done
 	done
 
-	popd > /dev/null
-
 	for artifact in $artifacts; do
-		local artifact_version=$(grep -F "${artifact}.version" $GIT_ROOT/.gradle/gradle.properties | cut -d'=' -f 2)
-		local folder=$(echo $artifact | cut -d'.' -f 3- | tr '.' '-')
-		local change_time=$(modifiedtime $folder)
+		local artifact_version=$(grep -F "${artifact}.version" .gradle/gradle.properties | cut -d'=' -f 2)
+		local artifact_folder=${repository_root}/com/liferay/portal/${artifact}/${artifact_version}
 
-		for artifact_file in $(find "${repository_root}/com/liferay/portal/${artifact}/${artifact_version}"); do
-			touch -t $change_time "$artifact_file"
-		done
+		local source_folder=$(echo $artifact | cut -d'.' -f 3- | tr '.' '-')
+
+		git log -1 --pretty='%H' -- ${source_folder} > ${artifact_folder}/.githash
 	done
-}
-
-modifiedtime() {
-	python $(dirname "${BASH_SOURCE[0]}")/modifiedtime.py "$@"
-}
-
-setopts() {
-	. $(dirname "${BASH_SOURCE[0]}")/setopts
 }
 
 setopts && checksnapshots
