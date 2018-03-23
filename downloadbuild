@@ -36,6 +36,7 @@ downloadbranch() {
 
 	# Rebase against the acquired hash if necessary
 
+	echo "Checking to see if we need to rebase against $BASE_BRANCH"
 	BASE_HASH=$(git log -1 --pretty='%H' $BASE_BRANCH)
 
 	if [ "$BASE_HASH" != "$NEW_BASELINE" ]; then
@@ -49,9 +50,34 @@ downloadbranch() {
 			git checkout -f $BASE_BRANCH
 		fi
 
-		git rebase $NEW_BASELINE && git reset --hard $NEW_BASELINE
+		if git merge-base --is-ancestor $CURRENT_HASH $NEW_BASELINE; then
+			git merge --ff-only $NEW_BASELINE
+		else
+			local CLOSEST_COUNT=$(git log --pretty='%H' ${NEW_BASELINE}..${CURRENT_HASH} | wc -l)
+
+			for remote in $(git remote); do
+				local ANCESTOR=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/${remote}/${BASE_BRANCH}$" | cut -d'/' -f 3,4)
+
+				if [ "" == "$ANCESTOR" ]; then
+					continue
+				fi
+
+				local COUNT=$(git log --pretty='%H' ${ANCESTOR}..${CURRENT_HASH} | wc -l)
+
+				if [[ $COUNT -lt $CLOSEST_COUNT ]]; then
+					CLOSEST_COUNT=$COUNT
+				fi
+			done
+
+			if [[ 0 -eq ${CLOSEST_COUNT} ]]; then
+				git reset --hard $NEW_BASELINE
+			else
+				git rebase $NEW_BASELINE
+			fi
+		fi
 
 		REBASE_STATUS=$?
+		CURRENT_HASH=$(git log -1 --pretty='%H')
 
 		if [ "$CURRENT_BRANCH" != "$BASE_BRANCH" ]; then
 			git checkout $CURRENT_BRANCH
@@ -441,7 +467,7 @@ rollbackbranch() {
 	local CLOSEST_COUNT=$(git log --pretty='%H' ${NEW_BASELINE}..${CURRENT_HASH} | wc -l)
 
 	for remote in $(git remote); do
-		local ANCESTOR=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/${remote}/${SHORT_NAME}$" | cut -d'/' -f 3,4)
+		local ANCESTOR=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/${remote}/${BASE_BRANCH}$" | cut -d'/' -f 3,4)
 
 		if [ "" == "$ANCESTOR" ]; then
 			continue
