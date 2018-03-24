@@ -1,5 +1,9 @@
 #!/bin/bash
 
+githashtime() {
+	$(dirname ${BASH_SOURCE[0]})/githashtime $@
+}
+
 unzipportaljar() {
 	if [ -d $1/classes ] && [ -f $1/$1.jar ]; then
 		return 0
@@ -27,6 +31,8 @@ unzipportaljar() {
 	pushd $1/classes > /dev/null
 	unzip -oqq ../$1.jar
 	popd > /dev/null
+
+	githashtime $1
 }
 
 if [ "" != "$1" ]; then
