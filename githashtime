@@ -19,7 +19,7 @@ githashtime() {
 		BASELINE_HASH=${BASE_BRANCH}
 	fi
 
-	$(dirname "${BASH_SOURCE[0]}")/gitchanges ${CURRENT_HASH} ${BASELINE_HASH}
+	$(dirname "${BASH_SOURCE[0]}")/gitchanges ${BASELINE_HASH} ${CURRENT_HASH}
 
 	local REFERENCE_HASH=
 	local FOLDER=
