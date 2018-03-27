@@ -30,7 +30,7 @@ downloadbranch() {
 		echo "Checking remotes for updates"
 
 		for remote in $(git remote); do
-			git fetch --no-tags $remote $BASE_BRANCH
+			git fetch --no-tags $remote $BASE_BRANCH 2> /dev/null
 		done
 	fi
 
