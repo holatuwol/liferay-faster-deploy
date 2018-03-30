@@ -37,6 +37,8 @@ baseline() {
 		return 0
 	fi
 
+	checksnapshots
+
 	# Scan the Gradle changes to build one large command
 
 	cat /dev/null > $GIT_ROOT/.redeploy/baseline.txt
@@ -53,8 +55,6 @@ baseline() {
 	done
 
 	if [[ 0 -ne $(cat $GIT_ROOT/.redeploy/baseline.txt | grep -c '^') ]]; then
-		checksnapshots
-
 		# Execute the one large command we built before
 
 		if [ -d modules ]; then
