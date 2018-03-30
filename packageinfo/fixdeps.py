@@ -72,26 +72,27 @@ def get_semver(import_version_string):
 packages = dict()
 manifests = dict()
 
-with open(get_rd_file('checkdeps.txt'), 'r') as f:
-	reader = csv.reader(f, delimiter=',', quotechar='"')
+if os.path.isfile(get_rd_file('checkdeps.txt')):
+	with open(get_rd_file('checkdeps.txt'), 'r') as f:
+		reader = csv.reader(f, delimiter=',', quotechar='"')
 
-	for row in reader:
-		folder = row[0]
+		for row in reader:
+			folder = row[0]
 
-		if folder in manifests:
-			continue
+			if folder in manifests:
+				continue
 
-		packages[row[2]] = row[1]
+			packages[row[2]] = row[1]
 
-		filename = '%s/build/tmp/jar/MANIFEST.MF.csv' % folder
+			filename = '%s/build/tmp/jar/MANIFEST.MF.csv' % folder
 
-		if not os.path.isfile(filename):
-			manifests[folder] = None
-			continue
+			if not os.path.isfile(filename):
+				manifests[folder] = None
+				continue
 
-		with open(filename) as f2:
-			reader2 = csv.reader(f2, delimiter=',', quotechar='"')
-			manifests[folder] = { row2[0]: get_semver(row2[1]) for row2 in reader2 if len(row2) == 2 }
+			with open(filename) as f2:
+				reader2 = csv.reader(f2, delimiter=',', quotechar='"')
+				manifests[folder] = { row2[0]: get_semver(row2[1]) for row2 in reader2 if len(row2) == 2 }
 
 # Use the parsed manifests to decide what needs to be updated
 
