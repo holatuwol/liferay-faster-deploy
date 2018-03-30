@@ -8,6 +8,11 @@ catalinaconf() {
 	# Identify a usable port
 
 	local TOMCAT_PORT=$(python $(dirname ${BASH_SOURCE[0]})/getport.py)
+
+	if [ "" == "${TOMCAT_PORT}" ]; then
+		return 1
+	fi
+
 	export TOMCAT_PORT_PREFIX=$(echo "${TOMCAT_PORT}" | sed 's/80$//')
 
 	# Update the port in server.xml to the usable prot
@@ -84,6 +89,10 @@ catalinastart() {
 	if [ "" == "$IS_RUNNING" ]; then
 		catalinaconf
 
+		if [[ 0 -ne $? ]]; then
+			return 1
+		fi
+
 		# Start from a clean osgi/state folder, because that can cause
 		# problems after redeploy.
 
@@ -150,5 +159,7 @@ tcnative() {
 
 	./configure --with-apr=/usr --prefix=$CATALINA_HOME/lib/apr && make && make install
 }
+
+$(dirname "${BASH_SOURCE[0]}")/../checkpython psutil
 
 catalinastart $@
