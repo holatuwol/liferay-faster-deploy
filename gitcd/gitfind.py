@@ -58,9 +58,9 @@ def git_find(haystack, needle, commit=None):
 	haystack = relpath(haystack, git_root)
 
 	if commit is None:
-		file_list = [relpath(x, haystack).replace('\\', '/') for x in git.ls_files(haystack).split('\n') if x.find(needle) != -1 and x.find('.releng') == -1]
+		file_list = [relpath(x, haystack).replace('\\', '/') for x in git.ls_files(haystack).split('\n') if is_project_file(needle, x)]
 	else:
-		file_list = [relpath(x, haystack).replace('\\', '/') for x in git.ls_files('--with-tree=%s' % commit, haystack).split('\n') if x.find(needle) != -1 and x.find('.releng') == -1]
+		file_list = [relpath(x, haystack).replace('\\', '/') for x in git.ls_files('--with-tree=%s' % commit, haystack).split('\n') if is_project_file(needle, x)]
 
 	# First, assume that we're looking for a module root, so check for
 	# bnd.bnd, ivy.xml, and package.json
@@ -109,6 +109,9 @@ def git_root_relpaths(entries):
 		return None
 
 	return relpaths([join(git_root, entry) for entry in entries])
+
+def is_project_file(needle, x):
+	return x.find(needle) != -1 and x.find('.releng') == -1 and x.find('.gradle') == -1
 
 def nongit_find(haystack, needle):
 	if isdir(join(haystack, needle)):
