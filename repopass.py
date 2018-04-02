@@ -5,7 +5,12 @@ import sys
 key_prefix = 'build.repository.private.';
 key_suffix = '[%s]' % sys.argv[1].split('/')[-1];
 
-properties_content = subprocess.check_output(['git', 'show', '%s:working.dir.properties' % sys.argv[1]])
+branch = sys.argv[1]
+
+if branch.find('-private') == -1:
+	branch = branch + '-private'
+
+properties_content = subprocess.check_output(['git', 'show', '%s:working.dir.properties' % branch])
 
 lines = [line.strip() for line in properties_content.decode('utf8').split('\n')]
 pairs = [[x.strip() for x in line.split('=')] for line in lines if line.find(key_prefix) == 0 and line.find(key_suffix) != -1]
