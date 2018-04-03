@@ -38,7 +38,7 @@ findgradle() {
 }
 
 fixdefaults() {
-	if [ "" != "$(grep -F useNpmCI "${GIT_ROOT}/modules/build.gradle")" ]; then
+	if [ -f "${GIT_ROOT}/modules/build.gradle" ] && [ "" != "$(grep -F useNpmCI "${GIT_ROOT}/modules/build.gradle")" ]; then
 		return 0
 	fi
 
