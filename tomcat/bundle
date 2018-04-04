@@ -14,7 +14,7 @@ create_network() {
 		docker network create ${NETWORK_NAME}
 	fi
 
-	NETWORK_METADATA="--network ${NETWORK_NAME} --network-alias liferay1"
+	NETWORK_METADATA="--network ${NETWORK_NAME} --network-alias ${CONTAINER_NAME}"
 }
 
 remove_container() {
@@ -35,7 +35,7 @@ set_container_mounts() {
 		LIFERAY_HOME_MOUNT="-v ${PWD}:/build"
 	elif [ -d bundles ]; then
 		LIFERAY_HOME_MOUNT="-v ${PWD}/bundles:/build"
-	elif [ "" == "$1" ] && [ -f app.server.$USER.properties ]; then
+	elif [ -f app.server.$USER.properties ]; then
 		. $(dirname $(dirname ${BASH_SOURCE[0]}))/appserverprops
 		LIFERAY_HOME_MOUNT="-v ${LIFERAY_HOME}:/build"
 	fi
@@ -48,10 +48,8 @@ set_container_name() {
 
 	if [ "" != "$1" ] && [[ $1 =~ ^[0-9]*$ ]]; then
 		CONTAINER_NAME="test$1"
-	elif [ "" != "$1" ]; then
-		CONTAINER_NAME="$1"
 	else
-		CONTAINER_NAME='test8080'
+		CONTAINER_NAME="$1"
 	fi
 }
 
@@ -70,12 +68,28 @@ set_image_name() {
 }
 
 start_liferay() {
-	local INCREMENT=0
-
-	if [ "" != "$2" ] && [[ $2 =~ ^[0-9]*$ ]]; then
-		INCREMENT=$(expr $2 '-' 8080)
+	if [ "" == "${TOMCAT_PORT}" ]; then
+		TOMCAT_PORT=$2
 	fi
 
+	if [ "" == "${TOMCAT_PORT}" ]; then
+		TOMCAT_PORT=$(python $(dirname ${BASH_SOURCE[0]})/getport.py)
+	fi
+
+	if [ "" == "${TOMCAT_PORT}" ]; then
+		TOMCAT_PORT=8080
+	fi
+
+	if [ "" != "$3" ]; then
+		set_container_name $3
+	else
+		set_container_name ${TOMCAT_PORT}
+	fi
+
+	remove_container
+	create_network
+
+	local INCREMENT=$(expr ${TOMCAT_PORT} '-' 8080)
 	local GLOBAL_BIND="$(echo 8009 8080 8443 | tr ' ' '\n' | awk '{ print  "--publish " $1+'${INCREMENT}' ":" $1 }' | xargs)"
 	local LOCAL_BIND="$(echo 8000 11311 | tr ' ' '\n' | awk '{ print  "--publish 127.0.0.1:" $1+'${INCREMENT}' ":" $1 }' | xargs)"
 	local EXPOSE_ONLY="$(echo 7800 7801 | tr ' ' '\n' | awk '{ print  "--expose " $1 }' | xargs)"
@@ -87,12 +101,9 @@ start_liferay() {
 		${IMAGE_NAME} $1
 }
 
-set_container_name $2
-remove_container
-set_container_mounts $1
-create_network
+set_container_mounts
 set_image_name $1
 
 echo "Using Docker image ${IMAGE_NAME}"
 
-start_liferay $1 $2
+start_liferay $1 $2 $3
