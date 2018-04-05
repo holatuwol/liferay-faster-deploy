@@ -71,7 +71,7 @@ def getparent(check_tags):
 			base_branch = current_branch if current_branch != 'HEAD' else '7.0.x'
 		elif base_branch == 'ee-7.0.x':
 			base_branch = '7.0.x'
-		elif isdir(join(git_root, 'modules/private')) and len(git.ls_files('build.properties').strip()) == 0:
+		elif isdir(join(git_root, 'modules/private')) and len(git.ls_files('build.properties').strip()) == 0 and base_branch.find('-private') == -1:
 			base_branch = '%s-private' % base_branch
 
 	# If this is master or master-private, or we've recently rebased to 7.0.x or 7.0.x-private,
