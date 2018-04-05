@@ -7,6 +7,12 @@ create_network() {
 		return 0
 	fi
 
+	if [ -d ${LIFERAY_HOME}/osgi/portal ] && [ ! -f ${LIFERAY_HOME}/osgi/portal/com.liferay.portal.cluster.multiple.jar ]; then
+		echo "Unable to find clustering module in ${LIFERAY_HOME}."
+		echo "Are you sure built a private branch?"
+		return 1
+	fi
+
 	if docker network inspect ${NETWORK_NAME} 1> /dev/null 2> /dev/null; then
 		echo ${NETWORK_NAME} containers will join the existing ${NETWORK_NAME} network.
 	else
@@ -14,7 +20,7 @@ create_network() {
 		docker network create ${NETWORK_NAME}
 	fi
 
-	NETWORK_METADATA="--network ${NETWORK_NAME} --network-alias ${CONTAINER_NAME}"
+	NETWORK_METADATA="--network ${NETWORK_NAME} --network-alias ${CONTAINER_NAME} -e IS_CLUSTER=true"
 }
 
 remove_container() {
@@ -32,8 +38,10 @@ set_container_mounts() {
 	fi
 
 	if [ -f portal-ext.properties ]; then
+		LIFERAY_HOME=${PWD}
 		LIFERAY_HOME_MOUNT="-v ${PWD}:/build"
 	elif [ -d bundles ]; then
+		LIFERAY_HOME="${PWD}/bundles"
 		LIFERAY_HOME_MOUNT="-v ${PWD}/bundles:/build"
 	elif [ -f app.server.$USER.properties ]; then
 		. $(dirname $(dirname ${BASH_SOURCE[0]}))/appserverprops
@@ -88,6 +96,10 @@ start_liferay() {
 
 	remove_container
 	create_network
+
+	if [[ 0 -ne $? ]]; then
+		return 0
+	fi
 
 	local INCREMENT=$(expr ${TOMCAT_PORT} '-' 8080)
 	local GLOBAL_BIND="$(echo 8009 8080 8443 | tr ' ' '\n' | awk '{ print  "--publish " $1+'${INCREMENT}' ":" $1 }' | xargs)"
