@@ -482,6 +482,12 @@ rollbackbranch() {
 		return 1
 	fi
 
+	CURRENT_HASH=$(git log -1 --pretty='%H')
+
+	if [ "${CURRENT_HASH}" == "${NEW_BASELINE}" ]; then
+		return 0
+	fi
+
 	resetbasebranch
 
 	if [ "$SHORT_NAME" == "$CLOSEST_ANCESTOR" ]; then
