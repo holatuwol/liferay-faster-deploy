@@ -504,7 +504,7 @@ rollbackbranch() {
 
 	git checkout -b ${CURRENT_BRANCH}
 	git format-patch --relative ${CLOSEST_ANCESTOR}
-	git reset --hard ${SHORT_NAME}
+	git reset --hard ${BASE_BRANCH}
 
 	set -o pipefail
 
