@@ -21,11 +21,15 @@ dirnames() {
 }
 
 fixdeps() {
+	if [ ! -d modules ]; then
+		return 0
+	fi
+
 	checkdeps
 
 	# Mass compile check
 
-	if [ -d modules ] && [[ 0 -ne $(cat ${GIT_ROOT}/.redeploy/checkdeps.txt | grep -c '^') ]]; then
+	if [[ 0 -ne $(cat ${GIT_ROOT}/.redeploy/checkdeps.txt | grep -c '^') ]]; then
 		cachenpm $base_remote/$BASE_BRANCH
 
 		cd modules

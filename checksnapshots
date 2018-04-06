@@ -20,6 +20,7 @@ updatesnapshots() {
 	fi
 
 	if [ ! -f "build.xml" ] || [ "" == "$(grep -F setup-sdk "build.xml")" ]; then
+		ant compile
 		return 0
 	fi
 
