@@ -1,10 +1,6 @@
 #!/bin/bash
 
 applychanges() {
-	# Set the modules that we are willing to deploy
-
-	$(dirname "${BASH_SOURCE[0]}")/skipmp
-
 	# Compute all changes
 
 	if [ "" == "$BASE_TAG" ]; then
