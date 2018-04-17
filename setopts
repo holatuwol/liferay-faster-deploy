@@ -22,10 +22,12 @@ buildopts() {
 	fi
 
 	if [ "" == "${TOTAL_MEMORY}" ] || [ 10000000 -gt $TOTAL_MEMORY ]; then
-		GRADLE_OPTS='-Xms3g -Xmx3g -Dorg.gradle.workers.max=1'
+		GRADLE_OPTS='-Xms3g -Xmx3g'
 	else
-		GRADLE_OPTS='-Xms4g -Xmx4g -Dorg.gradle.workers.max=1'
+		GRADLE_OPTS='-Xms4g -Xmx4g'
 	fi
+
+	GRADLE_OPTS="$GRADLE_OPTS -Dorg.gradle.workers.max=1 -x clean"
 
 	if [[ 8 -gt $JAVA_VERSION ]]; then
 		GRADLE_OPTS="$GRADLE_OPTS -XX:MaxPermSize=512m"
