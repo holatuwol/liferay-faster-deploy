@@ -127,6 +127,16 @@ fixdefaults() {
 		return 0
 	fi
 
+	local GRADLE_PLUGINS_DEFAULTS=$(grep com.liferay.gradle.plugins.defaults modules/build-buildscript.gradle | grep -o 'version: "[^"]*"' | cut -d'"' -f 2)
+
+	if [ "5.3" != "$(echo ${GRADLE_PLUGINS_DEFAULTS} | cut -d'.' -f 1,2)" ]; then
+		return 0
+	fi
+
+	if [[ 29 -lt $(echo ${GRADLE_PLUGINS_DEFAULTS} | cut -d'.' -f 3) ]]; then
+		return 0
+	fi
+
 	local PUBLIC_PACKAGE_JSON=$(git ls-files modules | grep -F package.json | grep -vF '/src/' | grep -c '^')
 	local PUBLIC_PACKAGE_LOCK_JSON=$(git ls-files modules | grep -F package-lock.json | grep -vF '/src/' | grep -c '^')
 
