@@ -13,6 +13,11 @@ create_network() {
 		return 1
 	fi
 
+	if [ ! -f ${LIFERAY_HOME}/portal-ext.properties ] || [ "" == "$(grep -F jdbc.default ${LIFERAY_HOME}/portal-ext.properties | grep -vF '#')" ]; then
+		echo "You need to have a portal-ext.properties with a database connection to cluster."
+		return 1
+	fi
+
 	if docker network inspect ${NETWORK_NAME} 1> /dev/null 2> /dev/null; then
 		echo ${NETWORK_NAME} containers will join the existing ${NETWORK_NAME} network.
 	else
