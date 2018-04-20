@@ -27,7 +27,7 @@ buildopts() {
 		GRADLE_OPTS='-Xms4g -Xmx4g'
 	fi
 
-	GRADLE_OPTS="$GRADLE_OPTS -Dorg.gradle.workers.max=1 -x clean"
+	GRADLE_OPTS="$GRADLE_OPTS -Dorg.gradle.workers.max=1"
 
 	if [[ 8 -gt $JAVA_VERSION ]]; then
 		GRADLE_OPTS="$GRADLE_OPTS -XX:MaxPermSize=512m"
