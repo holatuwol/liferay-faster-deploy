@@ -55,6 +55,9 @@ def rev_parse(*args, **kwargs):
 def show(*args, **kwargs):
 	return _git('show', args, **kwargs)
 
+def tag(*args, **kwargs):
+	return _git('tag', args, **kwargs)
+
 git_root = rev_parse('--show-toplevel', stderr=DEVNULL)
 
 if git_root is None or git_root == '':
