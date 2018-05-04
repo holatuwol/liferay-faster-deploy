@@ -127,24 +127,50 @@ downloadbranchmirror() {
 			return 0
 		fi
 
-		REQUEST_URL="$LIFERAY_FILES_MIRROR/private/ee/portal/upstream-$BASE_BRANCH/latest/liferay-portal-tomcat-$BASE_BRANCH.zip"
+		REQUEST_URL="$LIFERAY_FILES_MIRROR/private/ee/portal/upstream-$BASE_BRANCH/"
 	else
 		if [ "" == "$LIFERAY_RELEASES_MIRROR" ]; then
 			LIFERAY_RELEASES_MIRROR=https://releases.liferay.com
 		fi
 
-		REQUEST_URL="$LIFERAY_RELEASES_MIRROR/portal/upstream-$BASE_BRANCH/latest/liferay-portal-tomcat-$BASE_BRANCH.zip"
+		REQUEST_URL="$LIFERAY_RELEASES_MIRROR/portal/upstream-$BASE_BRANCH/"
 	fi
 
-	BUILD_NAME="$SHORT_NAME.zip"
+	echo "Identifying build timestamp via ${REQUEST_URL}"
+
+	local BUILD_TIMESTAMP=$(curl -s --connect-timeout 2 $REQUEST_URL | grep -o '<a href="[0-9]*/">' | cut -d'"' -f 2 | sort | tail -1)
+
+	if [ "" == "$BUILD_TIMESTAMP" ]; then
+		if [[ "$BASE_BRANCH" == ee-* ]] || [[ "$BASE_BRANCH" == *-private ]]; then
+			echo "Unable to identify build timestamp (maybe you forgot to connect to a VPN)"
+			return 1
+		fi
+
+		LIFERAY_RELEASES_MIRROR=https://releases.liferay.com
+		REQUEST_URL="$LIFERAY_RELEASES_MIRROR/portal/upstream-$BASE_BRANCH/"
+
+		echo "Failed to reach releases mirror, switching to releases server"
+
+		BUILD_TIMESTAMP=$(curl -s --connect-timeout 2 $REQUEST_URL | grep -o '<a href="[0-9]*/">' | cut -d'"' -f 2 | sort | tail -1)
+
+		if [ "" == "$BUILD_TIMESTAMP" ]; then
+			echo "Unable to identify build timestamp from releases server"
+			return 1
+		fi
+	fi
+
+	REQUEST_URL="${REQUEST_URL}${BUILD_TIMESTAMP}liferay-portal-tomcat-$BASE_BRANCH.zip"
+	BUILD_TIMESTAMP=$(echo $BUILD_TIMESTAMP | cut -d'/' -f 1)
+	BUILD_NAME="$SHORT_NAME-$BUILD_TIMESTAMP.zip"
 
 	if [ -f "$HOME/.liferay/builds/$BUILD_NAME" ]; then
 		NEW_BASELINE=$(cat $HOME/.liferay/builds/${BUILD_NAME}.githash)
 		return 0
 	fi
 
-	find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.tar.gz*" | xargs rm
-	find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.zip*" | xargs rm
+	if [ "" != $(ls -1 "$HOME/.liferay/builds/" | grep "${SHORT_NAME}-[0-9]*\(.tar.gz\|.zip\).*") ]; then
+		ls -1 "$HOME/.liferay/builds/" | grep "${SHORT_NAME}-[0-9]*\(.tar.gz\|.zip\).*" | xargs rm
+	fi
 
 	echo "Downloading snapshot for $SHORT_NAME"
 
