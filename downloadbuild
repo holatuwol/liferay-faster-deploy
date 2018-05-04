@@ -139,6 +139,7 @@ downloadbranchmirror() {
 	BUILD_NAME="$SHORT_NAME.zip"
 
 	if [ -f "$HOME/.liferay/builds/$BUILD_NAME" ]; then
+		NEW_BASELINE=$(cat $HOME/.liferay/builds/${BUILD_NAME}.githash)
 		return 0
 	fi
 
