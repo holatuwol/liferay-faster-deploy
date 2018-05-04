@@ -127,34 +127,16 @@ downloadbranchmirror() {
 			return 0
 		fi
 
-		REQUEST_URL="$LIFERAY_FILES_MIRROR/private/ee/portal/nightly-$BASE_BRANCH/"
+		REQUEST_URL="$LIFERAY_FILES_MIRROR/private/ee/portal/upstream-$BASE_BRANCH/latest/liferay-portal-tomcat-$SHORT_NAME.zip"
 	else
 		if [ "" == "$LIFERAY_RELEASES_MIRROR" ]; then
 			LIFERAY_RELEASES_MIRROR=https://releases.liferay.com
 		fi
 
-		REQUEST_URL="$LIFERAY_RELEASES_MIRROR/portal/nightly-$BASE_BRANCH/"
+		REQUEST_URL="$LIFERAY_RELEASES_MIRROR/portal/upstream-$BASE_BRANCH/latest/liferay-portal-tomcat-$SHORT_NAME.zip"
 	fi
 
-	local BUILD_TIMESTAMP=$(curl -s --connect-timeout 2 $REQUEST_URL | grep -o '<a href="[0-9]*/">' | cut -d'"' -f 2 | sort | tail -1)
-
-	if [ "" == "$BUILD_TIMESTAMP" ]; then
-		return 0
-	fi
-
-	REQUEST_URL="${REQUEST_URL}${BUILD_TIMESTAMP}"
-	BUILD_TIMESTAMP=$(echo $BUILD_TIMESTAMP | cut -d'/' -f 1)
-	BUILD_NAME="$SHORT_NAME-$BUILD_TIMESTAMP.zip"
-
-	local BUILD_CANDIDATE=$(curl -s --connect-timeout 2 $REQUEST_URL | grep -o '<a href="[^"]*tomcat-7.0-[^"]*">' | cut -d'"' -f 2 | sort | tail -1)
-
-	if [ "" == "$BUILD_CANDIDATE" ]; then
-		return 0
-	fi
-
-	REQUEST_URL="${REQUEST_URL}${BUILD_CANDIDATE}"
-
-	NEW_BASELINE=$(echo $BUILD_CANDIDATE | grep -o "[a-z0-9]*.zip" | cut -d'.' -f 1 | cut -d'-' -f 2)
+	BUILD_NAME="$SHORT_NAME.zip"
 
 	if [ -f "$HOME/.liferay/builds/$BUILD_NAME" ]; then
 		return 0
@@ -163,10 +145,11 @@ downloadbranchmirror() {
 	find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.tar.gz*" | xargs rm
 	find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.zip*" | xargs rm
 
-	echo "Downloading snapshot for $SHORT_NAME ($NEW_BASELINE)"
+	echo "Downloading snapshot for $SHORT_NAME"
 
 	getbuild $REQUEST_URL ${BUILD_NAME}
-	echo -n $NEW_BASELINE > $HOME/.liferay/builds/${BUILD_NAME}.githash
+	NEW_BASELINE=$(unzip -c -qq $HOME/.liferay/builds/${BUILD_NAME} liferay-portal-${SHORT_NAME}/.githash)
+	echo ${NEW_BASELINE} > $HOME/.liferay/builds/${BUILD_NAME}.githash
 }
 
 downloadbuild() {
