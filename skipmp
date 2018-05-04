@@ -120,8 +120,12 @@ transitiveexcludes() {
 
 		cat /dev/null > .excludes_transitive
 
-		sed 's@^modules/private@@g' .excludes | sed 's@^modules@@g' | tr '/' ':' | sort -u | awk '{ print "project(\"" $1 ":" }' > .excludes_project
-		sed 's@^modules/private@@g' .excludes | sed 's@^modules@@g' | tr '/' ':' | sort -u | awk '{ print "project(\"" $1 "\"" }' >> .excludes_project
+		sed 's@^modules/private@@g' .excludes | sed 's@^modules@@g' | tr '/' ':' | sort -u | awk '{ print "provided project(\"" $1 ":" }' > .excludes_project
+		sed 's@^modules/private@@g' .excludes | sed 's@^modules@@g' | tr '/' ':' | sort -u | awk '{ print "provided project(\"" $1 "\"" }' >> .excludes_project
+		sed 's@^modules/private@@g' .excludes | sed 's@^modules@@g' | tr '/' ':' | sort -u | awk '{ print "compileOnly project(\"" $1 ":" }' >> .excludes_project
+		sed 's@^modules/private@@g' .excludes | sed 's@^modules@@g' | tr '/' ':' | sort -u | awk '{ print "compileOnly project(\"" $1 "\"" }' >> .excludes_project
+		sed 's@^modules/private@@g' .excludes | sed 's@^modules@@g' | tr '/' ':' | sort -u | awk '{ print "compileInclude project(\"" $1 ":" }' >> .excludes_project
+		sed 's@^modules/private@@g' .excludes | sed 's@^modules@@g' | tr '/' ':' | sort -u | awk '{ print "compileInclude project(\"" $1 "\"" }' >> .excludes_project
 
 		if [[ 0 -ne "$(grep -c '^' .excludes_project)" ]]; then
 			cat ${GIT_ROOT}/.redeploy/gradle_list.txt | xargs grep -lFf .excludes_project | dirnames >> .excludes_transitive
