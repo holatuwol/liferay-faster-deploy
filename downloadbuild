@@ -253,31 +253,40 @@ extract() {
 		return 0
 	fi
 
-	pushd "$LIFERAY_HOME" > /dev/null
-
-	rm -rf tomcat* osgi tools work
+	local EXCLUDES=
 
 	if [[ "$BUILD_NAME" == *.tar.gz ]]; then
-		local EXCLUDES=
+		pushd "${LIFERAY_HOME_DIRNAME}" > /dev/null
 
 		if [ -d data ]; then
 			EXCLUDES="--exclude='data/hypersonic/lportal.script' --exclude='data/hypersonic/lportal.properties'"
 		fi
 
 		tar -zxf "$HOME/.liferay/builds/${BUILD_NAME}" $EXCLUDES
-	elif [[ "$BUILD_NAME" == *.zip ]]; then
-		local EXCLUDES=
 
-		if [ -d data ]; then
-			EXCLUDES="-x 'data/hypersonic/lportal.script' -x 'data/hypersonic/lportal.properties'"
+		popd > /dev/null
+	elif [[ "$BUILD_NAME" == *.zip ]]; then
+		local LIFERAY_HOME_BASENAME=$(basename "${LIFERAY_HOME}")
+		local LIFERAY_HOME_DIRNAME=$(dirname "${LIFERAY_HOME}")
+
+		pushd "${LIFERAY_HOME_DIRNAME}" > /dev/null
+
+		if [ -d "${LIFERAY_HOME_BASENAME}" ]; then
+			pushd "$LIFERAY_HOME_BASENAME" > /dev/null
+			rm -rf tomcat* osgi tools work .liferay-home
+			popd > /dev/null
+
+			mv "${LIFERAY_HOME_BASENAME}" liferay-portal-${BASE_BRANCH}
 		fi
 
-		unzip -qq $EXCLUDES "$HOME/.liferay/builds/${BUILD_NAME}"
+		unzip -qqn "$HOME/.liferay/builds/${BUILD_NAME}"
+
+		mv liferay-portal-${BASE_BRANCH} "${LIFERAY_HOME_BASENAME}"
+
+		popd > /dev/null
 	fi
 
 	echo -n "$NEW_BASELINE" > "baseline.txt"
-
-	popd > /dev/null
 }
 
 getbuild() {
