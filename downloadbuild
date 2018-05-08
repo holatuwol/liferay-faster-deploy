@@ -168,7 +168,7 @@ downloadbranchmirror() {
 		return 0
 	fi
 
-	if [ "" != $(ls -1 "$HOME/.liferay/builds/" | grep "${SHORT_NAME}-[0-9]*\(.tar.gz\|.zip\).*") ]; then
+	if [ "" != "$(ls -1 "$HOME/.liferay/builds/" | grep "${SHORT_NAME}-[0-9]*\(.tar.gz\|.zip\).*")" ]; then
 		ls -1 "$HOME/.liferay/builds/" | grep "${SHORT_NAME}-[0-9]*\(.tar.gz\|.zip\).*" | xargs rm
 	fi
 
