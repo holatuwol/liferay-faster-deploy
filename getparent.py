@@ -88,13 +88,14 @@ def getparent(check_tags):
 
 	# Find the closest matching tag
 
-	base_tag = git.describe('--tags', 'HEAD', '--abbrev=0')
+	if base_branch == '7.0.x':
+		base_tag = git.describe('--tags', 'HEAD', '--abbrev=0', '--match=fix-pack-de-*')
 
-	if base_tag.find('fix-pack-fix-') > -1:
-		base_tag = git.tag('--merged', current_branch, '--sort', "-refname", "--list", "fix-pack-base-*", "--list", "fix-pack-de-*", "--list", "*-ga*")
-		
-		if base_tag:
-			base_tag = base_tag.split()[0]
+		if base_tag is None:
+			base_tag = git.describe('--tags', 'HEAD', '--abbrev=0', '--match=7.0.*-ga*')
+
+	elif base_branch == 'ee-6.2.x':
+		base_tag = git.describe('--tags', 'HEAD', '--abbrev=0', '--match=fix-pack-base-*')
 
 	if base_tag.find('fix-pack-base-') > -1 or base_tag.find('fix-pack-de-') > -1 or base_tag.find('-ga') > -1:
 		return base_tag
