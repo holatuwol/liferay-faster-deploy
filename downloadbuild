@@ -169,7 +169,8 @@ downloadbranchmirror() {
 	fi
 
 	if [ "" != "$(ls -1 "$HOME/.liferay/builds/" | grep "${SHORT_NAME}-[0-9]*\(.tar.gz\|.zip\).*")" ]; then
-		ls -1 "$HOME/.liferay/builds/" | grep "${SHORT_NAME}-[0-9]*\(.tar.gz\|.zip\).*" | xargs rm
+		find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.tar.gz*" -exec rm {} +
+		find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.zip*" -exec rm {} +
 	fi
 
 	echo "Downloading snapshot for $SHORT_NAME"
@@ -360,7 +361,9 @@ gettargetfolder() {
 
 	# Check for the best parent, making sure to update our tags first.
 
-	updatetags
+	if [ "master" != "${BASE_BRANCH}" ]; then
+		updatetags
+	fi
 
 	. $(dirname "${BASH_SOURCE[0]}")/getparent
 
