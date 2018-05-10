@@ -1,6 +1,8 @@
 #!/bin/bash
 
 getparent() {
+	echo "Detecting parent branch..."
+
 	local PARENTS=$(python "$(dirname "${BASH_SOURCE[0]}")/getparent.py")
 
 	BASE_TAG=$(echo "${PARENTS}" | head -1)
