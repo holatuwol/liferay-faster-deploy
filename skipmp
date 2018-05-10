@@ -1,5 +1,17 @@
 #!/bin/bash
 
+checkappbnd() {
+	(
+		for dir in $(grep -F app.bnd ${GIT_ROOT}/.redeploy/lsfiles.txt | dirnames); do
+			if [ "" == "$(grep "^${dir}/.*/.lfrbuild-portal$" ${GIT_ROOT}/.redeploy/lsfiles.txt)" ]; then
+				continue
+			fi
+
+			echo ${dir}/app.bnd
+		done
+	) | xargs grep -F Liferay-Releng-App-Title | cut -d' ' -f 3-
+}
+
 dirnames() {
 	python $(dirname "${BASH_SOURCE[0]}")/dirnames.py
 }
@@ -55,8 +67,7 @@ skipmp() {
 	elif [ "7.0.x" == "${BASE_BRANCH}" ] || [ "7.0.x-private" == "${BASE_BRANCH}" ]; then
 		BUNDLE_APPS=$(echo -e 'Collaboration\nForms and Workflow\nFoundation\nStatic\nWeb Experience\nPush\nSAML 2.0 Provider')
 	else
-		echo "Build will not be restricted for 7.1+"
-		return 0
+		BUNDLE_APPS=$(checkappbnd)
 	fi
 
 	echo "Restricting build to the following applications:"
