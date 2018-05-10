@@ -55,7 +55,8 @@ skipmp() {
 	elif [ "7.0.x" == "${BASE_BRANCH}" ] || [ "7.0.x-private" == "${BASE_BRANCH}" ]; then
 		BUNDLE_APPS=$(echo -e 'Collaboration\nForms and Workflow\nFoundation\nStatic\nWeb Experience\nPush\nSAML 2.0 Provider')
 	else
-		BUNDLE_APPS=$(echo -e 'Collaboration\nForms and Workflow\nFoundation\nStatic\nWeb Experience\nPush\nSAML 2.0 Provider\nConnector to Elasticsearch 6')
+		echo "Build will not be restricted for 7.1+"
+		return 0
 	fi
 
 	echo "Restricting build to the following applications:"
