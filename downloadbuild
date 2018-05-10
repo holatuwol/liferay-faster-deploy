@@ -257,7 +257,7 @@ extract() {
 	local EXCLUDES=
 
 	if [[ "$BUILD_NAME" == *.tar.gz ]]; then
-		pushd "${LIFERAY_HOME_DIRNAME}" > /dev/null
+		pushd "${LIFERAY_HOME}" > /dev/null
 
 		if [ -d data ]; then
 			EXCLUDES="--exclude='data/hypersonic/lportal.script' --exclude='data/hypersonic/lportal.properties'"
