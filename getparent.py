@@ -35,7 +35,7 @@ def getparent(check_tags):
 
 	if isfile(join(git_root, 'release.properties')):
 		full_version = get_file_property(join(git_root, 'release.properties'), 'lp.version')
-	elif isfile(join(git_root, 'build.properties')):
+	elif isfile(join(git_root, 'build.properties')) and isfile(join(git_root, 'app.server.properties')):
 		full_version = get_file_property(join(git_root, 'build.properties'), 'lp.version')
 	elif isfile(join(git_root, 'git-commit-portal')):
 		with open(join(git_root, 'git-commit-portal'), 'r') as file:
