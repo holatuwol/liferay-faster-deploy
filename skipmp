@@ -24,7 +24,6 @@ lsfiles() {
 	git ls-files modules | grep -vF '/src/' > ${GIT_ROOT}/.redeploy/lsfiles.txt
 
 	if [ -f git-commit-portal ]; then
-		#ant -f build-working-dir.xml
 		git ls-tree -r $(cat git-commit-portal) --name-only -- modules | grep -vF '/src/' >> ${GIT_ROOT}/.redeploy/lsfiles.txt
 	fi
 
@@ -61,6 +60,7 @@ skipmp() {
 	git status | grep -F deleted | grep -F '.lfrbuild-portal' | cut -d':' -f 2 | xargs git checkout
 
 	getparent
+	lsfiles
 
 	if [ -f $HOME/lpkgs.txt ]; then
 		BUNDLE_APPS=$(cat $HOME/lpkgs.txt)
@@ -73,25 +73,28 @@ skipmp() {
 	echo "Restricting build to the following applications:"
 	echo "${BUNDLE_APPS}"
 
-	echo -en "\n\n"
-
-	lsfiles
-
 	cat /dev/null > .excludes
 
 	for file in $(grep -F app.bnd ${GIT_ROOT}/.redeploy/lsfiles.txt); do
 		app=$(grep Liferay-Releng-App-Title $file | cut -d' ' -f 3-)
 		is_bundled=$(echo "$BUNDLE_APPS" | grep "^\s*${app}\s*\$")
 
-		if [ "" == "$is_bundled" ]; then
-			public_app="$(dirname $file)"
-			echo $public_app >> .excludes
+		if [ "" != "$is_bundled" ]; then
+			continue
+		fi
 
-			private_app="modules/private/$(echo $public_app | cut -d'/' -f 2-)"
+		public_app="$(dirname $file)"
 
-			if [ -d $private_app ]; then
-				echo $private_app >> .excludes
-			fi
+		if [ "" == "$(grep "^${public_app}/.*/.lfrbuild-portal$" ${GIT_ROOT}/.redeploy/lsfiles.txt)" ]; then
+			continue
+		fi
+
+		echo $public_app >> .excludes
+
+		private_app="modules/private/$(echo $public_app | cut -d'/' -f 2-)"
+
+		if [ -d $private_app ]; then
+			echo $private_app >> .excludes
 		fi
 	done
 
@@ -103,18 +106,26 @@ skipmp() {
 		fi
 	done
 
-	if [[ 0 -ne $(cat .excludes | grep -c '^') ]]; then
-		transitiveexcludes
+	echo -en "\n\n"
 
-		local all_excludes=$(grep -Ff .excludes ${GIT_ROOT}/.redeploy/lsfiles.txt | grep -F .lfrbuild-portal | sort -u)
-		local git_excludes=$(cat .excludes | xargs git ls-files | grep -F .lfrbuild-portal | sort -u)
+	if [[ 0 -eq $(cat .excludes | grep -c '^') ]]; then
+		echo "No modules will be excluded in this build"
 
-		echo "$all_excludes" | dirnames | awk '{ print "Excluding " $1 }'
-		echo "$git_excludes" | xargs git update-index --assume-unchanged
-		echo "$all_excludes" | xargs rm -f
+		rm .excludes
+
+		return 0
 	fi
 
-	rm -f .excludes
+	cat .excludes
+
+	transitiveexcludes
+
+	local all_excludes=$(grep -Ff .excludes ${GIT_ROOT}/.redeploy/lsfiles.txt | grep -F .lfrbuild-portal | sort -u)
+	local git_excludes=$(cat .excludes | xargs git ls-files | grep -F .lfrbuild-portal | sort -u)
+
+	echo "$all_excludes" | dirnames | awk '{ print "Excluding " $1 }'
+	echo "$git_excludes" | xargs git update-index --assume-unchanged
+	echo "$all_excludes" | xargs rm -f
 }
 
 transitiveexcludes() {
