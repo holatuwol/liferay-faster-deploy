@@ -7,33 +7,15 @@ buildopts() {
 		JAVA_VERSION=$(java -version 2>&1 | head -1 | cut -d'"' -f 2 | cut -d'.' -f 2)
 	fi
 
-	ANT_OPTS='-Xms2g -Xmx2g'
+	ANT_OPTS='-Xms4g -Xmx4g'
 
 	if [[ 8 -gt $JAVA_VERSION ]]; then
-		ANT_OPTS="$ANT_OPTS -XX:MaxPermSize=512m"
+		ANT_OPTS="${ANT_OPTS} -XX:MaxPermSize=512m"
+	else
+		ANT_OPTS="${ANT_OPTS} -Dorg.gradle.workers.max=1"
 	fi
 
 	export ANT_OPTS
-
-	local TOTAL_MEMORY=10000000
-
-	if [ "" != "$(which vmstat 2> /dev/null)" ]; then
-		TOTAL_MEMORY=$(vmstat -s | grep -F 'total memory' | awk '{ print $1 }')
-	fi
-
-	if [ "" == "${TOTAL_MEMORY}" ] || [ 10000000 -gt $TOTAL_MEMORY ]; then
-		GRADLE_OPTS='-Xms3g -Xmx3g'
-	else
-		GRADLE_OPTS='-Xms4g -Xmx4g'
-	fi
-
-	GRADLE_OPTS="$GRADLE_OPTS -Dorg.gradle.workers.max=1"
-
-	if [[ 8 -gt $JAVA_VERSION ]]; then
-		GRADLE_OPTS="$GRADLE_OPTS -XX:MaxPermSize=512m"
-	fi
-
-	export GRADLE_OPTS
 }
 
 checkjava() {

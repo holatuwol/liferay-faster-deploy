@@ -164,15 +164,16 @@ prepare() {
 	BASE_BRANCH=ee-$(grep -F 'lp.version.major=' release.properties | cut -d'=' -f 2).x
 	JSP_JAVA_VERSION=
 
+	ANT_OPTS='-Xms4g -Xmx4g'
+
 	if [ "ee-6.2.x" == "$BASE_BRANCH" ]; then
-		export ANT_OPTS='-Xms2g -Xmx2g -XX:MaxPermSize=512m'
+		export ANT_OPTS="${ANT_OPTS} -XX:MaxPermSize=512m"
 		javahome 6
 	elif [ "ee-6.1.x" == "$BASE_BRANCH" ]; then
-		export ANT_OPTS='-Xms2g -Xmx2g -XX:MaxPermSize=512m'
+		export ANT_OPTS="${ANT_OPTS} -XX:MaxPermSize=512m"
 		javahome 6
 	else
-		export GRADLE_OPTS='-Xms4g -Xmx4g -Dorg.gradle.workers.max=1'
-		export ANT_OPTS='-Xms2g -Xmx2g'
+		export ANT_OPTS="${ANT_OPTS} -Dorg.gradle.workers.max=1"
 		javahome 8
 	fi
 
