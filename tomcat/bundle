@@ -42,7 +42,7 @@ set_container_mounts() {
 		return 0
 	fi
 
-	if [ -f portal-ext.properties ]; then
+	if [ -f portal-ext.properties ] || [ -d deploy ]; then
 		LIFERAY_HOME=${PWD}
 		LIFERAY_HOME_MOUNT="-v ${PWD}:/build"
 	elif [ -d bundles ]; then
