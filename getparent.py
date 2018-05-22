@@ -88,6 +88,8 @@ def getparent(check_tags):
 
 	# Find the closest matching tag
 
+	base_tag = ''
+
 	if base_branch == '7.0.x':
 		base_tag = git.describe('--tags', 'HEAD', '--abbrev=0', '--match=fix-pack-de-*')
 
