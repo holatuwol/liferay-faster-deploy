@@ -31,6 +31,22 @@ subrepos() {
 
 	source_folder=$PWD
 
+	if [ "" != "$1" ]; then
+		if [ ! -d $1 ] || [ ! -f $1/.gitrepo ] || [ "" == "$(grep -Fl 'mode = pull' $1/.gitrepo)" ]; then
+			echo $1 is not a subrepository
+			return 1
+		fi
+
+		remote_location=$(grep -F 'remote = ' $1/.gitrepo | cut -d'=' -f 2)
+		remote_project=$(echo "$remote_location" | cut -d'/' -f 2 | cut -d'.' -f 1)
+
+		if [ ! -d $SUBREPO_ROOT/$remote_project ]; then
+			subrepo $1 $SUBREPO_ROOT $remote_location $remote_project
+		fi
+
+		return 0
+	fi
+
 	for repo_file in $(git ls-files modules | grep -F '.gitrepo' | xargs grep -Fl 'mode = pull'); do
 		remote_location=$(grep -F 'remote = ' $repo_file | cut -d'=' -f 2)
 		remote_project=$(echo "$remote_location" | cut -d'/' -f 2 | cut -d'.' -f 1)
@@ -65,4 +81,4 @@ if [ "" == "$(which hub 2> /dev/null)" ]; then
 	exit 1
 fi
 
-subrepos
+subrepos $1
