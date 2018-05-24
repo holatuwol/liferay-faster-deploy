@@ -8,7 +8,7 @@ compile() {
 	echo "Starting compilation for $1"
 	GIT_HASH=$(git log -1 --pretty='%H')
 
-	sed -i 's/\${env.ANT_OPTS}/${env.GRADLE_OPTS}/g' build-common.xml
+	enable_marketplace_app_deployment
 
 	# Setup properties
 
@@ -45,12 +45,48 @@ compile() {
 	EXIT_CODE=$?
 	set +o pipefail
 
+	disable_marketplace_app_deployment
+
 	if [[ $EXIT_CODE -ne 0 ]]; then
 		return $EXIT_CODE
 	fi
 
 	$SCRIPT_FOLDER/../tomcat/precompile
 	return 0
+}
+
+disable_marketplace_app_deployment() {
+	rm portal-impl/src/com/liferay/portal/license/util/CustomLicenseManagerImpl.java
+	sed -i.bak 's/CustomLicenseManagerImpl/DefaultLicenseManagerImpl/g' portal-impl/src/META-INF/util-spring.xml
+}
+
+enable_marketplace_app_deployment() {
+	echo "Enabling Marketplace app deployment on bundle built from source..."
+
+	echo '
+package com.liferay.portal.license.util;
+
+import java.util.HashMap;
+import java.util.Map;
+
+public class CustomLicenseManagerImpl extends DefaultLicenseManagerImpl {
+	@Override
+	public int getLicenseState(Map<String, String> licenseProperties) {
+		return STATE_GOOD;
+	}
+
+	@Override
+	public Map<String, String> getLicenseProperties(String productId) {
+		Map<String, String> licenseProperties = new HashMap<String, String>();
+
+		licenseProperties.put("productVersion", String.valueOf(Integer.MAX_VALUE));
+
+		return licenseProperties;
+	}
+}
+' > portal-impl/src/com/liferay/portal/license/util/CustomLicenseManagerImpl.java
+
+	sed -i.bak 's/DefaultLicenseManagerImpl/CustomLicenseManagerImpl/g' portal-impl/src/META-INF/util-spring.xml
 }
 
 finish() {
