@@ -1,4 +1,4 @@
 #!/bin/bash
 
 pkill -f 'cronbuilder'
-$(dirname $0)/cronbuilder
+$(dirname $0)/cronbuilder $@
