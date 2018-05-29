@@ -19,7 +19,7 @@ compile() {
 
 	# Mass change timestamps
 
-	$(dirname ${PWD})/../githashtime
+	$(dirname ${SCRIPT_FOLDER})/../githashtime
 
 	# Begin building
 
