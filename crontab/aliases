@@ -52,21 +52,6 @@ cr() {
 		return 1
 	fi
 
-	PORT=$(grep -o '"[0-9]*80"' $CATALINA_HOME/conf/server.xml | cut -d'"' -f 2 | sort -u)
-	PIDS=$(lsof -b -a -i :$PORT -t -c java)
-
-	if [ "" != "$PIDS" ]; then
-		RUNNING_CATALINA_HOME=$(ps --no-headers $PIDS | grep -o "catalina.base=[^ ]*" | cut -d '=' -f 2)
-
-		if [ "$CATALINA_HOME" == "$RUNNING_CATALINA_HOME" ]; then
-			echo "$1 is already running"
-			return 0
-		else
-			echo "$RUNNING_CATALINA_HOME is already running on port $PORT"
-			return 1
-		fi
-	fi
-
 	echo "Starting latest build of $1"
 
 	$CATALINA_HOME/bin/startup.sh
