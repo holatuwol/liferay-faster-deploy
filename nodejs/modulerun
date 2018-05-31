@@ -1,12 +1,11 @@
 #!/bin/bash
 
 modulerun() {
-	modulerungw
-	modulerunyarn
-	modulerungulp
+	module_npminstall
+	module_gulpbuild
 }
 
-modulerungulp() {
+module_gulpbuild() {
 	cat /dev/null > ${cache_home}/cachenpm.gwargs
 
 	for folder in $(cat ${cache_home}/cachenpm.txt | dirnames); do
@@ -15,35 +14,23 @@ modulerungulp() {
 		fi
 	done
 
-	if [[ 0 -ne "$(grep -c '^' ${cache_home}/cachenpm.gwargs)" ]]; then
-		cat ${cache_home}/cachenpm.gwargs | xargs $(dirname "${BASH_SOURCE[0]}")/../gw --continue
-	fi
+	rungradlew
 }
 
-modulerungw() {
+module_npminstall() {
 	pushd modules
 
 	cat ${cache_home}/cachenpm.txt | dirnames | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":npmInstall" }' > ${cache_home}/cachenpm.gwargs
 
-	if [[ 0 -ne "$(grep -c '^' ${cache_home}/cachenpm.gwargs)" ]]; then
-		cat ${cache_home}/cachenpm.gwargs | xargs $(dirname "${BASH_SOURCE[0]}")/../gw --continue
-	fi
+	rungradlew
 
 	popd > /dev/null
 }
 
-modulerunyarn() {
-	if [ "" == "$(which yarn 2> /dev/null)" ]; then
-		return 0
+rungradlew() {
+	if [[ 0 -ne "$(grep -c '^' ${cache_home}/cachenpm.gwargs)" ]]; then
+		cat ${cache_home}/cachenpm.gwargs | xargs ${GIT_ROOT}/gradlew --continue
 	fi
-
-	for folder in $(cat ${cache_home}/cachenpm.txt | dirnames); do
-		if [ ! -d $folder/node_modules ] || [[ 0 -eq $(ls $folder/node_modules/ | grep -c '^') ]]; then
-			pushd $folder > /dev/null
-			yarn
-			popd > /dev/null
-		fi
-	done
 }
 
 modulerun
