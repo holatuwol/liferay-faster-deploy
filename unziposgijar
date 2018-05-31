@@ -72,13 +72,15 @@ unziposgijar() {
 		BUNDLE_SYMBOLICNAME=$(grep -F 'Bundle-SymbolicName' $1/bnd.bnd | cut -d' ' -f 2)
 		MODULE_PATH=$1
 
-		JAR_PATH=$(find $LIFERAY_HOME/osgi -name ${BUNDLE_SYMBOLICNAME}.jar)
+		if [ -d $LIFERAY_HOME/osgi ]; then
+			JAR_PATH=$(find $LIFERAY_HOME/osgi -name ${BUNDLE_SYMBOLICNAME}.jar)
+		fi
 
-		if [ "" == "${JAR_PATH}" ]; then
+		if [ "" == "${JAR_PATH}" ] && [ -d $CATALINA_HOME/lib/ext ]; then
 			JAR_PATH=$(find $CATALINA_HOME/lib/ext -name ${BUNDLE_SYMBOLICNAME}.jar)
 		fi
 
-		if [ "" == "${JAR_PATH}" ]; then
+		if [ "" == "${JAR_PATH}" ] && [ -d $CATALINA_HOME/webapps/ROOT/WEB-INF/lib ]; then
 			JAR_PATH=$(find $CATALINA_HOME/webapps/ROOT/WEB-INF/lib -name ${BUNDLE_SYMBOLICNAME}.jar)
 		fi
 
@@ -88,9 +90,11 @@ unziposgijar() {
 	elif getmodulepath $1; then
 		BUNDLE_SYMBOLICNAME=$(grep -F 'Bundle-SymbolicName' $MODULE_PATH/bnd.bnd | cut -d' ' -f 2)
 
-		JAR_PATH=$(find $LIFERAY_HOME/osgi -name $BUNDLE_SYMBOLICNAME.jar)
+		if [ -d $LIFERAY_HOME/osgi ]; then
+			JAR_PATH=$(find $LIFERAY_HOME/osgi -name $BUNDLE_SYMBOLICNAME.jar)
+		fi
 
-		if [ "" == "${JAR_PATH}" ]; then
+		if [ "" == "${JAR_PATH}" ] && [ -d $CATALINA_HOME/lib/ext ]; then
 			JAR_PATH=$(find $CATALINA_HOME/lib/ext -name ${BUNDLE_SYMBOLICNAME}.jar)
 		fi
 
