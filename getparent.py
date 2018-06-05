@@ -105,31 +105,31 @@ def getparent(check_tags):
 	return base_branch
 
 def getparent_origin():
-	branches = [
-		ref[len('refs/remotes/'):]
-			for ref in git.for_each_ref('--format=%(refname)', 'refs/remotes/').split('\n')
-				if ref.find('refs/remotes/origin') == 0 or ref.find('refs/remotes/upstream') == 0
-	]
+	remote_refs = git.for_each_ref('--format=%(refname)', 'refs/remotes/').split('\n')
+
+	origin_branches = [ref[len('refs/remotes/'):] for ref in remote_refs if ref.find('refs/remotes/origin') == 0]
+	upstream_branches = [ref[len('refs/remotes/'):] for ref in remote_refs if ref.find('refs/remotes/upstream') == 0]
 
 	closest_branch = None
 	closest_branch_diff = -1
 
-	for branch in branches:
-		short_branch = branch[branch.find('/')+1:]
+	for branch_set in [upstream_branches, origin_branches]:
+		for branch in branch_set:
+			short_branch = branch[branch.find('/')+1:]
 
-		if short_branch == current_branch or short_branch == closest_branch or not git.is_ancestor(branch, current_branch):
-			continue
+			if short_branch == current_branch or short_branch == closest_branch or not git.is_ancestor(branch, current_branch):
+				continue
 
-		branch_diff = len(git.log('--pretty=%H', '%s..%s' % (branch, current_branch)))
+			branch_diff = len(git.log('--pretty=%H', '%s..%s' % (branch, current_branch)))
 
-		if closest_branch is None or branch_diff < closest_branch_diff:
-			closest_branch = short_branch
-			closest_branch_diff = branch_diff
+			if closest_branch is None or branch_diff < closest_branch_diff:
+				closest_branch = short_branch
+				closest_branch_diff = branch_diff
 
-	if closest_branch is None:
-		return current_branch
+		if closest_branch is not None:
+			return closest_branch
 
-	return closest_branch
+	return current_branch
 
 if __name__ == '__main__':
 	print(getparent(True))
