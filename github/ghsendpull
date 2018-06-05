@@ -70,7 +70,7 @@ findreviewer() {
 fixdeps() {
 	echo "Fixing dependencies"
 
-	$(dirname "${BASH_SOURCE[0]}")/../packageinfo/fixdeps
+	. $(dirname "${BASH_SOURCE[0]}")/../packageinfo/fixdeps
 }
 
 formatsource() {

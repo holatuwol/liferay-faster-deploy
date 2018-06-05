@@ -5,7 +5,7 @@ cachenpm() {
 }
 
 checkdeps() {
-	$(dirname ${BASH_SOURCE[0]})/checkdeps
+	. $(dirname ${BASH_SOURCE[0]})/checkdeps
 }
 
 checkpython() {
