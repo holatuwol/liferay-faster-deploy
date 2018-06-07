@@ -56,11 +56,19 @@ compile() {
 }
 
 disable_marketplace_app_deployment() {
+	if [ "6.1.x" == "${BASE_BRANCH}" ]; then
+		return 0
+	fi
+
 	rm portal-impl/src/com/liferay/portal/license/util/CustomLicenseManagerImpl.java
 	sed -i.bak 's/CustomLicenseManagerImpl/DefaultLicenseManagerImpl/g' portal-impl/src/META-INF/util-spring.xml
 }
 
 enable_marketplace_app_deployment() {
+	if [ "6.1.x" == "${BASE_BRANCH}" ]; then
+		return 0
+	fi
+
 	echo "Enabling Marketplace app deployment on bundle built from source..."
 
 	echo '
