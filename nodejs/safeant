@@ -4,40 +4,6 @@ dirnames() {
 	python $(dirname "${BASH_SOURCE[0]}")/../dirnames.py
 }
 
-disable_marketplace_app_deployment() {
-	rm portal-impl/src/com/liferay/portal/license/util/CustomLicenseManagerImpl.java
-	sed -i.bak 's/CustomLicenseManagerImpl/DefaultLicenseManagerImpl/g' portal-impl/src/META-INF/util-spring.xml
-}
-
-enable_marketplace_app_deployment() {
-	echo "Enabling Marketplace app deployment on bundle built from source..."
-
-	echo '
-package com.liferay.portal.license.util;
-
-import java.util.HashMap;
-import java.util.Map;
-
-public class CustomLicenseManagerImpl extends DefaultLicenseManagerImpl {
-	@Override
-	public int getLicenseState(Map<String, String> licenseProperties) {
-		return STATE_GOOD;
-	}
-
-	@Override
-	public Map<String, String> getLicenseProperties(String productId) {
-		Map<String, String> licenseProperties = new HashMap<String, String>();
-
-		licenseProperties.put("productVersion", String.valueOf(Integer.MAX_VALUE));
-
-		return licenseProperties;
-	}
-}
-' > portal-impl/src/com/liferay/portal/license/util/CustomLicenseManagerImpl.java
-
-	sed -i.bak 's/DefaultLicenseManagerImpl/CustomLicenseManagerImpl/g' portal-impl/src/META-INF/util-spring.xml
-}
-
 fixclasspath() {
 	if [ "" == "${CATALINA_HOME}" ] || [ ! -d ${CATALINA_HOME} ]; then
 		return 0
@@ -225,7 +191,6 @@ safeant() {
 	# Execute the actual build
 
 	pushd $GIT_ROOT > /dev/null
-	enable_marketplace_app_deployment
 
 	if [ "" == "${IS_SNAPSHOT}" ]; then
 		git ls-files | grep -vF modules | grep -F bnd.bnd | xargs rm -f
@@ -241,7 +206,6 @@ safeant() {
 		git ls-files | grep -vF modules | grep -F bnd.bnd | xargs git checkout
 	fi
 
-	disable_marketplace_app_deployment
 	popd > /dev/null
 
 	# Report the completion time
