@@ -2,7 +2,7 @@
 
 deletebranches() {
 	local remote_url=$(git remote -v | grep "^${1}\s" | awk '{ print $2 }' | uniq)
-	local remote_branches=$(git for-each-ref --format='%(refname)' refs/remotes/$1)
+	local remote_branches=$(git for-each-ref --format='%(refname)' refs/remotes/$1 | cut -d'/' -f 3-)
 
 	if [ "git@github.com:liferay/liferay-portal.git" == "$remote_url" ]; then
 		echo "$remote_branches" | grep -v '/master$'
@@ -24,13 +24,22 @@ fixupstream() {
 
 	for remote in $(git remote | grep upstream); do
 		local remote_url=$(git remote -v | grep "^${remote}\s" | awk '{ print $2 }' | uniq)
-		delete_branches=$(deletebranches $remote | cut -d'/' -f 4-)
+
+		if [ "" == "$1" ]; then
+			delete_branches=$(deletebranches $remote | cut -d'/' -f 4-)
+		else
+			delete_branches=$(git for-each-ref --format='%(refname)' refs/remotes/$remote | grep -v $1 | cut -d'/' -f 3-)
+		fi
 
 		for delete_branch in $delete_branches; do
-			git branch -d -r $remote/$delete_branch
+			git branch -d -r $delete_branch
 		done
 
-		retain_branches=$(retainbranches "$remote" | cut -d'/' -f 3-)
+		if [ "" == "$1" ]; then
+			retain_branches=$(retainbranches "$remote" | cut -d'/' -f 3-)
+		else
+			retain_branches=$1
+		fi
 
 		if [ "" != "$retain_branches" ]; then
 			git remote set-branches $remote $(echo "$retain_branches" | tr '\n' ' ')
@@ -42,10 +51,8 @@ fixupstream() {
 	done
 
 	for remote in $(git remote | grep upstream); do
-		echo $remote
 		git fetch --no-tags $remote --prune
 	done
-
 
 	for remote in $(git remote | grep origin); do
 		git fetch $remote --prune
@@ -84,4 +91,4 @@ retainbranches() {
 	fi
 }
 
-fixupstream
+fixupstream $@
