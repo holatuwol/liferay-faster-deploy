@@ -22,10 +22,8 @@ nodew() {
 	if [ -f gulpfile.js ]; then
 		npm install
 		node_modules/gulp/bin/gulp.js build
-	elif [ "" == "$(which yarn 2> /dev/null)" ]; then
-		npm install
 	else
-		yarn
+		npm install
 	fi
 
 	local EXECUTABLE=$(cat package.json | jq .bin.$1 | cut -d'"' -f 2)
