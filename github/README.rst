@@ -117,6 +117,8 @@ You can invoke it without arguments to simply apply the symlinks. Optionally, yo
 	linkprivate
 	linkprivate reset
 
+**Warning**: Because this script relies on symlinks, you cannot run ``ant all``, because it will remove those symlinks during the ``clean`` phase. Instead, run ``ant compile deploy``.
+
 Push Branch to Origin
 =====================
 
