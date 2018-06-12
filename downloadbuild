@@ -428,6 +428,45 @@ rebasebranch() {
 	. $(dirname "${BASH_SOURCE[0]}")/rebasebranch
 }
 
+resetbasebranch() {
+	CURRENT_HASH=$(git log -1 --pretty='%H')
+
+	if git merge-base --is-ancestor $CURRENT_HASH $NEW_BASELINE; then
+		git merge --ff-only $NEW_BASELINE
+		return $?
+	fi
+
+	CLOSEST_ANCESTOR=
+	CLOSEST_COUNT=$(git log --pretty='%H' ${NEW_BASELINE}..${CURRENT_HASH} | wc -l)
+
+	for remote in $(git remote); do
+		local ANCESTOR=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/${remote}/${BASE_BRANCH}$" | cut -d'/' -f 3,4)
+
+		if [ "" == "$ANCESTOR" ]; then
+			continue
+		fi
+
+		local COUNT=$(git log --pretty='%H' ${ANCESTOR}..${CURRENT_HASH} | wc -l)
+		echo "$(git rev-parse --abbrev-ref HEAD) differs from ${ANCESTOR} by ${COUNT} commits"
+
+		if [[ $COUNT -lt $CLOSEST_COUNT ]]; then
+			CLOSEST_ANCESTOR=$ANCESTOR
+			CLOSEST_COUNT=$COUNT
+		fi
+	done
+
+	if [[ 0 -eq ${CLOSEST_COUNT} ]]; then
+		echo "Resetting $(git rev-parse --abbrev-ref HEAD) to ${BASE_BRANCH} baseline because there are no unique commits"
+		git reset --hard $NEW_BASELINE
+		return $?
+	fi
+
+	if ! git merge-base --is-ancestor $NEW_BASELINE $CURRENT_HASH; then
+		git rebase $NEW_BASELINE
+		return $?
+	fi
+}
+
 updatetags() {
 	if [ -z "${TAG_ARCHIVE_MIRROR}" ]; then
 		return 0
