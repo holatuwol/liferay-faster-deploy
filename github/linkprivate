@@ -1,0 +1,92 @@
+#!/bin/bash
+
+linkprivate() {
+	if [ ! -d portal-impl ] || [ -h portal-impl ]; then
+		echo "This can only be run from portal source"
+		return 1
+	fi
+
+	if [ "" == "${PRIVATE_FOLDER}" ]; then
+		if [ -d "${PWD}-private" ]; then
+			PRIVATE_FOLDER="${PWD}-private"
+		else
+			PRIVATE_FOLDER="$(dirname $PWD)/private"
+		fi
+	fi
+
+	if [ ! -d "${PRIVATE_FOLDER}" ]; then
+		echo "You must have the private repository checked out at ${PRIVATE_FOLDER} or ${PWD}-private"
+		return 1
+	fi
+
+	if [ "reset" == "$1" ]; then
+		CURRENT_HASH=$(git log -1 --pretty='%H')
+		CURRENT_BRANCH=$(git symbolic-ref --short HEAD 2> /dev/null)
+
+		NEW_BASELINE=$(cat ${PRIVATE_FOLDER}/git-commit-portal)
+		SHORT_NAME=$(grep -F public.branch.name= ${PRIVATE_FOLDER}/working.dir.properties | head -1 | cut -d'=' -f 2)
+
+		if [ "" == "$(git log -1 --pretty='%H' ${NEW_BASELINE})" ]; then
+			git fetch upstream --no-tags
+		fi
+
+		. $(dirname "${BASH_SOURCE[0]}")/../rebasebranch
+	fi
+
+	mkdir -p .m2
+	mkdir -p tmp
+
+	for file in gradlew gradlew.bat; do
+		if [ ! -f ${PRIVATE_FOLDER}/$file ]; then
+			cp -f $PWD/$file ${PRIVATE_FOLDER}/
+		fi
+	done
+
+	if [ ! -d ${PRIVATE_FOLDER}/gradle ] || [ -h ${PRIVATE_FOLDER}/gradle ]; then
+		rm -rf ${PRIVATE_FOLDER}/gradle
+		cp -R $PWD/gradle ${PRIVATE_FOLDER}/
+	fi
+
+	for file in *; do
+		if [ -f ${file} ] && [ "" != "$(grep -F ${file} ${PRIVATE_FOLDER}/build-working-dir.xml)" ]; then
+			cp -f $PWD/$file ${PRIVATE_FOLDER}/
+		elif [ ! -e ${PRIVATE_FOLDER}/$file ]; then
+			ln -s $PWD/$file ${PRIVATE_FOLDER}/
+		fi
+	done
+
+	if [ ! -h ${PRIVATE_FOLDER}/.gradle ]; then
+		if [ -d ${PRIVATE_FOLDER}/.gradle ]; then
+			if [ ! -e ${PRIVATE_FOLDER}/.gradle/gradle.properties ]; then
+				ln -s $PWD/.gradle/gradle.properties ${PRIVATE_FOLDER}/.gradle/
+			fi
+		else
+			ln -s $PWD/.gradle/ ${PRIVATE_FOLDER}/
+		fi
+	fi
+
+	if [ ! -h ${PRIVATE_FOLDER}/.m2 ]; then
+		ln -s $PWD/.m2/ ${PRIVATE_FOLDER}/
+	fi
+
+	for file in modules/*; do
+		if [ -d $file ]; then
+			echo Updating $file using rsync
+			mkdir -p ${PRIVATE_FOLDER}/$file/
+			rsync -r $PWD/$file/ ${PRIVATE_FOLDER}/$file/
+		elif [ ! -e ${PRIVATE_FOLDER}/$file ]; then
+			ln -s $PWD/$file ${PRIVATE_FOLDER}/$file
+		fi
+	done
+
+	pushd ${PRIVATE_FOLDER} > /dev/null
+
+	sed -i.bak '/<target.* name="prepare-working-dir">/s/depends="[^"]*" //' build-working-dir.xml
+	ant -f build-working-dir.xml prepare-working-dir
+	rm build-working-dir.xml
+	mv build-working-dir.xml.bak build-working-dir.xml
+
+	popd > /dev/null
+}
+
+linkprivate $@

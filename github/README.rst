@@ -26,6 +26,10 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 			${MCD_RD_CLONE_PATH}/github/pullrequest $@
 	}
 
+	linkprivate() {
+		${MCD_RD_CLONE_PATH}/github/linkprivate $@
+	}
+
 	pushorigin() {
 		${MCD_RD_CLONE_PATH}/github/pushorigin "$1" "$2"
 	}
@@ -98,6 +102,20 @@ Aside from that, currently, the script does the following:
 * runs source formatter against your changes (ignoring profiles)
 * runs `pmd <https://pmd.github.io>`__ against all changed files (required by pull request tests)
 * opens a web browser to the GitHub compare URL so you can create a pull request
+
+Use Symlinks for Private Repositories
+=====================================
+
+It's possible that ``ant -f build-working-dir.xml`` is extremely slow in your environment. If that's the case, you can speed things up by generating symlinks against your master folder (or ``rsync`` in the case of modules, because Gradle can't handle symlinked references to projects), and then modify the ``prepare-working-dir`` task to only apply the source-level modifications it needs to.
+
+* `linkprivate <linkprivate>`__
+
+You can invoke it without arguments to simply apply the symlinks. Optionally, you can also ask it to reset your current master to whatever is specified in your private branch's ``git-commit-portal`` file. In order to prevent accidental loss of changes, it uses the same format-patch and apply strategy as the ``redeploy`` script (it uses the branch specified in ``working.dir.properties`` as an estimate) in order to retain your changes.
+
+.. code-block:: bash
+
+	linkprivate
+	linkprivate reset
 
 Push Branch to Origin
 =====================
