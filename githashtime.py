@@ -13,7 +13,12 @@ def git_hash_time(hash, folders):
 		with open(changes_file, 'r') as f:
 			changes = set([line.strip() for line in f.readlines()])
 
-	mtime = int(git.log('-1', hash, '--pretty=format:%ct'))
+	mtime = git.log('-1', hash, '--pretty=format:%ct')
+
+	if mtime == '':
+		return
+
+	mtime = int(mtime)
 
 	for folder in folders:
 		folder = folder.strip()
