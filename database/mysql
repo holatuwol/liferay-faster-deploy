@@ -75,11 +75,7 @@ waitfor_database() {
 DB_TYPE='mysql'
 DRIVER='mysql.jar'
 
-if [ "ee-6.0.x" == "${BASE_BRANCH}" ] || [ "ee-6.1.x" == "${BASE_BRANCH}" ]; then
-	MYSQL_VERSION='5.5'
-elif [ "ee-6.2.x" == "${BASE_BRANCH}" ]; then
-	MYSQL_VERSION='5.6'
-else
+if [ "" == "${MYSQL_VERSION}" ]; then
 	MYSQL_VERSION='5.7'
 fi
 
