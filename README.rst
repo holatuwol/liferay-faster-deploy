@@ -27,7 +27,7 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 
 		LIFERAY_FILES_MIRROR='http://mirrors/files.liferay.com' \
 			LIFERAY_RELEASES_MIRROR='http://mirrors/releases.liferay.com' \
-			TAG_ARCHIVE_MIRROR='http://cloud-10-50-0-165/builds/fixpacks' \
+			TAG_ARCHIVE_MIRROR='http://cloud-10-0-30-27/builds/fixpacks' \
 			BRANCH_ARCHIVE_MIRROR='http://cloud-10-50-0-165/builds/branches' \
 				${MCD_RD_CLONE_PATH}/redeploy $@
 	}
