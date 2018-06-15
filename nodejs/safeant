@@ -46,35 +46,37 @@ fixclasspath() {
 		fi
 	done
 
-	echo "Copying portal-pre modules from bundle..."
+	if [ -d modules ]; then
+		echo "Copying portal-pre modules from bundle..."
 
-	local missing_jar=
+		local missing_jar=
 
-	if [ -f git-commit-portal ]; then
-		for folder in $(git ls-tree -r --name-only $(cat git-commit-portal) | grep -F .lfrbuild-portal-pre | dirnames); do
-			unziposgijar $folder
-			local jar_name=$(grep -F 'Bundle-SymbolicName' $folder/bnd.bnd | cut -d' ' -f 2).jar
+		if [ -f git-commit-portal ]; then
+			for folder in $(git ls-tree -r --name-only $(cat git-commit-portal) | grep -F .lfrbuild-portal-pre | dirnames); do
+				unziposgijar $folder
+				local jar_name=$(grep -F 'Bundle-SymbolicName' $folder/bnd.bnd | cut -d' ' -f 2).jar
 
-			if [ ! -f tmp/lib-pre/${jar_name} ]; then
-				echo "Missing ${jar_name}"
-				missing_jar=true
-			fi
-		done
-	else
-		for folder in $(git ls-files modules | grep -F .lfrbuild-portal-pre | dirnames); do
-			unziposgijar $folder
-			local jar_name=$(grep -F 'Bundle-SymbolicName' $folder/bnd.bnd | cut -d' ' -f 2).jar
+				if [ ! -f tmp/lib-pre/${jar_name} ]; then
+					echo "Missing ${jar_name}"
+					missing_jar=true
+				fi
+			done
+		else
+			for folder in $(git ls-files modules | grep -F .lfrbuild-portal-pre | dirnames); do
+				unziposgijar $folder
+				local jar_name=$(grep -F 'Bundle-SymbolicName' $folder/bnd.bnd | cut -d' ' -f 2).jar
 
-			if [ ! -f tmp/lib-pre/${jar_name} ]; then
-				echo "Missing ${jar_name}"
-				missing_jar=true
-			fi
-		done
-	fi
+				if [ ! -f tmp/lib-pre/${jar_name} ]; then
+					echo "Missing ${jar_name}"
+					missing_jar=true
+				fi
+			done
+		fi
 
-	if [ "" != "${missing_jar}" ]; then
-		echo "Missing a jar from the bundle, running ant compile instead"
-		ant compile
+		if [ "" != "${missing_jar}" ]; then
+			echo "Missing a jar from the bundle, running ant compile instead"
+			ant compile
+		fi
 	fi
 
 	popd > /dev/null
@@ -147,7 +149,9 @@ safeant() {
 
 	echo "Started $(date)" | tee $GIT_ROOT/.redeploy/compile.txt
 
-	fixclasspath
+	if [ "${GIT_ROOT}" != "${PWD}" ]; then
+		fixclasspath
+	fi
 
 	# Building older tags might not work due to version range
 	# dependencies and the corresponding bnd.bnd
@@ -159,7 +163,7 @@ safeant() {
 	# Improve build consistency by removing items that
 	# are not needed from the build and not using the CDN
 
-	if [ "all" == "$1" ] && [ -d modules ]; then
+	if [ "true" == "${CACHE_NPM}" ]; then
 		$(dirname ${BASH_SOURCE[0]})/../skipmp
 		$(dirname ${BASH_SOURCE[0]})/cachenpm
 
