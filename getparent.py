@@ -90,7 +90,7 @@ def getparent(check_tags):
 
 	base_tag = ''
 
-	if base_branch == '7.0.x':
+	if base_branch == '7.0.x' or base_branch == '7.0.x-private':
 		base_tag = git.describe('--tags', 'HEAD', '--abbrev=0', '--match=fix-pack-de-*')
 
 		if base_tag is None:
