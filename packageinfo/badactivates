@@ -1,0 +1,47 @@
+#!/bin/bash
+
+get_imports() {
+	local CLASS_NAME=$(echo ${1} | sed 's@^.*/src/main/java/@@g' | sed 's@\.java$@@g' | tr '/' '.')
+	local PACKAGE_NAME=$(echo ${CLASS_NAME} | sed 's@\.[^\.]*$@@g')
+
+	echo "${CLASS_NAME}"
+	grep '^import [^ ]*;' ${1}
+
+	for file in $(ls $(dirname ${1}) | grep -F '.java' | sed 's@\.java$@@g'); do
+		if [ "" != "$(grep -F "${file}." ${1})" ]; then
+			echo "import ${PACKAGE_NAME}.${file};"
+		fi
+	done
+
+	echo ""
+}
+
+if [ "" == "${1}" ]; then
+	IMPORTS_FILE='../imports.txt'
+	ACTIVATES_FILE='../activates.txt'
+else
+	IMPORTS_FILE="../imports_${1}.txt"
+	ACTIVATES_FILE="../activates_${1}.txt"
+fi
+
+if [ -f ${IMPORTS_FILE} ]; then
+	echo "Using previous ${IMPORTS_FILE}"
+else
+	touch ${IMPORTS_FILE}
+
+	for file in $(git ls-files modules | grep -F '/src/main/java/' | grep -F .java); do
+		get_imports $file >> ${IMPORTS_FILE}
+	done
+fi
+
+if [ -f ${ACTIVATES_FILE} ]; then
+	echo "Using previous ${ACTIVATES_FILE}"
+else
+	git ls-files modules | xargs grep -Fl '@Activate' | grep -F '/src/main/java/' | grep -F .java | sed 's@^.*/src/main/java/@@g' | sed 's@\.java$@@g' | tr '/' '.' > ${ACTIVATES_FILE}
+fi
+
+if [ "" != "${1}" ]; then
+	python $(dirname ${BASH_SOURCE[0]})/badactivates.py $1
+else
+	python $(dirname ${BASH_SOURCE[0]})/badactivates.py
+fi
