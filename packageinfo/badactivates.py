@@ -54,7 +54,7 @@ with open(activates_file, 'r') as f:
 		line = line.strip()
 
 		my_imports = reachable_imports[line]
-		service_util_imports = {x: y for x, y in my_imports.items() if x.find('ServiceUtil') != -1}
+		service_util_imports = [key for key in my_imports if key.find('ServiceUtil') != -1]
 
 		if len(service_util_imports) > 0:
 			problem_activates[line] = service_util_imports
@@ -62,4 +62,7 @@ with open(activates_file, 'r') as f:
 # Report the problematic files
 
 for key, value in problem_activates.items():
-	print((key, value))
+	print(key)
+
+	for path in [nx.shortest_path(imports_graph, key, x) for x in value]:
+		print(' - %s' % '\n   '.join(path))
