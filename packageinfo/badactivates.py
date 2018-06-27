@@ -53,6 +53,9 @@ with open(activates_file, 'r') as f:
 	for line in f:
 		line = line.strip()
 
+		if line not in reachable_imports:
+			continue
+
 		my_imports = reachable_imports[line]
 		service_util_imports = [key for key in my_imports if key.find('ServiceUtil') != -1]
 
