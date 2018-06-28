@@ -43,7 +43,7 @@ resetbasebranch() {
 	fi
 
 	CLOSEST_ANCESTOR=
-	CLOSEST_COUNT=$(git log --pretty='%H' ${NEW_BASELINE}..${CURRENT_HASH} | wc -l)
+	CLOSEST_COUNT=$(git rev-list --count HEAD)
 
 	for remote in $(git remote); do
 		local ANCESTOR=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/${remote}/${BASE_BRANCH}$" | cut -d'/' -f 3,4)
@@ -94,7 +94,8 @@ rollbackbranch() {
 	fi
 
 	if [ "" == "${CLOSEST_ANCESTOR}" ]; then
-		CLOSEST_ANCESTOR=${SHORT_NAME}
+		echo "Unable to determine closest ancestor"
+		return 1
 	fi
 
 	echo "Detected a deviation from the build reference commit ${NEW_BASELINE} due to rebase against ${CLOSEST_ANCESTOR}"
