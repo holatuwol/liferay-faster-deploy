@@ -43,7 +43,7 @@ if [ -f ${ACTIVATES_FILE} ]; then
 	echo "Using previous ${ACTIVATES_FILE}"
 else
 	echo "Generating ${ACTIVATES_FILE}"
-	git ls-files modules | xargs grep -Fl '@Activate' | grep -F '/src/main/java/' | grep -F .java | sed 's@^.*/src/main/java/@@g' | sed 's@\.java$@@g' | tr '/' '.' > ${ACTIVATES_FILE}
+	git ls-files modules | grep -F '/src/main/java/' | grep -F .java | xargs grep -Fl '@Component' | sed 's@^.*/src/main/java/@@g' | sed 's@\.java$@@g' | tr '/' '.' > ${ACTIVATES_FILE}
 fi
 
 if [ "" != "${1}" ]; then
