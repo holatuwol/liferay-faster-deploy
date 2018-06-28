@@ -68,4 +68,4 @@ for key, value in problem_activates.items():
 	print(key)
 
 	for path in [nx.shortest_path(imports_graph, key, x) for x in value]:
-		print(' - %s' % '\n   '.join(path))
+		print(' - %s' % '\n   '.join(path[1:]))
