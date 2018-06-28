@@ -30,8 +30,12 @@ else
 	touch ${IMPORTS_FILE}
 	echo "Generating ${IMPORTS_FILE}"
 
-	for file in $(git ls-files modules | grep -F '/src/main/java/' | grep -F .java); do
-		get_imports $file >> ${IMPORTS_FILE}
+	for folder in $(git ls-files modules | grep -F service.xml | python $(dirname ${BASH_SOURCE})/../dirnames.py); do
+		echo "Processing ${folder}"
+
+		for file in $(git ls-files ${folder} | grep -F '/src/main/java/' | grep -F .java); do
+			get_imports $file >> ${IMPORTS_FILE}
+		done
 	done
 fi
 
