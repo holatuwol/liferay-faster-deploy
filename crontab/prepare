@@ -41,7 +41,7 @@ compile() {
 	$SCRIPT_FOLDER/../fixbnd
 
 	set -o pipefail
-	ant all | tee -a "${LIFERAY_HOME}.log"
+	ant compile deploy | tee -a "${LIFERAY_HOME}.log"
 	EXIT_CODE=$?
 	set +o pipefail
 
