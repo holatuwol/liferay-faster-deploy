@@ -40,6 +40,8 @@ cr() {
 			switchport 80 62
 		elif [ "$1" == "70x-private" ]; then
 			switchport 80 70
+		elif [ "$1" == "master" ]; then
+			switchport 80 60
 		fi
 	fi
 
