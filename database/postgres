@@ -1,0 +1,52 @@
+#!/bin/bash
+
+. "$(dirname ${BASH_SOURCE[0]})/common"
+
+startdatabase() {
+	if docker inspect ${CONTAINER_NAME} 1>/dev/null 2>/dev/null; then
+		echo "Using existing container ${CONTAINER_NAME}"
+		docker start ${CONTAINER_NAME}
+		return 0
+	fi
+
+	docker run --name ${CONTAINER_NAME} \
+		-e 'POSTGRES_USER=lportal' -e 'POSTGRES_PASSWORD=lportal' -e 'POSTGRES_DB=lportal' \
+		--detach --expose 5432 postgres:${POSTGRES_VERSION}
+}
+
+updateprops() {
+	local IP_ADDRESS=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${CONTAINER_NAME})
+	echo "PostgreSQL database is started with IP address ${IP_ADDRESS}"
+
+	echo "Updating ${LIFERAY_HOME}/portal-ext.properties with database connection information"
+
+	if [ -f ${LIFERAY_HOME}/portal-ext.properties ]; then
+		if [ "" != "$(grep -F ${IP_ADDRESS} ${LIFERAY_HOME}/portal-ext.properties | grep -vF '#')" ]; then
+			return 0
+		fi
+
+		sed -i.bak 's/^jdbc.default/#jdbc.default/g' ${LIFERAY_HOME}/portal-ext.properties
+	fi
+
+	echo "
+jdbc.default.driverClassName=org.postgresql.Driver
+jdbc.default.url=jdbc:postgresql://${IP_ADDRESS}:5432/lportal
+jdbc.default.username=lportal
+jdbc.default.password=lportal
+" >> ${LIFERAY_HOME}/portal-ext.properties
+}
+
+waitfor_database() {
+	echo 'Waiting for database startup to complete...'
+
+	echo 'Database startup complete!'
+}
+
+DB_TYPE='postgres'
+DRIVER='postgresql.jar'
+
+if [ "" == "${POSTGRES_VERSION}" ]; then
+	POSTGRES_VERSION='10.4'
+fi
+
+runcontainer $@
