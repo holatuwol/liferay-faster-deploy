@@ -79,4 +79,4 @@ if [ "" == "${MYSQL_VERSION}" ]; then
 	MYSQL_VERSION='5.7'
 fi
 
-runcontainer
+runcontainer $@
