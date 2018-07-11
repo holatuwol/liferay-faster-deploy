@@ -104,7 +104,13 @@ deployant() {
 
 	echo "Preparing initial portal snapshots..."
 
-	safeant compile
+	if [ -d ${GIT_ROOT}/modules ]; then
+		pushd ${GIT_ROOT}/modules/core/portal-bootstrap > /dev/null
+		git clean -xdf
+		popd > /dev/null
+
+		safeant compile
+	fi
 
 	# Finally, iterate over the folders that are listed for deployment
 

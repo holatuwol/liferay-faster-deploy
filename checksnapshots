@@ -75,6 +75,10 @@ updatesnapshots() {
 	# Run the pre-checks for ant
 
 	if [ -d "modules" ]; then
+		pushd modules/core/portal-bootstrap > /dev/null
+		git clean -xdf
+		popd > /dev/null
+
 		safeant compile
 	fi
 
