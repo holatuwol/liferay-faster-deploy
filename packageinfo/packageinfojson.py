@@ -7,22 +7,49 @@ import json
 import os
 import sys
 
-folder = sys.argv[1]
-ce_releases = int(sys.argv[2])
-ee_releases = int(sys.argv[3])
+def get_release_tuple(release_tuple):
+	release_id = release_tuple[1]
 
-file_suffixes = ['7010-base'] + \
-	['70%s-ga%d' % (str(i).zfill(2), i+1) for i in range(0, ce_releases)] + \
-	['7010-de-%d' % i for i in range(1, ee_releases + 1)]
+	x = release_id.find('-')
 
-bundle_file_names = ['bundleinfo-%s.txt' % file_suffix for file_suffix in file_suffixes]
-package_file_names = ['packageinfo-%s.txt' % file_suffix for file_suffix in file_suffixes]
+	release_number = release_id[0:x]
+	patch_level = release_id[x+1:]
+
+	if patch_level.find('ga') == 0:
+		patch_level = patch_level[2:]
+	elif patch_level.find('de-') == 0:
+		patch_level = patch_level[3:]
+
+	private = False
+
+	if patch_level == 'base':
+		patch_level = '0'
+
+	return (release_number, int(patch_level), private)
+
+file_metadata = sorted(
+	set(
+		[
+			(folder, f[f.find('-')+1:-4])
+				for folder in sys.argv[1:]
+					for f in os.listdir('%s/metadata' % folder)
+						if f != 'tags.txt' and f.find('-private') == -1
+		]
+	),
+	key=get_release_tuple
+)
+
+folders = [metadata[0] for metadata in file_metadata]
+file_suffixes = [metadata[1] for metadata in file_metadata]
+
+bundle_file_names = ['bundleinfo-%s.txt' % suffix for suffix in file_suffixes]
+package_file_names = ['packageinfo-%s.txt' % suffix for suffix in file_suffixes]
 
 json_suffixes = [suffix if suffix[5:7] != 'de' else suffix[0:8] + suffix[8:].zfill(2) for suffix in file_suffixes]
 
 # Read the CSV file
 
-def read_bundle_file(file_name):
+def read_bundle_file(folder, file_name):
 	result = {}
 
 	with open('%s/metadata/%s' % (folder, file_name), 'r') as f:
@@ -39,7 +66,7 @@ def read_bundle_file(file_name):
 
 	return result
 
-def read_package_file(file_name):
+def read_package_file(folder, file_name):
 	result = {}
 
 	with open('%s/metadata/%s' % (folder, file_name), 'r') as f:
@@ -58,8 +85,8 @@ def read_package_file(file_name):
 
 # Add another entry
 
-def add_bundle_file(bundles, file_name, suffix):
-	for key, row in read_bundle_file(file_name).items():
+def add_bundle_file(bundles, folder, file_name, suffix):
+	for key, row in read_bundle_file(folder, file_name).items():
 		if key not in bundles:
 			bundles[key] = { 'group': row['group'], 'name': row['name'], 'version': '0.0.0' }
 
@@ -68,8 +95,8 @@ def add_bundle_file(bundles, file_name, suffix):
 
 	return bundles
 
-def add_package_file(packages, file_name, suffix):
-	for key, row in read_package_file(file_name).items():
+def add_package_file(packages, folder, file_name, suffix):
+	for key, row in read_package_file(folder, file_name).items():
 		if key not in packages:
 			packages[key] = { 'group': row['group'], 'name': row['name'], 'version': '0.0.0', 'package': key, 'packageVersion': '0.0.0' }
 
@@ -81,15 +108,15 @@ def add_package_file(packages, file_name, suffix):
 
 # Load data files
 
-packages = read_package_file(package_file_names[0])
+packages = read_package_file(folders[0], package_file_names[0])
 
-for file_name, suffix in zip(package_file_names, json_suffixes):
-	packages = add_package_file(packages, file_name, suffix)
+for folder, file_name, suffix in zip(folders, package_file_names, json_suffixes):
+	packages = add_package_file(packages, folder, file_name, suffix)
 
-bundles = read_bundle_file(bundle_file_names[0])
+bundles = read_bundle_file(folders[0], bundle_file_names[0])
 
-for file_name, suffix in zip(bundle_file_names, json_suffixes):
-	bundles = add_bundle_file(bundles, file_name, suffix)
+for folder, file_name, suffix in zip(folders, bundle_file_names, json_suffixes):
+	bundles = add_bundle_file(bundles, folder, file_name, suffix)
 
 # Fill in missing values
 

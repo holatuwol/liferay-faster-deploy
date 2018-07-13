@@ -4,8 +4,13 @@ if [ "" == "$AWS_PROFILE" ]; then
 	AWS_PROFILE=default
 fi
 
-if [ -z "${PORTAL_SOURCE_ROOT}" ]; then
-	echo "Please set a PORTAL_SOURCE_ROOT for the build"
+if [ -z "${PORTAL_SOURCE_ROOT_70}" ]; then
+	echo "Please set a PORTAL_SOURCE_ROOT_70 for the build"
+	exit 1
+fi
+
+if [ -z "${PORTAL_SOURCE_ROOT_71}" ]; then
+	echo "Please set a PORTAL_SOURCE_ROOT_71 for the build"
 	exit 1
 fi
 
@@ -22,17 +27,19 @@ fi
 
 . $(dirname $0)/packageinfo
 
-pushd "$PORTAL_SOURCE_ROOT" > /dev/null
-CE_RELEASE_COUNT=$(git tag | grep 'ga' | grep '7.0.' | grep -c '^')
-EE_RELEASE_COUNT=$(git tag | grep 'fix-pack-de-[0-9]*-7010$' | grep -c '^')
+pushd "$PORTAL_SOURCE_ROOT_70" > /dev/null
+CE_70_COUNT=$(git tag | grep 'ga' | grep '7.0.' | grep -c '^')
+CE_71_COUNT=$(git tag | grep 'ga' | grep '7.1.' | grep -c '^')
+EE_70_COUNT=$(git tag | grep 'fix-pack-de-[0-9]*-7010$' | grep -c '^')
+EE_71_COUNT=$(git tag | grep 'fix-pack-de-[0-9]*-7110$' | grep -c '^')
 popd > /dev/null
 
 # Generate the JSON files
 
 cd $(dirname $0)
 
-python packageinfojson.py $(dirname $PORTAL_SOURCE_ROOT) $CE_RELEASE_COUNT $EE_RELEASE_COUNT
-python requireschemajson.py $(dirname $PORTAL_SOURCE_ROOT) $CE_RELEASE_COUNT $EE_RELEASE_COUNT
+python packageinfojson.py $(dirname $PORTAL_SOURCE_ROOT_70) $(dirname $PORTAL_SOURCE_ROOT_71)
+python requireschemajson.py $(dirname $PORTAL_SOURCE_ROOT_70) $(dirname $PORTAL_SOURCE_ROOT_71)
 
 # Upload the files to the designated bucket
 

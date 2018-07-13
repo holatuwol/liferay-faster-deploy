@@ -42,7 +42,7 @@ checkfile() {
 	OUTPUT_FILE=
 
 	if [[ $1 == fix-pack-base-* ]]; then
-		OUTPUT_FILE=${OUTPUT_FOLDER}/$2-7010-base.txt
+		OUTPUT_FILE=${OUTPUT_FOLDER}/$2-$(echo $1 | cut -d'-' -f 4)-base.txt
 	elif [[ $1 == fix-pack-* ]]; then
 		OUTPUT_FILE=${OUTPUT_FOLDER}/$2-$(echo "$1" | cut -d'-' -f 5)-$(echo "$1" | cut -d'-' -f 3,4,6).txt
 	else
@@ -156,6 +156,30 @@ packageinfo_compat() {
 	done
 }
 
+packageinfo_release() {
+	pushd "${1}" > /dev/null
+
+	OUTPUT_FOLDER=$(dirname $PWD)/metadata
+
+	mkdir -p $OUTPUT_FOLDER
+
+	git ls-remote -t git@github.com:liferay/liferay-portal.git | \
+		awk '{ print $2 }' | grep ga | grep -vF sync | grep -vF 'private' | grep -F "/${2}" | \
+		sort | cut -d'/' -f 3 > $OUTPUT_FOLDER/tags.txt
+
+	git ls-remote -t git@github.com:liferay/liferay-portal-ee.git | \
+		awk '{ print $2 }' | grep "fix-pack-\(base-${3}\|de-.*-${3}\)" | grep -v '\(test\|demo\)' | \
+		sort -t'-' -nk4,5 | cut -d'/' -f 3 >> $OUTPUT_FOLDER/tags.txt
+
+	for tag_id in $(cat $OUTPUT_FOLDER/tags.txt); do
+		bundleinfo $tag_id
+		packageinfo $tag_id
+		requireschema $tag_id
+	done
+
+	popd > /dev/null
+}
+
 requireschema() {
 	if ! checkfile $1 requireschema; then
 		return 0
@@ -191,8 +215,13 @@ requireschema() {
 	done
 }
 
-if [ -z "${PORTAL_SOURCE_ROOT}" ]; then
-	echo "Please set a PORTAL_SOURCE_ROOT for the build"
+if [ -z "${PORTAL_SOURCE_ROOT_70}" ]; then
+	echo "Please set a PORTAL_SOURCE_ROOT_70 for the build"
+	exit 1
+fi
+
+if [ -z "${PORTAL_SOURCE_ROOT_71}" ]; then
+	echo "Please set a PORTAL_SOURCE_ROOT_71 for the build"
 	exit 1
 fi
 
@@ -204,30 +233,5 @@ if [[ 0 -ne $? ]]; then
 	exit 1
 fi
 
-pushd "$PORTAL_SOURCE_ROOT" > /dev/null
-
-OUTPUT_FOLDER=$(dirname $PWD)/metadata
-
-mkdir -p $OUTPUT_FOLDER
-
-if [ "" == "$1" ]; then
-	git ls-remote -t git@github.com:liferay/liferay-portal.git | \
-		awk '{ print $2 }' | grep ga | grep -vF sync | grep -vF 'private' | grep -F '/7.0' | \
-		sort | cut -d'/' -f 3 > $OUTPUT_FOLDER/tags.txt
-
-	git ls-remote -t git@github.com:liferay/liferay-portal-ee.git | \
-		awk '{ print $2 }' | grep 'fix-pack-\(base-70\|de-\)' | grep -v '\(test\|demo\)' | \
-		sort -t'-' -nk4,5 | cut -d'/' -f 3 >> $OUTPUT_FOLDER/tags.txt
-
-	for tag_id in $(cat $OUTPUT_FOLDER/tags.txt); do
-		bundleinfo $tag_id
-		packageinfo $tag_id
-		requireschema $tag_id
-	done
-else
-	bundleinfo $1
-	packageinfo $1
-	requireschema $1
-fi
-
-popd > /dev/null
+packageinfo_release ${PORTAL_SOURCE_ROOT_70} 7.0 70
+packageinfo_release ${PORTAL_SOURCE_ROOT_71} 7.1 71

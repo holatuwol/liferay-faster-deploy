@@ -7,20 +7,47 @@ import json
 import os
 import sys
 
-folder = sys.argv[1]
-ce_releases = int(sys.argv[2])
-ee_releases = int(sys.argv[3])
+def get_release_tuple(release_tuple):
+	release_id = release_tuple[1]
 
-file_suffixes = ['7010-base'] + \
-	['70%s-ga%d' % (str(i).zfill(2), i+1) for i in range(0, ce_releases)] + \
-	['7010-de-%d' % i for i in range(1, ee_releases + 1)]
+	x = release_id.find('-')
 
-file_names = ['requireschema-%s.txt' % file_suffix for file_suffix in file_suffixes]
+	release_number = release_id[0:x]
+	patch_level = release_id[x+1:]
+
+	if patch_level.find('ga') == 0:
+		patch_level = patch_level[2:]
+	elif patch_level.find('de-') == 0:
+		patch_level = patch_level[3:]
+
+	private = False
+
+	if patch_level == 'base':
+		patch_level = '0'
+
+	return (release_number, int(patch_level), private)
+
+file_metadata = sorted(
+	set(
+		[
+			(folder, f[f.find('-')+1:-4])
+				for folder in sys.argv[1:]
+					for f in os.listdir('%s/metadata' % folder)
+						if f != 'tags.txt' and f.find('-private') == -1
+		]
+	),
+	key=get_release_tuple
+)
+
+folders = [metadata[0] for metadata in file_metadata]
+file_suffixes = [metadata[1] for metadata in file_metadata]
+
+file_names = ['requireschema-%s.txt' % suffix for suffix in file_suffixes]
 suffixes = [suffix if suffix[5:7] != 'de' else suffix[0:8] + suffix[8:].zfill(2) for suffix in file_suffixes]
 
 # Read the CSV file
 
-def read_file(file_name):
+def read_file(folder, file_name):
 	result = {}
 
 	with open('%s/metadata/%s' % (folder, file_name), 'r') as f:
@@ -39,8 +66,8 @@ def read_file(file_name):
 
 # Add another entry
 
-def add_file(schemas, file_name, suffix):
-	for key, row in read_file(file_name).items():
+def add_file(schemas, folder, file_name, suffix):
+	for key, row in read_file(folder, file_name).items():
 		if key not in schemas:
 			schemas[key] = { 'name': key, 'requireSchemaVersion': '0.0.0' }
 
@@ -51,10 +78,10 @@ def add_file(schemas, file_name, suffix):
 
 # Load data file_names
 
-schemas = read_file(file_names[0])
+schemas = read_file(folders[0], file_names[0])
 
-for file_name, suffix in zip(file_names, suffixes):
-	schemas = add_file(schemas, file_name, suffix)
+for folder, file_name, suffix in zip(folders, file_names, suffixes):
+	schemas = add_file(schemas, folder, file_name, suffix)
 
 # Fill in missing values
 
