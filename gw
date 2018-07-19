@@ -42,7 +42,9 @@ fixdefaults() {
 		return 0
 	fi
 
-	pushd ${GIT_ROOT} > /dev/null
+	if [ "" != "${GIT_ROOT}" ]; then
+		pushd ${GIT_ROOT} > /dev/null
+	fi
 
 	local PUBLIC_PACKAGE_JSON=$(git ls-files modules | grep -F package.json | grep -vF '/src/' | grep -c '^')
 	local PUBLIC_PACKAGE_LOCK_JSON=$(git ls-files modules | grep -F package-lock.json | grep -vF '/src/' | grep -c '^')
@@ -62,15 +64,21 @@ fixdefaults() {
 		sed -i.bak '/com.liferay.gradle.plugins.defaults/s/version: "[^"]*"/version: "5.3.29"/' modules/build-buildscript.gradle
 	fi
 
-	popd > /dev/null
+	if [ "" != "${GIT_ROOT}" ]; then
+		popd > /dev/null
+	fi
 }
 
 fixgradle() {
+	if [ "" == "$GIT_ROOT" ]; then
+		return
+	fi
+
 	echo 'Checking for common Gradle problems'
 
 	# undo any past deletions of settings.gradle
 
-	if [ "" != "$GIT_ROOT" ] && [ "" != "$(git ls-files -v | grep '^h ' | cut -d' ' -f 2 | grep -F 'settings.gradle')" ]; then
+	if [ "" != "$(git ls-files -v | grep '^h ' | cut -d' ' -f 2 | grep -F 'settings.gradle')" ]; then
 		git ls-files -v | grep '^h ' | cut -d' ' -f 2 | grep -F 'settings.gradle' | xargs git checkout
 	fi
 
