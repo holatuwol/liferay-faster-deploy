@@ -82,7 +82,7 @@ fi
 # the branches so other people can use them.
 
 if [ "clean" == "$1" ]; then
-	for folder in master 70x-private 62x 61x; do
+	for folder in master 71x-private 70x-private 62x 61x; do
 		if [ -d $BUILD_FOLDER_PREFIX/$folder ]; then
 			cr $folder
 		fi

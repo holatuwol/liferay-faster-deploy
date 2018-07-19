@@ -38,8 +38,13 @@ The script assumes that there is a file ``/home/tomcat/portal-ext.properties`` w
 
 	session.cookie.use.full.hostname=true
 	virtual.hosts.valid.hosts=\
-		master.lrsupport.com,70x.lrsupport.com,62x.lrsupport.com,61x.lrsupport.com,debug.lrsupport.com,\
-		master,70x,62x,61x,debug,PUBLIC_IP,PUBLIC_HOSTNAME
+		master.lrsupport.com,master,\
+		71x.lrsupport.com,71x,\
+		70x.lrsupport.com,70x,\
+		62x.lrsupport.com,62x,\
+		61x.lrsupport.com,61x,\
+		debug.lrsupport.com,debug,\
+		PUBLIC_IP,PUBLIC_HOSTNAME
 
 	setup.wizard.enabled=false
 	terms.of.use.required=false

@@ -45,11 +45,6 @@ if [ ! -d /var/www/html/logs ]; then
 	echo -e "\n\n.logs {\n\tdisplay: none;\n}" >> index.css
 fi
 
-if [ ! -d /var/www/html/sphinx ]; then
-	echo -e "\n\n.docs {\n\tdisplay: none;\n}" >> index.css
-	echo -e "\n\n.sphinx {\n\tdisplay: none;\n}" >> index.css
-fi
-
 # Create CSS classes related to home folders
 
 if [ ! -d $HOME/builds ]; then
@@ -60,7 +55,13 @@ if [ ! -d $HOME/master ]; then
 	echo -e "\n\n.master {\n\tdisplay: none;\n}" >> index.css
 fi
 
-for folder in 70x 62x 61x; do
+for folder in 71x 70x; do
+	if [ ! -d $HOME/$folder-private ]; then
+		echo -e "\n\n.ee-$folder {\n\tdisplay: none;\n}" >> index.css
+	fi
+done
+
+for folder in 62x 61x; do
 	if [ ! -d $HOME/$folder ]; then
 		echo -e "\n\n.ee-$folder {\n\tdisplay: none;\n}" >> index.css
 	fi
