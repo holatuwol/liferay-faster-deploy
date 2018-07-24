@@ -41,7 +41,13 @@ compile() {
 	$SCRIPT_FOLDER/../fixbnd
 
 	set -o pipefail
-	ant compile deploy | tee -a "${LIFERAY_HOME}.log"
+
+	if [ "6.1.x" == "${BASE_BRANCH}" ] || [ "6.2.x" == "${BASE_BRANCH}" ]; then
+		ant start deploy | tee -a "${LIFERAY_HOME}.log"
+	else
+		ant compile deploy | tee -a "${LIFERAY_HOME}.log"
+	fi
+
 	EXIT_CODE=$?
 	set +o pipefail
 
