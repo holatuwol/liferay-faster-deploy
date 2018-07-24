@@ -80,8 +80,10 @@ compileroot() {
 		JSP_JAVA_VERSION=1.8
 	fi
 
+	mkdir -p ${CATALINA_HOME}/work/Catalina/localhost/_
+
 	ant -f $(dirname ${BASH_SOURCE[0]})/precompile.xml \
-		-Dtomcat.home.dir="$CATALINA_HOME" -Dwebapp.home=${CATALINA_HOME}/webapps/ROOT -Dwebapp.work=${CATALINA_HOME}/work/Catalina/localhost/_ \
+		-Dtomcat.home.dir="$CATALINA_HOME" -Dwebapp.home=ROOT -Dwebapp.work=_ \
 		-Djsp.java.version=$JSP_JAVA_VERSION
 }
 
