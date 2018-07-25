@@ -19,11 +19,11 @@ buildopts() {
 }
 
 checkjava() {
-	local MINIMUM_JAVA_VERSION=8
-
-	if [ -d "$GIT_ROOT/portal-impl" ] && [ -f "$GIT_ROOT/build.properties" ]; then
-		MINIMUM_JAVA_VERSION=$(grep javac.source "$GIT_ROOT/build.properties" | cut -d'=' -f 2 | cut -d'.' -f 2)
+	if [ ! -d "$GIT_ROOT/portal-impl" ] || [ ! -f "$GIT_ROOT/build.properties" ]; then
+		return 0
 	fi
+
+	MINIMUM_JAVA_VERSION=$(grep javac.source "$GIT_ROOT/build.properties" | cut -d'=' -f 2 | cut -d'.' -f 2)
 
 	if [[ $MINIMUM_JAVA_VERSION -gt $JAVA_VERSION ]]; then
 		javahome $MINIMUM_JAVA_VERSION
