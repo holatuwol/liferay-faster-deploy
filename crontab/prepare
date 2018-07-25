@@ -42,7 +42,7 @@ compile() {
 
 	set -o pipefail
 
-	if [ "6.1.x" == "${BASE_BRANCH}" ] || [ "6.2.x" == "${BASE_BRANCH}" ]; then
+	if [ "ee-6.1.x" == "${BASE_BRANCH}" ] || [ "ee-6.2.x" == "${BASE_BRANCH}" ]; then
 		ant start deploy | tee -a "${LIFERAY_HOME}.log"
 	else
 		ant compile deploy | tee -a "${LIFERAY_HOME}.log"
@@ -62,7 +62,7 @@ compile() {
 }
 
 disable_marketplace_app_deployment() {
-	if [ "6.1.x" == "${BASE_BRANCH}" ]; then
+	if [ "ee-6.1.x" == "${BASE_BRANCH}" ]; then
 		return 0
 	fi
 
@@ -71,7 +71,7 @@ disable_marketplace_app_deployment() {
 }
 
 enable_marketplace_app_deployment() {
-	if [ "6.1.x" == "${BASE_BRANCH}" ]; then
+	if [ "ee-6.1.x" == "${BASE_BRANCH}" ]; then
 		return 0
 	fi
 
