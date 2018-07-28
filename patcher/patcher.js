@@ -5,7 +5,7 @@ function setProductVersions(accumulator, next) {
 	_1_WAR_osbpatcherportlet_productVersionOnChange(next.value);
 
 	AUI().all('#_1_WAR_osbpatcherportlet_patcherProjectVersionId option')._nodes.reduce(
-		next.innerText.trim() == '6.x' ? setProjectVersions6 : setProjectVersions7,
+		next.innerText.trim().indexOf('6.x') != -1 ? setProjectVersions6 : setProjectVersions7,
 		accumulator
 	);
 
@@ -42,7 +42,7 @@ function getLiferayVersion(version) {
 		var deVersion = version.substring(12, pos);
 		var shortVersion = version.substring(pos + 1);
 
-		pos = shortVersion.indexOf('-');
+		pos = shortVersion.indexOf('-private');
 
 		if (pos != -1) {
 			shortVersion = shortVersion.substring(0, pos);
@@ -52,7 +52,13 @@ function getLiferayVersion(version) {
 	}
 	else {
 		var shortVersion = version.substring('fix-pack-base-'.length);
-		var pos = shortVersion.indexOf('-');
+		var pos = shortVersion.indexOf('-private');
+
+		if (pos != -1) {
+			shortVersion = shortVersion.substring(0, pos);
+		}
+
+		pos = shortVersion.indexOf('-');
 
 		if (pos == -1) {
 			return parseInt(shortVersion) * 1000;
@@ -73,7 +79,9 @@ function compareLiferayVersions(a, b) {
 	return a > b ? 1 : a < b ? -1 : 0;
 };
 
-AUI().all('#_1_WAR_osbpatcherportlet_productVersion option')._nodes.reduce(setProductVersions, projectVersionIds);
+AUI().all('#_1_WAR_osbpatcherportlet_patcherProductVersionId option')._nodes.reduce(setProductVersions, projectVersionIds);
+
+Object.keys(projectVersionIds).forEach(function(x) { console.log(x, getLiferayVersion(x)) });
 
 var jsonString = JSON.stringify(
 	projectVersionIds,
