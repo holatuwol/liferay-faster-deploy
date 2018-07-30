@@ -173,7 +173,7 @@ sendpull() {
 		return 1
 	fi
 
-	if [ -f "$GIT_ROOT/release.properties" ]; then
+	if [ -d "$GIT_ROOT/portal-impl" ]; then
 		pushd $GIT_ROOT > /dev/null
 
 		. $(dirname "${BASH_SOURCE[0]}")/../gitchanges ${upstream_remote}/$BASE_BRANCH
@@ -218,7 +218,7 @@ sendpull() {
 			return 0
 		fi
 
-		if [ -f build.gradle ]; then
+		if [ -f build.gradle ] && [ ! -f build.properties ]; then
 			fixdeps && baseline && formatsource && pmdreport
 		fi
 
