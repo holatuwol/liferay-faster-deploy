@@ -195,14 +195,6 @@ safeant() {
 
 	# Execute the actual build
 
-	pushd $GIT_ROOT > /dev/null
-
-	if [ "" == "${IS_SNAPSHOT}" ]; then
-		git ls-files | grep -vF modules | grep -F bnd.bnd | xargs rm -f
-	fi
-
-	popd > /dev/null
-
 	ANT_OPTS="$ANT_OPTS" ant $@ | tee -a $GIT_ROOT/.redeploy/compile.txt
 
 	pushd $GIT_ROOT > /dev/null
