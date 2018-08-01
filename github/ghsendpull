@@ -208,34 +208,6 @@ sendpull() {
 		if [ "" != "$HAS_CHANGES" ]; then
 			echo "Detected files modified during sanity check, please commit them before sending a pull request"
 		fi
-	else
-		pushd $GIT_ROOT > /dev/null
-
-		. $(dirname "${BASH_SOURCE[0]}")/../gitchanges ${upstream_remote}/$BASE_BRANCH
-
-		if [[ 0 -eq $(cat ${GIT_ROOT}/.redeploy/changes.txt | grep -c '^') ]]; then
-			echo No changes detected.
-			return 0
-		fi
-
-		if [ -f build.gradle ] && [ ! -f build.properties ]; then
-			fixdeps && baseline && formatsource && pmdreport
-		fi
-
-		EXIT_CODE=$?
-
-		popd > /dev/null
-
-		if [[ 0 -ne $EXIT_CODE ]]; then
-			return 1
-		fi
-
-		HAS_CHANGES=$(git status -s | grep -vF '??' | grep -vF gradle.properties)
-
-		if [ "" != "$HAS_CHANGES" ]; then
-			echo "Detected files modified during sanity check, please commit them before sending a pull request"
-			return 1
-		fi
 	fi
 
 	# Update our origin
