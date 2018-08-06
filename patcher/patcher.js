@@ -81,8 +81,6 @@ function compareLiferayVersions(a, b) {
 
 AUI().all('#_1_WAR_osbpatcherportlet_patcherProductVersionId option')._nodes.reduce(setProductVersions, projectVersionIds);
 
-Object.keys(projectVersionIds).forEach(function(x) { console.log(x, getLiferayVersion(x)) });
-
 var jsonString = JSON.stringify(
 	projectVersionIds,
 	Object.keys(projectVersionIds).sort(compareLiferayVersions),
