@@ -127,13 +127,13 @@ downloadbranchmirror() {
 			return 0
 		fi
 
-		REQUEST_URL="$LIFERAY_FILES_MIRROR/private/ee/portal/upstream-$BASE_BRANCH/"
+		REQUEST_URL="$LIFERAY_FILES_MIRROR/private/ee/portal/snapshot-$BASE_BRANCH/"
 	else
 		if [ "" == "$LIFERAY_RELEASES_MIRROR" ]; then
 			LIFERAY_RELEASES_MIRROR=https://releases.liferay.com
 		fi
 
-		REQUEST_URL="$LIFERAY_RELEASES_MIRROR/portal/upstream-$BASE_BRANCH/"
+		REQUEST_URL="$LIFERAY_RELEASES_MIRROR/portal/snapshot-$BASE_BRANCH/"
 	fi
 
 	echo "Identifying build timestamp via ${REQUEST_URL}"
@@ -147,7 +147,7 @@ downloadbranchmirror() {
 		fi
 
 		LIFERAY_RELEASES_MIRROR=https://releases.liferay.com
-		REQUEST_URL="$LIFERAY_RELEASES_MIRROR/portal/upstream-$BASE_BRANCH/"
+		REQUEST_URL="$LIFERAY_RELEASES_MIRROR/portal/snapshot-$BASE_BRANCH/"
 
 		echo "Failed to reach releases mirror, switching to releases server"
 
