@@ -9,6 +9,7 @@ compile() {
 	GIT_HASH=$(git log -1 --pretty='%H')
 
 	enable_marketplace_app_deployment
+	disable_javascript_fast_load
 
 	# Setup properties
 
@@ -59,6 +60,10 @@ compile() {
 
 	$SCRIPT_FOLDER/../tomcat/precompile
 	return 0
+}
+
+disable_javascript_fast_load() {
+	git ls-files | grep -F .jsp | xargs grep -Fl -- '-min.js' | xargs sed -i 's/-min\.js/.js/'
 }
 
 disable_marketplace_app_deployment() {
