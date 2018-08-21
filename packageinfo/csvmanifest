@@ -1,18 +1,8 @@
 #!/bin/bash
 
 csvmanifest() {
-	if [ "" == "$1" ]; then
-		echo 'Usage: csvmanifest [Import|Export] </path/to/manifest|/path/to/bundle>'
-		return 1
-	fi
-
 	local HEADER=$1
 	local INPUT_FILE=$2
-
-	if [ "" == "$2" ]; then
-		HEADER='Import'
-		INPUT_FILE=$1
-	fi
 
 	if [ ! -f "${INPUT_FILE}" ]; then
 		echo ${INPUT_FILE} could not be found
@@ -25,9 +15,21 @@ csvmanifest() {
 		MANIFEST="unzip -p ${INPUT_FILE} META-INF/MANIFEST.MF"
 	fi
 
+	echo "[ ${HEADER} ]"
 	${MANIFEST} | sed -n "/${HEADER}-Package/,/^[^ ]/p" | sed '$d' | sed "1s/${HEADER}-Package://" | tr -d '[:space:]' | \
 		sed 's/",/"\n/g' | sed 's/;uses:="[^"]*"//g' | sed 's/;version=/,/g' | sed 's/,\([^"0-9]\)/\n\1/g' | \
-		sort | tee "${INPUT_FILE}.csv"
+		sort | tee "${INPUT_FILE}.${HEADER}.csv"
 }
 
-csvmanifest $@
+if [ "" == "$1" ]; then
+	echo 'Usage: csvmanifest [Import|Export] </path/to/manifest|/path/to/bundle>'
+	exit 1
+fi
+
+if [ "" == "$2" ]; then
+	csvmanifest Import $1
+	echo ""
+	csvmanifest Export $1
+else
+	csvmanifest $1 $2
+fi
