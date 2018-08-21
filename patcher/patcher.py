@@ -21,7 +21,7 @@ def get_baseline_id():
 		patcher_json = json.load(file)
 		return patcher_json[base_tag]
 
-def get_fix_id(workaround=False):
+def get_fix_id(typeFilter='0'):
 	if len(sys.argv) == 3 and len(sys.argv[2]) > 0:
 		return sys.argv[2]
 
@@ -33,7 +33,7 @@ def get_fix_id(workaround=False):
 		'patcherProjectVersionIdFilter': get_baseline_id(),
 		'patcherFixName': fix_name,
 		'hideOldFixVersions': 'true',
-		'typeFilter': '1' if workaround else 0,
+		'typeFilter': typeFilter,
 		'andOperator': 'true'
 	}
 
@@ -116,7 +116,10 @@ def open_patcher_portal():
 	fix_id = get_fix_id()
 
 	if fix_id is None:
-		fix_id = get_fix_id(True)
+		fix_id = get_fix_id('1')
+
+	if fix_id is None:
+		fix_id = get_fix_id('6')
 
 	if fix_id is None:
 		print('No existing fix to update, opening window for a new fix...')
