@@ -1,8 +1,9 @@
 #!/bin/bash
 
-findbuild() {
+gethotfix() {
 	local VERSION=
-	local FIX_NAME=
+
+	FIX_NAME=
 
 	if [[ $1 == liferay* ]]; then
 		VERSION=$(echo $1 | cut -d'-' -f 4 | sed 's/\([0-9]\)\([0-9]\)\([0-9][0-9]\)/\1.\2.\3/')
@@ -15,13 +16,15 @@ findbuild() {
 		FIX_NAME="liferay-hotfix-$1-$2"
 	fi
 
-	local DELETE_ZIP=
-
 	if [ ! -f $FIX_NAME.zip ]; then
 		echo "Downloading $FIX_NAME to check fixpack_documentation.xml"
 		echo $FILES_MIRROR/private/ee/fix-packs/$VERSION/hotfix/$FIX_NAME.zip
 		curl -s -O "$FILES_MIRROR/private/ee/fix-packs/$VERSION/hotfix/$FIX_NAME.zip"
 	fi
+}
+
+findbuild() {
+	gethotfix $1
 
 	local BUILD_ID=$(unzip -p $FIX_NAME.zip fixpack_documentation.xml | grep -F '<build-id>' | cut -d'>' -f 2 | cut -d'<' -f 1)
 
