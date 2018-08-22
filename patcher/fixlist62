@@ -1,0 +1,38 @@
+#!/bin/bash
+
+getfixpack() {
+	FIX_NAME=
+
+	if [[ $2 == portal-*-6210 ]]; then
+		FIX_NAME=$1
+	elif [[ $1 == portal-* ]]; then
+		FIX_NAME=liferay-fix-pack-$1-6210
+	else
+		FIX_NAME=$1
+	fi
+
+	if [ ! -f $FIX_NAME.zip ]; then
+		echo "Downloading $FIX_NAME to check fixpack_documentation.xml"
+		echo "$FILES_MIRROR/private/ee/fix-packs/6.2.10/portal/$FIX_NAME.zip"
+		curl -s -O "$FILES_MIRROR/private/ee/fix-packs/6.2.10/portal/$FIX_NAME.zip"
+	fi
+}
+
+fixlist() {
+	getfixpack $@
+
+	unzip -p $FIX_NAME.zip fixpack_documentation.xml | grep -F '<fixed-issues>' | cut -d'>' -f 2 | cut -d'<' -f 1 | \
+		tr ',' '\n' | sort -t'-' -n -k1 -k2 > base.txt
+
+	(
+		for line in $(echo "$2" | tr ',' '\n'); do
+			if [ "" == "$(grep "^${line}$" base.txt)" ]; then
+				echo "${line}"
+			fi
+		done
+	) | tr '\n' ','
+
+	echo $1
+}
+
+fixlist $@
