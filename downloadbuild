@@ -176,7 +176,13 @@ downloadbranchmirror() {
 	echo "Downloading snapshot for $SHORT_NAME"
 
 	getbuild $REQUEST_URL ${BUILD_NAME}
-	NEW_BASELINE=$(unzip -c -qq $HOME/.liferay/builds/${BUILD_NAME} liferay-portal-${BASE_BRANCH}/.githash)
+
+	if [ "" != "$(unzip -l $HOME/.liferay/builds/${BUILD_NAME} | grep -F .githash)" ]; then
+		NEW_BASELINE=$(unzip -c -qq $HOME/.liferay/builds/${BUILD_NAME} liferay-portal-${BASE_BRANCH}/.githash)
+	else
+		NEW_BASELINE=$(unzip -c -qq $HOME/.liferay/builds/${BUILD_NAME} liferay-portal-${BASE_BRANCH}/git-commit)
+	fi
+
 	echo ${NEW_BASELINE} > $HOME/.liferay/builds/${BUILD_NAME}.githash
 }
 
