@@ -34,6 +34,10 @@ remove_container() {
 }
 
 set_container_mounts() {
+	mkdir -p ${HOME}/.liferay/builds
+
+	LIFERAY_RDBUILD_MOUNT="-v ${HOME}/.liferay/builds:/rdbuild"
+
 	mkdir -p ${HOME}/.liferay/release
 
 	LIFERAY_RELEASE_MOUNT="-v ${HOME}/.liferay/release:/release"
@@ -118,7 +122,7 @@ start_liferay() {
 	local EXPOSE_ONLY="$(echo 7800 7801 | tr ' ' '\n' | awk '{ print  "--expose " $1 }' | xargs)"
 
 	docker run ${GLOBAL_BIND} ${LOCAL_BIND} ${EXPOSE_ONLY} \
-		${LIFERAY_HOME_MOUNT} ${LIFERAY_RELEASE_MOUNT} ${DOCLIB_MOUNT} \
+		${LIFERAY_HOME_MOUNT} ${LIFERAY_RDBUILD_MOUNT} ${LIFERAY_RELEASE_MOUNT} ${DOCLIB_MOUNT} \
 		-e BRANCH_ARCHIVE_MIRROR=${BRANCH_ARCHIVE_MIRROR} \
 		-e RELEASE_ID=${RELEASE_ID} \
 		-e LIFERAY_PASSWORD=${LIFERAY_PASSWORD} \
