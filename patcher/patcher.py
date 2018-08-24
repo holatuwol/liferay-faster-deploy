@@ -113,7 +113,12 @@ def get_fix_name_from_id():
 def open_patcher_portal():
 	print('Checking patcher portal for existing fix...')
 
-	fix_id = get_fix_id()
+	if current_branch.find('patcher-') == 0:
+		fix_id = current_branch[len('patcher-'):]
+	elif current_branch.find('fix-pack-fix-') == 0:
+		fix_id = current_branch[len('fix-pack-fix-'):]
+	else:
+		fix_id = get_fix_id()
 
 	if fix_id is None:
 		fix_id = get_fix_id('1')
