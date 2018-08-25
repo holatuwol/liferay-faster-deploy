@@ -179,7 +179,7 @@ fixpacks() {
 	done
 
 	git ls-remote -t git@github.com:liferay/liferay-portal-ee.git | \
-		awk '{ print $2 }' | grep 'fix-pack-\(base-61\|base-62\|base-70\|de-\)' | grep -v '\(test\|demo\|build\)' | \
+		awk '{ print $2 }' | grep 'fix-pack-\(base-61\|base-62\|base-70\|de-\|dxp-\)' | grep -v '\(test\|demo\|build\)' | \
 		sort -t'-' -nk4,5 | cut -d'/' -f 3 > /var/www/html/builds/fixpacks/tags.txt
 
 	for tag_id in $(cat /var/www/html/builds/fixpacks/tags.txt); do

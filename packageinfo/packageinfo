@@ -168,7 +168,7 @@ packageinfo_release() {
 		sort | cut -d'/' -f 3 > $OUTPUT_FOLDER/tags.txt
 
 	git ls-remote -t git@github.com:liferay/liferay-portal-ee.git | \
-		awk '{ print $2 }' | grep "fix-pack-\(base-${3}\|de-.*-${3}\)" | grep -v '\(test\|demo\|build\)' | \
+		awk '{ print $2 }' | grep "fix-pack-\(base-${3}\|de-.*-${3}\|dxp-\)" | grep -v '\(test\|demo\|build\)' | \
 		sort -t'-' -nk4,5 | cut -d'/' -f 3 >> $OUTPUT_FOLDER/tags.txt
 
 	for tag_id in $(cat $OUTPUT_FOLDER/tags.txt); do

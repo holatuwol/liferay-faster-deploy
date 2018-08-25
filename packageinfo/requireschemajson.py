@@ -19,6 +19,8 @@ def get_release_tuple(release_tuple):
 		patch_level = patch_level[2:]
 	elif patch_level.find('de-') == 0:
 		patch_level = patch_level[3:]
+	elif patch_level.find('dxp-') == 0:
+		patch_level = patch_level[4:]
 
 	private = False
 
