@@ -19,9 +19,9 @@ create_network() {
 	fi
 
 	if docker network inspect ${NETWORK_NAME} 1> /dev/null 2> /dev/null; then
-		echo ${NETWORK_NAME} containers will join the existing ${NETWORK_NAME} network.
+		echo ${CONTAINER_NAME} will join the existing ${NETWORK_NAME} network
 	else
-		echo ${NETWORK_NAME} containers will join a newly-created ${NETWORK_NAME} network.
+		echo ${CONTAINER_NAME} will join the newly-created ${NETWORK_NAME} network
 		docker network create ${NETWORK_NAME}
 	fi
 
@@ -131,6 +131,10 @@ start_liferay() {
 		${NETWORK_METADATA} ${EXTRA_ARGS} --name ${CONTAINER_NAME} \
 		${IMAGE_NAME} $1
 }
+
+if [ "" == "${LIFERAY_PASSWORD}" ]; then
+	LIFERAY_PASSWORD='test'
+fi
 
 set_container_mounts
 set_image_name "$1"

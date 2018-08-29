@@ -1,0 +1,196 @@
+#!/bin/bash
+
+appserverprops() {
+	. $(dirname ${BASH_SOURCE[0]})/../appserverprops
+}
+
+bundle() {
+	BRANCH_ARCHIVE_MIRROR=${BRANCH_ARCHIVE_MIRROR} \
+	LIFERAY_PASSWORD=${LIFERAY_PASSWORD} \
+	NETWORK_NAME=${NETWORK_NAME} \
+	EXTRA_ARGS='--detach' \
+		$(dirname ${BASH_SOURCE[0]})/bundle "$1" "$2" "$3"
+}
+
+clean() {
+	if [ "" == "$(docker ps -a | grep -o "${NETWORK_NAME}-${1}[0-9]*")" ]; then
+		return 0
+	fi
+
+	echo "Removing ${NETWORK_NAME}-$1 cluster nodes"
+
+	if [ "" != "$(docker ps | grep -o "${NETWORK_NAME}-${1}[0-9]*")" ]; then
+		docker ps | grep -o "${NETWORK_NAME}-${1}[0-9]*" | xargs docker kill
+	fi
+
+	docker ps -a | grep -o "${NETWORK_NAME}-${1}[0-9]*" | xargs docker rm -v
+}
+
+elasticsearch() {
+	if [[ ${HOTFIX_LEVEL} == 6.1.* ]] || [[ ${HOTFIX_LEVEL} == *-6130 ]] || [[ ${HOTFIX_LEVEL} == *-6130.zip ]]; then
+		return 0
+	elif [[ ${HOTFIX_LEVEL} == portal-* ]] || [[ ${HOTFIX_LEVEL} == 6.2.* ]] || [[ ${HOTFIX_LEVEL} == *-6210 ]] || [[ ${HOTFIX_LEVEL} == *-6210.zip ]]; then
+		return 0
+	elif [ -f release.properties ] && [ "" != "$(grep -F 'lp.version=6.' release.properties)" ]; then
+		return 0
+	fi
+
+	if [ "" == "${ELASTIC_NODE_COUNT}" ]; then
+		ELASTIC_NODE_COUNT=1
+	fi
+
+	echo "Starting ${ELASTIC_NODE_COUNT} Elasticsearch nodes"
+
+	local ELASTIC_NODE_LIST=$(seq ${ELASTIC_NODE_COUNT} | awk '{ print "\"elastic" $1 ":9300\"" }' | tr '\n' ',' | sed 's/,$//g')
+
+	echo '
+operationMode="REMOTE"
+clientTransportIgnoreClusterName="false"
+indexNamePrefix="liferay-"
+httpCORSConfigurations=""
+additionalConfigurations=""
+httpCORSAllowOrigin="/https?://localhost(:[0-9]+)?/"
+networkBindHost=""
+transportTcpPort=""
+syncSearch="true"
+bootstrapMlockAll="false"
+networkPublishHost=""
+overrideTypeMappings=""
+clientTransportSniff="true"
+additionalIndexConfigurations=""
+retryOnConflict="5"
+httpCORSEnabled="true"
+clientTransportNodesSamplerInterval="5s"
+additionalTypeMappings=""
+logExceptionsOnly="true"
+httpEnabled="true"
+networkHost=""
+transportAddresses=
+clusterName="LiferayElasticsearchCluster"
+discoveryZenPingUnicastHostsPort="9300-9400"
+' > ${LIFERAY_HOME}/osgi/configs/com.liferay.portal.search.elasticsearch.configuration.ElasticsearchConfiguration.config
+
+	sed -i.bak "s/transportAddresses=.*$/transportAddresses=[${ELASTIC_NODE_LIST}]/g" \
+		${LIFERAY_HOME}/osgi/configs/com.liferay.portal.search.elasticsearch.configuration.ElasticsearchConfiguration.config
+
+	local ELASTIC_VERSION=6.1
+
+	if [ "7.0.x" == "${HOTFIX_LEVEL}" ] || [[ ${HOTFIX_LEVEL} == de-* ]] || [[ ${HOTFIX_LEVEL} == *-7010 ]] || [[ ${HOTFIX_LEVEL} == *-7010.zip ]]; then
+		ELASTIC_VERSION=2.4
+	elif [ -f release.properties ] && [ "" != "$(grep -F 'lp.version=7.0' release.properties)" ]; then
+		ELASTIC_VERSION=2.4
+	elif [[ 262144 -gt $(sysctl vm.max_map_count | cut -d'=' -f 2) ]]; then
+		echo "Unable to start Elasticsearch ${ELASTIC_VERSION}"
+		echo "https://www.elastic.co/guide/en/elasticsearch/reference/${ELASTIC_VERSION}/vm-max-map-count.html#vm-max-map-count"
+		return 1
+	fi
+
+	for i in $(seq ${ELASTIC_NODE_COUNT}); do
+		if docker inspect ${NETWORK_NAME}-elastic$i 1> /dev/null 2> /dev/null; then
+			docker start ${NETWORK_NAME}-elastic$i
+			continue
+		fi
+
+		docker run -d \
+			--name ${NETWORK_NAME}-elastic$i --network ${NETWORK_NAME} --network-alias elastic$i \
+			liferay-elasticsearch:${ELASTIC_VERSION}
+	done
+}
+
+liferay() {
+	if [ "" != "${LIFERAY_HOME}" ]; then
+		cd ${LIFERAY_HOME}
+	fi
+
+	mkdir -p data/document_library
+	touch portal-ext.properties
+
+	START_TIME=$(date '+%s')
+
+	echo "$(date '+%H:%M') Starting primary node..."
+	startnode 1
+
+	echo "$(date '+%H:%M') Waiting for primary node startup to complete..."
+	waitfornode 1
+
+	if [[ 1 != $NODE_COUNT ]]; then
+		echo "$(date '+%H:%M') Starting secondary nodes..."
+
+		for i in $(seq 2 $NODE_COUNT); do
+			startnode $i
+		done
+
+		echo "$(date '+%H:%M') Waiting for $(expr ${NODE_COUNT} '-' 1) secondary node startups to complete..."
+
+		for i in $(seq 2 $NODE_COUNT); do
+			waitfornode $i
+		done
+	fi
+}
+
+mysqldb() {
+	if [ -f ${LIFERAY_HOME}/portal-ext.properties ] && [ "" != "$(grep -F 'jdbc.default.driverClassName' ${LIFERAY_HOME}/portal-ext.properties)" ] && [ "" == "$(grep -F 'mysqldb' ${LIFERAY_HOME}/portal-ext.properties)" ]; then
+		local GATEWAY=$(docker inspect ${NETWORK_NAME} | jq '.[] | .IPAM.Config | .[].Gateway' | cut -d'"' -f 2)
+
+		sed -i.bak "s/127.0.0.1/${GATEWAY}/g" ${LIFERAY_HOME}/portal-ext.properties
+		sed -i.bak "s/localhost/${GATEWAY}/g" ${LIFERAY_HOME}/portal-ext.properties
+
+		return 0
+	fi
+
+	echo "$(date '+%H:%M') Starting MySQL database..."
+
+	DB_HOST_NAME='mysqldb' $(dirname ${BASH_SOURCE[0]})/../database/mysql ${NETWORK_NAME}
+
+	if [ "" == "$(docker network inspect ${NETWORK_NAME} | grep -F ${NETWORK_NAME}-mysql)" ]; then
+		docker network connect --alias mysqldb ${NETWORK_NAME} ${NETWORK_NAME}-mysql
+	fi
+}
+
+network() {
+	if [ "" == "${NETWORK_NAME}" ]; then
+		NETWORK_NAME='test'
+	fi
+
+	if docker network inspect ${NETWORK_NAME} 1> /dev/null 2> /dev/null; then
+		return 0
+	fi
+
+	echo ${NETWORK_NAME} containers will join a newly-created ${NETWORK_NAME} network.
+	docker network create ${NETWORK_NAME}
+}
+
+startnode() {
+	PORT_NUMBER=$(expr 8080 '+' $1 '*' 100)
+
+	bundle "${HOTFIX_LEVEL}" "${PORT_NUMBER}" "${NETWORK_NAME}-lfr${PORT_NUMBER}"
+}
+
+waitfornode() {
+	PORT_NUMBER=$(expr 8080 '+' $1 '*' 100)
+
+	while [ "" == "$(docker logs --since="${START_TIME}" "${NETWORK_NAME}-lfr${PORT_NUMBER}" 2>&1 | grep -F 'Server startup')" ]; do
+		sleep 1
+	done
+}
+
+network
+
+if [ "stop" == "$1" ]; then
+	if [ "" != "$(docker network inspect ${NETWORK_NAME} | jq '.[].Containers | .[].Name')" ]; then
+		docker network inspect ${NETWORK_NAME} | jq '.[].Containers | .[].Name' | cut -d'"' -f 2 | xargs docker stop
+	fi
+elif [ "clean" == "$1" ]; then
+	clean lfr && clean elastic && clean mysql
+elif [ "restart" == "$1" ]; then
+	appserverprops && mysqldb && elasticsearch && liferay
+else
+	HOTFIX_LEVEL=$1
+	NODE_COUNT=$2
+
+	if [ "" == "$NODE_COUNT" ]; then
+		NODE_COUNT=2
+	fi
+
+	appserverprops && mysqldb && elasticsearch && clean lfr && liferay
+fi
