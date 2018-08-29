@@ -36,13 +36,15 @@ ALTER SYSTEM SET UNDO_TABLESPACE=lportal_undo SCOPE=BOTH;
 }
 
 updateprops() {
-	local IP_ADDRESS=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${CONTAINER_NAME})
-	echo "Oracle database is started with IP address ${IP_ADDRESS}"
+	if [ "" == "${DB_HOST_NAME}" ]; then
+		DB_HOST_NAME=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${CONTAINER_NAME})
+		echo "Oracle database is started with IP address ${DB_HOST_NAME}"
+	fi
 
 	echo "Updating ${LIFERAY_HOME}/portal-ext.properties with database connection information"
 
 	if [ -f ${LIFERAY_HOME}/portal-ext.properties ]; then
-		if [ "" != "$(grep -F ${IP_ADDRESS} ${LIFERAY_HOME}/portal-ext.properties | grep -vF '#')" ]; then
+		if [ "" != "$(grep -F ${DB_HOST_NAME} ${LIFERAY_HOME}/portal-ext.properties | grep -vF '#')" ]; then
 			return 0
 		fi
 
@@ -51,7 +53,7 @@ updateprops() {
 
 	echo "
 jdbc.default.driverClassName=oracle.jdbc.OracleDriver
-jdbc.default.url=jdbc:oracle:thin:@${IP_ADDRESS}:1521:orcl
+jdbc.default.url=jdbc:oracle:thin:@${DB_HOST_NAME}:1521:orcl
 jdbc.default.username=lportal
 jdbc.default.password=lportal
 " >> ${LIFERAY_HOME}/portal-ext.properties

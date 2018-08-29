@@ -15,13 +15,16 @@ startdatabase() {
 }
 
 updateprops() {
-	local IP_ADDRESS=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${CONTAINER_NAME})
-	echo "PostgreSQL database is started with IP address ${IP_ADDRESS}"
+	if [ "" == "${DB_HOST_NAME}" ]; then
+		local DB_HOST_NAME=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${CONTAINER_NAME})
+		echo "PostgreSQL database is started with IP address ${DB_HOST_NAME}"
+	fi
+
 
 	echo "Updating ${LIFERAY_HOME}/portal-ext.properties with database connection information"
 
 	if [ -f ${LIFERAY_HOME}/portal-ext.properties ]; then
-		if [ "" != "$(grep -F ${IP_ADDRESS} ${LIFERAY_HOME}/portal-ext.properties | grep -vF '#')" ]; then
+		if [ "" != "$(grep -F ${DB_HOST_NAME} ${LIFERAY_HOME}/portal-ext.properties | grep -vF '#')" ]; then
 			return 0
 		fi
 
@@ -30,7 +33,7 @@ updateprops() {
 
 	echo "
 jdbc.default.driverClassName=org.postgresql.Driver
-jdbc.default.url=jdbc:postgresql://${IP_ADDRESS}:5432/lportal
+jdbc.default.url=jdbc:postgresql://${DB_HOST_NAME}:5432/lportal
 jdbc.default.username=lportal
 jdbc.default.password=lportal
 " >> ${LIFERAY_HOME}/portal-ext.properties
