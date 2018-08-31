@@ -82,11 +82,11 @@ set_image_name() {
 	fi
 
 	if [[ $1 == 6.1.* ]] || [[ $1 == *-6130 ]] || [[ $1 == *-6130.zip ]]; then
-		IMAGE_NAME='mcd-nightly-jdk7'
+		IMAGE_NAME="holatuwol/liferay:openjdk7"
 	elif [[ $1 == portal-* ]] || [[ $1 == 6.2.* ]] || [[ $1 == *-6210 ]] || [[ $1 == *-6210.zip ]]; then
-		IMAGE_NAME='mcd-nightly-jdk7'
+		IMAGE_NAME="holatuwol/liferay:openjdk7"
 	else
-		IMAGE_NAME='mcd-nightly-jdk8'
+		IMAGE_NAME="holatuwol/liferay:openjdk8"
 	fi
 }
 

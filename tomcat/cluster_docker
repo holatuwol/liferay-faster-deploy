@@ -22,7 +22,7 @@ clean() {
 		return 0
 	fi
 
-	echo "Removing ${NETWORK_NAME}-$1 cluster nodes"
+	timeecho "Removing ${NETWORK_NAME}-$1 cluster nodes"
 
 	if [ "" != "$(docker ps | grep -o "${NETWORK_NAME}-${1}[0-9]*")" ]; then
 		docker ps | grep -o "${NETWORK_NAME}-${1}[0-9]*" | xargs docker kill
@@ -40,11 +40,14 @@ elasticsearch() {
 		return 0
 	fi
 
+	updatedocker 'holatuwol/liferay-elasticsearch'
+
 	if [ "" == "${ELASTIC_NODE_COUNT}" ]; then
 		ELASTIC_NODE_COUNT=1
 	fi
 
-	echo "Starting ${ELASTIC_NODE_COUNT} Elasticsearch nodes"
+	timeecho "Starting ${ELASTIC_NODE_COUNT} Elasticsearch nodes"
+	mkdir -p ${LIFERAY_HOME}/osgi/configs
 
 	local ELASTIC_NODE_LIST=$(seq ${ELASTIC_NODE_COUNT} | awk '{ print "\"elastic" $1 ":9300\"" }' | tr '\n' ',' | sed 's/,$//g')
 
@@ -85,8 +88,8 @@ discoveryZenPingUnicastHostsPort="9300-9400"
 	elif [ -f release.properties ] && [ "" != "$(grep -F 'lp.version=7.0' release.properties)" ]; then
 		ELASTIC_VERSION=2.4
 	elif [[ 262144 -gt $(sysctl vm.max_map_count | cut -d'=' -f 2) ]]; then
-		echo "Unable to start Elasticsearch ${ELASTIC_VERSION}"
-		echo "https://www.elastic.co/guide/en/elasticsearch/reference/${ELASTIC_VERSION}/vm-max-map-count.html#vm-max-map-count"
+		timeecho "Unable to start Elasticsearch ${ELASTIC_VERSION}"
+		timeecho "https://www.elastic.co/guide/en/elasticsearch/reference/${ELASTIC_VERSION}/vm-max-map-count.html#vm-max-map-count"
 		return 1
 	fi
 
@@ -98,11 +101,13 @@ discoveryZenPingUnicastHostsPort="9300-9400"
 
 		docker run -d \
 			--name ${NETWORK_NAME}-elastic$i --network ${NETWORK_NAME} --network-alias elastic$i \
-			liferay-elasticsearch:${ELASTIC_VERSION}
+			holatuwol/liferay-elasticsearch:${ELASTIC_VERSION}
 	done
 }
 
 liferay() {
+	updatedocker 'holatuwol/liferay'
+
 	if [ "" != "${LIFERAY_HOME}" ]; then
 		cd ${LIFERAY_HOME}
 	fi
@@ -112,24 +117,27 @@ liferay() {
 
 	START_TIME=$(date '+%s')
 
-	echo "$(date '+%H:%M') Starting primary node..."
-	startnode 1
+	timeecho "Starting primary node..."
 
-	echo "$(date '+%H:%M') Waiting for primary node startup to complete..."
-	waitfornode 1
+	if startnode 1; then
+		timeecho "Waiting for primary node startup to complete..."
+		waitfornode 1
 
-	if [[ 1 != $NODE_COUNT ]]; then
-		echo "$(date '+%H:%M') Starting secondary nodes..."
+		if [[ 1 != $NODE_COUNT ]]; then
+			timeecho "Starting secondary nodes..."
 
-		for i in $(seq 2 $NODE_COUNT); do
-			startnode $i
-		done
+			for i in $(seq 2 $NODE_COUNT); do
+				startnode $i
+			done
 
-		echo "$(date '+%H:%M') Waiting for $(expr ${NODE_COUNT} '-' 1) secondary node startups to complete..."
+			timeecho "Waiting for $(expr ${NODE_COUNT} '-' 1) secondary node startups to complete..."
 
-		for i in $(seq 2 $NODE_COUNT); do
-			waitfornode $i
-		done
+			for i in $(seq 2 $NODE_COUNT); do
+				waitfornode $i
+			done
+		fi
+	else
+		return 1
 	fi
 }
 
@@ -143,7 +151,7 @@ mysqldb() {
 		return 0
 	fi
 
-	echo "$(date '+%H:%M') Starting MySQL database..."
+	timeecho "Starting MySQL database..."
 
 	DB_HOST_NAME='mysqldb' $(dirname ${BASH_SOURCE[0]})/../database/mysql ${NETWORK_NAME}
 
@@ -161,7 +169,7 @@ network() {
 		return 0
 	fi
 
-	echo ${NETWORK_NAME} containers will join a newly-created ${NETWORK_NAME} network.
+	timeecho "${NETWORK_NAME} containers will join a newly-created ${NETWORK_NAME} network."
 	docker network create ${NETWORK_NAME}
 }
 
@@ -169,6 +177,19 @@ startnode() {
 	PORT_NUMBER=$(expr 8080 '+' $1 '*' 100)
 
 	bundle "${HOTFIX_LEVEL}" "${PORT_NUMBER}" "${NETWORK_NAME}-lfr${PORT_NUMBER}"
+}
+
+timeecho() {
+	echo "$(date '+%H:%M') $@"
+}
+
+updatedocker() {
+	timeecho "Updating $1 from DockerHub..."
+	docker pull --all-tags "$1"
+
+	if [ "" != "$(docker images -a --filter=dangling=true -q | grep -F "$1")" ]; then
+		docker rmi $(docker images -a --filter=dangling=true -q | grep -F "$1")
+	fi
 }
 
 waitfornode() {
