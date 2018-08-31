@@ -9,7 +9,7 @@ Clone this repository.
 
 Make sure that you've got all the prerequisite binary tools and Python packages:
 
-* `Initial Setup <SETUP.rst>`__
+* `Initial Setup <../SETUP.rst>`__
 
 Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shell you're using) which calls the script, making sure to change ``/path/to/clone/location`` to wherever you cloned the repository:
 
