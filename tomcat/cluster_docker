@@ -1,7 +1,11 @@
 #!/bin/bash
 
 appserverprops() {
-	. $(dirname ${BASH_SOURCE[0]})/../appserverprops
+	if [ -f portal-ext.properties ]; then
+		LIFERAY_HOME=${PWD}
+	else
+		. $(dirname ${BASH_SOURCE[0]})/../appserverprops
+	fi
 }
 
 bundle() {
