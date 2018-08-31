@@ -47,7 +47,7 @@ file_suffixes = [metadata[1] for metadata in file_metadata]
 bundle_file_names = ['bundleinfo-%s.txt' % suffix for suffix in file_suffixes]
 package_file_names = ['packageinfo-%s.txt' % suffix for suffix in file_suffixes]
 
-json_suffixes = [suffix if suffix[5:7] != 'de' else suffix[0:8] + suffix[8:].zfill(2) for suffix in file_suffixes]
+json_suffixes = [suffix if suffix[5:7] != 'de' and suffix[5:8] != 'dxp' else suffix[0:8] + suffix[8:].zfill(2) for suffix in file_suffixes]
 
 # Read the CSV file
 

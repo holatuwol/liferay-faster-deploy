@@ -157,7 +157,9 @@ packageinfo_compat() {
 }
 
 packageinfo_release() {
-	pushd "${1}" > /dev/null
+	GIT_ROOT="${1}"
+
+	pushd "${GIT_ROOT}" > /dev/null
 
 	OUTPUT_FOLDER=$(dirname $PWD)/metadata
 
@@ -165,11 +167,11 @@ packageinfo_release() {
 
 	git ls-remote -t git@github.com:liferay/liferay-portal.git | \
 		awk '{ print $2 }' | grep ga | grep -vF sync | grep -vF 'private' | grep -F "/${2}" | \
-		sort | cut -d'/' -f 3 > $OUTPUT_FOLDER/tags.txt
+		sort | cut -d'/' -f 3 | tee $OUTPUT_FOLDER/tags.txt
 
 	git ls-remote -t git@github.com:liferay/liferay-portal-ee.git | \
-		awk '{ print $2 }' | grep "fix-pack-\(base-${3}\|de-.*-${3}\|dxp-\)" | grep -v '\(test\|demo\|build\)' | \
-		sort -t'-' -nk4,5 | cut -d'/' -f 3 >> $OUTPUT_FOLDER/tags.txt
+		awk '{ print $2 }' | grep "fix-pack-\(base\|de-.*\|dxp-.*\)-${3}" | grep -v '\(test\|demo\|build\)' | \
+		sort -t'-' -nk4,5 | cut -d'/' -f 3 | tee -a $OUTPUT_FOLDER/tags.txt
 
 	for tag_id in $(cat $OUTPUT_FOLDER/tags.txt); do
 		bundleinfo $tag_id

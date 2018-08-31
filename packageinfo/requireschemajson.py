@@ -45,7 +45,7 @@ folders = [metadata[0] for metadata in file_metadata]
 file_suffixes = [metadata[1] for metadata in file_metadata]
 
 file_names = ['requireschema-%s.txt' % suffix for suffix in file_suffixes]
-suffixes = [suffix if suffix[5:7] != 'de' else suffix[0:8] + suffix[8:].zfill(2) for suffix in file_suffixes]
+suffixes = [suffix if suffix[5:7] != 'de' and suffix[5:8] != 'dxp' else suffix[0:8] + suffix[8:].zfill(2) for suffix in file_suffixes]
 
 # Read the CSV file
 
