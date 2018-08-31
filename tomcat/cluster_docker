@@ -179,7 +179,7 @@ network() {
 }
 
 startnode() {
-	PORT_NUMBER=$(expr 8080 '+' $1 '*' 100)
+	PORT_NUMBER=$(expr "${START_PORT}" '+' $1 '*' 100)
 
 	bundle "${HOTFIX_LEVEL}" "${PORT_NUMBER}" "${NETWORK_NAME}-lfr${PORT_NUMBER}"
 }
@@ -198,7 +198,7 @@ updatedocker() {
 }
 
 waitfornode() {
-	PORT_NUMBER=$(expr 8080 '+' $1 '*' 100)
+	PORT_NUMBER=$(expr "${START_PORT}" '+' $1 '*' 100)
 
 	while [ "" == "$(docker logs --since="${START_TIME}" "${NETWORK_NAME}-lfr${PORT_NUMBER}" 2>&1 | grep -F 'Server startup')" ]; do
 		sleep 1
@@ -221,6 +221,10 @@ else
 
 	if [ "" == "$NODE_COUNT" ]; then
 		NODE_COUNT=2
+	fi
+
+	if [ "" == "${START_PORT}" ]; then
+		START_PORT=8080
 	fi
 
 	appserverprops && mysqldb && elasticsearch && clean lfr && liferay
