@@ -110,10 +110,9 @@ start_liferay() {
 	fi
 
 	remove_container
-	create_network
 
-	if [[ 0 -ne $? ]]; then
-		return 0
+	if ! create_network; then
+		return 1
 	fi
 
 	local INCREMENT=$(expr ${TOMCAT_PORT} '-' 8080)
