@@ -8,6 +8,7 @@ You will need to have the following programs installed for your operating system
 
 * ``ant``: https://ant.apache.org
 * ``conda``: https://conda.io/miniconda.html
+* ``docker``: https://www.docker.com/get-started
 * ``groovy``: http://groovy-lang.org/download.html
 * ``jq``: https://stedolan.github.io/jq/
 * ``mvn``: https://maven.apache.org
