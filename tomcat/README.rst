@@ -49,7 +49,7 @@ Simple wrapper script that recreates a Docker container by passing arguments to 
 * a bundle that has been built from source (run the command from a folder with the proper ``app.server.${USERNAME}.properties``, or run it from the ``LIFERAY_HOME`` of the Tomcat bundle)
 * one of my `cloud-10-0-30-27 <http://cloud-10-0-30-27/builds/>`__ weekly builds, `cloud-10-50-0-165 <http://cloud-10-50-0-165/builds/>`__ nightly builds, or an official snapshot build hosted on an internal office mirror of ``releases.liferay.com`` (for public branches) or ``files.liferay.com`` (for private branches)
 * an official release bundle (CE GA release, EE service pack release) from an internal office mirror of ``releases.liferay.com`` (for CE releases) or ``files.liferay.com`` (for EE releases)
-* a fix pack, which will use the internal office mirror of ``files.liferay.com`` to download the closest service pack (note that this is hard-coded, so you will have to periodically rebuild the Docker image whenever I update it) and apply the fix pack
+* a fix pack, which will use the internal office mirror of ``files.liferay.com`` to download the closest service pack (note that this is manually updated, so there may be a delay before I fix it) and apply the fix pack
 * a bundle that can be easily derived from a hotfix name (``liferay-hotfix-123-7010``) or URL, which will use the internal office mirror of ``files.liferay.com`` to download the needed fix pack derived from its fix pack documentation XML
 
 The script accepts the following parameters:
