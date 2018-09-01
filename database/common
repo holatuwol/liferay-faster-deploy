@@ -1,13 +1,5 @@
 #!/bin/bash
 
-appserverprops() {
-	if [ -f portal-ext.properties ]; then
-		LIFERAY_HOME=${PWD}
-	else
-		. $(dirname ${BASH_SOURCE[0]})/../appserverprops
-	fi
-}
-
 containername() {
 	if [ "" != "$1" ]; then
 		CONTAINER_NAME=${1}-${DB_TYPE}
@@ -22,10 +14,16 @@ containername() {
 }
 
 copydriver() {
+	if [ "" == "${CATALINA_HOME}" ]; then
+		mkdir -p ${LIFERAY_HOME}/tomcat/lib/ext
+		CATALINA_HOME=${LIFERAY_HOME}/tomcat
+	fi
+
 	if [ -f ${CATALINA_HOME}/lib/ext/${DRIVER} ]; then
 		echo "Using existing ${DRIVER} in ${CATALINA_HOME}/lib/ext"
 	elif [ "" == "${DRIVERS_FOLDER}" ]; then
-		echo "DRIVERS_FOLDER environment variable not set, so JDBC driver must be added manually"
+		echo "DRIVERS_FOLDER environment variable not set."
+		echo "Hopefully driver already exists"
 	elif [ ! -f ${DRIVERS_FOLDER}/${DRIVER} ]; then
 		echo "${DRIVER} not found. Please download it and copy it to ${DRIVERS_FOLDER}"
 	else
@@ -34,7 +32,19 @@ copydriver() {
 	fi
 }
 
-getparent() {
+liferayhome() {
+	if [ -f portal-ext.properties ]; then
+		LIFERAY_HOME=${PWD}
+		return 0
+	fi
+
+	. $(dirname ${BASH_SOURCE[0]})/../appserverprops
+
+	if [ "" == "${LIFERAY_HOME}" ]; then
+		echo 'Please either define LIFERAY_HOME or navigate to a portal source folder'
+		exit 1
+	fi
+
 	. $(dirname ${BASH_SOURCE[0]})/../getparent
 }
 
@@ -43,11 +53,4 @@ runcontainer() {
 }
 
 
-appserverprops
-
-if [ "" == "${LIFERAY_HOME}" ]; then
-	echo 'Please either define LIFERAY_HOME or navigate to a portal source folder'
-	exit 1
-fi
-
-getparent
+liferayhome
