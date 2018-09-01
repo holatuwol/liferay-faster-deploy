@@ -18,12 +18,22 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 	MCD_RD_CLONE_PATH=/path/to/clone/location
 
 	bundle() {
-		LIFERAY_PASSWORD= \
+		LIFERAY_RELEASES_MIRROR=http://172.16.168.221/files.liferay.com \
+		LIFERAY_FILES_MIRROR=http://172.16.168.221/releases.liferay.com \
+		BRANCH_ARCHIVE_MIRROR=http://10.50.0.165/builds/branches/ \
+		LICENSE_MIRROR=http://10.50.0.165/license/ \
+		LIFERAY_PASSWORD=test \
 			${MCD_RD_CLONE_PATH}/tomcat/bundle "$@"
 	}
 
 	cluster() {
-		${MCD_RD_CLONE_PATH}/tomcat/cluster $@
+		LIFERAY_RELEASES_MIRROR=http://172.16.168.221/files.liferay.com \
+		LIFERAY_FILES_MIRROR=http://172.16.168.221/releases.liferay.com \
+		BRANCH_ARCHIVE_MIRROR=http://10.50.0.165/builds/branches/ \
+		LICENSE_MIRROR=http://10.50.0.165/license/ \
+		LIFERAY_PASSWORD=test \
+		DRIVERS_FOLDER=/path/to/folder/with/jdbc/jars \
+			${MCD_RD_CLONE_PATH}/tomcat/cluster_docker "$@"
 	}
 
 	cr() {
@@ -33,15 +43,13 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 Docker Bundle
 =============
 
-Simple wrapper script that recreates a Docker container by passing arguments to the initialization of a `nightly build downloader <https://github.com/holatuwol/lps-dockerfiles/tree/master/nightly>`__ Docker image.
+Simple wrapper script that recreates a Docker container by passing arguments to the initialization of a `build downloader <https://github.com/holatuwol/lps-dockerfiles/tree/master/nightly>`__ Docker image. The built Docker images will use any of the following Tomcat bundles:
 
-The built Docker images will use any of the following Tomcat bundles:
-
-* a local Tomcat bundle, specified via a ``LIFERAY_HOME`` environment variable *or* the existence of a ``portal-ext.properties`` file or ``app.server.properties`` file in the current working directory
-* daily/weekly build server artifacts (if for some reason you decided to recreate the same infrastructure I set up in the Diamond Bar office over the past year)
-* daily/hourly build artifacts from `releases.liferay.com <https://releases.liferay.com/portal>`__ and internal `files.liferay.com <https://files.liferay.com/private/ee/portal/>`__ mirrors
-* official community releases from `releases.liferay.com <https://releases.liferay.com/portal>`__
-* official hotfixes and fixpacks on internal `files.liferay.com <https://files.liferay.com/private/ee/portal/>`__ mirrors
+* a bundle that has been built from source (run the command from a folder with the proper ``app.server.${USERNAME}.properties``, or run it from the ``LIFERAY_HOME`` of the Tomcat bundle)
+* one of my `cloud-10-0-30-27 <http://cloud-10-0-30-27/builds/>`__ weekly builds, `cloud-10-50-0-165 <http://cloud-10-50-0-165/builds/>`__ nightly builds, or an official snapshot build hosted on an internal office mirror of ``releases.liferay.com`` (for public branches) or ``files.liferay.com`` (for private branches)
+* an official release bundle (CE GA release, EE service pack release) from an internal office mirror of ``releases.liferay.com`` (for CE releases) or ``files.liferay.com`` (for EE releases)
+* a fix pack, which will use the internal office mirror of ``files.liferay.com`` to download the closest service pack (note that this is hard-coded, so you will have to periodically rebuild the Docker image whenever I update it) and apply the fix pack
+* a bundle that can be easily derived from a hotfix name (``liferay-hotfix-123-7010``) or URL, which will use the internal office mirror of ``files.liferay.com`` to download the needed fix pack derived from its fix pack documentation XML
 
 The script accepts the following parameters:
 
@@ -60,7 +68,7 @@ You can also specify an ``IMAGE_NAME`` environment variable if you'd like it to 
 .. code-block:: bash
 
 	bundle de-32
-	IMAGE_NAME='mcd-nightly-ibm8' bundle hotfix-1852
+	IMAGE_NAME='holatuwol/liferay:ibmjdk8' bundle hotfix-1852
 	cd ${LIFERAY_HOME} && bundle
 
 The script has some additional logic to check ``LIFERAY_HOME`` (when ``LIFERAY_HOME`` isn't specified as an environment variable, it checks in the current working directory for ``portal-ext.properties``), and the container will use ``rsync`` to copy everything in ``LIFERAY_HOME`` to itself on each restart. This means that if it has a bundle, it copies the bundle. If it does not have a bundle, the script allows you to spin up multiple versions simultaneously using the same ``portal-ext.properties``, and it allows you to evaluate OSGi bundles and OSGi configurations across multiple releases and branches of Liferay.
@@ -73,16 +81,16 @@ The alias allows you to pass in whatever password you wish to use for the portal
 
 	docker exec test grep default.admin.password= /home/liferay/portal-setup-wizard.properties
 
-If the current folder contains a ``portal-ext.properties`` file or any of the alternate folders listed in the **Provide Additional Files** section of the nightly build downloader documentation, the current working directory will be automatically mounts the local folder so that its contents can be copied to ``LIFERAY_HOME``. If none of the above apply, but there is a ``bundles`` folder as a child of the current working folder, that ``bundles`` folder will be automatically mounted so that its contents can be copied to ``LIFERAY_HOME``.
+If the current folder contains a ``portal-ext.properties`` file or any of the alternate folders listed in the **Provide Additional Files** section of the nightly build downloader documentation, the current working directory will be automatically mounted so that its contents can be copied to ``LIFERAY_HOME``. If none of the above apply, but there is a ``bundles`` folder as a child of the current working folder, that ``bundles`` folder will be automatically mounted so that its contents can be copied to ``LIFERAY_HOME``.
 
 * `bundle <bundle>`__
 
-Prepare Tomcat Cluster
-======================
+Docker Cluster
+==============
 
-This is a script that I use in order to prepare a simple unicast cluster using TCPPING on Ubuntu. You need to run from the portal source, and it uses ``app.server.USERNAME.properties`` in order to determine how to generate the nodes.
+A wrapper script which uses the ``bundle`` command (described above) to start a cluster. If a database is not specified in ``portal-ext.properties``, it will use the `database <https://github.com/holatuwol/liferay-faster-deploy/tree/master/database>`__ scripts from this repository to create a MySQL database.
 
-* `cluster <cluster>`__
+* `cluster_docker <cluster_docker>`__
 
 Start Tomcat
 ============
