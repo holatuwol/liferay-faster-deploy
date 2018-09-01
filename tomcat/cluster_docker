@@ -149,7 +149,7 @@ liferay() {
 
 mysqldb() {
 	if [ -f ${LIFERAY_HOME}/portal-ext.properties ] && [ "" != "$(grep -F 'jdbc.default.driverClassName' ${LIFERAY_HOME}/portal-ext.properties)" ] && [ "" == "$(grep -F 'mysqldb' ${LIFERAY_HOME}/portal-ext.properties)" ]; then
-		local GATEWAY=$(docker inspect ${NETWORK_NAME} | jq '.[] | .IPAM.Config | .[].Gateway' | cut -d'"' -f 2)
+		local GATEWAY=$(docker network inspect ${NETWORK_NAME} | jq '.[] | .IPAM.Config | .[].Gateway' | cut -d'"' -f 2)
 
 		sed -i.bak "s/127.0.0.1/${GATEWAY}/g" ${LIFERAY_HOME}/portal-ext.properties
 		sed -i.bak "s/localhost/${GATEWAY}/g" ${LIFERAY_HOME}/portal-ext.properties
