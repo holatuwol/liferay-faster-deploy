@@ -49,6 +49,13 @@ create_network() {
 	NETWORK_METADATA=
 
 	if [ "" == "${NETWORK_NAME}" ]; then
+		if [ -f ${LIFERAY_HOME}/portal-ext.properties ]; then
+			local GATEWAY=$(docker network inspect bridge | jq '.[] | .IPAM.Config | .[].Gateway' | cut -d'"' -f 2)
+
+			sed -i.bak "s/127.0.0.1/${GATEWAY}/g" ${LIFERAY_HOME}/portal-ext.properties
+			sed -i.bak "s/localhost/${GATEWAY}/g" ${LIFERAY_HOME}/portal-ext.properties
+		fi
+
 		return 0
 	fi
 
