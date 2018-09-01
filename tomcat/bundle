@@ -104,7 +104,7 @@ set_container_mounts() {
 		return 0
 	fi
 
-	if [ -f portal-ext.properties ] || [ -d deploy ]; then
+	if [ -f portal-ext.properties ] || [ -d drivers ] || [ -d patches ]; then
 		LIFERAY_HOME=${PWD}
 		LIFERAY_HOME_MOUNT="-v ${PWD}:/build"
 	elif [ -d bundles ]; then
@@ -112,7 +112,21 @@ set_container_mounts() {
 		LIFERAY_HOME_MOUNT="-v ${PWD}/bundles:/build"
 	elif [ -f app.server.$USER.properties ]; then
 		. $(dirname $(dirname ${BASH_SOURCE[0]}))/appserverprops
+
 		LIFERAY_HOME_MOUNT="-v ${LIFERAY_HOME}:/build"
+	else
+		echo "Unable to determine LIFERAY_HOME"
+		echo "Please touch portal-ext.properties if you wish to use the current folder as LIFERAY_HOME"
+		return 1
+	fi
+
+	CATALINA_HOME="$(ls ${LIFERAY_HOME} | grep '^tomcat-')"
+
+	if [ "" != "$1" ] && [ "" != "${CATALINA_HOME}" ]; then
+		echo "You asked to start a container running $1 rather than a bundle built from source"
+		echo "However, there is a '${CATALINA_HOME}' folder present in ${LIFERAY_HOME} that would be copied to the container"
+		echo "Cowardly refusing to create the Docker container"
+		return 1
 	fi
 }
 
@@ -206,9 +220,7 @@ if [ "" == "${LIFERAY_PASSWORD}" ]; then
 	LIFERAY_PASSWORD='test'
 fi
 
-set_container_mounts
-set_image_name "$1"
-
-echo "Using Docker image ${IMAGE_NAME}"
-
-start_liferay "$1" "$2" "$3"
+set_container_mounts "$1" && \
+	set_image_name "$1" && \
+	echo "Using Docker image ${IMAGE_NAME}" && \
+	start_liferay "$1" "$2" "$3"
