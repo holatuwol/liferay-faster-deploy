@@ -169,7 +169,11 @@ mysqldb() {
 
 network() {
 	if [ "" == "${NETWORK_NAME}" ]; then
-		NETWORK_NAME='test'
+		if [ "" == "$1" ]; then
+			NETWORK_NAME='test'
+		else
+			NETWORK_NAME="$1"
+		fi
 	fi
 
 	if docker network inspect ${NETWORK_NAME} 1> /dev/null 2> /dev/null; then
@@ -181,9 +185,11 @@ network() {
 }
 
 startnode() {
-	PORT_NUMBER=$(expr "${START_PORT}" '+' $1 '*' 100)
+	local PORT_NUMBER=$(python $(dirname ${BASH_SOURCE[0]})/getport.py)
 
-	bundle "${HOTFIX_LEVEL}" "${PORT_NUMBER}" "${NETWORK_NAME}-lfr${PORT_NUMBER}"
+	timeecho "Starting ${NETWORK_NAME}-liferay${1} on port ${PORT_NUMBER}"
+
+	bundle "${HOTFIX_LEVEL}" "${PORT_NUMBER}" "${NETWORK_NAME}-liferay${1}"
 }
 
 timeecho() {
@@ -200,34 +206,37 @@ updatedocker() {
 }
 
 waitfornode() {
-	PORT_NUMBER=$(expr "${START_PORT}" '+' $1 '*' 100)
-
-	while [ "" == "$(docker logs --since="${START_TIME}" "${NETWORK_NAME}-lfr${PORT_NUMBER}" 2>&1 | grep -F 'Server startup')" ]; do
+	while [ "" == "$(docker logs --since="${START_TIME}" "${NETWORK_NAME}-liferay${1}" 2>&1 | grep -F 'Server startup')" ]; do
 		sleep 1
 	done
 }
 
-network
-
 if [ "stop" == "$1" ]; then
+	network $2
+
 	if [ "" != "$(docker network inspect ${NETWORK_NAME} | jq '.[].Containers | .[].Name')" ]; then
 		docker network inspect ${NETWORK_NAME} | jq '.[].Containers | .[].Name' | cut -d'"' -f 2 | xargs docker stop
 	fi
 elif [ "clean" == "$1" ]; then
-	clean lfr && clean elastic && clean mysql
+	network $2
+
+	clean liferay && clean elastic && clean mysql
 elif [ "restart" == "$1" ]; then
+	network $2
+
 	appserverprops && mysqldb && elasticsearch && liferay
 else
 	HOTFIX_LEVEL=$1
-	NODE_COUNT=$2
+
+	network $2
+
+	if [ "" == "${NODE_COUNT}" ]; then
+		NODE_COUNT=$3
+	fi
 
 	if [ "" == "$NODE_COUNT" ]; then
 		NODE_COUNT=2
 	fi
 
-	if [ "" == "${START_PORT}" ]; then
-		START_PORT=8080
-	fi
-
-	appserverprops && mysqldb && elasticsearch && clean lfr && liferay
+	appserverprops && mysqldb && elasticsearch && clean liferay && liferay
 fi

@@ -58,7 +58,7 @@ The script accepts the following parameters:
 
 	bundle [fix-pack-level] [port-number] [container-name]
 
-All parameters are technically optional, but you have to leave off parameters starting from right to left.
+All parameters are technically optional, but you have to leave off parameters starting from right to left. If you want to leave off something in the middle, you must explicitly set it to ``""``.
 
 1. If you leave off the container name, and you do not set a ``CONTAINER_NAME`` environment variable, it will name it ``test`` followed by the port number.
 2. If you leave off the port number, and you do not set a ``TOMCAT_PORT`` environment variable, it will do its best to guess the port number it should use, starting at 8080.
@@ -92,6 +92,21 @@ Docker Cluster
 A wrapper script which uses the ``bundle`` command (described above) to start a cluster. If a database is not specified in ``portal-ext.properties``, it will use the `database <https://github.com/holatuwol/liferay-faster-deploy/tree/master/database>`__ scripts from this repository to create a MySQL database.
 
 * `cluster_docker <cluster_docker>`__
+
+The script accepts the following parameters:
+
+.. code-block:: bash
+
+	cluster stop [network-name]
+	cluster clean [network-name]
+	cluster restart [network-name]
+	cluster [fix-pack-level] [network-name] [node-count]
+
+All parameters are technically optional, but you have to leave off parameters starting from right to left. If you want to leave off something in the middle, you must explicitly set it to ``""``.
+
+1. If you leave off the node count, and you do not set a ``NODE_COUNT`` environment variable, it will assume you wish to create a two node cluster.
+2. If you leave off the network name, and you do not set a ``NETWORK_NAME`` environment variable, it will create and use a network named ``test``.
+3. If you leave off the fix pack level, it will check to see if there is a bundle that can be identified from the current folder (either you are located in ``LIFERAY_HOME`` with a ``portal-ext.properties`` file, or you're located in portal source with a ``build.USERNAME.properties`` file). If there is no such bundle, it will default to downloading a snapshot of master.
 
 Start Tomcat
 ============
