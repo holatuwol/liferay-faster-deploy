@@ -23,6 +23,7 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 		BRANCH_ARCHIVE_MIRROR=http://10.50.0.165/builds/branches/ \
 		LICENSE_MIRROR=http://10.50.0.165/license/ \
 		LIFERAY_PASSWORD=test \
+		DRIVERS_FOLDER=/path/to/folder/with/jdbc/jars \
 			${MCD_RD_CLONE_PATH}/tomcat/bundle "$@"
 	}
 
