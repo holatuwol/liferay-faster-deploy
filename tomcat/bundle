@@ -8,7 +8,9 @@ copy_driver() {
 
 	local DRIVER_CLASS_NAME="$(grep -F jdbc.default.driverClassName ${LIFERAY_HOME}/portal-ext.properties | grep -vF '#' | cut -d'=' -f 2)"
 
-	if [ "org.mariadb.jdbc.Driver" == "${DRIVER_CLASS_NAME}" ]; then
+	if [ "" == "${DRIVER_CLASS_NAME}" ] || [ "org.hsqldb.jdbc.JDBCDriver" == "${DRIVER_CLASS_NAME}" ]; then
+		DRIVER='hsql.jar'
+	elif [ "org.mariadb.jdbc.Driver" == "${DRIVER_CLASS_NAME}" ]; then
 		DRIVER='mariadb.jar'
 	elif [ "com.mysql.jdbc.Driver" == "${DRIVER_CLASS_NAME}" ]; then
 		DRIVER='mysql.jar'
