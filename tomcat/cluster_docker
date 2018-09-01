@@ -200,8 +200,8 @@ updatedocker() {
 	timeecho "Updating $1 from DockerHub..."
 	docker pull --all-tags "$1"
 
-	if [ "" != "$(docker images -a --filter=dangling=true -q | grep -F "$1")" ]; then
-		docker rmi $(docker images -a --filter=dangling=true -q | grep -F "$1")
+	if [ "" != "$(docker images -a --filter=dangling=true -q)" ]; then
+		docker images -a --filter=dangling=true -q | xargs docker rmi
 	fi
 }
 
