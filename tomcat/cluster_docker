@@ -165,6 +165,8 @@ mysqldb() {
 	if [ "" == "$(docker network inspect ${NETWORK_NAME} | grep -F ${NETWORK_NAME}-mysql)" ]; then
 		docker network connect --alias mysqldb ${NETWORK_NAME} ${NETWORK_NAME}-mysql
 	fi
+
+	docker exec ${NETWORK_NAME}-mysql mysql -e 'use lportal; drop table if exists JGROUPSPING;'
 }
 
 network() {
