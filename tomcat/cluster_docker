@@ -31,7 +31,7 @@ clean() {
 	timeecho "Removing ${NETWORK_NAME}-$1 cluster nodes"
 
 	if [ "" != "$(docker ps | grep -o " ${NETWORK_NAME}-${1}[0-9]*")" ]; then
-		docker ps | grep -o " ${NETWORK_NAME}-${1}[0-9]*" | xargs docker kill
+		docker ps | grep -o " ${NETWORK_NAME}-${1}[0-9]*" | xargs docker stop
 	fi
 
 	docker ps -a | grep -o " ${NETWORK_NAME}-${1}[0-9]*" | xargs docker rm -v
