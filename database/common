@@ -33,7 +33,7 @@ copydriver() {
 }
 
 liferayhome() {
-	if [ -f portal-ext.properties ]; then
+	if [ "${PWD}" != "${HOME}" ] && [ -f portal-ext.properties ]; then
 		LIFERAY_HOME=${PWD}
 		return 0
 	fi
