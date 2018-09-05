@@ -23,6 +23,8 @@ nodew() {
 
 	if [ -f gulpfile.js ]; then
 		node_modules/gulp/bin/gulp.js build
+	elif [ -f tsconfig.json ]; then
+		node_modules/typescript/bin/tsc --project .
 	elif [ "null" != "$(jq '.scripts.build' package.json)" ]; then
 		npm run-script build
 	fi
