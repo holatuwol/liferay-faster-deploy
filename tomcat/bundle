@@ -122,7 +122,7 @@ set_container_mounts() {
 		return 1
 	fi
 
-	CATALINA_HOME="$(ls ${LIFERAY_HOME} | grep '^tomcat-')"
+	CATALINA_HOME="${LIFERAY_HOME}/$(ls ${LIFERAY_HOME} | grep '^tomcat-')"
 
 	if [ "" != "$1" ] && [ "" != "${CATALINA_HOME}" ]; then
 		echo "You asked to start a container running $1 rather than a bundle built from source"
