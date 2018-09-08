@@ -31,7 +31,7 @@ function generateBOM() {
 	var versionId;
 	var versionNumber = parseInt(sourceVersion.substring(0, 4));
 
-	if (versionNumber % 100 == 10) {
+	if ((versionNumber % 100 == 10) && (sourceVersion.indexOf('-base') == -1)) {
 		var fixPackVersion = sourceVersion.substring(sourceVersion.indexOf('-', 5) + 1);
 		versionId = Math.floor(versionNumber / 1000) + '.' + Math.floor((versionNumber % 1000) / 100) + '.10.fp' + fixPackVersion;
 	}
