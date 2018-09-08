@@ -23,6 +23,73 @@ if (notableOnly) {
 	notableOnly.checked = getParameter('notableOnly') == 'true';
 }
 
+function generateBOM() {
+	var sourceVersion = select1.options[select1.selectedIndex].value;
+
+	var artifactId = sourceVersion.indexOf('-ga') != -1 ? 'com.liferay.ce.bom' : 'com.liferay.dxp.bom';
+
+	var versionId;
+	var versionNumber = parseInt(sourceVersion.substring(0, 4));
+
+	if (versionNumber % 100 == 10) {
+		var fixPackVersion = sourceVersion.substring(sourceVersion.indexOf('-', 5) + 1);
+		versionId = Math.floor(versionNumber / 1000) + '.' + Math.floor((versionNumber % 1000) / 100) + '.10.fp' + fixPackVersion;
+	}
+	else {
+		var fixPackVersion = sourceVersion.substring(sourceVersion.indexOf('-', 5) + 1);
+		versionId = Math.floor(versionNumber / 1000) + '.' + Math.floor((versionNumber % 1000) / 100) + '.' + (versionNumber % 100);
+	}
+
+	var bomXML = [
+		'<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">',
+		'<modelVersion>4.0.0</modelVersion>',
+		'<groupId>com.liferay</groupId>',
+		'<artifactId>', artifactId, '</artifactId>',
+		'<version>', versionId, '</version>',
+		'<packaging>pom</packaging>',
+		'<licenses><license><name>LGPL 2.1</name><url>http://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt</url></license></licenses>',
+		'<developers><developer><name>Brian Wing Shun Chan</name><organization>Liferay, Inc.</organization><organizationUrl>http://www.liferay.com</organizationUrl></developer></developers>',
+		'<scm><connection>scm:git:git@github.com:liferay/liferay-portal.git</connection><developerConnection>scm:git:git@github.com:liferay/liferay-portal.git</developerConnection><url>https://github.com/liferay/liferay-portal</url></scm>',
+		'<repositories><repository><id>liferay-public-snapshots</id><name>Liferay Public Snapshots</name><url>https://repository.liferay.com/nexus/content/repositories/liferay-public-snapshots/</url></repository></repositories>',
+		'<dependencyManagement>',
+		'<dependencies>'
+	];
+
+	var key ='version_' + sourceVersion;
+
+	var isAvailableVersion = function(versionInfo) {
+		return versionInfo[key] && versionInfo[key] != '0.0.0';
+	};
+
+	var asDependencyElement = function(accumulator, versionInfo) {
+		accumulator.push(
+			'<dependency>',
+			'<groupId>', versionInfo['group'], '</groupId>',
+			'<artifactId>', versionInfo['name'], '</artifactId>',
+			'<version>', versionInfo[key], '</version>',
+			'</dependency>'
+		);
+
+		return accumulator;
+	}
+
+	versionInfoList.filter(isAvailableVersion).reduce(asDependencyElement, bomXML);
+
+	bomXML.push('</dependencies>', '</dependencyManagement>', '</project>');
+
+	var bomBlob = new Blob(bomXML, {type : 'application/xml'});
+
+	var downloadBOMLink = document.createElement('a');
+	downloadBOMLink.style.display = 'none';
+
+	downloadBOMLink.href = URL.createObjectURL(bomBlob);
+	downloadBOMLink.download = artifactId + '-' + versionId + '.bom';
+
+	document.body.appendChild(downloadBOMLink);
+	downloadBOMLink.click();
+	document.body.removeChild(downloadBOMLink);
+};
+
 function isPermaLink(element) {
 	return element.getAttribute('data-original-title') == 'Permalink'
 };
