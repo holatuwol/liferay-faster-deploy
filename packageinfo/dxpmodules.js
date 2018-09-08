@@ -65,16 +65,39 @@ function generateBOM() {
 	};
 
 	var asDependencyElement = function(accumulator, versionInfo) {
+		var dependencyVersion = versionInfo[key];
+
+		if (dependencyVersion.indexOf('-SNAPSHOT') != -1) {
+			var x = dependencyVersion.indexOf('.');
+			var y = dependencyVersion.indexOf('.', x + 1);
+
+			var majorVersion = parseInt(dependencyVersion.substring(0, x));
+			var minorVersion = parseInt(dependencyVersion.substring(x + 1, y));
+			var patchVersion = parseInt(dependencyVersion.substring(y + 1, dependencyVersion.indexOf('-SNAPSHOT')));
+
+			if (patchVersion > 0) {
+				dependencyVersion = majorVersion + '.' + minorVersion + '.0';
+			}
+			else if (minorVersion > 0) {
+				dependencyVersion = majorVersion + '.' + (minorVersion - 1) + '.0';
+			}
+			else {
+				dependencyVersion = majorVersion + '.' + minorVersion + '.' + patchVersion;
+			}
+		}
+
 		accumulator.push(
 			'<dependency>',
 			'<groupId>', versionInfo['group'], '</groupId>',
 			'<artifactId>', versionInfo['name'], '</artifactId>',
-			'<version>', versionInfo[key], '</version>',
+			'<version>', dependencyVersion, '</version>',
 			'</dependency>'
 		);
 
 		return accumulator;
 	}
+
+	console.log('What?');
 
 	versionInfoList.filter(isAvailableVersion).reduce(asDependencyElement, bomXML);
 
