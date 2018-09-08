@@ -50,7 +50,10 @@ function generateBOM() {
 		'<licenses><license><name>LGPL 2.1</name><url>http://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt</url></license></licenses>',
 		'<developers><developer><name>Brian Wing Shun Chan</name><organization>Liferay, Inc.</organization><organizationUrl>http://www.liferay.com</organizationUrl></developer></developers>',
 		'<scm><connection>scm:git:git@github.com:liferay/liferay-portal.git</connection><developerConnection>scm:git:git@github.com:liferay/liferay-portal.git</developerConnection><url>https://github.com/liferay/liferay-portal</url></scm>',
-		'<repositories><repository><id>liferay-public-snapshots</id><name>Liferay Public Snapshots</name><url>https://repository.liferay.com/nexus/content/repositories/liferay-public-snapshots/</url></repository></repositories>',
+		'<repositories>',
+		'<repository><id>liferay-public</id><name>Liferay Public (CDN)</name><url>https://repository-cdn.liferay.com/nexus/content/repositories/public/</url></repository>',
+		'<repository><id>liferay-public-snpashots</id><name>Liferay Public Snapshots (CDN)</name><url>https://repository-cdn.liferay.com/nexus/content/repositories/liferay-public-snapshots/</url></repository>',
+		'</repositories>',
 		'<dependencyManagement>',
 		'<dependencies>'
 	];
