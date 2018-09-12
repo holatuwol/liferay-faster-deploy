@@ -23,20 +23,23 @@ if (notableOnly) {
 	notableOnly.checked = getParameter('notableOnly') == 'true';
 }
 
-function generateBOM() {
-	var sourceVersion = select1.options[select1.selectedIndex].value;
+function generateBOM(selectId) {
+	selectId = selectId || 'sourceVersion';
 
-	var artifactId = sourceVersion.indexOf('-ga') != -1 ? 'com.liferay.ce.bom' : 'com.liferay.dxp.bom';
+	var select = document.getElementById(selectId);
+	var selectValue = select.options[select.selectedIndex].value;
+
+	var artifactId = selectValue.indexOf('-ga') != -1 ? 'com.liferay.ce.bom' : 'com.liferay.dxp.bom';
 
 	var versionId;
-	var versionNumber = parseInt(sourceVersion.substring(0, 4));
+	var versionNumber = parseInt(selectValue.substring(0, 4));
 
-	if ((versionNumber % 100 == 10) && (sourceVersion.indexOf('-base') == -1)) {
-		var fixPackVersion = sourceVersion.substring(sourceVersion.indexOf('-', 5) + 1);
+	if ((versionNumber % 100 == 10) && (selectValue.indexOf('-base') == -1)) {
+		var fixPackVersion = selectValue.substring(selectValue.indexOf('-', 5) + 1);
 		versionId = Math.floor(versionNumber / 1000) + '.' + Math.floor((versionNumber % 1000) / 100) + '.10.fp' + fixPackVersion;
 	}
 	else {
-		var fixPackVersion = sourceVersion.substring(sourceVersion.indexOf('-', 5) + 1);
+		var fixPackVersion = selectValue.substring(selectValue.indexOf('-', 5) + 1);
 		versionId = Math.floor(versionNumber / 1000) + '.' + Math.floor((versionNumber % 1000) / 100) + '.' + (versionNumber % 100);
 	}
 
@@ -58,7 +61,7 @@ function generateBOM() {
 		'<dependencies>'
 	];
 
-	var key ='version_' + sourceVersion;
+	var key ='version_' + selectValue;
 
 	var isAvailableVersion = function(versionInfo) {
 		return versionInfo[key] && versionInfo[key] != '0.0.0';
