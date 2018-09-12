@@ -104,12 +104,8 @@ catalinastart() {
 			rm -rf $LIFERAY_HOME/osgi/state
 		fi
 
-		$CATALINA_HOME/bin/startup.sh
-	fi
-
-	# At this point, figure out if we successfully have a running Tomcat.
-
-	if [ -f $CATALINA_HOME/logs/catalina.out ]; then
+		$CATALINA_HOME/bin/catalina.sh jpda run
+	elif [ -f $CATALINA_HOME/logs/catalina.out ]; then
 		tail -f $CATALINA_HOME/logs/catalina.out
 	else
 		echo Failed to start tomcat!
