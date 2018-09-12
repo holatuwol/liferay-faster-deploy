@@ -51,6 +51,10 @@ catalinaconf() {
 	# Make sure we have a portal-ext.properties in LIFERAY_HOME
 
 	touch $LIFERAY_HOME/portal-ext.properties
+
+	if [ -d $CATALINA_HOME/webapps/manager ]; then
+		echo '<?xml version="1.0" encoding="utf-8"?><tomcat-users><user username="tomcat" password="tomcat" roles="manager-gui,manager-script,manager-status,manager-jmx"/></tomcat-users>' > $CATALINA_HOME/conf/tomcat-users.xml
+	fi
 }
 
 catalinastart() {
