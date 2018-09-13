@@ -16,15 +16,32 @@ bundleinfo() {
 		fi
 	done
 
-	git ls-files modules | grep -F '/.lfrbuild-portal' | \
-		grep -v '^modules/aspectj/' | \
-		grep -vF -- '-compat/' | \
-		grep -v '^modules/post-upgrade-fix/' | \
-		grep -v '^modules/sdk/' | \
-		grep -v '^modules/test/' | \
-		grep -v '^modules/third-party/' | \
-		grep -v '^modules/util/' | \
-		dirnames | sort -u > ${GIT_ROOT}/.redeploy/bundleinfo.txt
+	if [ "" != "$(git ls-files modules | grep -F '/.lfrbuild-portal')" ]; then
+		git ls-files modules | grep -F '/.lfrbuild-portal' | \
+			grep -v '^modules/aspectj/' | \
+			grep -vF -- '-compat/' | \
+			grep -v '^modules/post-upgrade-fix/' | \
+			grep -v '^modules/sdk/' | \
+			grep -v '^modules/test/' | \
+			grep -v '^modules/third-party/' | \
+			grep -v '^modules/util/' | \
+			dirnames | sort -u > ${GIT_ROOT}/.redeploy/bundleinfo.txt
+	else
+		git ls-files modules | grep '/\(build.gradle\|apps/foundation/frontend-theme/.*/gulpfile.js\)$' | \
+			grep -vF -- '-test/build.gradle' | \
+			grep -v '^modules/apps/asset-tags-validator/' | \
+			grep -v 'modules/apps/forms-and-workflow/portal-rules-engine/portal-rules-engine-sample-web/' | \
+			grep -v 'modules/apps/foundation/frontend-taglib/frontend-taglib-aui-form-extension-sample/' | \
+			grep -v 'modules/apps/foundation/frontend-theme/frontend-theme-product-app/' | \
+			grep -v 'modules/apps/foundation/portal-cache/portal-cache-memory/' | \
+			grep -v 'modules/apps/portal-search-solr/' | \
+			grep -v 'modules/apps/wiki-engine-jspwiki/' | \
+			grep -v '^modules/sdk/' | \
+			grep -v '^modules/test/' | \
+			grep -v '^modules/third-party/' | \
+			grep -v '^modules/util/' | \
+			dirnames | sort -u > ${GIT_ROOT}/.redeploy/bundleinfo.txt
+	fi
 
 	for folder in $(cat ${GIT_ROOT}/.redeploy/bundleinfo.txt); do
 		if [ ! -f "$folder/bnd.bnd" ]; then
