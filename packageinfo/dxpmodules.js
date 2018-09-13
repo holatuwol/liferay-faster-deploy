@@ -23,6 +23,17 @@ if (notableOnly) {
 	notableOnly.checked = getParameter('notableOnly') == 'true';
 }
 
+var servicePacks = {
+	'7010-de-07': 1,
+	'7010-de-12': 2,
+	'7010-de-14': 3,
+	'7010-de-22': 4,
+	'7010-de-30': 5,
+	'7010-de-32': 6,
+	'7010-de-40': 7,
+	'7010-de-50': 8
+};
+
 function generateBOM(selectId) {
 	selectId = selectId || 'sourceVersion';
 
@@ -36,7 +47,8 @@ function generateBOM(selectId) {
 
 	if ((versionNumber % 100 == 10) && (selectValue.indexOf('-base') == -1)) {
 		var fixPackVersion = selectValue.substring(selectValue.indexOf('-', 5) + 1);
-		versionId = Math.floor(versionNumber / 1000) + '.' + Math.floor((versionNumber % 1000) / 100) + '.10.fp' + fixPackVersion;
+		var versionSuffix = selectValue in servicePacks ? ('.' + servicePacks[selectValue]) : ('.fp' + fixPackVersion);
+		versionId = Math.floor(versionNumber / 1000) + '.' + Math.floor((versionNumber % 1000) / 100) + '.10' + versionSuffix;
 	}
 	else {
 		var fixPackVersion = selectValue.substring(selectValue.indexOf('-', 5) + 1);
@@ -45,26 +57,49 @@ function generateBOM(selectId) {
 
 	var bomXML = [
 		'<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">',
-		'<modelVersion>4.0.0</modelVersion>',
-		'<groupId>com.liferay</groupId>',
-		'<artifactId>', artifactId, '</artifactId>',
-		'<version>', versionId, '</version>',
-		'<packaging>pom</packaging>',
-		'<licenses><license><name>LGPL 2.1</name><url>http://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt</url></license></licenses>',
-		'<developers><developer><name>Brian Wing Shun Chan</name><organization>Liferay, Inc.</organization><organizationUrl>http://www.liferay.com</organizationUrl></developer></developers>',
-		'<scm><connection>scm:git:git@github.com:liferay/liferay-portal.git</connection><developerConnection>scm:git:git@github.com:liferay/liferay-portal.git</developerConnection><url>https://github.com/liferay/liferay-portal</url></scm>',
-		'<repositories>',
-		'<repository><id>liferay-public</id><name>Liferay Public (CDN)</name><url>https://repository-cdn.liferay.com/nexus/content/repositories/public/</url></repository>',
-		'<repository><id>liferay-public-snpashots</id><name>Liferay Public Snapshots (CDN)</name><url>https://repository-cdn.liferay.com/nexus/content/repositories/liferay-public-snapshots/</url></repository>',
-		'</repositories>',
-		'<dependencyManagement>',
-		'<dependencies>'
+		'  <modelVersion>4.0.0</modelVersion>',
+		'  <groupId>com.liferay</groupId>',
+		'  <artifactId>' + artifactId + '</artifactId>',
+		'  <version>' + versionId + '</version>',
+		'  <packaging>pom</packaging>',
+		'  <licenses>',
+		'    <license>',
+		'      <name>LGPL 2.1</name>',
+		'      <url>http://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt</url>',
+		'    </license>',
+		'  </licenses>',
+		'  <developers>',
+		'    <developer>',
+		'      <name>Brian Wing Shun Chan</name>',
+		'      <organization>Liferay, Inc.</organization>',
+		'      <organizationUrl>http://www.liferay.com</organizationUrl>',
+		'    </developer>',
+		'  </developers>',
+		'  <scm>',
+		'    <connection>scm:git:git@github.com:liferay/liferay-portal.git</connection>',
+		'    <developerConnection>scm:git:git@github.com:liferay/liferay-portal.git</developerConnection>',
+		'    <url>https://github.com/liferay/liferay-portal</url>',
+		'  </scm>',
+		'  <repositories>',
+		'    <repository>',
+		'      <id>liferay-public</id>',
+		'      <name>Liferay Public (CDN)</name>',
+		'      <url>https://repository-cdn.liferay.com/nexus/content/repositories/public/</url>',
+		'    </repository>',
+		'    <repository>',
+		'      <id>liferay-public-snapshots</id>',
+		'      <name>Liferay Public Snapshots (CDN)</name>',
+		'      <url>https://repository-cdn.liferay.com/nexus/content/repositories/liferay-public-snapshots/</url>',
+		'    </repository>',
+		'  </repositories>',
+		'  <dependencyManagement>',
+		'    <dependencies>'
 	];
 
 	var key ='version_' + selectValue;
 
-	var isAvailableVersion = function(versionInfo) {
-		return versionInfo[key] && versionInfo[key] != '0.0.0';
+	var isAvailableVersion = function(repository, versionInfo) {
+		return (key in versionInfo) && versionInfo[key] != '0.0.0' && versionInfo['repository'] == repository;
 	};
 
 	var asDependencyElement = function(accumulator, versionInfo) {
@@ -90,23 +125,29 @@ function generateBOM(selectId) {
 		}
 
 		accumulator.push(
-			'<dependency>',
-			'<groupId>', versionInfo['group'], '</groupId>',
-			'<artifactId>', versionInfo['name'], '</artifactId>',
-			'<version>', dependencyVersion, '</version>',
-			'</dependency>'
+			'      <dependency>',
+			'        <groupId>' + versionInfo['group'] + '</groupId>',
+			'        <artifactId>' + versionInfo['name'] + '</artifactId>',
+			'        <version>' + dependencyVersion + '</version>',
+			'      </dependency>'
 		);
 
 		return accumulator;
 	}
 
-	console.log('What?');
+	versionInfoList.filter(isAvailableVersion.bind(null, 'public')).reduce(asDependencyElement, bomXML);
 
-	versionInfoList.filter(isAvailableVersion).reduce(asDependencyElement, bomXML);
+	bomXML.push('', '      <!--');
+	versionInfoList.filter(isAvailableVersion.bind(null, 'private')).reduce(asDependencyElement, bomXML);
+	bomXML.push('      -->', '');
 
-	bomXML.push('</dependencies>', '</dependencyManagement>', '</project>');
+	bomXML.push(
+		'    </dependencies>',
+		'  </dependencyManagement>',
+		'</project>'
+	);
 
-	var bomBlob = new Blob(bomXML, {type : 'application/xml'});
+	var bomBlob = new Blob([bomXML.join('\n')], {type : 'application/xml'});
 
 	var downloadBOMLink = document.createElement('a');
 	downloadBOMLink.style.display = 'none';
@@ -257,7 +298,7 @@ request.onreadystatechange = function() {
 			var option = document.createElement('option');
 
 			option.value = x;
-			option.innerHTML = x;
+			option.innerHTML = x in servicePacks ? (x + ' (sp' + servicePacks[x] + ')') : x;
 			select.appendChild(option);
 
 			return select;
