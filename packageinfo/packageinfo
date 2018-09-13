@@ -12,7 +12,7 @@ bundleinfo() {
 			local BUNDLE_NAME="com.liferay.$(echo $folder | tr '-' '.')"
 			local BUNDLE_VERSION=$(grep '^Bundle-Version' $folder/bnd.bnd | cut -d' ' -f 2-)
 
-			echo "com.liferay.portal,${BUNDLE_NAME},${BUNDLE_VERSION}-SNAPSHOT" >> ${OUTPUT_FILE}
+			echo "com.liferay.portal,${BUNDLE_NAME},${BUNDLE_VERSION}-SNAPSHOT,public" >> ${OUTPUT_FILE}
 		fi
 	done
 
@@ -51,7 +51,13 @@ bundleinfo() {
 		local BUNDLE_NAME=$(grep '^Bundle-SymbolicName' $folder/bnd.bnd | cut -d' ' -f 2-)
 		local BUNDLE_VERSION=$(grep '^Bundle-Version' $folder/bnd.bnd | cut -d' ' -f 2-)
 
-		echo "com.liferay,${BUNDLE_NAME},${BUNDLE_VERSION}" >> ${OUTPUT_FILE}
+		local REPOSITORY='public'
+
+		if [[ ${folder} == modules/private/* ]]; then
+			REPOSITORY='private'
+		fi
+
+		echo "com.liferay,${BUNDLE_NAME},${BUNDLE_VERSION},${REPOSITORY}" >> ${OUTPUT_FILE}
 	done
 }
 
