@@ -40,7 +40,7 @@ function generateBOM(selectId) {
 	var select = document.getElementById(selectId);
 	var selectValue = select.options[select.selectedIndex].value;
 
-	var artifactId = selectValue.indexOf('-ga') != -1 ? 'com.liferay.ce.bom' : 'com.liferay.dxp.bom';
+	var artifactId = selectValue.indexOf('-ga') != -1 ? 'release.portal.bom' : 'release.dxp.bom';
 
 	var versionId;
 	var versionNumber = parseInt(selectValue.substring(0, 4));
@@ -283,8 +283,12 @@ var request = new XMLHttpRequest();
 var requestURL = 'https://s3-us-west-2.amazonaws.com/mdang.grow/dxpmodules.json';
 
 request.onreadystatechange = function() {
+	var hasRepository = function(versionInfo) {
+		return versionInfo['repository'] && versionInfo['repository'] != 'none';
+	};
+
 	if (this.readyState == 4 && this.status == 200) {
-		versionInfoList = JSON.parse(this.responseText);
+		versionInfoList = JSON.parse(this.responseText).filter(hasRepository);
 
 		var prefix = 'version_';
 
