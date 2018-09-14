@@ -43,6 +43,7 @@ copy_driver() {
 		echo "${DRIVER} not found. Please download it and copy it to ${DRIVERS_FOLDER}"
 	else
 		echo "Copying ${DRIVER} from ${DRIVERS_FOLDER} to ${CATALINA_HOME}/lib/ext"
+		mkdir -p ${CATALINA_HOME}/lib/ext
 		cp ${DRIVERS_FOLDER}/${DRIVER} ${CATALINA_HOME}/lib/ext
 	fi
 }
@@ -102,11 +103,13 @@ set_container_mounts() {
 		LIFERAY_RELEASE_MOUNT="-v ${PWD}/data/document_library:/opt/liferay/data/document_library"
 	fi
 
-	if [ "$PWD" == "$HOME" ] || [ "" != "${LIFERAY_HOME_MOUNT}" ]; then
-		return 0
-	fi
-
-	if [ -f portal-ext.properties ] || [ -d drivers ] || [ -d patches ]; then
+	if [ "" != "${LIFERAY_HOME}" ]; then
+		LIFERAY_HOME_MOUNT="-v ${PWD}:/build"
+	elif [ "$PWD" == "${HOME}" ]; then
+		echo "Unable to determine LIFERAY_HOME"
+		echo "Please run from a folder other than ${HOME} containing portal-ext.properties"
+		return 1
+	elif [ -f portal-ext.properties ] || [ -d drivers ] || [ -d patches ]; then
 		LIFERAY_HOME=${PWD}
 		LIFERAY_HOME_MOUNT="-v ${PWD}:/build"
 	elif [ -d bundles ]; then
@@ -114,7 +117,6 @@ set_container_mounts() {
 		LIFERAY_HOME_MOUNT="-v ${PWD}/bundles:/build"
 	elif [ -f app.server.$USER.properties ]; then
 		. $(dirname $(dirname ${BASH_SOURCE[0]}))/appserverprops
-
 		LIFERAY_HOME_MOUNT="-v ${LIFERAY_HOME}:/build"
 	else
 		echo "Unable to determine LIFERAY_HOME"
@@ -122,13 +124,19 @@ set_container_mounts() {
 		return 1
 	fi
 
-	CATALINA_HOME="${LIFERAY_HOME}/$(ls ${LIFERAY_HOME} | grep '^tomcat-')"
+	local TOMCAT_FOLDER="$(ls ${LIFERAY_HOME} | grep '^tomcat-')"
 
-	if [ "" != "$1" ] && [ "" != "${CATALINA_HOME}" ]; then
-		echo "You asked to start a container running $1 rather than a bundle built from source"
-		echo "However, there is a '${CATALINA_HOME}' folder present in ${LIFERAY_HOME} that would be copied to the container"
-		echo "Cowardly refusing to create the Docker container"
-		return 1
+	if [ "" != "${TOMCAT_FOLDER}" ]; then
+		if [ "" != "$1" ]; then
+			echo "You asked to start a container running $1 rather than a bundle built from source"
+			echo "However, there is a '${TOMCAT_FOLDER}' folder present in ${LIFERAY_HOME} that would be copied to the container"
+			echo "Cowardly refusing to create the Docker container"
+			return 1
+		else
+			CATALINA_HOME="${LIFERAY_HOME}/${TOMCAT_FOLDER}"
+		fi
+	else
+		CATALINA_HOME="${LIFERAY_HOME}/tomcat"
 	fi
 }
 
