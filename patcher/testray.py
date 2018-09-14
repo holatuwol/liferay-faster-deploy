@@ -129,7 +129,7 @@ def get_github_build_url(url):
 			if build['name'].find(matching_name) != -1
 	]
 
-	if len(matching_build_urls) != 1:
+	if len(matching_build_urls) == 0:
 		print('Unable to determine build URL from %s' % url)
 		return None
 
@@ -196,7 +196,7 @@ def get_hotfix_build_url(url):
 			if build['name'].find(hotfix_id) != -1
 	]
 
-	if len(matching_build_urls) != 1:
+	if len(matching_build_urls) == 0:
 		print('Unable to determine build URL from %s' % url)
 		return None
 
