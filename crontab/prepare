@@ -117,27 +117,40 @@ finish() {
 	TOMCAT_FOLDER=$LIFERAY_HOME/tomcat-${TOMCAT_VERSION}
 
 	cp tools/servers/tomcat/bin/setenv.* $TOMCAT_FOLDER/bin
-	sed -i 's/@.*@ //g' $TOMCAT_FOLDER/bin/setenv.sh
-	sed -i 's/@.*@ //g' $TOMCAT_FOLDER/bin/setenv.bat
 
-	echo -en '\nGIT_HASH="'$GIT_HASH'"' >> $TOMCAT_FOLDER/bin/setenv.sh
-	echo -en '\r\nset GIT_HASH="'$GIT_HASH'"' >> $TOMCAT_FOLDER/bin/setenv.bat
+	for file in setenv.sh setenv.bat; do
+		sed -i 's/@.*@ //g' $TOMCAT_FOLDER/bin/${file}
 
-	echo -en '\nCATALINA_OPTS="$CATALINA_OPTS -Denv.COMPUTERNAME='$1'-$GIT_HASH"' >> $TOMCAT_FOLDER/bin/setenv.sh
-	echo -en '\r\nset "CATALINA_OPTS=%CATALINA_OPTS% -Denv.COMPUTERNAME='$1'-%GIT_HASH%"' >> $TOMCAT_FOLDER/bin/setenv.bat
+		sed -i 's/ -Xm[sx][0-9]*[gm]//g' $TOMCAT_FOLDER/bin/${file}
+		sed -i 's/ -XX:NewSize=[0-9]*[gm]//g' $TOMCAT_FOLDER/bin/${file}
+		sed -i 's/ -XX:MaxNewSize=[0-9]*[gm]//g' $TOMCAT_FOLDER/bin/${file}
+		sed -i 's/ -XX:PermSize=[0-9]*[gm]//g' $TOMCAT_FOLDER/bin/${file}
+		sed -i 's/ -XX:MaxPermSize=[0-9]*[gm]//g' $TOMCAT_FOLDER/bin/${file}
+		sed -i 's/ -XX:MetaspaceSize=[0-9]*[gm]//g' $TOMCAT_FOLDER/bin/${file}
+		sed -i 's/ -XX:MaxMetaspaceSize=[0-9]*[gm]//g' $TOMCAT_FOLDER/bin/${file}
+		sed -i 's/ -XX:SurvivorRatio=7//g' $TOMCAT_FOLDER/bin/${file}
 
-	echo -en '\n#JAVA_HOME=' >> $TOMCAT_FOLDER/bin/setenv.sh
-	echo -en '\r\nrem set JAVA_HOME=' >> $TOMCAT_FOLDER/bin/setenv.bat
+		local SETVAR=
+		local UNSETVAR='#'
+		local NEWLINE='\n'
 
-	echo -en '\nPATH=$JAVA_HOME/bin:$PATH' >> $TOMCAT_FOLDER/bin/setenv.sh
-	echo -en '\r\nset PATH="%JAVA_HOME%\\bin;%PATH%"' >> $TOMCAT_FOLDER/bin/setenv.bat
+		if [ "setenv.bat" == "${file}" ]; then
+			SETVAR='set '
+			UNSETVAR='rem set '
+			NEWLINE='\r\n'
+		fi
 
-	if [ "ee-6.2.x" == "$BASE_BRANCH" ] || [ "ee-6.1.x" == "$BASE_BRANCH" ]; then
-		sed -i 's/-Xmx[0-9]*[gm]/-Xms1g -Xmx1g/g' $TOMCAT_FOLDER/bin/setenv.sh
-		sed -i 's/-Xmx[0-9]*[gm]/-Xms1g -Xmx1g/g' $TOMCAT_FOLDER/bin/setenv.bat
-	else
-		sed -i 's/-Xmx[0-9]*[gm]/-Xms2g -Xmx2g/g' $TOMCAT_FOLDER/bin/setenv.sh
-		sed -i 's/-Xmx[0-9]*[gm]/-Xms2g -Xmx2g/g' $TOMCAT_FOLDER/bin/setenv.bat
+		echo -en ${NEWLINE}${UNSETVAR}'JAVA_HOME=' >> $TOMCAT_FOLDER/bin/${file}
+		echo -en ${NEWLINE}${SETVAR}'PATH=$JAVA_HOME/bin:$PATH' >> $TOMCAT_FOLDER/bin/${file}
+
+		echo -en ${NEWLINE}${SETVAR}'GIT_HASH="'$GIT_HASH'"' >> $TOMCAT_FOLDER/bin/${file}
+		echo -en ${NEWLINE}${SETVAR}'CATALINA_OPTS="$CATALINA_OPTS -Denv.COMPUTERNAME='$1'-$GIT_HASH"' >> $TOMCAT_FOLDER/bin/${file}
+
+		if [ "ee-6.2.x" == "$BASE_BRANCH" ] || [ "ee-6.1.x" == "$BASE_BRANCH" ]; then
+			echo -en ${NEWLINE}${SETVAR}'CATALINA_OPTS="$CATALINA_OPTS -Xms1g -Xmx1g -XX:MaxPermSize=256m"' >> $TOMCAT_FOLDER/bin/${file}
+		else
+			echo -en ${NEWLINE}${SETVAR}'CATALINA_OPTS="$CATALINA_OPTS -Xms2g -Xmx2g -XX:MaxMetaspaceSize=512m"' >> $TOMCAT_FOLDER/bin/${file}
+		fi
 	fi
 
 	sed -i 's/ start / jpda start /g' $TOMCAT_FOLDER/bin/startup.sh
