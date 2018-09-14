@@ -36,7 +36,7 @@ class SourceTrie:
 
 		# Load information from bnd.bnd
 
-		_, artifact_version = self.extract_bnd(path)
+		_, artifact_version = self.extract_version(path, 'modules/.releng/%s.properties' % path)
 
 		build_xml = '%s/build.xml' % path
 
@@ -61,14 +61,14 @@ class SourceTrie:
 			y = lines[0].find('"', x)
 
 		artifact_name = lines[0][x:y]
-		self.add(path, 'com.liferay.portal', artifact_name, artifact_version + '-SNAPSHOT')
+		self.add(path, 'com.liferay.portal', artifact_name, artifact_version)
 
 	def add_gradle(self, path):
-		artifact_name, artifact_version = self.extract_bnd(path)
+		artifact_name, artifact_version = self.extract_version(path, 'modules/.releng/%s/artifact.properties' % path[8:])
 		self.add(path, 'com.liferay', artifact_name, artifact_version)
 
-	def extract_bnd(self, path):
-		bnd_bnd = '%s/bnd.bnd' % path
+	def extract_version(self, module_path, releng_path):
+		bnd_bnd = '%s/bnd.bnd' % module_path
 
 		if not os.path.exists(bnd_bnd):
 			return None, None
@@ -79,11 +79,25 @@ class SourceTrie:
 		name_lines = [line for line in lines if line.startswith('Bundle-SymbolicName:')]
 		version_lines = [line for line in lines if line.startswith('Bundle-Version:')]
 
+		if os.path.exists(releng_path):
+			with open(releng_path, 'r') as f:
+				lines = [line for line in f.readlines()]
+
+			artifact_url_lines = [line for line in lines if line.startswith('artifact.url')]
+		else:
+			artifact_url_lines = []
+
 		if len(name_lines) != 1 or len(version_lines) != 1:
 			return None, None
 
 		artifact_name = name_lines[0][20:].strip()
-		artifact_version = version_lines[0][15:].strip()
+
+		if len(artifact_url_lines) > 0:
+			artifact_url = artifact_url_lines[0][13:]
+			version_pos = artifact_url.find('/' + artifact_name + '/') + len(artifact_name) + 2
+			artifact_version = artifact_url[version_pos:artifact_url.find('/', version_pos)]
+		else:
+			artifact_version = version_lines[0][15:].strip() + '-SNAPSHOT'
 
 		return artifact_name, artifact_version
 

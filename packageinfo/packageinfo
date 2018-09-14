@@ -10,9 +10,14 @@ bundleinfo() {
 	for folder in $(ls -1 . | sort -u); do
 		if [ -f "$folder/bnd.bnd" ]; then
 			local BUNDLE_NAME="com.liferay.$(echo $folder | tr '-' '.')"
-			local BUNDLE_VERSION=$(grep '^Bundle-Version' $folder/bnd.bnd | cut -d' ' -f 2-)
 
-			echo "com.liferay.portal,${BUNDLE_NAME},${BUNDLE_VERSION}-SNAPSHOT,public" >> ${OUTPUT_FILE}
+			local BUNDLE_VERSION="$(grep '^Bundle-Version' $folder/bnd.bnd | cut -d' ' -f 2-)-SNAPSHOT"
+
+			if [ -f modules/.releng/${folder}.properties ]; then
+				BUNDLE_VERSION=$(grep 'artifact.url' modules/.releng/${folder}.properties | cut -d'=' -f 2 | grep -o "/${BUNDLE_NAME}/[^/]*" | cut -d'/' -f 3)
+			fi
+
+			echo "com.liferay.portal,${BUNDLE_NAME},${BUNDLE_VERSION},public" >> ${OUTPUT_FILE}
 		fi
 	done
 
@@ -49,12 +54,20 @@ bundleinfo() {
 		fi
 
 		local BUNDLE_NAME=$(grep '^Bundle-SymbolicName' $folder/bnd.bnd | cut -d' ' -f 2-)
-		local BUNDLE_VERSION=$(grep '^Bundle-Version' $folder/bnd.bnd | cut -d' ' -f 2-)
+		local BUNDLE_VERSION="$(grep '^Bundle-Version' $folder/bnd.bnd | cut -d' ' -f 2-)-SNAPSHOT"
 
 		local REPOSITORY='public'
 
 		if [[ ${folder} == modules/private/* ]]; then
 			REPOSITORY='private'
+		fi
+
+		local RELENG_FOLDER=$(echo "${folder}" | sed 's@^modules/@modules/.releng/@g')
+
+		if [ -d ${RELENG_FOLDER} ]; then
+			BUNDLE_VERSION=$(grep 'artifact.url' ${RELENG_FOLDER}/artifact.properties | cut -d'=' -f 2 | grep -o "/${BUNDLE_NAME}/[^/]*" | cut -d'/' -f 3)
+		else
+			REPOSITORY='none'
 		fi
 
 		echo "com.liferay,${BUNDLE_NAME},${BUNDLE_VERSION},${REPOSITORY}" >> ${OUTPUT_FILE}
