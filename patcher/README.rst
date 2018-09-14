@@ -31,6 +31,10 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 			${MCD_RD_CLONE_PATH}/patcher/subrepobp $@
 	}
 
+	testray() {
+		${MCD_RD_CLONE_PATH}/patcher/testray $@
+	}
+
 Find Build for Hotfix
 =====================
 
@@ -96,3 +100,17 @@ To use this script, run it from a folder that currently has ``ee-7.0.x`` checked
 .. code-block:: bash
 
 	subrepobp LPS-1 LPS-2 LPS-3 LPS-4
+
+Lookup Build Result on Testray
+==============================
+
+While doing Support QA work, I realized that I really disliked how I had to travel through so many different screens in order to get to the build results. So, I decided to automate that part of it.
+
+* `testray <testray>`__
+
+To use this script, just give it either a Patcher Portal build URL or a hotfix URL.
+
+.. code-block:: bash
+
+	testray https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/0
+	testray http://files.liferay.com/private/ee/fix-packs/7.0.10/hotfix/liferay-hotfix-0-7010.zip
