@@ -135,15 +135,46 @@ def get_github_build_url(url):
 
 	return matching_build_urls[0]
 
+def get_hotfix_url(url):
+	if url.find('https://patcher.liferay.com/') != 0:
+		return url
+
+	hotfix_html = get_liferay_content(url)
+
+	if hotfix_html is None:
+		print('Unable to determine hotfix ID from %s' % url)
+		return None
+
+	soup = BeautifulSoup(hotfix_html, 'html.parser')
+
+	download_label = soup.find('label', {'for': '_1_WAR_osbpatcherportlet_official'})
+
+	if download_label is None:
+		print('Unable to determine hotfix ID from %s' % url)
+		return None
+
+	download_link = download_label.parent.find('a')
+
+	if download_link is None:
+		print('Unable to determine hotfix ID from %s' % url)
+		return None
+
+	return download_link['href']
+
 def get_hotfix_build_url(url):
-	routine_id = get_routine_id(url)
+	hotfix_url = get_hotfix_url(url)
+
+	if hotfix_url is None:
+		return None
+
+	routine_id = get_routine_id(hotfix_url)
 
 	if routine_id is None:
 		return None
 
 	base_url = 'https://testray.liferay.com/api/jsonws/osb-testray-web.builds/index'
 
-	hotfix_id = url[url.rfind('/') + 1 : url.rfind('.')]
+	hotfix_id = hotfix_url[hotfix_url.rfind('/') + 1 : hotfix_url.rfind('.')]
 
 	hotfix_parts = hotfix_id.split('-')
 	hotfix_number = hotfix_parts[2]
@@ -174,6 +205,9 @@ def get_hotfix_build_url(url):
 def get_build_url(url):
 	if url.find('https://github.com/') == 0:
 		return get_github_build_url(url)
+
+	if url.find('https://patcher.liferay.com/') == 0:
+		return get_hotfix_build_url(url)
 
 	if url.find('https://files.liferay.com/') == 0:
 		return get_hotfix_build_url(url)
