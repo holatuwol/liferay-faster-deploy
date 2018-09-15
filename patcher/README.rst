@@ -108,7 +108,7 @@ While doing Support QA work, I realized that I really disliked how I had to trav
 
 * `testray <testray>`__
 
-To use this script, just give it either a Patcher Portal build URL or a hotfix URL.
+It's not very secure, but in order to use this script, you'll want to set your Liferay username and password as ``git`` configurations. The username should be set against ``files.username`` and the password should be set against ``files.password``. Once you've done that, just give it either a Patcher Portal build URL or a hotfix URL.
 
 .. code-block:: bash
 
