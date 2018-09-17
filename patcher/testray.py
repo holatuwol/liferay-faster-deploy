@@ -4,7 +4,9 @@ from scrape_liferay import get_liferay_content, get_namespaced_parameters
 import sys
 import webbrowser
 
-def get_project_version(url):
+# Utility methods for bridging Liferay systems
+
+def get_liferay_version(url):
 	if url.find('https://files.liferay.com/') == 0 or url.find('http://files.liferay.com/') == 0:
 		url_parts = url.split('/')
 		version_id = url_parts[6]
@@ -17,8 +19,96 @@ def get_project_version(url):
 	print('Unable to determine Liferay version from %s' % url)
 	return None
 
+# Utility methods for dealing with Patcher Portal
+
+def get_patcher_build(url):
+	build_url_parts = url.split('/')
+	build_id = build_url_parts[-1]
+
+	base_url = 'https://patcher.liferay.com/api/jsonws/osb-patcher-portlet.builds/view'
+
+	parameters = {
+		'id': build_id
+	}
+
+	json_response = json.loads(get_liferay_content(base_url, parameters, 'post'))
+
+	if json_response['status'] != 200:
+		print('Unable to retrieve account code for %s' % url)
+		return None
+
+	return json_response['data']
+
+def get_previous_patcher_build(patcher_build):
+	if patcher_build is None:
+		return None
+
+	account_code = patcher_build['patcherBuildAccountEntryCode']
+
+	if account_code is None:
+		return None
+
+	base_url = 'https://patcher.liferay.com/api/jsonws/osb-patcher-portlet.accounts/view'
+
+	parameters = {
+		'limit': 10,
+		'patcherBuildAccountEntryCode': account_code
+	}
+
+	json_response = json.loads(get_liferay_content(base_url, parameters))
+
+	if json_response['status'] != 200:
+		print('Unable to retrieve account builds for %s' % account_code)
+		return None
+
+	matching_builds = [
+		build for build in json_response['data']
+			if build['statusLabel'] == 'complete' and
+				build['qaStatusLabel'] == 'qa-automation-passed' and
+				build['downloadURL'][-8:] == patcher_build['downloadURL'][-8:] and
+				build['patcherBuildId'] != patcher_build['patcherBuildId']
+	]
+
+	if len(matching_builds) == 0:
+		return None
+
+	same_baseline_builds = [
+		build for build in matching_builds
+			if build['patcherProjectVersionId'] == patcher_build['patcherProjectVersionId']
+	]
+
+	if len(same_baseline_builds) != 0:
+		matching_builds = same_baseline_builds
+
+	patcher_build_fixes = set(patcher_build['patcherBuildName'].split(','))
+
+	best_matching_build = None
+	best_matching_build_overlap = len(patcher_build_fixes)
+
+	for matching_build in matching_builds:
+		matching_build_overlap = len(patcher_build_fixes - set(matching_build['patcherBuildName'].split(',')))
+
+		if matching_build_overlap < best_matching_build_overlap:
+			best_matching_build = matching_build
+			best_matching_build_overlap = matching_build_overlap
+
+	return best_matching_build
+
+def get_hotfix_url(url):
+	if url.find('https://patcher.liferay.com/') != 0:
+		return url
+
+	patcher_build = get_patcher_build(url)
+
+	if patcher_build is None:
+		return None
+
+	return patcher_build['downloadURL']
+
+# Utility methods for dealing with Testray
+
 def get_project_id(url):
-	version = get_project_version(url)
+	version = get_liferay_version(url)
 
 	if version is None:
 		return None
@@ -97,23 +187,13 @@ def get_routine_id(url):
 
 	return matching_routine_ids[0]
 
-def get_github_build_url(url):
-	routine_id = get_routine_id(url)
-
-	if routine_id is None:
-		return None
-
+def get_build_id(routine_id, search_name, matching_name, archived=False):
 	base_url = 'https://testray.liferay.com/api/jsonws/osb-testray-web.builds/index'
 
-	pull_request_parts = url.split('/')
-
-	pull_request_sender = pull_request_parts[3]
-	pull_request_number = pull_request_parts[6]
-
 	parameters = {
-		'name': pull_request_sender,
+		'name': search_name,
 		'testrayRoutineId': routine_id,
-		'archived': False,
+		'archived': archived,
 		'cur': 0,
 		'delta': 100,
 		'start': -1,
@@ -122,48 +202,41 @@ def get_github_build_url(url):
 
 	json_response = json.loads(get_liferay_content(base_url, parameters))
 
-	matching_name = '> %s - PR#%s' % (pull_request_sender, pull_request_number)
+	if json_response['status'] != 200:
+		print('Unable to determine build for routine %s, search string %s' % (routine_id, search_name))
+		return None
 
-	matching_build_urls = [
-		build['htmlURL'] for build in json_response['data']
+	matching_build_ids = [
+		build['testrayBuildId'] for build in json_response['data']
 			if build['name'].find(matching_name) != -1
 	]
 
-	if len(matching_build_urls) == 0:
-		print('Unable to determine build URL from %s' % url)
+	if len(matching_build_ids) == 0:
+		if not archived:
+			return get_build(routine_id, search_name, matching_name, True)
+
+		print('Unable to determine build for routine %s, search string %s, matching string %s' % (routine_id, search_name, matching_name))
 		return None
 
-	return matching_build_urls[0]
+	return matching_build_ids[0]
 
-def get_hotfix_url(url):
-	if url.find('https://patcher.liferay.com/') != 0:
-		return url
+def get_github_build_id(github_url):
+	routine_id = get_routine_id(github_url)
 
-	hotfix_html = get_liferay_content(url)
-
-	if hotfix_html is None:
-		print('Unable to determine hotfix ID from %s' % url)
+	if routine_id is None:
 		return None
 
-	soup = BeautifulSoup(hotfix_html, 'html.parser')
+	pull_request_parts = github_url.split('/')
 
-	download_label = soup.find('label', {'for': '_1_WAR_osbpatcherportlet_official'})
+	pull_request_sender = pull_request_parts[3]
+	pull_request_number = pull_request_parts[6]
 
-	if download_label is None:
-		print('Unable to determine hotfix ID from %s' % url)
-		return None
+	search_name = pull_request_sender
+	matching_name = '> %s - PR#%s' % (pull_request_sender, pull_request_number)
 
-	download_link = download_label.parent.find('a')
+	return get_build_id(routine_id, search_name, matching_name)
 
-	if download_link is None:
-		print('Unable to determine hotfix ID from %s' % url)
-		return None
-
-	return download_link['href']
-
-def get_hotfix_build_url(url):
-	hotfix_url = get_hotfix_url(url)
-
+def get_hotfix_build_id(hotfix_url):
 	if hotfix_url is None:
 		return None
 
@@ -179,50 +252,101 @@ def get_hotfix_build_url(url):
 	hotfix_parts = hotfix_id.split('-')
 	hotfix_number = hotfix_parts[2]
 
+	search_name = hotfix_number
+	matching_name = hotfix_id
+
+	return get_build_id(routine_id, search_name, matching_name)
+
+def get_run_id(build_id):
+	if build_id is None:
+		return None
+
+	base_url = 'https://testray.liferay.com/api/jsonws/osb-testray-web.runs/index'
+
 	parameters = {
-		'name': hotfix_number,
-		'testrayRoutineId': routine_id,
-		'archived': False,
+		'testrayBuildId': build_id,
 		'cur': 0,
 		'delta': 100,
-		'start': -1,
-		'end': -1
 	}
 
 	json_response = json.loads(get_liferay_content(base_url, parameters))
 
-	matching_build_urls = [
-		build['htmlURL'] for build in json_response['data']
-			if build['name'].find(hotfix_id) != -1
-	]
-
-	if len(matching_build_urls) == 0:
-		print('Unable to determine build URL from %s' % url)
+	if json_response['status'] != 200:
+		print('Unable to determine runs for build %s' % (build_id))
 		return None
 
-	return matching_build_urls[0]
+	first_runs = [
+		run['testrayRunId'] for run in json_response['data']
+			if run['number'] == '1'
+	]
 
-def get_build_url(url):
+	if len(first_runs) == 0:
+		print('Unable to determine runs for build %s' % (build_id))
+		return None
+
+	return first_runs[0]
+
+def get_testray_url(a, b):
+	if a is None:
+		return None
+
+	if b is None:
+		return 'https://testray.liferay.com/home/-/testray/case_results?testrayBuildId=%s&testrayRunId=%s' % (a, get_run_id(a))
+
+	return 'https://testray.liferay.com/home/-/testray/runs/compare?testrayRunIdA=%s&testrayRunIdB=%s&view=details' % (get_run_id(a), get_run_id(b))
+
+# Main logic for deciding which URL to use
+
+def open_testray(url):
+	if url.find('?') != -1:
+		url = url[0:url.find('?')]
+
+	patcher_url = None
+	hotfix_url = None
+
 	if url.find('https://github.com/') == 0:
-		return get_github_build_url(url)
-
+		build_id = get_github_build_id(url)
 	if url.find('https://patcher.liferay.com/') == 0:
-		return get_hotfix_build_url(url)
+		patcher_url = url
+	elif url.find('https://files.liferay.com/') == 0:
+		build_id = get_hotfix_build_id(url)
+	elif url.find('http://files.liferay.com/') == 0:
+		build_id = get_hotfix_build_id(url)
+	else:
+		print('Unable to determine build URL from %s' % url)
+		return
 
-	if url.find('https://files.liferay.com/') == 0:
-		return get_hotfix_build_url(url)
+	testray_url = None
 
-	if url.find('http://files.liferay.com/') == 0:
-		return get_hotfix_build_url(url)
+	if patcher_url is not None:
+		patcher_build = get_patcher_build(patcher_url)
 
-	print('Unable to determine build URL from %s' % url)
-	return None
+		if patcher_build is None:
+			return
 
-if len(sys.argv) > 1:
-	build_url = get_build_url(sys.argv[1])
+		build_id = get_hotfix_build_id(patcher_build['downloadURL'])
 
-	if build_url is not None:
-		webbrowser.open_new_tab(build_url)
-else:
-	print('testray <github_url>')
-	print('testray <hotfix_url>')
+		if build_id is None:
+			return
+
+		previous_patcher_build = get_previous_patcher_build(patcher_build)
+
+		if previous_patcher_build is not None:
+			previous_build_id = get_hotfix_build_id(previous_patcher_build['downloadURL'])
+			testray_url = get_testray_url(build_id, previous_build_id)
+
+	if testray_url is None:
+		testray_url = get_testray_url(build_id, None)
+
+	if testray_url is not None:
+		webbrowser.open_new_tab(testray_url)
+
+# Main method
+
+if __name__ == '__main__':
+	if len(sys.argv) > 1:
+		open_testray(sys.argv[1])
+	else:
+		print('testray <github_url>')
+		print('testray <hotfix_url>')
+		print('testray <patcher_url>')
