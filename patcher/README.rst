@@ -22,6 +22,11 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 			${MCD_RD_CLONE_PATH}/patcher/findbuild $@
 	}
 
+	fixlist62() {
+		FILES_MIRROR=http://mirrors/files.liferay.com \
+			${MCD_RD_CLONE_PATH}/patcher/fixlist62 $@
+	}
+
 	patcher() {
 		${MCD_RD_CLONE_PATH}/patcher/patcher $@
 	}
@@ -49,6 +54,18 @@ You can use it by specifying the hotfix number followed by the version of Lifera
 	findbuild 1 7010
 	findbuild hotfix-1-7010
 	findbuild liferay-hotfix-1-7010
+
+Find Unique Fixes in Hotfix
+===========================
+
+Because of the way patcher portal works, it's possible for customer support engineers to generate fixes that include fix names that are already part of a portal fix. While patcher portal can resolve this noise on its own, it still creates a lot of noise for technical support engineers if you need fixes to be rebased on a new portal fixpack level.
+
+You can use this script to only list the unique LPEs that don't already exist in a portal fixpack.
+
+.. code-block:: bash
+
+	fixlist62 portal-123 'LPE-1234,LPE-5678,LPE-9012'
+
 
 Add New Fixes
 =============
