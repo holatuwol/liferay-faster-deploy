@@ -68,40 +68,40 @@ def get_patcher_build(url):
 def get_fix_names(build):
 	return set(build['patcherBuildName'].split(','))
 
-def debug_in_browser(patcher_build, best_matching_build_diff, account_parameters):
-	account_base_url = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/accounts/view'
-	account_namespaced_parameters = get_namespaced_parameters('1_WAR_osbpatcherportlet', account_parameters)
-	account_query_string = '&'.join(['%s=%s' % (key, value) for key, value in account_namespaced_parameters.items()])
-
-	webbrowser.open_new_tab('%s?%s' % (account_base_url, account_query_string))
-
-	build_id = patcher_build['patcherBuildId']
-
+def show_fixes_in_browser(build_id, fixes):
 	base_url = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/%s/fixes' % build_id
 	parameters = {}
 
 	links = []
 
-	def append_fix_link(columns):
+	def process_fixes(columns):
 		has_fix = False
 
 		for fix_name in columns['name'].text.strip().split(','):
-			if fix_name in best_matching_build_diff:
+			if fix_name in fixes:
 				has_fix = True
 
 		if not has_fix:
 			return
 
 		fix_id = columns['fix id'].text.strip()
-		fix_url = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/fixes/%s' % fix_id
-		links.append(fix_url)
+
+		webbrowser.open_new_tab('https://patcher.liferay.com/group/guest/patching/-/osb_patcher/fixes/%s' % fix_id)
 
 	process_patcher_search_container(
 		base_url, parameters, 'patcherFixsSearchContainerSearchContainer',
-		['fix id', 'name'], append_fix_link)
+		['fix id', 'name'], process_fixes)
 
-	for link in links:
-		webbrowser.open_new_tab(link)
+	base_url = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/%s/childBuilds' % build_id
+	parameters = {}
+
+	def process_child_builds(columns):
+		child_build_id = columns['build id'].text.strip()
+		show_fixes_in_browser(child_build_id, fixes)
+
+	process_patcher_search_container(
+		base_url, parameters, 'patcherBuildsSearchContainerSearchContainer',
+		['build id'], process_child_builds)
 
 def get_previous_patcher_build(patcher_build):
 	if patcher_build is None:
@@ -164,7 +164,13 @@ def get_previous_patcher_build(patcher_build):
 			best_matching_build_fixes = matching_build_fixes
 			best_matching_build_diff = matching_build_diff
 
-	debug_in_browser(patcher_build, best_matching_build_diff, account_parameters)
+	account_base_url = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/accounts/view'
+	account_namespaced_parameters = get_namespaced_parameters('1_WAR_osbpatcherportlet', account_parameters)
+	account_query_string = '&'.join(['%s=%s' % (key, value) for key, value in account_namespaced_parameters.items()])
+
+	webbrowser.open_new_tab('%s?%s' % (account_base_url, account_query_string))
+
+	show_fixes_in_browser(patcher_build['patcherBuildId'], best_matching_build_diff)
 
 	return best_matching_build
 
