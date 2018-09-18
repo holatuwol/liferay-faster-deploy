@@ -58,8 +58,8 @@ def get_fix_id(typeFilter='0'):
 	if thead is None or tbody is None:
 		return None
 
-	fix_id_index = 0
-	content_index = 0
+	fix_id_index = -1
+	content_index = -1
 
 	for i, th in enumerate(thead.find_all('th')):
 		th_text = th.text.strip().lower()
@@ -68,6 +68,9 @@ def get_fix_id(typeFilter='0'):
 			fix_id_index = i
 		elif th_text == 'content':
 			content_index = i
+
+	if fix_id_index == -1 or content_index == -1:
+		return None
 
 	for tr in tbody.find_all('tr'):
 		cells = tr.find_all('td')
