@@ -16,6 +16,68 @@ from git import git_root, current_branch
 
 base_tag = getparent(True)
 
+def process_patcher_search_container(base_url, parameters, container_name, column_names, callback):
+	namespaced_parameters = get_namespaced_parameters('1_WAR_osbpatcherportlet', parameters)
+	namespaced_parameters['p_p_state'] = 'exclusive'
+
+	html = get_liferay_content(base_url, namespaced_parameters)
+	soup = BeautifulSoup(html, 'html.parser')
+
+	namespaced_container_name = '_1_WAR_osbpatcherportlet_%s' % container_name
+	search_container = soup.find('div', {'id': namespaced_container_name})
+
+	if search_container is None:
+		print('Unable to find search results %s' % namespaced_container_name)
+		return
+
+	table = search_container.find('table')
+
+	if table is None:
+		print('Unable to find search results %s' % (namespaced_container_name))
+		return
+
+	thead = table.find('thead')
+	tbody = table.find('tbody')
+
+	if thead is None or tbody is None:
+		print('No search results %s' % (namespaced_container_name))
+		return
+
+	column_indices = [-1] * len(column_names)
+
+	for i, th in enumerate(thead.find_all('th')):
+		th_text = th.text.strip().lower()
+
+		for j, column_name in enumerate(column_names):
+			if th_text == column_name:
+				column_indices[j] = i
+
+	missing_column = False
+
+	for column_index, column_name in zip(column_indices, column_names):
+		if column_index == -1:
+			print('Unable to find column %s in search results %s' % (column_name, namespaced_container_name))
+			missing_column = True
+
+	if missing_column:
+		return
+
+	for tr in tbody.find_all('tr'):
+		cells = tr.find_all('td')
+
+		if cells is None:
+			continue
+
+		null_cell = False
+
+		for index in column_indices:
+			if cells[index] is None:
+				null_cell = True
+				break
+
+		if not null_cell:
+			callback({name: cells[index] for index, name in zip(column_indices, column_names)})
+
 def get_baseline_id():
 	with open(join(dirname(sys.argv[0]), 'patcher.json'), 'r') as file:
 		patcher_json = json.load(file)
@@ -37,48 +99,17 @@ def get_fix_id(typeFilter='0'):
 		'andOperator': 'true'
 	}
 
-	namespaced_parameters = get_namespaced_parameters('1_WAR_osbpatcherportlet', parameters)
+	fix_link = None
 
-	fix_html = get_liferay_content(base_url, namespaced_parameters)
-	soup = BeautifulSoup(fix_html, 'html.parser')
+	def get_fix_link(columns):
+		if fix_name == columns['content'].text.strip():
+			fix_link = columns['fix id'].text.strip()
 
-	search_container = soup.find('div', {'id': '_1_WAR_osbpatcherportlet_patcherFixsSearchContainerSearchContainer'})
+	process_patcher_search_container(
+		base_url, parameters, 'patcherFixsSearchContainerSearchContainer',
+		['fix id', 'content'], get_fix_link)
 
-	if search_container is None:
-		return None
-
-	table = search_container.find('table')
-
-	if table is None:
-		return None
-
-	thead = table.find('thead')
-	tbody = table.find('tbody')
-
-	if thead is None or tbody is None:
-		return None
-
-	fix_id_index = -1
-	content_index = -1
-
-	for i, th in enumerate(thead.find_all('th')):
-		th_text = th.text.strip().lower()
-
-		if th_text == 'fix id':
-			fix_id_index = i
-		elif th_text == 'content':
-			content_index = i
-
-	if fix_id_index == -1 or content_index == -1:
-		return None
-
-	for tr in tbody.find_all('tr'):
-		cells = tr.find_all('td')
-
-		if cells is not None and cells[content_index] is not None and fix_name == cells[content_index].text.strip():
-			return cells[fix_id_index].text.strip()
-
-	return None
+	return fix_link
 
 def get_fix_name():
 	fix_name = get_fix_name_from_id()

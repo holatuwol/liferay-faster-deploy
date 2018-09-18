@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup
 import json
+from patcher import process_patcher_search_container
 from scrape_liferay import get_liferay_content, get_namespaced_parameters
 import sys
 import webbrowser
@@ -28,53 +29,21 @@ def get_qa_build_urls():
 		'tabs1': 'accounts'
 	}
 
-	namespaced_parameters = get_namespaced_parameters('1_WAR_osbpatcherportlet', parameters)
-
-	qa_builds_html = get_liferay_content(base_url, parameters)
-	soup = BeautifulSoup(qa_builds_html, 'html.parser')
-
-	search_container = soup.find('div', {'id': '_1_WAR_osbpatcherportlet_patcherBuildsSearchContainerSearchContainer'})
-
-	if search_container is None:
-		return []
-
-	table = search_container.find('table')
-
-	if table is None:
-		return []
-
-	thead = table.find('thead')
-	tbody = table.find('tbody')
-
-	if thead is None or tbody is None:
-		return []
-
-	build_id_index = -1
-	qa_status_index = -1
-
-	for i, th in enumerate(thead.find_all('th')):
-		th_text = th.text.strip().lower()
-
-		if th_text == 'build id':
-			build_id_index = i
-		elif th_text == 'qa status':
-			qa_status_index = i
-
-	if build_id_index == -1 or qa_status_index == -1:
-		return []
-
 	links = []
 
-	for tr in tbody.find_all('tr'):
-		cells = tr.find_all('td')
+	def append_build_link(columns):
+		if columns['build id'].text.strip().lower() != 'qa analysis needed':
+			return
 
-		if cells is not None and cells[build_id_index] is not None and cells[qa_status_index] is not None:
-			if cells[qa_status_index].text.strip().lower() != 'qa analysis needed':
-				continue
+		for link_tag in columns['qa status'].find_all('a'):
+			if link_tag['href'].find('https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/') == 0:
+				window_state_href = link_tag['href']
+				query_index = window_state_href.find('?')
+				links.append(window_state_href if query_index == -1 else window_state_href[0:query_index])
 
-			for link_tag in cells[build_id_index].find_all('a'):
-				if link_tag['href'].find('https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/') == 0:
-					links.append(link_tag['href'])
+	process_patcher_search_container(
+		base_url, parameters, 'patcherBuildsSearchContainerSearchContainer',
+		['build id', 'qa status'], append_build_link)
 
 	return links
 
