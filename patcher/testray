@@ -1,3 +1,22 @@
 #!/bin/bash
 
-python "$(dirname ${BASH_SOURCE[0]})/testray.py" $@
+SCRIPT_FOLDER=$(dirname ${BASH_SOURCE[0]})
+
+findbuildurl() {
+	. "${SCRIPT_FOLDER}/findbuildurl" $1
+	rm -f ${FIX_NAME}.zip
+}
+
+if [[ $1 == http://files.liferay.com/* ]] || [[ $1 == https://files.liferay.com/* ]]; then
+	if [ "" != "${FILES_MIRROR}" ]; then
+		findbuildurl $1
+	else
+		echo 'Unable to convert hotfix URL to build URL unless FILES_MIRROR environment variable is set'
+	fi
+fi
+
+if [ "" != "${BUILD_URL}" ]; then
+	python "${SCRIPT_FOLDER}/testray.py" ${BUILD_URL}
+else
+	python "${SCRIPT_FOLDER}/testray.py" $1
+fi

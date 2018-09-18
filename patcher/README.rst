@@ -37,7 +37,8 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 	}
 
 	testray() {
-		${MCD_RD_CLONE_PATH}/patcher/testray $@
+		FILES_MIRROR=http://mirrors/files.liferay.com \
+			${MCD_RD_CLONE_PATH}/patcher/testray $@
 	}
 
 Find Build for Hotfix

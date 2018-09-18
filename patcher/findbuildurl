@@ -1,0 +1,41 @@
+#!/bin/bash
+
+gethotfix() {
+	local VERSION=
+
+	FIX_NAME=
+
+	if [[ $1 == http* ]]; then
+		FIX_NAME=$(echo "$1" | grep -o 'liferay-hotfix-[^\.]*')
+		VERSION=$(echo ${FIX_NAME} | cut -d'-' -f 4 | sed 's/\([0-9]\)\([0-9]\)\([0-9][0-9]\)/\1.\2.\3/')
+	elif [[ $1 == liferay* ]]; then
+		VERSION=$(echo $1 | cut -d'-' -f 4 | sed 's/\([0-9]\)\([0-9]\)\([0-9][0-9]\)/\1.\2.\3/')
+		FIX_NAME=$1
+	elif [[ $1 == hotfix* ]]; then
+		VERSION=$(echo $1 | cut -d'-' -f 3 | sed 's/\([0-9]\)\([0-9]\)\([0-9][0-9]\)/\1.\2.\3/')
+		FIX_NAME="liferay-$1"
+	else
+		VERSION=$(echo $2 | cut -d'-' -f 2 | sed 's/\([0-9]\)\([0-9]\)\([0-9][0-9]\)/\1.\2.\3/')
+		FIX_NAME="liferay-hotfix-$1-$2"
+	fi
+
+	if [ ! -f $FIX_NAME.zip ]; then
+		echo "Downloading $FIX_NAME to check fixpack_documentation.xml"
+		echo $FILES_MIRROR/private/ee/fix-packs/$VERSION/hotfix/$FIX_NAME.zip
+		curl -s -O "$FILES_MIRROR/private/ee/fix-packs/$VERSION/hotfix/$FIX_NAME.zip"
+	fi
+}
+
+findbuildurl() {
+	gethotfix $1
+
+	local BUILD_ID=$(unzip -p $FIX_NAME.zip fixpack_documentation.xml | grep -F '<build-id>' | cut -d'>' -f 2 | cut -d'<' -f 1)
+
+	if [ "" == "${BUILD_ID}" ]; then
+		return 1
+	fi
+
+	BUILD_URL="https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/${BUILD_ID}"
+}
+
+findbuildurl $@
