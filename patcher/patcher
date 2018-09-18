@@ -68,10 +68,6 @@ checkcommonerrors() {
 	fi
 }
 
-checkpython() {
-	$(dirname ${BASH_SOURCE[0]})/../checkpython $@
-}
-
 patcher() {
 	. $(dirname "${BASH_SOURCE[0]}")/../setopts
 	. $(dirname "${BASH_SOURCE[0]}")/../getparent
@@ -97,8 +93,6 @@ patcher() {
 
 	python "$(dirname ${BASH_SOURCE[0]})/patcher.py" "${ORIGIN}" "$1"
 }
-
-checkpython beautifulsoup4
 
 if [[ 0 -ne $? ]]; then
 	exit 1
