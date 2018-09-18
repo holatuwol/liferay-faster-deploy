@@ -11,6 +11,7 @@ import git
 
 username = git.config('files.username')
 password = git.config('files.password')
+json_auth_token = {}
 
 session = requests.session()
 
@@ -23,7 +24,12 @@ def authenticate(base_url, get_params):
 		login_portlet(r.url, r.text)
 
 def get_liferay_content(base_url, params=None, method='get'):
-	authenticate(base_url, params)
+	pos = base_url.find('/api/jsonws/')
+
+	if pos != -1:
+		params['p_auth'] = get_json_auth_token(base_url[0:pos])
+	else:
+		authenticate(base_url, params)
 
 	if method == 'get':
 		if params is None:
@@ -38,7 +44,7 @@ def get_liferay_content(base_url, params=None, method='get'):
 
 		r = session.get(full_url, data=params)
 	else:
-		r = session.post(full_url, data=params)
+		r = session.post(base_url, data=params)
 
 	return r.text
 
@@ -99,3 +105,25 @@ def saml_response(response_body):
 	form_params = { node.get('name'): node.get('value') for node in form.find_all('input') if node.get('name') is not None }
 
 	r = session.post(form_action, data=form_params)
+
+def get_json_auth_token(base_url):
+	if base_url in json_auth_token:
+		return json_auth_token[base_url]
+
+	authenticate('%s/group/control_panel' % base_url, None)
+
+	parameters = {
+		'signature': '/company/get-company-by-id-1-companyId'
+	}
+
+	json_api_html = get_liferay_content('%s/api/jsonws' % base_url, parameters)
+
+	soup = BeautifulSoup(json_api_html, 'html.parser')
+
+	p_auth_input = soup.find('input', {'name': 'p_auth'})
+
+	if p_auth_input is None:
+		return ''
+
+	json_auth_token[base_url] = p_auth_input['value']
+	return json_auth_token[base_url]
