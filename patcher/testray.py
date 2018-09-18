@@ -128,26 +128,39 @@ def get_previous_patcher_build(patcher_build):
 	matching_builds = [
 		build for build in json_response['data']
 			if build['statusLabel'] == 'complete' and
-				build['qaStatusLabel'] == 'qa-automation-passed' and
 				build['downloadURL'][-8:] == patcher_build['downloadURL'][-8:] and
 				build['patcherBuildId'] != patcher_build['patcherBuildId']
 	]
 
-	if len(matching_builds) == 0:
-		return None
-
 	account_parameters = {
 		'patcherBuildAccountEntryCode': account_code
 	}
+
+	successful_builds = [
+		build for build in matching_builds
+			if build['qaStatusLabel'] == 'qa-automation-passed'
+	]
+
+	if len(successful_builds) > 0:
+		matching_builds = successful_builds
 
 	same_baseline_builds = [
 		build for build in matching_builds
 			if build['patcherProjectVersionId'] == patcher_build['patcherProjectVersionId']
 	]
 
-	if len(same_baseline_builds) != 0:
+	if len(same_baseline_builds) > 0:
 		matching_builds = same_baseline_builds
 		account_parameters['patcherProjectVersionId'] = patcher_build['patcherProjectVersionId']
+
+	account_base_url = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/accounts/view'
+	account_namespaced_parameters = get_namespaced_parameters('1_WAR_osbpatcherportlet', account_parameters)
+	account_query_string = '&'.join(['%s=%s' % (key, value) for key, value in account_namespaced_parameters.items()])
+
+	webbrowser.open_new_tab('%s?%s' % (account_base_url, account_query_string))
+
+	if len(matching_builds) == 0:
+		return None
 
 	patcher_build_fixes = get_fix_names(patcher_build)
 
@@ -163,12 +176,6 @@ def get_previous_patcher_build(patcher_build):
 			best_matching_build = matching_build
 			best_matching_build_fixes = matching_build_fixes
 			best_matching_build_diff = matching_build_diff
-
-	account_base_url = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/accounts/view'
-	account_namespaced_parameters = get_namespaced_parameters('1_WAR_osbpatcherportlet', account_parameters)
-	account_query_string = '&'.join(['%s=%s' % (key, value) for key, value in account_namespaced_parameters.items()])
-
-	webbrowser.open_new_tab('%s?%s' % (account_base_url, account_query_string))
 
 	show_fixes_in_browser(patcher_build['patcherBuildId'], best_matching_build_diff)
 
