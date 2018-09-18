@@ -23,6 +23,8 @@ def get_liferay_version(url):
 # Utility methods for dealing with Patcher Portal
 
 def get_qa_build_urls():
+	print('Looking up all patcher builds needing analysis')
+
 	base_url = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds'
 
 	parameters = {
@@ -51,6 +53,8 @@ def get_patcher_build(url):
 	build_url_parts = url.split('/')
 	build_id = build_url_parts[-1]
 
+	print('Looking up metadata for patcher build %s' % build_id)
+
 	base_url = 'https://patcher.liferay.com/api/jsonws/osb-patcher-portlet.builds/view'
 
 	parameters = {
@@ -60,7 +64,7 @@ def get_patcher_build(url):
 	json_response = json.loads(get_liferay_content(base_url, parameters, 'post'))
 
 	if json_response['status'] != 200:
-		print('Unable to retrieve account code for %s' % url)
+		print('Unable to retrieve patcher account code for %s' % url)
 		return None
 
 	return json_response['data']
@@ -69,6 +73,8 @@ def get_fix_names(build):
 	return set(build['patcherBuildName'].split(','))
 
 def show_fixes_in_browser(build_id, fixes):
+	print('Looking up fixes for patcher build %s' % build_id)
+
 	base_url = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/%s/fixes' % build_id
 	parameters = {}
 
@@ -112,6 +118,8 @@ def get_previous_patcher_build(patcher_build):
 	if account_code is None:
 		return None
 
+	print('Looking up patcher builds for account %s' % account_code)
+
 	base_url = 'https://patcher.liferay.com/api/jsonws/osb-patcher-portlet.accounts/view'
 
 	parameters = {
@@ -122,7 +130,7 @@ def get_previous_patcher_build(patcher_build):
 	json_response = json.loads(get_liferay_content(base_url, parameters))
 
 	if json_response['status'] != 200:
-		print('Unable to retrieve account builds for %s' % account_code)
+		print('Unable to retrieve patcher account builds for %s' % account_code)
 		return None
 
 	matching_builds = [
@@ -200,6 +208,8 @@ def get_project_id(url):
 	if version is None:
 		return None
 
+	print('Looking up testray projects for Liferay version %s' % version)
+
 	base_url = 'https://testray.liferay.com/api/jsonws/osb-testray-web.projects/index'
 
 	parameters = {
@@ -212,7 +222,7 @@ def get_project_id(url):
 	json_response = json.loads(get_liferay_content(base_url, parameters))
 
 	if json_response['status'] != 200:
-		print('Unable to determine project ID from %s' % url)
+		print('Unable to determine testray project from %s' % url)
 		return None
 
 	matching_name = 'Liferay Portal %s' % (version if version != 'master' else '7.1')
@@ -223,7 +233,7 @@ def get_project_id(url):
 	]
 
 	if len(matching_project_ids) != 1:
-		print('Unable to determine project ID from %s' % url)
+		print('Unable to determine testray project from %s' % url)
 		return None
 
 	return matching_project_ids[0]
@@ -233,6 +243,8 @@ def get_routine_id(url):
 
 	if project_id is None:
 		return None
+
+	print('Looking up testray routine by project')
 
 	base_url = 'https://testray.liferay.com/api/jsonws/osb-testray-web.routines/index'
 
@@ -249,7 +261,7 @@ def get_routine_id(url):
 	json_response = json.loads(get_liferay_content(base_url, parameters))
 
 	if json_response['status'] != 200:
-		print('Unable to determine routine ID from %s' % url)
+		print('Unable to determine testray routine from %s' % url)
 		return None
 
 	matching_name = None
@@ -261,7 +273,7 @@ def get_routine_id(url):
 	elif url.find('http://files.liferay.com') == 0:
 		matching_name = 'Hotfix Tester'
 	else:
-		print('Unable to determine routine ID from %s' % url)
+		print('Unable to determine testray routine from %s' % url)
 
 	matching_routine_ids = [
 		routine['testrayRoutineId'] for routine in json_response['data']
@@ -269,12 +281,14 @@ def get_routine_id(url):
 	]
 
 	if len(matching_routine_ids) != 1:
-		print('Unable to determine routine ID from %s' % url)
+		print('Unable to determine testray routine from %s' % url)
 		return None
 
 	return matching_routine_ids[0]
 
 def get_build_id(routine_id, search_name, matching_name, archived=False):
+	print('Looking up testray build by routine')
+
 	base_url = 'https://testray.liferay.com/api/jsonws/osb-testray-web.builds/index'
 
 	parameters = {
@@ -290,7 +304,7 @@ def get_build_id(routine_id, search_name, matching_name, archived=False):
 	json_response = json.loads(get_liferay_content(base_url, parameters))
 
 	if json_response['status'] != 200:
-		print('Unable to determine build for routine %s, search string %s' % (routine_id, search_name))
+		print('Unable to determine testray build for testray routine %s, search string %s' % (routine_id, search_name))
 		return None
 
 	matching_build_ids = [
@@ -302,7 +316,7 @@ def get_build_id(routine_id, search_name, matching_name, archived=False):
 		if not archived:
 			return get_build_id(routine_id, search_name, matching_name, True)
 
-		print('Unable to determine build for routine %s, search string %s, matching string %s' % (routine_id, search_name, matching_name))
+		print('Unable to determine build for testray routine %s, search string %s, matching string %s' % (routine_id, search_name, matching_name))
 		return None
 
 	return matching_build_ids[0]
@@ -348,6 +362,8 @@ def get_run_id(build_id, run_number):
 	if build_id is None:
 		return None
 
+	print('Looking up testray run by testray build')
+
 	base_url = 'https://testray.liferay.com/api/jsonws/osb-testray-web.runs/index'
 
 	parameters = {
@@ -359,7 +375,7 @@ def get_run_id(build_id, run_number):
 	json_response = json.loads(get_liferay_content(base_url, parameters))
 
 	if json_response['status'] != 200:
-		print('Unable to determine runs for build %s' % (build_id))
+		print('Unable to determine testray runs for testray build %s' % (build_id))
 		return None
 
 	first_runs = [
@@ -368,7 +384,7 @@ def get_run_id(build_id, run_number):
 	]
 
 	if len(first_runs) == 0:
-		print('Unable to determine runs for build %s' % (build_id))
+		print('Unable to determine testray runs for testray build %s' % (build_id))
 		return None
 
 	return first_runs[0]
@@ -404,7 +420,7 @@ def open_testray(url):
 	elif url.find('http://files.liferay.com/') == 0:
 		build_id = get_hotfix_build_id(url)
 	else:
-		print('Unable to determine build URL from %s' % url)
+		print('Unable to determine testray build ID from %s' % url)
 		return
 
 	testray_url = None
