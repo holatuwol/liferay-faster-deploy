@@ -65,6 +65,44 @@ def get_patcher_build(url):
 
 	return json_response['data']
 
+def get_fix_names(build):
+	return set(build['patcherBuildName'].split(','))
+
+def debug_in_browser(patcher_build, best_matching_build_diff, account_parameters):
+	account_base_url = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/accounts/view'
+	account_namespaced_parameters = get_namespaced_parameters('1_WAR_osbpatcherportlet', account_parameters)
+	account_query_string = '&'.join(['%s=%s' % (key, value) for key, value in account_namespaced_parameters.items()])
+
+	webbrowser.open_new_tab('%s?%s' % (account_base_url, account_query_string))
+
+	build_id = patcher_build['patcherBuildId']
+
+	base_url = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/%s/fixes' % build_id
+	parameters = {}
+
+	links = []
+
+	def append_fix_link(columns):
+		has_fix = False
+
+		for fix_name in columns['name'].text.strip().split(','):
+			if fix_name in best_matching_build_diff:
+				has_fix = True
+
+		if not has_fix:
+			return
+
+		fix_id = columns['fix id'].text.strip()
+		fix_url = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/fixes/%s' % fix_id
+		links.append(fix_url)
+
+	process_patcher_search_container(
+		base_url, parameters, 'patcherFixsSearchContainerSearchContainer',
+		['fix id', 'name'], append_fix_link)
+
+	for link in links:
+		webbrowser.open_new_tab(link)
+
 def get_previous_patcher_build(patcher_build):
 	if patcher_build is None:
 		return None
@@ -98,7 +136,7 @@ def get_previous_patcher_build(patcher_build):
 	if len(matching_builds) == 0:
 		return None
 
-	browser_parameters = {
+	account_parameters = {
 		'patcherBuildAccountEntryCode': account_code
 	}
 
@@ -109,25 +147,24 @@ def get_previous_patcher_build(patcher_build):
 
 	if len(same_baseline_builds) != 0:
 		matching_builds = same_baseline_builds
-		browser_parameters['patcherProjectVersionId'] = patcher_build['patcherProjectVersionId']
+		account_parameters['patcherProjectVersionId'] = patcher_build['patcherProjectVersionId']
 
-	browser_base_url = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/accounts/view'
-	browser_namespaced_parameters = get_namespaced_parameters('1_WAR_osbpatcherportlet', browser_parameters)
-	browser_query_string = '&'.join(['%s=%s' % (key, value) for key, value in browser_namespaced_parameters.items()])
-
-	webbrowser.open_new_tab('%s?%s' % (browser_base_url, browser_query_string))
-
-	patcher_build_fixes = set(patcher_build['patcherBuildName'].split(','))
+	patcher_build_fixes = get_fix_names(patcher_build)
 
 	best_matching_build = None
-	best_matching_build_overlap = len(patcher_build_fixes)
+	best_matching_build_fixes = None
+	best_matching_build_diff = patcher_build_fixes
 
 	for matching_build in matching_builds:
-		matching_build_overlap = len(patcher_build_fixes - set(matching_build['patcherBuildName'].split(',')))
+		matching_build_fixes = get_fix_names(matching_build)
+		matching_build_diff = patcher_build_fixes - matching_build_fixes
 
-		if matching_build_overlap < best_matching_build_overlap:
+		if len(matching_build_diff) < len(best_matching_build_diff):
 			best_matching_build = matching_build
-			best_matching_build_overlap = matching_build_overlap
+			best_matching_build_fixes = matching_build_fixes
+			best_matching_build_diff = matching_build_diff
+
+	debug_in_browser(patcher_build, best_matching_build_diff, account_parameters)
 
 	return best_matching_build
 
