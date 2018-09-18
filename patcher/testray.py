@@ -257,7 +257,7 @@ def get_hotfix_build_id(hotfix_url):
 
 	return get_build_id(routine_id, search_name, matching_name)
 
-def get_run_id(build_id):
+def get_run_id(build_id, run_number):
 	if build_id is None:
 		return None
 
@@ -277,7 +277,7 @@ def get_run_id(build_id):
 
 	first_runs = [
 		run['testrayRunId'] for run in json_response['data']
-			if run['number'] == '1'
+			if run['number'] == run_number
 	]
 
 	if len(first_runs) == 0:
@@ -286,14 +286,18 @@ def get_run_id(build_id):
 
 	return first_runs[0]
 
-def get_testray_url(a, b):
-	if a is None:
+def get_testray_url(a, b, run_number='1'):
+	a_run_id = get_run_id(a, run_number)
+
+	if a_run_id is None:
 		return None
 
-	if b is None:
-		return 'https://testray.liferay.com/home/-/testray/case_results?testrayBuildId=%s&testrayRunId=%s' % (a, get_run_id(a))
+	b_run_id = get_run_id(b, run_number)
 
-	return 'https://testray.liferay.com/home/-/testray/runs/compare?testrayRunIdA=%s&testrayRunIdB=%s&view=details' % (get_run_id(a), get_run_id(b))
+	if b_run_id is None:
+		return 'https://testray.liferay.com/home/-/testray/case_results?testrayBuildId=%s&testrayRunId=%s' % (a, a_run_id)
+
+	return 'https://testray.liferay.com/home/-/testray/runs/compare?testrayRunIdA=%s&testrayRunIdB=%s&view=details' % (a_run_id, b_run_id)
 
 # Main logic for deciding which URL to use
 
