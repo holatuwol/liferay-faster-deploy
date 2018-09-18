@@ -129,6 +129,10 @@ def get_previous_patcher_build(patcher_build):
 	if len(matching_builds) == 0:
 		return None
 
+	browser_parameters = {
+		'patcherBuildAccountEntryCode': account_code
+	}
+
 	same_baseline_builds = [
 		build for build in matching_builds
 			if build['patcherProjectVersionId'] == patcher_build['patcherProjectVersionId']
@@ -136,6 +140,13 @@ def get_previous_patcher_build(patcher_build):
 
 	if len(same_baseline_builds) != 0:
 		matching_builds = same_baseline_builds
+		browser_parameters['patcherProjectVersionId'] = patcher_build['patcherProjectVersionId']
+
+	browser_base_url = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/accounts/view'
+	browser_namespaced_parameters = get_namespaced_parameters('1_WAR_osbpatcherportlet', browser_parameters)
+	browser_query_string = '&'.join(['%s=%s' % (key, value) for key, value in browser_namespaced_parameters.items()])
+
+	webbrowser.open_new_tab('%s?%s' % (browser_base_url, browser_query_string))
 
 	patcher_build_fixes = set(patcher_build['patcherBuildName'].split(','))
 
