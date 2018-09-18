@@ -21,6 +21,63 @@ def get_liferay_version(url):
 
 # Utility methods for dealing with Patcher Portal
 
+def get_qa_build_urls():
+	base_url = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds'
+
+	parameters = {
+		'tabs1': 'accounts'
+	}
+
+	namespaced_parameters = get_namespaced_parameters('1_WAR_osbpatcherportlet', parameters)
+
+	qa_builds_html = get_liferay_content(base_url, parameters)
+	soup = BeautifulSoup(qa_builds_html, 'html.parser')
+
+	search_container = soup.find('div', {'id': '_1_WAR_osbpatcherportlet_patcherBuildsSearchContainerSearchContainer'})
+
+	if search_container is None:
+		return []
+
+	table = search_container.find('table')
+
+	if table is None:
+		return []
+
+	thead = table.find('thead')
+	tbody = table.find('tbody')
+
+	if thead is None or tbody is None:
+		return []
+
+	build_id_index = -1
+	qa_status_index = -1
+
+	for i, th in enumerate(thead.find_all('th')):
+		th_text = th.text.strip().lower()
+
+		if th_text == 'build id':
+			build_id_index = i
+		elif th_text == 'qa status':
+			qa_status_index = i
+
+	if build_id_index == -1 or qa_status_index == -1:
+		return []
+
+	links = []
+
+	for tr in tbody.find_all('tr'):
+		cells = tr.find_all('td')
+
+		if cells is not None and cells[build_id_index] is not None and cells[qa_status_index] is not None:
+			if cells[qa_status_index].text.strip().lower() != 'qa analysis needed':
+				continue
+
+			for link_tag in cells[build_id_index].find_all('a'):
+				if link_tag['href'].find('https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/') == 0:
+					links.append(link_tag['href'])
+
+	return links
+
 def get_patcher_build(url):
 	build_url_parts = url.split('/')
 	build_id = build_url_parts[-1]
@@ -213,7 +270,7 @@ def get_build_id(routine_id, search_name, matching_name, archived=False):
 
 	if len(matching_build_ids) == 0:
 		if not archived:
-			return get_build(routine_id, search_name, matching_name, True)
+			return get_build_id(routine_id, search_name, matching_name, True)
 
 		print('Unable to determine build for routine %s, search string %s, matching string %s' % (routine_id, search_name, matching_name))
 		return None
@@ -351,6 +408,10 @@ if __name__ == '__main__':
 	if len(sys.argv) > 1:
 		open_testray(sys.argv[1])
 	else:
-		print('testray <github_url>')
-		print('testray <hotfix_url>')
-		print('testray <patcher_url>')
+		qa_build_urls = get_qa_build_urls()
+
+		if len(qa_build_urls) != 0:
+			webbrowser.open_new_tab('https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds?_1_WAR_osbpatcherportlet_tabs1=fixes')
+
+			for qa_build_url in get_qa_build_urls():
+				open_testray(qa_build_url)
