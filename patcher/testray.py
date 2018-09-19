@@ -72,7 +72,7 @@ def get_patcher_build(url):
 def get_fix_names(build):
 	return set(build['patcherBuildName'].split(','))
 
-def show_fixes_in_browser(build_id, fixes):
+def get_new_fixes(build_id, new_fix_names):
 	print('Looking up fixes for patcher build %s' % build_id)
 
 	base_url = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/%s/fixes' % build_id
@@ -84,7 +84,7 @@ def show_fixes_in_browser(build_id, fixes):
 		has_fix = False
 
 		for fix_name in columns['name'].text.strip().split(','):
-			if fix_name in fixes:
+			if fix_name in new_fix_names:
 				has_fix = True
 
 		if not has_fix:
@@ -92,7 +92,7 @@ def show_fixes_in_browser(build_id, fixes):
 
 		fix_id = columns['fix id'].text.strip()
 
-		webbrowser.open_new_tab('https://patcher.liferay.com/group/guest/patching/-/osb_patcher/fixes/%s' % fix_id)
+		links.append('https://patcher.liferay.com/group/guest/patching/-/osb_patcher/fixes/%s' % fix_id)
 
 	process_patcher_search_container(
 		base_url, parameters, 'patcherFixsSearchContainerSearchContainer',
@@ -103,11 +103,13 @@ def show_fixes_in_browser(build_id, fixes):
 
 	def process_child_builds(columns):
 		child_build_id = columns['build id'].text.strip()
-		show_fixes_in_browser(child_build_id, fixes)
+		links.extend(get_new_fixes(child_build_id, new_fix_names))
 
 	process_patcher_search_container(
 		base_url, parameters, 'patcherBuildsSearchContainerSearchContainer',
 		['build id'], process_child_builds)
+
+	return links
 
 def get_previous_patcher_build(patcher_build):
 	if patcher_build is None:
@@ -185,7 +187,16 @@ def get_previous_patcher_build(patcher_build):
 			best_matching_build_fixes = matching_build_fixes
 			best_matching_build_diff = matching_build_diff
 
-	show_fixes_in_browser(patcher_build['patcherBuildId'], best_matching_build_diff)
+	new_fixes = get_new_fixes(patcher_build['patcherBuildId'], best_matching_build_diff)
+
+	if len(new_fixes) <= 2:
+		for new_fix in new_fixes:
+			webbrowser.open_new_tab(new_fix)
+	else:
+		webbrowser.open_new_tab(
+			'https://github.com/liferay/liferay-portal-ee/compare/fix-pack-fix-%s...fix-pack-fix-%s' %
+				(best_matching_build['patcherFixId'], patcher_build['patcherFixId'])
+		)
 
 	return best_matching_build
 
