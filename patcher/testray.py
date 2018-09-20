@@ -169,33 +169,37 @@ def get_previous_patcher_build(patcher_build):
 
 	webbrowser.open_new_tab('%s?%s' % (account_base_url, account_query_string))
 
-	if len(matching_builds) == 0:
-		return None
-
 	patcher_build_fixes = get_fix_names(patcher_build)
 
-	best_matching_build = None
-	best_matching_build_fixes = None
-	best_matching_build_diff = patcher_build_fixes
+	if len(matching_builds) == 0:
+		best_matching_build = None
+		best_matching_build_diff = patcher_build_fixes
+		best_matching_build_name = patcher_build['patcherProjectVersionName']
+	else:
+		best_matching_build = None
+		best_matching_build_fixes = None
+		best_matching_build_diff = patcher_build_fixes
 
-	for matching_build in matching_builds:
-		matching_build_fixes = get_fix_names(matching_build)
-		matching_build_diff = patcher_build_fixes - matching_build_fixes
+		for matching_build in matching_builds:
+			matching_build_fixes = get_fix_names(matching_build)
+			matching_build_diff = patcher_build_fixes - matching_build_fixes
 
-		if len(matching_build_diff) < len(best_matching_build_diff):
-			best_matching_build = matching_build
-			best_matching_build_fixes = matching_build_fixes
-			best_matching_build_diff = matching_build_diff
+			if len(matching_build_diff) < len(best_matching_build_diff):
+				best_matching_build = matching_build
+				best_matching_build_fixes = matching_build_fixes
+				best_matching_build_diff = matching_build_diff
+
+		best_matching_build_name = 'fix-pack-fix-%s' % best_matching_build['patcherFixId']
 
 	new_fixes = get_new_fixes(patcher_build['patcherBuildId'], best_matching_build_diff)
 
-	if len(new_fixes) <= 2:
+	if len(new_fixes) > 0 and len(new_fixes) <= 2:
 		for new_fix in new_fixes:
 			webbrowser.open_new_tab(new_fix)
 	else:
 		webbrowser.open_new_tab(
-			'https://github.com/liferay/liferay-portal-ee/compare/fix-pack-fix-%s...fix-pack-fix-%s' %
-				(best_matching_build['patcherFixId'], patcher_build['patcherFixId'])
+			'https://github.com/liferay/liferay-portal-ee/compare/%s...fix-pack-fix-%s' %
+				(best_matching_build_name, patcher_build['patcherFixId'])
 		)
 
 	return best_matching_build
