@@ -12,7 +12,13 @@ if [[ $1 == http://files.liferay.com/* ]] || [[ $1 == https://files.liferay.com/
 		findbuildurl $1
 	else
 		echo 'Unable to convert hotfix URL to build URL unless FILES_MIRROR environment variable is set'
+		exit 1
 	fi
+fi
+
+if [ "" == "$(git config files.username)" ] || [ "" == "$(git config files.password)" ]; then
+	echo "Cannot connect to patcher portal and testray API unless files.username and files.password are set with git config --global"
+	exit 1
 fi
 
 if [ "" != "${BUILD_URL}" ]; then
