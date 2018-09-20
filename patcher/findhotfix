@@ -1,0 +1,10 @@
+#!/bin/bash
+
+if [ "" == "$(git config files.username)" ] || [ "" == "$(git config files.password)" ]; then
+	echo "Cannot decode $1 unless files.username and files.password are set with git config --global"
+	exit 1
+fi
+
+SCRIPT_FOLDER=$(dirname ${BASH_SOURCE[0]})
+
+python "${SCRIPT_FOLDER}/findhotfix.py" $1 | grep -o '^http://files.liferay.com/.*$'
