@@ -1,5 +1,7 @@
 #!/bin/bash
 
+SCRIPT_FOLDER=$(dirname ${BASH_SOURCE[0]})
+
 copy_driver() {
 	if [ "" == "${CATALINA_HOME}" ]; then
 		mkdir -p ${LIFERAY_HOME}/tomcat/lib/ext
@@ -83,6 +85,25 @@ create_network() {
 	NETWORK_METADATA="--network ${NETWORK_NAME} --network-alias ${CONTAINER_NAME} -e IS_CLUSTER=true"
 }
 
+get_hotfix_url() {
+	if [[ $1 != https://patcher.liferay.com/* ]]; then
+		HOTFIX_URL=$1
+		return 0
+	fi
+
+	if [ "" == "$(git config files.username)" ] || [ "" == "$(git config files.password)" ]; then
+		echo "Cannot decode $1 unless files.username and files.password are set with git config --global"
+		return 1
+	fi
+
+	HOTFIX_URL=$("$(dirname "${SCRIPT_FOLDER}")/patcher/findhotfix" "$1")
+
+	if [ "" == "${HOTFIX_URL}" ]; then
+		echo "Unable to decode $1 into a hotfix name"
+		return 1
+	fi
+}
+
 remove_container() {
 	docker stop ${CONTAINER_NAME} 1> /dev/null 2> /dev/null
 	docker rm -v ${CONTAINER_NAME} 1> /dev/null 2> /dev/null
@@ -116,7 +137,7 @@ set_container_mounts() {
 		LIFERAY_HOME="${PWD}/bundles"
 		LIFERAY_HOME_MOUNT="-v ${PWD}/bundles:/build"
 	elif [ -f app.server.$USER.properties ]; then
-		. $(dirname $(dirname ${BASH_SOURCE[0]}))/appserverprops
+		. "$(dirname ${SCRIPT_FOLDER})/appserverprops"
 		LIFERAY_HOME_MOUNT="-v ${LIFERAY_HOME}:/build"
 	else
 		echo "Unable to determine LIFERAY_HOME"
@@ -172,7 +193,7 @@ start_liferay() {
 	fi
 
 	if [ "" == "${TOMCAT_PORT}" ]; then
-		TOMCAT_PORT=$(python $(dirname ${BASH_SOURCE[0]})/getport.py)
+		TOMCAT_PORT=$(python "${SCRIPT_FOLDER}/getport.py")
 	fi
 
 	if [ "" == "${TOMCAT_PORT}" ]; then
@@ -216,14 +237,18 @@ start_liferay() {
 		MIRRORS="${MIRRORS} -e LICENSE_MIRROR=${LICENSE_MIRROR}"
 	fi
 
-	docker run ${GLOBAL_BIND} ${LOCAL_BIND} ${EXPOSE_ONLY} \
-		${LIFERAY_HOME_MOUNT} ${LIFERAY_RDBUILD_MOUNT} ${LIFERAY_RELEASE_MOUNT} ${DOCLIB_MOUNT} \
-		-e RELEASE_ID=${RELEASE_ID} \
-		-e LIFERAY_PASSWORD=${LIFERAY_PASSWORD} \
-		-e IS_UPGRADE=${IS_UPGRADE} \
-		-e JVM_HEAP_SIZE=${JVM_HEAP_SIZE} \
-		${MIRRORS} ${NETWORK_METADATA} ${EXTRA_ARGS} --name ${CONTAINER_NAME} \
-		${IMAGE_NAME} $1
+	if get_hotfix_url $1; then
+		docker run ${GLOBAL_BIND} ${LOCAL_BIND} ${EXPOSE_ONLY} \
+			${LIFERAY_HOME_MOUNT} ${LIFERAY_RDBUILD_MOUNT} ${LIFERAY_RELEASE_MOUNT} ${DOCLIB_MOUNT} \
+			-e RELEASE_ID=${RELEASE_ID} \
+			-e LIFERAY_PASSWORD=${LIFERAY_PASSWORD} \
+			-e IS_UPGRADE=${IS_UPGRADE} \
+			-e JVM_HEAP_SIZE=${JVM_HEAP_SIZE} \
+			${MIRRORS} ${NETWORK_METADATA} ${EXTRA_ARGS} --name ${CONTAINER_NAME} \
+			${IMAGE_NAME} ${HOTFIX_URL}
+	else
+		return 1
+	fi
 }
 
 if [ "" == "${LIFERAY_PASSWORD}" ]; then
