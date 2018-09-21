@@ -21,11 +21,13 @@
 
 <p>When developing for Liferay, you usually prefer specifying the lowest possible version of the bundle or module that provides the API that you are consuming, as that maximizes the number of versions where your customization can successfully run. However, sometimes a community member or a customer knows that they aren't going to downgrade their Liferay, and they want to know, "What version of this bundle/module am I using in this version of DXP?" This page was created to answer that question.</p>
 
-<p><strong>Warning</strong>: This is NOT an official Liferay tool, nor is it supported by Liferay in any way. This does a source code analysis of the code that exists at the tag for the specified release. For Marketplace plugins (which are not recreated from source but rather released on a separate schedule), these versions will not be accurate.</p>
+<p><strong>Warning</strong>: This is NOT an official Liferay tool, nor is it supported by Liferay in any way. This does a source code analysis of the code that exists at the tag for the specified release. For Marketplace plugins (which are released on a separate schedule), these versions will not be accurate.</p>
 
 <h2>Choose Your Comparison</h2>
 
-<p><strong>Note</strong>: If the values in the select boxes are the same, this will list the versions of all modules at the specified baseline rather than a comparison. Artifacts from the <code>com.liferay.portal</code> group are listed as snapshots, because they really are snapshots (so the official artifact has not been released). If the version is listed as .1, use .0 at build time. If the version is listed as .0, you might be able to use .0 at build time if your package doesn't change before the actual .0 release, but you may have to use one minor version before the listed version at build time.
+<p><strong>Note</strong>: If the values in the select boxes are the same, this will list the versions of all modules at the specified baseline rather than a comparison. Some artifacts (often from the <code>com.liferay.portal</code> group) are listed as snapshots, because there used to be a disconnect between releasing an artifact and generating a new Liferay fix pack.</p>
+
+<ul><li>If the version is listed as <code>.1-SNAPSHOT</code> or later, you can use .0 at build time.</li><li>If the version is listed as <code>.0-SNAPSHOT</code>, you might be able to use .0 at build time if your package doesn't change before the actual .0 release, but you may have to use one minor version before the listed version at build time.</li></ul>
 
 <table class="table">
 <tbody>
