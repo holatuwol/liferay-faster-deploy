@@ -151,7 +151,7 @@ finish() {
 		else
 			echo -en ${NEWLINE}${SETVAR}'CATALINA_OPTS="$CATALINA_OPTS -Xms2g -Xmx2g -XX:MaxMetaspaceSize=512m"' >> $TOMCAT_FOLDER/bin/${file}
 		fi
-	fi
+	done
 
 	sed -i 's/ start / jpda start /g' $TOMCAT_FOLDER/bin/startup.sh
 	sed -i 's/ start / jpda start /g' $TOMCAT_FOLDER/bin/startup.bat
