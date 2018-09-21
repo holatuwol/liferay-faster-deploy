@@ -1,5 +1,72 @@
 #!/bin/bash
 
+checknode() {
+	NODEJS=$(which nodejs 2> /dev/null)
+
+	if [ "" == "$NODEJS" ]; then
+		NODEJS=$(which node 2> /dev/null)
+	fi
+
+	if [ "" == "$NODEJS" ]; then
+		echo "Please install node.js"
+		exit 1
+	fi
+
+	checknodeversion
+
+	local MD5SUM=
+
+	if [ -f /usr/bin/md5sum ]; then
+		MD5SUM=/usr/bin/md5sum
+	elif [ -f /sbin/md5 ]; then
+		MD5SUM="/sbin/md5 -r"
+	fi
+
+	if [ "" != "${MD5SUM}" ]; then
+		${MD5SUM} package.json > package.json.md5.new
+
+		if [ -f package.json.md5 ]; then
+			if [ "$(cat package.json.md5)" == "$(cat package.json.md5.new)" ]; then
+				rm package.json.md5.new
+				return 0
+			fi
+		fi
+	fi
+
+	echo 'Running npm to update script dependencies'
+
+	npm install
+
+	if [ -f gulpfile.js ]; then
+		node_modules/gulp/bin/gulp.js build
+	elif [ -f tsconfig.json ]; then
+		node_modules/typescript/bin/tsc --project .
+	elif [ "null" != "$(jq '.scripts.build' package.json)" ]; then
+		npm run-script build
+	fi
+
+	if [ "" != "${MD5SUM}" ]; then
+		rm -f package.json.md5
+		mv package.json.md5.new package.json.md5
+	fi
+}
+
+checknodeversion() {
+	node --version > node.version.new
+
+	if [ -f node.version.old ]; then
+		if [ "$(cat node.version.old)" != "$(cat node.version.new)" ]; then
+			rm -rf node_modules
+		fi
+
+		rm node.version.old
+	else
+		rm -rf node_modules
+	fi
+
+	mv node.version.new node.version.old
+}
+
 nodew() {
 	if [ "" == "$REPO_PATH" ]; then
 		if [ "" == "$(which $1 2> /dev/null)" ]; then
@@ -19,15 +86,7 @@ nodew() {
 
 	pushd "${REPO_PATH}" > /dev/null
 
-	npm install
-
-	if [ -f gulpfile.js ]; then
-		node_modules/gulp/bin/gulp.js build
-	elif [ -f tsconfig.json ]; then
-		node_modules/typescript/bin/tsc --project .
-	elif [ "null" != "$(jq '.scripts.build' package.json)" ]; then
-		npm run-script build
-	fi
+	checknode
 
 	local EXECUTABLE=$(cat package.json | jq .bin.$1 | cut -d'"' -f 2)
 
