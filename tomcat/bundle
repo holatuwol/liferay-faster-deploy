@@ -8,6 +8,10 @@ copy_driver() {
 		CATALINA_HOME=${LIFERAY_HOME}/tomcat
 	fi
 
+	if [[ 0 -ne $(egrep -o $'\r\n'\$ "${LIFERAY_HOME}/portal-ext.properties" | wc -c ) ]]; then
+		perl -pi -e 's/\r\n|\n|\r/\n/g' "${LIFERAY_HOME}/portal-ext.properties"
+	fi
+
 	local DRIVER_CLASS_NAME="$(grep -F jdbc.default.driverClassName ${LIFERAY_HOME}/portal-ext.properties | grep -vF '#' | cut -d'=' -f 2)"
 
 	if [ "" == "${DRIVER_CLASS_NAME}" ] || [ "org.hsqldb.jdbc.JDBCDriver" == "${DRIVER_CLASS_NAME}" ]; then
