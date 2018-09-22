@@ -1,17 +1,32 @@
 from __future__ import print_function
-import psutil
+from contextlib import closing
+from socket import socket, AF_INET, SOCK_STREAM
 
-used_ports = set([conn.laddr.port for conn in psutil.net_connections()])
-
-increment = 0
 base_ports = [7800, 7801, 8000, 8009, 8080, 8443, 11311]
 
-test_ports = [base_port+increment for base_port in base_ports]
-conflict_ports = [test_port for test_port in test_ports if test_port in used_ports]
+def test_port(port):
+	with closing(socket(AF_INET, SOCK_STREAM)) as s:
+		try:
+			s.bind(('127.0.0.1', port))
+			return True
+		except:
+			return False
 
-while len(conflict_ports) > 0:
-	increment += 100
-	test_ports = [base_port+increment for base_port in base_ports]
-	conflict_ports = [test_port for test_port in test_ports if test_port in used_ports]
+def test_increment(increment):
+	for base_port in base_ports:
+		if not test_port(base_port + increment):
+			return False
 
-print(8080+increment)
+	return True
+
+def get_increment():
+	for increment in range(0, 65535 - max(base_ports), 100):
+		if test_increment(increment):
+			return increment
+
+	return None
+
+increment = get_increment()
+
+if increment is not None:
+	print(8080 + increment)

@@ -25,7 +25,6 @@ These scripts make use of the following Python libraries:
   * ``dateparser``: https://dateparser.readthedocs.io/en/stable/
   * ``jupyter``: http://jupyter.org/
   * ``pandas``: http://pandas.pydata.org/
-  * ``psutil``: https://pypi.org/project/psutil/
   * ``requests``: http://docs.python-requests.org/en/master/
   * ``semver``: https://pypi.python.org/pypi/semver
   * ``ujson``: https://pypi.python.org/pypi/ujson

@@ -160,6 +160,4 @@ tcnative() {
 	./configure --with-apr=/usr --prefix=$CATALINA_HOME/lib/apr && make && make install
 }
 
-$(dirname "${BASH_SOURCE[0]}")/../checkpython psutil
-
 catalinastart $@
