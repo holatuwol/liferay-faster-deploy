@@ -249,7 +249,11 @@ start_liferay() {
 			-e IS_UPGRADE=${IS_UPGRADE} \
 			-e JVM_HEAP_SIZE=${JVM_HEAP_SIZE} \
 			${MIRRORS} ${NETWORK_METADATA} ${EXTRA_ARGS} --name ${CONTAINER_NAME} \
-			${IMAGE_NAME} ${HOTFIX_URL}
+			--detach ${IMAGE_NAME} ${HOTFIX_URL}
+
+		if [ "no" != "${ATTACH_LOG}" ]; then
+			docker logs -f ${CONTAINER_NAME}
+		fi
 	else
 		return 1
 	fi
