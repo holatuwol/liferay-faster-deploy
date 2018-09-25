@@ -28,10 +28,11 @@ These scripts make use of the following Python libraries:
   * ``requests``: http://docs.python-requests.org/en/master/
   * ``semver``: https://pypi.python.org/pypi/semver
   * ``ujson``: https://pypi.python.org/pypi/ujson
+  * ``yq``: https://yq.readthedocs.io/en/latest/
 
 You can install all of these packages using the following commands:
 
 .. code-block:: bash
 
 	conda install -y beautifulsoup4 jupyter pandas psutil requests ujson
-	pip install dateparser semver
+	pip install dateparser semver yq
