@@ -18,8 +18,8 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 	MCD_RD_CLONE_PATH=/path/to/clone/location
 
 	bundle() {
-		LIFERAY_RELEASES_MIRROR=http://172.16.168.221/files.liferay.com \
-		LIFERAY_FILES_MIRROR=http://172.16.168.221/releases.liferay.com \
+		LIFERAY_RELEASES_MIRROR=http://172.16.168.221/releases.liferay.com \
+		LIFERAY_FILES_MIRROR=http://172.16.168.221/files.liferay.com \
 		BRANCH_ARCHIVE_MIRROR=http://10.50.0.165/builds/branches/ \
 		LICENSE_MIRROR=http://10.50.0.165/license/ \
 		LIFERAY_PASSWORD=test \
@@ -28,8 +28,8 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 	}
 
 	cluster() {
-		LIFERAY_RELEASES_MIRROR=http://172.16.168.221/files.liferay.com \
-		LIFERAY_FILES_MIRROR=http://172.16.168.221/releases.liferay.com \
+		LIFERAY_RELEASES_MIRROR=http://172.16.168.221/releases.liferay.com \
+		LIFERAY_FILES_MIRROR=http://172.16.168.221/files.liferay.com \
 		BRANCH_ARCHIVE_MIRROR=http://10.50.0.165/builds/branches/ \
 		LICENSE_MIRROR=http://10.50.0.165/license/ \
 		LIFERAY_PASSWORD=test \
