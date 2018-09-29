@@ -17,7 +17,7 @@ bundleinfo() {
 				BUNDLE_VERSION=$(grep 'artifact.url' modules/.releng/${folder}.properties | cut -d'=' -f 2 | grep -o "/${BUNDLE_NAME}/[^/]*" | cut -d'/' -f 3)
 			fi
 
-			echo "com.liferay.portal,${BUNDLE_NAME},${BUNDLE_VERSION},public" >> ${OUTPUT_FILE}
+			echo "com.liferay.portal,${BUNDLE_NAME},${BUNDLE_VERSION},public,jar" >> ${OUTPUT_FILE}
 		fi
 	done
 
@@ -48,13 +48,48 @@ bundleinfo() {
 			dirnames | sort -u > ${GIT_ROOT}/.redeploy/bundleinfo.txt
 	fi
 
+	if [ ! -d tools/sdk ]; then
+		ant setup-sdk
+	fi
+
+	local BASE_LP_VERSION=$(grep -F lp.version= tools/sdk/build.properties | cut -d'=' -f 2)
+
 	for folder in $(cat ${GIT_ROOT}/.redeploy/bundleinfo.txt); do
-		if [ ! -f "$folder/bnd.bnd" ]; then
+		local BUNDLE_GROUP='com.liferay'
+		local BUNDLE_NAME=
+		local BUNDLE_VERSION=
+		local PACKAGING=
+
+		if [ -f "$folder/bnd.bnd" ]; then
+			BUNDLE_NAME=$(grep '^Bundle-SymbolicName' $folder/bnd.bnd | cut -d' ' -f 2-)
+		elif [ -f "$folder/package.json" ]; then
+			BUNDLE_NAME=$(jq '.name' "${folder}/package.json" | cut -d'"' -f 2)
+		else
 			continue
 		fi
 
-		local BUNDLE_NAME=$(grep '^Bundle-SymbolicName' $folder/bnd.bnd | cut -d' ' -f 2-)
-		local BUNDLE_VERSION="$(grep '^Bundle-Version' $folder/bnd.bnd | cut -d' ' -f 2-)-SNAPSHOT"
+		if [ -f $folder/gulpfile.js ] && [ "" != "$(grep -F liferay-theme-tasks $folder/gulpfile.js)" ]; then
+			PACKAGING=war
+		else
+			PACKAGING=jar
+		fi
+
+		local RELENG_FOLDER=$(echo "${folder}" | sed 's@^modules/@modules/.releng/@g')
+
+		if [ -d ${RELENG_FOLDER} ]; then
+			BUNDLE_GROUP=$(grep 'artifact.url' ${RELENG_FOLDER}/artifact.properties | cut -d'=' -f 2 | grep -o "com/liferay/.*${BUNDLE_NAME}/" | sed "s@/${BUNDLE_NAME}/@@g" | tr '/' '.')
+			BUNDLE_VERSION=$(grep 'artifact.url' ${RELENG_FOLDER}/artifact.properties | cut -d'=' -f 2 | grep -o "/${BUNDLE_NAME}/[^/]*" | cut -d'/' -f 3)
+			PACKAGING=$(grep 'artifact.url' ${RELENG_FOLDER}/artifact.properties | grep -o "[^\\.]*$")
+		elif [ -f $folder/bnd.bnd ]; then
+			BUNDLE_VERSION="$(grep '^Bundle-Version' $folder/bnd.bnd | cut -d' ' -f 2-)-SNAPSHOT"
+			REPOSITORY='none'
+		elif [ -f $folder/package.json ]; then
+			BUNDLE_VERSION="$(jq '.version' $folder/package.json | cut -d'"' -f 2)-SNAPSHOT"
+			REPOSITORY='none'
+		else
+			BUNDLE_VERSION='0.0.0'
+			REPOSITORY='none'
+		fi
 
 		local REPOSITORY='public'
 
@@ -62,15 +97,7 @@ bundleinfo() {
 			REPOSITORY='private'
 		fi
 
-		local RELENG_FOLDER=$(echo "${folder}" | sed 's@^modules/@modules/.releng/@g')
-
-		if [ -d ${RELENG_FOLDER} ]; then
-			BUNDLE_VERSION=$(grep 'artifact.url' ${RELENG_FOLDER}/artifact.properties | cut -d'=' -f 2 | grep -o "/${BUNDLE_NAME}/[^/]*" | cut -d'/' -f 3)
-		else
-			REPOSITORY='none'
-		fi
-
-		echo "com.liferay,${BUNDLE_NAME},${BUNDLE_VERSION},${REPOSITORY}" >> ${OUTPUT_FILE}
+		echo "${BUNDLE_GROUP},${BUNDLE_NAME},${BUNDLE_VERSION},${REPOSITORY},${PACKAGING}" >> ${OUTPUT_FILE}
 	done
 }
 

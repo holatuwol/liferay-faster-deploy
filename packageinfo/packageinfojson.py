@@ -56,7 +56,7 @@ def read_bundle_file(folder, file_name):
 
 	with open('%s/metadata/%s' % (folder, file_name), 'r') as f:
 		reader = csv.reader(f)
-		result = { row[1]: { 'group': row[0], 'name': row[1], 'version': row[2], 'repository': row[3] } for row in reader }
+		result = { row[1]: { 'group': row[0], 'name': row[1], 'version': row[2], 'repository': row[3], 'packaging': row[4] } for row in reader }
 
 	private_file_name = file_name[0:-4] + '-private' + file_name[-4:]
 
@@ -64,7 +64,7 @@ def read_bundle_file(folder, file_name):
 		with open('%s/metadata/%s' % (folder, private_file_name), 'r') as f:
 			reader = csv.reader(f)
 			for row in reader:
-				result[row[1]] = { 'group': row[0], 'name': row[1], 'version': row[2], 'repository': row[3] }
+				result[row[1]] = { 'group': row[0], 'name': row[1], 'version': row[2], 'repository': row[3], 'packaging': row[4] }
 
 	return result
 
@@ -90,7 +90,7 @@ def read_package_file(folder, file_name):
 def add_bundle_file(bundles, folder, file_name, suffix):
 	for key, row in read_bundle_file(folder, file_name).items():
 		if key not in bundles:
-			bundles[key] = { 'group': row['group'], 'name': row['name'], 'repository': row['repository'], 'version': '0.0.0' }
+			bundles[key] = { 'group': row['group'], 'name': row['name'], 'repository': row['repository'], 'version': '0.0.0', 'packaging': row['packaging'] }
 
 		bundles[key][suffix] = True
 		bundles[key]['version_%s' % suffix] = row['version']
@@ -140,7 +140,7 @@ for row in packages.values():
 
 # Identify module changes
 
-columns = ['group', 'name', 'version', 'repository']
+columns = ['group', 'name', 'version', 'repository', 'packaging']
 columns += ['version_%s' % suffix for suffix in json_suffixes]
 
 unique_modules = {(row['group'], row['name']): row for row in bundles.values()}

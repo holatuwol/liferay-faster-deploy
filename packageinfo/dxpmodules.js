@@ -124,13 +124,20 @@ function generateBOM(selectId) {
 			}
 		}
 
+		var dependencyPackaging = versionInfo['packaging'] || 'jar';
+
 		accumulator.push(
 			'      <dependency>',
 			'        <groupId>' + versionInfo['group'] + '</groupId>',
 			'        <artifactId>' + versionInfo['name'] + '</artifactId>',
-			'        <version>' + dependencyVersion + '</version>',
-			'      </dependency>'
+			'        <version>' + dependencyVersion + '</version>'
 		);
+
+		if (dependencyPackaging != 'jar') {
+			accumulator.push('        <packaging>' + dependencyPackaging + '</version>');
+		}
+
+		accumulator.push('      </dependency>');
 
 		return accumulator;
 	}
