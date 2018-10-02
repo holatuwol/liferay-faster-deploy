@@ -1,0 +1,20 @@
+#!/bin/bash
+
+if [ -z "${PORTAL_SOURCE_ROOT}" ]; then
+	echo "Please set a PORTAL_SOURCE_ROOT for the build"
+	exit 1
+fi
+
+SCRIPT_FOLDER=$(dirname $0)
+
+. ${SCRIPT_FOLDER}/s3upload
+
+# Regenerate the testinfo file
+
+cd ${PORTAL_SOURCE_ROOT}
+
+python ${SCRIPT_FOLDER}/testinfo.py
+
+# Upload the files to the designated bucket
+
+s3upload testinfo

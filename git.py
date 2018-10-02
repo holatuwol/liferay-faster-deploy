@@ -43,6 +43,9 @@ def log(*args, **kwargs):
 def ls_files(*args, **kwargs):
 	return _git('ls-files', args, **kwargs)
 
+def ls_tree(*args, **kwargs):
+	return _git('ls-tree', args, **kwargs)
+
 def merge_base(*args, **kwargs):
 	return _git('merge-base', args, **kwargs)
 
