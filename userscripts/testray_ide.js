@@ -4,6 +4,8 @@
 // @match          https://testray.liferay.com/home/-/testray/case_results/*
 // @match          https://github.com/liferay/liferay-portal/blob/*.testcase*
 // @match          https://github.com/liferay/liferay-portal/blob/*.macro*
+// @match          https://github.com/liferay/liferay-portal-ee/blob/*.testcase*
+// @match          https://github.com/liferay/liferay-portal-ee/blob/*.macro*
 // @grant          GM_xmlhttpRequest
 // @grant          GM.xmlHttpRequest
 // ==/UserScript==
@@ -31,7 +33,10 @@ function getGitHubLink(ref_name, items, title) {
     return null;
   }
 
-  return '<a href="https://github.com/liferay/liferay-portal/blob/' +
+  var repoName = ref_name.indexOf('-ee') != -1 ? 'liferay-portal-ee' :
+    ref_name.indexOf('-private') == -1 ? 'liferay-portal' : 'liferay-portal-ee';
+
+  return '<a href="https://github.com/liferay/' + repoName + '/blob/' +
     ref_name + '/' + item.path + '#L' + commandLineNumber +
       '" target="_blank">' + title + '</a>';
 }
