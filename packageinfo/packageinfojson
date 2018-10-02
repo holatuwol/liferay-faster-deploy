@@ -1,9 +1,5 @@
 #!/bin/bash
 
-if [ "" == "$AWS_PROFILE" ]; then
-	AWS_PROFILE=default
-fi
-
 if [ -z "${PORTAL_SOURCE_ROOT_70}" ]; then
 	echo "Please set a PORTAL_SOURCE_ROOT_70 for the build"
 	exit 1
@@ -14,51 +10,21 @@ if [ -z "${PORTAL_SOURCE_ROOT_71}" ]; then
 	exit 1
 fi
 
-if [ -z "${S3_BUCKET}" ]; then
-	echo "Please set a S3_BUCKET for the build"
-	exit 1
-fi
+SCRIPT_FOLDER=$(dirname $0)
 
-if [ -z "${AWS_PROFILE}" ]; then
-	AWS_PROFILE=default
-fi
+. ${SCRIPT_FOLDER}/s3upload
 
 # Make sure the packageinfo files are up to date
 
-. $(dirname $0)/packageinfo
-
-pushd "$PORTAL_SOURCE_ROOT_70" > /dev/null
-CE_70_COUNT=$(git tag | grep 'ga' | grep '7.0.' | grep -c '^')
-CE_71_COUNT=$(git tag | grep 'ga' | grep '7.1.' | grep -c '^')
-EE_70_COUNT=$(git tag | grep 'fix-pack-de-[0-9]*-7010$' | grep -c '^')
-EE_71_COUNT=$(git tag | grep 'fix-pack-de-[0-9]*-7110$' | grep -c '^')
-popd > /dev/null
+. ${SCRIPT_FOLDER}/packageinfo
 
 # Generate the JSON files
 
-cd $(dirname $0)
-
-python packageinfojson.py $(dirname $PORTAL_SOURCE_ROOT_70) $(dirname $PORTAL_SOURCE_ROOT_71)
-python requireschemajson.py $(dirname $PORTAL_SOURCE_ROOT_70) $(dirname $PORTAL_SOURCE_ROOT_71)
+python ${SCRIPT_FOLDER}/packageinfojson.py $(dirname $PORTAL_SOURCE_ROOT_70) $(dirname $PORTAL_SOURCE_ROOT_71)
+python ${SCRIPT_FOLDER}/requireschemajson.py $(dirname $PORTAL_SOURCE_ROOT_70) $(dirname $PORTAL_SOURCE_ROOT_71)
 
 # Upload the files to the designated bucket
 
 for file in dxppackages dxpmodules dxpschemas; do
-	rm -f ${file}.json.gz
-	gzip ${file}.json
-	aws s3 --profile $AWS_PROFILE cp ${file}.json.gz s3://$S3_BUCKET/${file}.json --acl public-read --metadata-directive REPLACE --content-encoding gzip
-	rm -f ${file}.json.gz
-
-	pushd $(dirname ${BASH_SOURCE[0]}) > /dev/null
-
-	for ext in html js; do
-		rm -f ${file}.${ext}.gz
-		gzip ${file}.${ext}
-		aws s3 --profile $AWS_PROFILE cp ${file}.${ext}.gz s3://$S3_BUCKET/${file}.${ext} --acl public-read --metadata-directive REPLACE --content-encoding gzip
-		gunzip ${file}.${ext}.gz
-	done
-
-	popd > /dev/null
+	s3upload ${file}
 done
-
-cd -
