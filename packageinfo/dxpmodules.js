@@ -124,6 +124,14 @@ function generateBOM(selectId) {
 			}
 		}
 
+		var dependencyClassifier = null;
+		var classifierSeparator = dependencyVersion.indexOf(':');
+
+		if (classifierSeparator != -1) {
+			dependencyClassifier = dependencyVersion.substring(classifierSeparator + 1);
+			dependencyVersion = dependencyVersion.substring(0, classifierSeparator);
+		}
+
 		var dependencyPackaging = versionInfo['packaging'] || 'jar';
 
 		accumulator.push(
@@ -132,6 +140,10 @@ function generateBOM(selectId) {
 			'        <artifactId>' + versionInfo['name'] + '</artifactId>',
 			'        <version>' + dependencyVersion + '</version>'
 		);
+
+		if (dependencyClassifier) {
+			accumulator.push('        <classifier>' + dependencyClassifier + '</classifier>');
+		}
 
 		if (dependencyPackaging != 'jar') {
 			accumulator.push('        <packaging>' + dependencyPackaging + '</version>');
@@ -142,11 +154,24 @@ function generateBOM(selectId) {
 		return accumulator;
 	}
 
+	bomXML.push('', '      <!-- Liferay Public Modules -->', '');
 	versionInfoList.filter(isAvailableVersion.bind(null, 'public')).reduce(asDependencyElement, bomXML);
 
-	bomXML.push('', '      <!--');
-	versionInfoList.filter(isAvailableVersion.bind(null, 'private')).reduce(asDependencyElement, bomXML);
-	bomXML.push('      -->', '');
+	var thirdPartyDependencies = versionInfoList.filter(isAvailableVersion.bind(null, 'third-party'));
+
+	if (thirdPartyDependencies.length > 0) {
+		bomXML.push('', '      <!-- Liferay Third-Party Dependencies -->', '');
+		thirdPartyDependencies.reduce(asDependencyElement, bomXML);
+	}
+
+	var privateDependencies = versionInfoList.filter(isAvailableVersion.bind(null, 'private'));
+
+	if (privateDependencies.length > 0) {
+		bomXML.push('', '      <!-- Liferay Private Modules -->');
+		bomXML.push('', '      <!--');
+		privateDependencies.reduce(asDependencyElement, bomXML);
+		bomXML.push('      -->', '');
+	}
 
 	bomXML.push(
 		'    </dependencies>',
@@ -289,11 +314,11 @@ checkVersionInfo = _.debounce(checkVersionInfo, 200);
 var request = new XMLHttpRequest();
 var requestURL = 'https://s3-us-west-2.amazonaws.com/mdang.grow/dxpmodules.json';
 
-request.onreadystatechange = function() {
-	var hasRepository = function(versionInfo) {
-		return versionInfo['repository'] && versionInfo['repository'] != 'none';
-	};
+function hasRepository(versionInfo) {
+	return versionInfo['repository'] && versionInfo['repository'] != 'none';
+};
 
+request.onreadystatechange = function() {
 	if (this.readyState == 4 && this.status == 200) {
 		versionInfoList = JSON.parse(this.responseText).filter(hasRepository);
 
