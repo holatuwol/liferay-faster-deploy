@@ -18,6 +18,10 @@ compile() {
 	ARCHIVE_HOME="$HOME/.liferay/tomcat" \
 		$SCRIPT_FOLDER/../appserverprops
 
+	if [ "" == "$(grep -F baseline.jar.report.level build.${USER}.properties)" ]; then
+		echo -e '\nbaseline.jar.report.level=off' >> build.${USER}.properties
+	fi
+
 	# Mass change timestamps
 
 	$(dirname ${SCRIPT_FOLDER})/../githashtime
