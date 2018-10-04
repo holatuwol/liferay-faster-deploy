@@ -41,12 +41,12 @@ branch() {
 		TIMESTAMP="$TIMESTAMP" \
 			$SCRIPT_FOLDER/prepare $WORKING_DIR $PORT_PREFIX
 
-	# Only retain last three builds
+	# Only retain last two builds
 
 	BUILD_COUNT=$(ls -1 "$BUILD_FOLDER_PREFIX/$WORKING_DIR/" | grep -vF '.log' | grep -c '^')
 
-	if [[ $BUILD_COUNT -gt 3 ]]; then
-		for BUILD_ID in $(ls -1 "$BUILD_FOLDER_PREFIX/$WORKING_DIR/" | grep -vF '.log' | sort | head -$(expr $BUILD_COUNT '-' 3)); do
+	if [[ $BUILD_COUNT -gt 2 ]]; then
+		for BUILD_ID in $(ls -1 "$BUILD_FOLDER_PREFIX/$WORKING_DIR/" | grep -vF '.log' | sort | head -$(expr $BUILD_COUNT '-' 2)); do
 			echo "Remove legacy build ${BUILD_ID}"
 			rm -rf "$BUILD_FOLDER_PREFIX/$WORKING_DIR/$BUILD_ID"
 		done
