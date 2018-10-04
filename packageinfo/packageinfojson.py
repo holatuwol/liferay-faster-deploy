@@ -45,6 +45,7 @@ folders = [metadata[0] for metadata in file_metadata]
 file_suffixes = [metadata[1] for metadata in file_metadata]
 
 bundle_file_names = ['bundleinfo-%s.txt' % suffix for suffix in file_suffixes]
+dependencies_file_names = ['dependencies-%s.txt' % suffix for suffix in file_suffixes]
 package_file_names = ['packageinfo-%s.txt' % suffix for suffix in file_suffixes]
 
 json_suffixes = [suffix if suffix[5:7] != 'de' and suffix[5:8] != 'dxp' else suffix[0:8] + suffix[8:].zfill(2) for suffix in file_suffixes]
@@ -57,6 +58,24 @@ def read_bundle_file(folder, file_name):
 	with open('%s/metadata/%s' % (folder, file_name), 'r') as f:
 		reader = csv.reader(f)
 		result = { row[1]: { 'group': row[0], 'name': row[1], 'version': row[2], 'repository': row[3], 'packaging': row[4] } for row in reader }
+
+	private_file_name = file_name[0:-4] + '-private' + file_name[-4:]
+
+	if os.path.isfile('%s/metadata/%s' % (folder, private_file_name)):
+		with open('%s/metadata/%s' % (folder, private_file_name), 'r') as f:
+			reader = csv.reader(f)
+			for row in reader:
+				result[row[1]] = { 'group': row[0], 'name': row[1], 'version': row[2], 'repository': row[3], 'packaging': row[4] }
+
+	return result
+
+def read_dependencies_file(folder, file_name):
+	result = {}
+
+	if os.path.isfile('%s/metadata/%s' % (folder, file_name)):
+		with open('%s/metadata/%s' % (folder, file_name), 'r') as f:
+			reader = csv.reader(f)
+			result = { row[1]: { 'group': row[0], 'name': row[1], 'version': row[2], 'repository': 'third-party', 'packaging': 'jar' } for row in reader }
 
 	private_file_name = file_name[0:-4] + '-private' + file_name[-4:]
 
@@ -97,6 +116,16 @@ def add_bundle_file(bundles, folder, file_name, suffix):
 
 	return bundles
 
+def add_dependencies_file(bundles, folder, file_name, suffix):
+	for key, row in read_dependencies_file(folder, file_name).items():
+		if key not in bundles:
+			bundles[key] = { 'group': row['group'], 'name': row['name'], 'repository': row['repository'], 'version': '0.0.0', 'packaging': row['packaging'] }
+
+		bundles[key][suffix] = True
+		bundles[key]['version_%s' % suffix] = row['version']
+
+	return bundles
+
 def add_package_file(packages, folder, file_name, suffix):
 	for key, row in read_package_file(folder, file_name).items():
 		if key not in packages:
@@ -110,15 +139,16 @@ def add_package_file(packages, folder, file_name, suffix):
 
 # Load data files
 
-packages = read_package_file(folders[0], package_file_names[0])
+packages = {}
 
 for folder, file_name, suffix in zip(folders, package_file_names, json_suffixes):
 	packages = add_package_file(packages, folder, file_name, suffix)
 
-bundles = read_bundle_file(folders[0], bundle_file_names[0])
+bundles = {}
 
-for folder, file_name, suffix in zip(folders, bundle_file_names, json_suffixes):
-	bundles = add_bundle_file(bundles, folder, file_name, suffix)
+for folder, bundle_file_name, dependencies_file_name, suffix in zip(folders, bundle_file_names, dependencies_file_names, json_suffixes):
+	bundles = add_bundle_file(bundles, folder, bundle_file_name, suffix)
+	bundles = add_dependencies_file(bundles, folder, dependencies_file_name, suffix)
 
 # Fill in missing values
 

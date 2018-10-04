@@ -145,8 +145,36 @@ checkfile() {
 	$(dirname $0)/../sourcetrie
 }
 
-checkpython() {
-	$(dirname ${BASH_SOURCE[0]})/../checkpython $@
+dependencies() {
+	if [[ $1 == *-private ]]; then
+		return 0
+	fi
+
+	for folder in global portal; do
+		if [ "" == "$(git show ${1}:lib/${folder}/dependencies.properties 2> /dev/null)" ]; then
+			return 0
+		fi
+	done
+
+	for library in jsp-api mail servlet-api; do
+		if [ "" == "$(git show ${1}:lib/development/dependencies.properties | grep "^${library}=")" ]; then
+			return 0
+		fi
+	done
+
+	if ! checkfile $1 dependencies; then
+		return 0
+	fi
+
+	echo "Generating dependencies info for $1"
+
+	for library in jsp-api mail servlet-api; do
+		grep "^${library}=" lib/development/dependencies.properties | cut -d'=' -f 2 | sed 's/^\([^:]*\):\([^:]*\):/\1,\2,/g' >> ${OUTPUT_FILE}
+	done
+
+	for folder in global portal; do
+		cut -d'=' -f 2 lib/${folder}/dependencies.properties | sed 's/^\([^:]*\):\([^:]*\):/\1,\2,/g' >> ${OUTPUT_FILE}
+	done
 }
 
 dirnames() {
@@ -243,6 +271,7 @@ packageinfo_release() {
 		bundleinfo $tag_id
 		packageinfo $tag_id
 		requireschema $tag_id
+		dependencies $tag_id
 	done
 
 	popd > /dev/null
@@ -294,8 +323,6 @@ if [ -z "${PORTAL_SOURCE_ROOT_71}" ]; then
 fi
 
 . $(dirname ${BASH_SOURCE[0]})/../setopts
-
-checkpython pandas
 
 if [[ 0 -ne $? ]]; then
 	exit 1
