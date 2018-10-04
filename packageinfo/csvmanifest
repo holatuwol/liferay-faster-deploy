@@ -11,7 +11,9 @@ csvmanifest() {
 
 	local MANIFEST="cat ${INPUT_FILE}"
 
-	if [[ ${INPUT_FILE} == *.jar ]]; then
+	if [ "$1" == "Export" ] && [[ ${INPUT_FILE} == *com.liferay.portal.bootstrap.jar ]]; then
+		MANIFEST="unzip -p ${INPUT_FILE} META-INF/system.packages.extra.mf"
+	elif [[ ${INPUT_FILE} == *.jar ]]; then
 		MANIFEST="unzip -p ${INPUT_FILE} META-INF/MANIFEST.MF"
 	fi
 
