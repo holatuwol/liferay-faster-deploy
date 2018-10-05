@@ -180,6 +180,32 @@ gw() {
 
 redeploy() {
 	downloadbuild $1 && applychanges
+
+	local DATABASE_SUPPORT_JAR="${CATALINA_HOME}/webapps/ROOT/WEB-INF/lib/com.liferay.portal.dao.db.jar"
+
+	if [ -f "${DATABASE_SUPPORT_JAR}" ]; then
+		return 0
+	fi
+
+	local PRIVATE_BRANCH=${BASE_BRANCH}
+
+	if [[ ${BASE_BRANCH} != ee-* ]] && [[ ${BASE_BRANCH} != *-private ]]; then
+		PRIVATE_BRANCH=${BASE_BRANCH}-private
+	fi
+
+	local ARTIFACT_PROPERTIES=$(git ls-tree -r --name-only ${PRIVATE_BRANCH} modules/.releng | grep -F portal-dao-db | grep -F artifact.properties)
+
+	if [ "" == "${ARTIFACT_PROPERTIES}" ]; then
+		return 0
+	fi
+
+	local PRIVATE_USERNAME=$(grep -F build.repository.private.username= build.${USER}.properties | cut -d'=' -f 2)
+	local PRIVATE_PASSWORD=$(grep -F build.repository.private.password= build.${USER}.properties | cut -d'=' -f 2)
+	local ARTIFACT_URL=$(git show ${PRIVATE_BRANCH}:${ARTIFACT_PROPERTIES} | grep -F artifact.url | cut -d'=' -f 2)
+
+	echo "Downloading ${ARTIFACT_URL}"
+
+	curl -u ${PRIVATE_USERNAME}:${PRIVATE_PASSWORD} -o ${DATABASE_SUPPORT_JAR} ${ARTIFACT_URL}
 }
 
 safeant() {
