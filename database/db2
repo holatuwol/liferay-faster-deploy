@@ -2,6 +2,29 @@
 
 . "$(dirname ${BASH_SOURCE[0]})/common"
 
+restorebackup() {
+	docker exec -u db2inst1 ${CONTAINER_NAME} bash -c 'cd "$(dirname "$(find /home/db2inst1/backup -name db2move.lst)")" && /home/db2inst1/sqllib/bin/db2move lportal import | tee /home/db2inst1/import.log'
+
+	local SCHEMA_NAME=$(docker exec ${CONTAINER_NAME} bash -c "grep 'IMPORT:' /home/db2inst1/import.log | cut -d'\"' -f 2 | uniq")
+
+	if [ "" != "${SCHEMA_NAME}" ]; then
+		sed -i.bak "s/currentSchema=[^;]*;/currentSchema=${SCHEMA_NAME};/g" ${LIFERAY_HOME}/portal-ext.properties
+
+		echo "
+connect to lportal;
+grant alterin on schema ${SCHEMA_NAME} to lportal;
+		" > privileges.sql
+
+		for table in $(docker exec ${CONTAINER_NAME} bash -c "grep 'IMPORT:' /home/db2inst1/import.log | cut -d'\"' -f 2,3,4" | sed 's/"//g'); do
+			echo "grant all on ${table} to lportal;" >> privileges.sql
+		done
+	fi
+
+	docker cp privileges.sql ${CONTAINER_NAME}:/home/db2inst1/
+	docker exec ${CONTAINER_NAME} chown db2inst1:db2inst1 /home/db2inst1/privileges.sql
+	docker exec -u db2inst1 ${CONTAINER_NAME} /home/db2inst1/sqllib/bin/db2 -tvmf /home/db2inst1/privileges.sql
+}
+
 startdatabase() {
 	if docker inspect ${CONTAINER_NAME} 1>/dev/null 2>/dev/null; then
 		echo "Using existing container ${CONTAINER_NAME}"
@@ -28,8 +51,9 @@ update database configuration for lportal using LOGSECOND 248;
 
 	docker cp setup.sql ${CONTAINER_NAME}:/home/db2inst1/
 	docker exec ${CONTAINER_NAME} chown db2inst1:db2inst1 /home/db2inst1/setup.sql
-	docker exec -u db2inst1 ${CONTAINER_NAME} bash -c '/home/db2inst1/sqllib/bin/db2 -tvmf /home/db2inst1/setup.sql'
+	docker exec -u db2inst1 ${CONTAINER_NAME} /home/db2inst1/sqllib/bin/db2 -tvmf /home/db2inst1/setup.sql
 
+	docker exec ${CONTAINER_NAME} yum install -y unzip zip
 	docker exec ${CONTAINER_NAME} useradd -g db2iadm1 lportal
 	docker exec ${CONTAINER_NAME} bash -c 'echo "lportal:lportal" | chpasswd'
 }
@@ -53,7 +77,7 @@ updateprops() {
 
 	echo "
 jdbc.default.driverClassName=com.ibm.db2.jcc.DB2Driver
-jdbc.default.url=jdbc:db2://${DB_HOST_NAME}:50000/lportal:deferPrepares=false;fullyMaterializeInputStreams=true;fullyMaterializeLobData=true;progresssiveLocators=2;progressiveStreaming=2;
+jdbc.default.url=jdbc:db2://${DB_HOST_NAME}:50000/lportal:deferPrepares=false;fullyMaterializeInputStreams=true;fullyMaterializeLobData=true;progresssiveLocators=2;progressiveStreaming=2;currentSchema=;
 jdbc.default.username=lportal
 jdbc.default.password=lportal
 " >> ${LIFERAY_HOME}/portal-ext.properties
@@ -71,5 +95,8 @@ DRIVER='db2jcc4.jar'
 if [ "" == "${DB2_VERSION}" ]; then
 	DB2_VERSION='10.5.0.5-3.10.0'
 fi
+
+CONTAINER_USER_NAME='db2inst1'
+BACKUP_FOLDER_NAME='/home/db2inst1/backup'
 
 runcontainer $@

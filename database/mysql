@@ -2,6 +2,10 @@
 
 . "$(dirname ${BASH_SOURCE[0]})/common"
 
+restorebackup() {
+
+}
+
 startdatabase() {
 	if docker inspect ${CONTAINER_NAME} 1>/dev/null 2>/dev/null; then
 		echo "Using existing container ${CONTAINER_NAME}"

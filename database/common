@@ -1,11 +1,6 @@
 #!/bin/bash
 
 containername() {
-	if [ "" != "$1" ]; then
-		CONTAINER_NAME=${1}-${DB_TYPE}
-		return
-	fi
-
 	if [[ ${BASE_BRANCH} == ee-* ]]; then
 		CONTAINER_NAME=$(echo ${BASE_BRANCH} | cut -d'-' -f 2- | tr -d '.')-${DB_TYPE}
 	else
@@ -32,6 +27,46 @@ copydriver() {
 	fi
 }
 
+docker_cp_chown() {
+	if [ "" == "${1}" ]; then
+		echo "No backup specified, skipping attempt to copy backup to container"
+		return 1
+	fi
+
+	if [ "" == "${CONTAINER_USER_NAME}" ]; then
+		echo "Unable to restore ${1} because CONTAINER_USER_NAME is not set"
+		return 1
+	fi
+
+	if [ "" == "${BACKUP_FOLDER_NAME}" ]; then
+		echo "Unable to restore ${1} because BACKUP_FOLDER_NAME is not set"
+		return 1
+	fi
+
+	local FILE_NAME=$(basename "$1")
+	local FOLDER_NAME=${BACKUP_FOLDER_NAME}
+
+	if [[ ${FOLDER_NAME} != */ ]]; then
+		FOLDER_NAME="${FOLDER_NAME}/"
+	fi
+
+	docker exec -u root ${CONTAINER_NAME} mkdir -p "${FOLDER_NAME}"
+	docker exec -u root ${CONTAINER_NAME} chown ${CONTAINER_USER_NAME}:${CONTAINER_USER_NAME} "${FOLDER_NAME}"
+
+	docker exec -u root ${CONTAINER_NAME} rm -f "${FOLDER_NAME}${FILE_NAME}"
+	docker cp "${1}" "${CONTAINER_NAME}:${FOLDER_NAME}"
+	docker exec -u root ${CONTAINER_NAME} chown ${CONTAINER_USER_NAME}:${CONTAINER_USER_NAME} "${FOLDER_NAME}${FILE_NAME}"
+
+	if [[ ${FILE_NAME} == *.zip ]]; then
+		docker exec ${CONTAINER_NAME} bash -c "cd ${FOLDER_NAME} && unzip -qq ${FILE_NAME} && rm -f ${FILE_NAME}"
+		docker exec ${CONTAINER_NAME} chown -R ${CONTAINER_USER_NAME}:${CONTAINER_USER_NAME} "${FOLDER_NAME}"
+	elif [[ ${FILE_NAME} == *.tar.gz ]]; then
+		docker exec ${CONTAINER_NAME} bash -c "cd ${FOLDER_NAME} && tar -zxf ${FILE_NAME}"
+	elif [[ ${FILE_NAME} == *.gz ]]; then
+		docker exec ${CONTAINER_NAME} bash -c "cd ${FOLDER_NAME} && gunzip ${FILE_NAME}"
+	fi
+}
+
 liferayhome() {
 	if [ "${PWD}" != "${HOME}" ] && [ -f portal-ext.properties ]; then
 		LIFERAY_HOME=${PWD}
@@ -53,8 +88,7 @@ random_password() {
 }
 
 runcontainer() {
-	containername $1 && startdatabase && updateprops && copydriver && waitfor_database
+	containername && startdatabase && updateprops && copydriver && waitfor_database && docker_cp_chown $@ && restorebackup $@
 }
-
 
 liferayhome
