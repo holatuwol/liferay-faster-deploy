@@ -147,6 +147,5 @@ waitfor_database() {
 }
 
 DB_TYPE='sybase'
-DRIVER='jconn4.jar'
 
 runcontainer

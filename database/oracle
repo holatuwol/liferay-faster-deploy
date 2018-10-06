@@ -80,6 +80,5 @@ waitfor_database() {
 
 DB_TYPE='oracle'
 ORACLE_VERSION='oracle/database:12.2.0.1-se2'
-DRIVER='ojdbc7_g.jar'
 
 runcontainer

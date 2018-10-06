@@ -1,0 +1,53 @@
+#!/bin/bash
+
+copydriver() {
+	if [[ 0 -ne $(egrep -o $'\r\n'\$ "${LIFERAY_HOME}/portal-ext.properties" | wc -c ) ]]; then
+		perl -pi -e 's/\r\n|\n|\r/\n/g' "${LIFERAY_HOME}/portal-ext.properties"
+	fi
+
+	local DRIVER_CLASS_NAME="$(grep -F jdbc.default.driverClassName ${LIFERAY_HOME}/portal-ext.properties | grep -vF '#' | cut -d'=' -f 2)"
+	echo "Found ${DRIVER_CLASS_NAME} as JDBC driver class"
+
+	if [ "" == "${DRIVER_CLASS_NAME}" ] || [ "org.hsqldb.jdbc.JDBCDriver" == "${DRIVER_CLASS_NAME}" ]; then
+		DRIVER='hsql.jar'
+	elif [ "com.ibm.db2.jcc.DB2Driver" == "${DRIVER_CLASS_NAME}" ]; then
+		DRIVER='db2jcc4.jar'
+	elif [ "org.mariadb.jdbc.Driver" == "${DRIVER_CLASS_NAME}" ]; then
+		DRIVER='mariadb.jar'
+	elif [ "com.mysql.jdbc.Driver" == "${DRIVER_CLASS_NAME}" ]; then
+		DRIVER='mysql.jar'
+	elif [ "oracle.jdbc.OracleDriver" == "${DRIVER_CLASS_NAME}" ]; then
+		DRIVER='ojdbc7_g.jar'
+	elif [ "org.postgresql.Driver" == "${DRIVER_CLASS_NAME}" ]; then
+		DRIVER='postgresql.jar'
+	elif [ "com.microsoft.sqlserver.jdbc.SQLServerDriver" == "${DRIVER_CLASS_NAME}" ]; then
+		if [[ ${HOTFIX_LEVEL} == 6.1.* ]] || [[ ${HOTFIX_LEVEL} == *-6130 ]] || [[ ${HOTFIX_LEVEL} == *-6130.zip ]]; then
+			DRIVER='mssql-jdbc-6.2.2.jre7.jar'
+		elif [[ ${HOTFIX_LEVEL} == portal-* ]] || [[ ${HOTFIX_LEVEL} == 6.2.* ]] || [[ ${HOTFIX_LEVEL} == *-6210 ]] || [[ ${HOTFIX_LEVEL} == *-6210.zip ]]; then
+			DRIVER='mssql-jdbc-6.2.2.jre7.jar'
+		else
+			DRIVER='mssql-jdbc-6.2.2.jre8.jar'
+		fi
+	elif [ "com.sybase.jdbc4.jdbc.SybDriver" == "${DRIVER_CLASS_NAME}" ]; then
+		DRIVER='jconn4.jar'
+	else
+		echo "Unable to guess .jar name for ${DRIVER_CLASS_NAME}"
+		echo "Hopefully driver is already in ${CATALINA_HOME}/lib/ext"
+		return 0
+	fi
+
+	if [ -f ${CATALINA_HOME}/lib/ext/${DRIVER} ]; then
+		echo "Using existing ${DRIVER} in ${CATALINA_HOME}/lib/ext"
+	elif [ "" == "${DRIVERS_FOLDER}" ]; then
+		echo "DRIVERS_FOLDER environment variable not set"
+		echo "Hopefully driver is already in ${CATALINA_HOME}/lib/ext"
+	elif [ ! -f ${DRIVERS_FOLDER}/${DRIVER} ]; then
+		echo "${DRIVER} not found. Please download it and copy it to ${DRIVERS_FOLDER}"
+	else
+		echo "Copying ${DRIVER} from ${DRIVERS_FOLDER} to ${CATALINA_HOME}/lib/ext"
+		mkdir -p ${CATALINA_HOME}/lib/ext
+		cp ${DRIVERS_FOLDER}/${DRIVER} ${CATALINA_HOME}/lib/ext
+	fi
+}
+
+copydriver

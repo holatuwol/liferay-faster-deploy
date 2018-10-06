@@ -50,7 +50,6 @@ waitfor_database() {
 }
 
 DB_TYPE='postgres'
-DRIVER='postgresql.jar'
 
 if [ "" == "${POSTGRES_VERSION}" ]; then
 	POSTGRES_VERSION='10.4'
