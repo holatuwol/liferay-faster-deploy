@@ -29,7 +29,7 @@
 
 <table class="table">
 <tbody>
-<tr><th>Starting Version</th><th>Check Against Version</th><th>Name Filter</th><th>Breaking Changes Only</th></tr>
+<tr><th>Starting Version</th><th>Check Against Version</th><th>Name Filter</th><th>Other Filters</th></tr>
 <tr>
 <td>
 <select id="sourceVersion" name="sourceVersion">
@@ -45,7 +45,14 @@
 <input id="nameFilter" name="nameFilter" type="text" />
 </td>
 <td>
-<input id="notableOnly" name="notableOnly" type="checkbox" />
+<div>
+	<input id="changesOnly" name="changesOnly" type="checkbox" />
+	<label for="changesOnly">Version Changes</label>
+</div>
+<div>
+	<input id="notableOnly" name="notableOnly" type="checkbox" />
+	<label for="notableOnly">Breaking Changes</label>
+</div>
 </td>
 </tr>
 </tbody>
@@ -84,5 +91,9 @@
 
 </body>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js" integrity="sha384-FZY+KSLVXVyc1qAlqH9oCx1JEOlQh6iXfw3o2n3Iy32qGjXmUPWT9I0Z9e9wxYe3" crossorigin="anonymous"></script>
+<script src="dxppackages.js"></script>
+
+<!--
 <script src="https://s3-us-west-2.amazonaws.com/mdang.grow/dxppackages.js"></script>
+-->

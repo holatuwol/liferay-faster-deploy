@@ -17,6 +17,13 @@ var select2 = document.getElementById('targetVersion');
 var select2Value = getParameter('targetVersion');
 var nameFilter = document.getElementById('nameFilter');
 nameFilter.value = getParameter('nameFilter');
+
+var changesOnly = document.getElementById('changesOnly');
+
+if (changesOnly) {
+	changesOnly.checked = getParameter('changesOnly') == 'true';
+}
+
 var notableOnly = document.getElementById('notableOnly');
 
 if (notableOnly) {
@@ -47,8 +54,12 @@ function checkSchemaInfo() {
 			newURL += '&nameFilter=' + nameFilter.value;
 		}
 
-		if (notableOnly.checked) {
-			newURL += '&notableOnly=true';
+		if (changesOnly) {
+			newURL += '&changesOnly=' + changesOnly.checked;
+		}
+
+		if (notableOnly) {
+			newURL += '&notableOnly=' + notableOnly.checked;
 		}
 
 		modifyState({path: newURL}, '', newURL);
@@ -62,6 +73,7 @@ function checkSchemaInfo() {
 	var header2 = select1.options[select2.selectedIndex].innerHTML;
 
 	var nameFilterValue = nameFilter.value;
+	var changesOnlyValue = changesOnly && changesOnly.checked;
 	var notableOnlyValue = notableOnly && notableOnly.checked;
 
 	var isDEVersionIncrease = (name2 > name1);
@@ -75,6 +87,15 @@ function checkSchemaInfo() {
 		var version2 = schemaInfo[name2];
 
 		return (version1 != '0.0.0') || (version2 != '0.0.0');
+	};
+
+	var isVersionChange = function(schemaInfo) {
+		var name = schemaInfo['name'];
+
+		var version1 = schemaInfo[name1];
+		var version2 = schemaInfo[name2];
+
+		return version1 != version2;
 	};
 
 	var isNotableVersionChange = function(schemaInfo) {
@@ -93,6 +114,10 @@ function checkSchemaInfo() {
 	var summary = document.getElementById('summary');
 
 	var filteredSchemaInfoList = schemaInfoList.filter(isMatchingNameFilter).filter(isAvailableVersion);
+
+	if ((name1 != name2) && changesOnlyValue) {
+		filteredSchemaInfoList = filteredSchemaInfoList.filter(isVersionChange);
+	}
 
 	if ((name1 != name2) && notableOnlyValue) {
 		filteredSchemaInfoList = filteredSchemaInfoList.filter(isNotableVersionChange);
@@ -203,6 +228,10 @@ request.onreadystatechange = function() {
 		select2.onchange = checkSchemaInfo;
 		nameFilter.oninput = checkSchemaInfo;
 		nameFilter.onpropertychange = checkSchemaInfo;
+
+		if (changesOnly) {
+			changesOnly.onchange = checkSchemaInfo;
+		}
 
 		if (notableOnly) {
 			notableOnly.onchange = checkSchemaInfo;

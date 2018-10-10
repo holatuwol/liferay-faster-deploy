@@ -31,7 +31,7 @@
 
 <table class="table">
 <tbody>
-<tr><th>Starting Version</th><th>Check Against Version</th><th>Name Filter</th><th>Changes Only</th></tr>
+<tr><th>Starting Version</th><th>Check Against Version</th><th>Name Filter</th><th>Other Filters</th></tr>
 <tr>
 <td>
 <select id="sourceVersion" name="sourceVersion">
@@ -49,7 +49,16 @@
 <input id="nameFilter" name="nameFilter" type="text" />
 </td>
 <td>
-<input id="notableOnly" name="notableOnly" type="checkbox" />
+<div>
+	<input id="notableOnly" name="notableOnly" type="checkbox" />
+	<label for="notableOnly">Version Changes</label>
+</div>
+<div>
+	<input id="includeThirdParty" name="includeThirdParty" type="checkbox" />
+	<label for="includeThirdParty">Third Party Libraries</label>
+</div>
+</td>
+<td>
 </td>
 </tr>
 </tbody>
