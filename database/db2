@@ -3,7 +3,7 @@
 . "$(dirname ${BASH_SOURCE[0]})/common"
 
 restorebackup() {
-	docker exec -u db2inst1 ${CONTAINER_NAME} bash -c 'cd "$(dirname "$(find /home/db2inst1/backup -name db2move.lst)")" && /home/db2inst1/sqllib/bin/db2move lportal import | tee /home/db2inst1/import.log'
+	docker exec -u db2inst1 ${CONTAINER_NAME} bash -c 'cd "$(dirname "$(find /home/db2inst1/backup -name db2move.lst)")"; ls *.gz | xargs gunzip; /home/db2inst1/sqllib/bin/db2move lportal import | tee /home/db2inst1/import.log'
 
 	local SCHEMA_NAME=$(docker exec ${CONTAINER_NAME} bash -c "grep 'IMPORT:' /home/db2inst1/import.log | cut -d'\"' -f 2 | uniq")
 
