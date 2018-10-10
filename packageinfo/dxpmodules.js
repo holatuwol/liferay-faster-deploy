@@ -34,25 +34,9 @@ var servicePacks = {
 	'7010-de-50': 8
 };
 
-function generateBOM(selectId) {
-	selectId = selectId || 'sourceVersion';
-
-	var select = document.getElementById(selectId);
-	var selectValue = select.options[select.selectedIndex].value;
-
-	var artifactId = selectValue.indexOf('-ga') != -1 ? 'release.portal.bom' : 'release.dxp.bom';
-
-	var versionId;
-	var versionNumber = parseInt(selectValue.substring(0, 4));
-
-	if ((versionNumber % 100 == 10) && (selectValue.indexOf('-base') == -1)) {
-		var fixPackVersion = selectValue.substring(selectValue.indexOf('-', 5) + 1);
-		var versionSuffix = selectValue in servicePacks ? ('.' + servicePacks[selectValue]) : ('.fp' + fixPackVersion);
-		versionId = Math.floor(versionNumber / 1000) + '.' + Math.floor((versionNumber % 1000) / 100) + '.10' + versionSuffix;
-	}
-	else {
-		var fixPackVersion = selectValue.substring(selectValue.indexOf('-', 5) + 1);
-		versionId = Math.floor(versionNumber / 1000) + '.' + Math.floor((versionNumber % 1000) / 100) + '.' + (versionNumber % 100);
+function addBOM(zip, key, artifactId, versionId, dependencies) {
+	if (dependencies.length == 0) {
+		return;
 	}
 
 	var bomXML = [
@@ -96,82 +80,7 @@ function generateBOM(selectId) {
 		'    <dependencies>'
 	];
 
-	var key ='version_' + selectValue;
-
-	var isAvailableVersion = function(repository, versionInfo) {
-		return (key in versionInfo) && versionInfo[key] != '0.0.0' && versionInfo['repository'] == repository;
-	};
-
-	var asDependencyElement = function(accumulator, versionInfo) {
-		var dependencyVersion = versionInfo[key];
-
-		if (dependencyVersion.indexOf('-SNAPSHOT') != -1) {
-			var x = dependencyVersion.indexOf('.');
-			var y = dependencyVersion.indexOf('.', x + 1);
-
-			var majorVersion = parseInt(dependencyVersion.substring(0, x));
-			var minorVersion = parseInt(dependencyVersion.substring(x + 1, y));
-			var patchVersion = parseInt(dependencyVersion.substring(y + 1, dependencyVersion.indexOf('-SNAPSHOT')));
-
-			if (patchVersion > 0) {
-				dependencyVersion = majorVersion + '.' + minorVersion + '.0';
-			}
-			else if (minorVersion > 0) {
-				dependencyVersion = majorVersion + '.' + (minorVersion - 1) + '.0';
-			}
-			else {
-				dependencyVersion = majorVersion + '.' + minorVersion + '.' + patchVersion;
-			}
-		}
-
-		var dependencyClassifier = null;
-		var classifierSeparator = dependencyVersion.indexOf(':');
-
-		if (classifierSeparator != -1) {
-			dependencyClassifier = dependencyVersion.substring(classifierSeparator + 1);
-			dependencyVersion = dependencyVersion.substring(0, classifierSeparator);
-		}
-
-		var dependencyPackaging = versionInfo['packaging'] || 'jar';
-
-		accumulator.push(
-			'      <dependency>',
-			'        <groupId>' + versionInfo['group'] + '</groupId>',
-			'        <artifactId>' + versionInfo['name'] + '</artifactId>',
-			'        <version>' + dependencyVersion + '</version>'
-		);
-
-		if (dependencyClassifier) {
-			accumulator.push('        <classifier>' + dependencyClassifier + '</classifier>');
-		}
-
-		if (dependencyPackaging != 'jar') {
-			accumulator.push('        <packaging>' + dependencyPackaging + '</version>');
-		}
-
-		accumulator.push('      </dependency>');
-
-		return accumulator;
-	}
-
-	bomXML.push('', '      <!-- Liferay Public Modules -->', '');
-	versionInfoList.filter(isAvailableVersion.bind(null, 'public')).reduce(asDependencyElement, bomXML);
-
-	var thirdPartyDependencies = versionInfoList.filter(isAvailableVersion.bind(null, 'third-party'));
-
-	if (thirdPartyDependencies.length > 0) {
-		bomXML.push('', '      <!-- Liferay Third-Party Dependencies -->', '');
-		thirdPartyDependencies.reduce(asDependencyElement, bomXML);
-	}
-
-	var privateDependencies = versionInfoList.filter(isAvailableVersion.bind(null, 'private'));
-
-	if (privateDependencies.length > 0) {
-		bomXML.push('', '      <!-- Liferay Private Modules -->');
-		bomXML.push('', '      <!--');
-		privateDependencies.reduce(asDependencyElement, bomXML);
-		bomXML.push('      -->', '');
-	}
+	dependencies.reduce(asDependencyElement.bind(null, key), bomXML);
 
 	bomXML.push(
 		'    </dependencies>',
@@ -179,17 +88,112 @@ function generateBOM(selectId) {
 		'</project>'
 	);
 
-	var bomBlob = new Blob([bomXML.join('\n')], {type : 'application/xml'});
+	zip.file(artifactId + '-' + versionId + '.pom', bomXML.join('\n'));
+}
 
-	var downloadBOMLink = document.createElement('a');
-	downloadBOMLink.style.display = 'none';
+function asDependencyElement(key, accumulator, versionInfo) {
+	var dependencyVersion = versionInfo[key];
 
-	downloadBOMLink.href = URL.createObjectURL(bomBlob);
-	downloadBOMLink.download = artifactId + '-' + versionId + '.bom';
+	if (dependencyVersion.indexOf('-SNAPSHOT') != -1) {
+		var x = dependencyVersion.indexOf('.');
+		var y = dependencyVersion.indexOf('.', x + 1);
 
-	document.body.appendChild(downloadBOMLink);
-	downloadBOMLink.click();
-	document.body.removeChild(downloadBOMLink);
+		var majorVersion = parseInt(dependencyVersion.substring(0, x));
+		var minorVersion = parseInt(dependencyVersion.substring(x + 1, y));
+		var patchVersion = parseInt(dependencyVersion.substring(y + 1, dependencyVersion.indexOf('-SNAPSHOT')));
+
+		if (patchVersion > 0) {
+			dependencyVersion = majorVersion + '.' + minorVersion + '.0';
+		}
+		else if (minorVersion > 0) {
+			dependencyVersion = majorVersion + '.' + (minorVersion - 1) + '.0';
+		}
+		else {
+			dependencyVersion = majorVersion + '.' + minorVersion + '.' + patchVersion;
+		}
+	}
+
+	var dependencyClassifier = null;
+	var classifierSeparator = dependencyVersion.indexOf(':');
+
+	if (classifierSeparator != -1) {
+		dependencyClassifier = dependencyVersion.substring(classifierSeparator + 1);
+		dependencyVersion = dependencyVersion.substring(0, classifierSeparator);
+	}
+
+	var dependencyPackaging = versionInfo['packaging'] || 'jar';
+
+	accumulator.push(
+		'      <dependency>',
+		'        <groupId>' + versionInfo['group'] + '</groupId>',
+		'        <artifactId>' + versionInfo['name'] + '</artifactId>',
+		'        <version>' + dependencyVersion + '</version>'
+	);
+
+	if (dependencyClassifier) {
+		accumulator.push('        <classifier>' + dependencyClassifier + '</classifier>');
+	}
+
+	if (dependencyPackaging != 'jar') {
+		accumulator.push('        <packaging>' + dependencyPackaging + '</version>');
+	}
+
+	accumulator.push('      </dependency>');
+
+	return accumulator;
+};
+
+function generateBOM(selectId) {
+	selectId = selectId || 'sourceVersion';
+
+	var select = document.getElementById(selectId);
+	var selectValue = select.options[select.selectedIndex].value;
+
+	var artifactId = selectValue.indexOf('-ga') != -1 ? 'release.portal.bom' : 'release.dxp.bom';
+
+	var versionId;
+	var versionNumber = parseInt(selectValue.substring(0, 4));
+
+	if ((versionNumber % 100 == 10) && (selectValue.indexOf('-base') == -1)) {
+		var fixPackVersion = selectValue.substring(selectValue.indexOf('-', 5) + 1);
+		var versionSuffix = selectValue in servicePacks ? ('.' + servicePacks[selectValue]) : ('.fp' + fixPackVersion);
+		versionId = Math.floor(versionNumber / 1000) + '.' + Math.floor((versionNumber % 1000) / 100) + '.10' + versionSuffix;
+	}
+	else {
+		var fixPackVersion = selectValue.substring(selectValue.indexOf('-', 5) + 1);
+		versionId = Math.floor(versionNumber / 1000) + '.' + Math.floor((versionNumber % 1000) / 100) + '.' + (versionNumber % 100);
+	}
+
+	var key ='version_' + selectValue;
+
+	var isAvailableVersion = function(repository, versionInfo) {
+		return (key in versionInfo) && versionInfo[key] != '0.0.0' && versionInfo['repository'] == repository;
+	};
+
+	var publicDependencies = versionInfoList.filter(isAvailableVersion.bind(null, 'public'));
+	var privateDependencies = versionInfoList.filter(isAvailableVersion.bind(null, 'private'));
+	var thirdPartyDependencies = versionInfoList.filter(isAvailableVersion.bind(null, 'third-party'));
+
+	var zip = new JSZip();
+
+	addBOM(zip, key, artifactId, versionId, publicDependencies);
+	addBOM(zip, key, artifactId + '.private', versionId, privateDependencies);
+	addBOM(zip, key, artifactId + '.third.party', versionId, thirdPartyDependencies);
+
+	zip.generateAsync({
+		type: 'blob',
+		compression: 'DEFLATE'
+	}).then(function(bomBlob) {
+		var downloadBOMLink = document.createElement('a');
+		downloadBOMLink.style.display = 'none';
+
+		downloadBOMLink.href = URL.createObjectURL(bomBlob);
+		downloadBOMLink.download = artifactId + '-' + versionId + '.zip';
+
+		document.body.appendChild(downloadBOMLink);
+		downloadBOMLink.click();
+		document.body.removeChild(downloadBOMLink);
+	})
 };
 
 function isPermaLink(element) {
