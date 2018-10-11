@@ -12,7 +12,7 @@ restorebackup() {
 
 		echo "
 connect to lportal;
-grant alterin on schema ${SCHEMA_NAME} to lportal;
+grant createin, alterin, dropin on schema ${SCHEMA_NAME} to lportal;
 		" > privileges.sql
 
 		for table in $(docker exec ${CONTAINER_NAME} bash -c "grep 'IMPORT:' /home/db2inst1/import.log | cut -d'\"' -f 2,3,4" | sed 's/"//g'); do
