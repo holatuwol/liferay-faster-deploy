@@ -14,32 +14,39 @@ window.setTimesheetCookie = function() {
 function appendQuickLinks() {
   setTimeout(function() {
     var scripts = document.getElementsByTagName('script');
-    var url = null;
+
+    var timesheetURL = null;
+    var ptoURL = null;
 
     for (var i = 0; i < scripts.length; i++) {
       var script = scripts[i].innerHTML;
       if (script.indexOf('"headerLinks"') != -1) {
         var start = script.lastIndexOf('{', script.indexOf('"Time"'));
         var end = script.indexOf('}', start);
-
         var timeInfo = JSON.parse(script.substring(start, end + 1));
-        url = timeInfo.url;
+        timesheetURL = timeInfo.url;
+
+        start = script.lastIndexOf('{', script.indexOf('"Time Off"'));
+        end = script.indexOf('}', start);
+        timeInfo = JSON.parse(script.substring(start, end + 1));
+        ptoURL = timeInfo.url;
       }
     }
 
-    if (!url) {
-      return;
+    var row = document.querySelector('#miscLinksInnerContainer table tr');
+    var insertIndex = 1;
+
+    if (timesheetURL) {
+      var cell = row.insertCell(insertIndex++);
+      cell.className = 'miscLinkContainer';
+      cell.innerHTML = '<span><a class="miscItem" href="https://nw12.ultipro.com/' + timesheetURL + '" onclick="window.setTimesheetCookie();" target="_blank">Timesheet</a></span>';
     }
 
-    var row = document.querySelector('#miscLinksInnerContainer table tr');
-
-    var cell = row.insertCell(1);
-    cell.className = 'miscLinkContainer';
-    cell.innerHTML = '<span><a class="miscItem" href="https://nw12.ultipro.com/' + url + '" onclick="window.setTimesheetCookie();" target="_blank">Timesheet</a></span>';
-
-    cell = row.insertCell(2);
-    cell.className = 'miscLinkContainer';
-    cell.innerHTML = '<span><a class="miscItem" href="https://wfm-toa-web2.ultipro.com/#/dashboard" target="_blank">PTO</a></span>';
+    if (ptoURL) {
+      var cell = row.insertCell(insertIndex++);
+      cell.className = 'miscLinkContainer';
+      cell.innerHTML = '<span><a class="miscItem" href="https://nw12.ultipro.com/' + ptoURL + '" target="_blank">PTO</a></span>';
+    }
 
   }, 2000);
 }
@@ -96,7 +103,7 @@ function appendTimePeriodNavigator() {
 }
 
 function checkEmptyProjects(timeout) {
-  setTimeout(doCheckEmptyTimeouts, 5000);
+  setTimeout(doCheckEmptyTimeouts, 4000);
 }
 
 function doCheckEmptyTimeouts() {
