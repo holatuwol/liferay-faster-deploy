@@ -11,6 +11,39 @@ window.setTimesheetCookie = function() {
   document.cookie = 'timeSheetCookie=timesheetCookie; domain=.ultipro.com; expires=' + expirationDate;
 }
 
+function appendQuickLinks() {
+  setTimeout(function() {
+    var scripts = document.getElementsByTagName('script');
+    var url = null;
+
+    for (var i = 0; i < scripts.length; i++) {
+      var script = scripts[i].innerHTML;
+      if (script.indexOf('"headerLinks"') != -1) {
+        var start = script.lastIndexOf('{', script.indexOf('"Time"'));
+        var end = script.indexOf('}', start);
+
+        var timeInfo = JSON.parse(script.substring(start, end + 1));
+        url = timeInfo.url;
+      }
+    }
+
+    if (!url) {
+      return;
+    }
+
+    var row = document.querySelector('#miscLinksInnerContainer table tr');
+
+    var cell = row.insertCell(1);
+    cell.className = 'miscLinkContainer';
+    cell.innerHTML = '<span><a class="miscItem" href="https://nw12.ultipro.com/' + url + '" onclick="window.setTimesheetCookie();" target="_blank">Timesheet</a></span>';
+
+    cell = row.insertCell(2);
+    cell.className = 'miscLinkContainer';
+    cell.innerHTML = '<span><a class="miscItem" href="https://wfm-toa-web2.ultipro.com/#/dashboard" target="_blank">PTO</a></span>';
+
+  }, 2000);
+}
+
 function appendTimePeriodNavigator() {
   setTimeout(function() {
     if (!document.location.hash || document.location.hash.indexOf('#/timesheet/metrics-view') != 0) {
@@ -62,48 +95,57 @@ function appendTimePeriodNavigator() {
   }, 2000);
 }
 
-if (document.location.hostname == 'nw12.ultipro.com') {
-  if (document.location.pathname == '/default.aspx') {
-    setTimeout(function() {
-      var scripts = document.getElementsByTagName('script');
-      var url = null;
+function checkEmptyProjects() {
+  setTimeout(function() {
+    var projectNodes = document.querySelectorAll('labor-metric-input[labor-metric="::laborMetric"] div[name="PROJECT"]');
 
-      for (var i = 0; i < scripts.length; i++) {
-        var script = scripts[i].innerHTML;
-        if (script.indexOf('"headerLinks"') != -1) {
-          var start = script.lastIndexOf('{', script.indexOf('"Time"'));
-          var end = script.indexOf('}', start);
+    var selectedProjects = [];
 
-          var timeInfo = JSON.parse(script.substring(start, end + 1));
-          url = timeInfo.url;
+    for (var i = 0; i < projectNodes.length; i++) {
+      var scope = angular.element(projectNodes[i]).scope();
+      var selectedItem = scope.$select.selected;
+
+      if (selectedItem) {
+        var hasSelectedItem = false;
+        for (var j = 0; j < selectedProjects.length; j++) {
+          hasSelectedItem |= (selectedItem.id == selectedProjects[j].id);
+        }
+
+        if (!hasSelectedItem) {
+          selectedProjects.push(selectedItem);
         }
       }
+    }
 
-      if (!url) {
-        return;
-      }
+    if (selectedProjects.length != 1) {
+      return;
+    }
 
-      var row = document.querySelector('#miscLinksInnerContainer table tr');
+    var selectedProject = selectedProjects[0];
 
-      var cell = row.insertCell(1);
-      cell.className = 'miscLinkContainer';
-      cell.innerHTML = '<span><a class="miscItem" href="https://nw12.ultipro.com/' + url + '" onclick="window.setTimesheetCookie();" target="_blank">Timesheet</a></span>';
+    for (var i = 0; i < projectNodes.length; i++) {
+      var scope = angular.element(projectNodes[i]).scope();
+      scope.$select.selected = selectedProject;
+      scope.$apply();
+    }
+  }, 4000);
+}
 
-      cell = row.insertCell(2);
-      cell.className = 'miscLinkContainer';
-      cell.innerHTML = '<span><a class="miscItem" href="https://wfm-toa-web2.ultipro.com/#/dashboard" target="_blank">PTO</a></span>';
-
-    }, 2000);
-  }
+if (document.location.hostname == 'nw12.ultipro.com') {
+  appendQuickLinks();
 }
 else {
-  appendTimePeriodNavigator();
   window.onhashchange = appendTimePeriodNavigator;
+  window.onhashchange = checkEmptyProjects;
 
   if (document.cookie.indexOf('timeSheetCookie=timesheetCookie') != -1) {
     setTimeout(function() {
       document.cookie = 'timeSheetCookie=timesheetCookie; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=.ultipro.com'
       document.location.href = 'https://wfm-time-web2.ultipro.com/#/timesheet';
     }, 2000);
+  }
+  else {
+    appendTimePeriodNavigator();
+    checkEmptyProjects();
   }
 }
