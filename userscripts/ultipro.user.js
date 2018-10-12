@@ -103,11 +103,19 @@ function appendTimePeriodNavigator() {
 }
 
 function checkEmptyProjects(timeout) {
-  setTimeout(doCheckEmptyTimeouts, 4000);
+  setTimeout(doCheckEmptyTimeouts, 2000);
 }
 
 function doCheckEmptyTimeouts() {
+  if ((window.location.hash.indexOf('#/timesheet') != 0) || (window.location.hash.indexOf('#/timesheet/') == 0)) {
+    return;
+  }
+
   var projectNodes = document.querySelectorAll('labor-metric-input[labor-metric="::laborMetric"] div[name="PROJECT"]');
+
+  if (projectNodes.length < 7) {
+    setTimeout(doCheckEmptyTimeouts, 1000);
+  }
 
   var selectedProjects = [];
 
@@ -166,7 +174,9 @@ else {
     }, 2000);
   }
   else {
-    appendTimePeriodNavigator();
-    checkEmptyProjects();
+    window.addEventListener('load', function() {
+      appendTimePeriodNavigator();
+      checkEmptyProjects();
+    });
   }
 }
