@@ -97,14 +97,13 @@ if (document.location.hostname == 'nw12.ultipro.com') {
   }
 }
 else {
+  appendTimePeriodNavigator();
+  window.onhashchange = appendTimePeriodNavigator;
+
   if (document.cookie.indexOf('timeSheetCookie=timesheetCookie') != -1) {
     setTimeout(function() {
       document.cookie = 'timeSheetCookie=timesheetCookie; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=.ultipro.com'
       document.location.href = 'https://wfm-time-web2.ultipro.com/#/timesheet';
     }, 2000);
-  }
-  else {
-    appendTimePeriodNavigator();
-    window.onhashchange = appendTimePeriodNavigator;
   }
 }
