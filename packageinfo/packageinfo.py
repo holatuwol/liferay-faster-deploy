@@ -102,7 +102,7 @@ with open(get_rd_file('packageinfo.txt'), 'r') as f:
 		else:
 			package_version = '1.0.0'
 
-		module_versions.append(node.value + (package_name, package_version))
+		module_versions.append(node.value + (package_name))
 
 with open(sys.argv[1], 'w') as f:
 	csvf = csv.writer(f)

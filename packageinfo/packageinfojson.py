@@ -57,7 +57,16 @@ def read_bundle_file(folder, file_name):
 
 	with open('%s/metadata/%s' % (folder, file_name), 'r') as f:
 		reader = csv.reader(f)
-		result = { row[1]: { 'group': row[0], 'name': row[1], 'version': row[2], 'repository': row[3], 'packaging': row[4] } for row in reader }
+		result = {
+			row[1]: {
+				'group': row[0],
+				'name': row[1],
+				'version': row[2],
+				'repository': row[3],
+				'packaging': row[6]
+			}
+			for row in reader
+		}
 
 	private_file_name = file_name[0:-4] + '-private' + file_name[-4:]
 
@@ -65,7 +74,13 @@ def read_bundle_file(folder, file_name):
 		with open('%s/metadata/%s' % (folder, private_file_name), 'r') as f:
 			reader = csv.reader(f)
 			for row in reader:
-				result[row[1]] = { 'group': row[0], 'name': row[1], 'version': row[2], 'repository': row[3], 'packaging': row[4] }
+				result[row[1]] = {
+					'group': row[0],
+					'name': row[1],
+					'version': row[2],
+					'repository': row[3],
+					'packaging': row[6]
+				}
 
 	return result
 
@@ -75,7 +90,16 @@ def read_dependencies_file(folder, file_name):
 	if os.path.isfile('%s/metadata/%s' % (folder, file_name)):
 		with open('%s/metadata/%s' % (folder, file_name), 'r') as f:
 			reader = csv.reader(f)
-			result = { row[1]: { 'group': row[0], 'name': row[1], 'version': row[2], 'repository': 'third-party', 'packaging': 'jar' } for row in reader }
+			result = {
+				row[1]: {
+					'group': row[0],
+					'name': row[1],
+					'version': row[2],
+					'repository': 'third-party',
+					'packaging': 'jar'
+				}
+				for row in reader
+			}
 
 	private_file_name = file_name[0:-4] + '-private' + file_name[-4:]
 
@@ -83,7 +107,13 @@ def read_dependencies_file(folder, file_name):
 		with open('%s/metadata/%s' % (folder, private_file_name), 'r') as f:
 			reader = csv.reader(f)
 			for row in reader:
-				result[row[1]] = { 'group': row[0], 'name': row[1], 'version': row[2], 'repository': row[3], 'packaging': row[4] }
+				result[row[1]] = {
+					'group': row[0],
+					'name': row[1],
+					'version': row[2],
+					'repository': row[3],
+					'packaging': row[4]
+				}
 
 	return result
 
@@ -92,7 +122,15 @@ def read_package_file(folder, file_name):
 
 	with open('%s/metadata/%s' % (folder, file_name), 'r') as f:
 		reader = csv.reader(f)
-		result = { row[3]: { 'group': row[0], 'name': row[1], 'version': row[2], 'package': row[3], 'packageVersion': row[4] } for row in reader }
+		result = {
+			row[3]: {
+				'group': row[0],
+				'name': row[1],
+				'package': row[2],
+				'packageVersion': row[3]
+			}
+			for row in reader
+		}
 
 	private_file_name = file_name[0:-4] + '-private' + file_name[-4:]
 
@@ -100,7 +138,12 @@ def read_package_file(folder, file_name):
 		with open('%s/metadata/%s' % (folder, private_file_name), 'r') as f:
 			reader = csv.reader(f)
 			for row in reader:
-				result[row[3]] = { 'group': row[0], 'name': row[1], 'version': row[2], 'package': row[3], 'packageVersion': row[4] }
+				result[row[3]] = {
+					'group': row[0],
+					'name': row[1],
+					'package': row[2],
+					'packageVersion': row[3]
+				}
 
 	return result
 
@@ -109,7 +152,13 @@ def read_package_file(folder, file_name):
 def add_bundle_file(bundles, folder, file_name, suffix):
 	for key, row in read_bundle_file(folder, file_name).items():
 		if key not in bundles:
-			bundles[key] = { 'group': row['group'], 'name': row['name'], 'repository': row['repository'], 'version': '0.0.0', 'packaging': row['packaging'] }
+			bundles[key] = {
+				'group': row['group'],
+				'name': row['name'],
+				'repository': row['repository'],
+				'version': '0.0.0',
+				'packaging': row['packaging']
+			}
 
 		bundles[key][suffix] = True
 		bundles[key]['version_%s' % suffix] = row['version']
@@ -119,7 +168,13 @@ def add_bundle_file(bundles, folder, file_name, suffix):
 def add_dependencies_file(bundles, folder, file_name, suffix):
 	for key, row in read_dependencies_file(folder, file_name).items():
 		if key not in bundles:
-			bundles[key] = { 'group': row['group'], 'name': row['name'], 'repository': row['repository'], 'version': '0.0.0', 'packaging': row['packaging'] }
+			bundles[key] = {
+				'group': row['group'],
+				'name': row['name'],
+				'repository': row['repository'],
+				'version': '0.0.0',
+				'packaging': row['packaging']
+			}
 
 		bundles[key][suffix] = True
 		bundles[key]['version_%s' % suffix] = row['version']
@@ -129,10 +184,9 @@ def add_dependencies_file(bundles, folder, file_name, suffix):
 def add_package_file(packages, folder, file_name, suffix):
 	for key, row in read_package_file(folder, file_name).items():
 		if key not in packages:
-			packages[key] = { 'group': row['group'], 'name': row['name'], 'version': '0.0.0', 'package': key, 'packageVersion': '0.0.0' }
+			packages[key] = { 'group': row['group'], 'name': row['name'], 'package': key, 'packageVersion': '0.0.0' }
 
 		packages[key][suffix] = True
-		packages[key]['version_%s' % suffix] = row['version']
 		packages[key]['packageVersion_%s' % suffix] = row['packageVersion']
 
 	return packages
@@ -156,14 +210,12 @@ for row in bundles.values():
 	for suffix in json_suffixes:
 		if suffix not in row:
 			row['version_%s' % suffix] = '0.0.0'
-			row['packageVersion_%s' % suffix] = '0.0.0'
 		else:
 			del row[suffix]
 
 for row in packages.values():
 	for suffix in json_suffixes:
 		if suffix not in row:
-			row['version_%s' % suffix] = '0.0.0'
 			row['packageVersion_%s' % suffix] = '0.0.0'
 		else:
 			del row[suffix]

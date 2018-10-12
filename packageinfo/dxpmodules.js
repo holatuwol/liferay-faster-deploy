@@ -40,6 +40,12 @@ var servicePacks = {
 	'7010-de-50': 8
 };
 
+var repositoryURLs = {
+	'public': 'https://repository-cdn.liferay.com/nexus/content/repositories/liferay-public-releases/',
+	'private': 'https://repository-cdn.liferay.com/nexus/content/repositories/liferay-private-releases/',
+	'third-party': 'https://repository-cdn.liferay.com/nexus/content/repositories/public/'
+} ;
+
 function addBOM(zip, key, artifactId, versionId, dependencies) {
 	if (dependencies.length == 0) {
 		return;
@@ -72,14 +78,19 @@ function addBOM(zip, key, artifactId, versionId, dependencies) {
 		'  </scm>',
 		'  <repositories>',
 		'    <repository>',
-		'      <id>liferay-public</id>',
-		'      <name>Liferay Public (CDN)</name>',
-		'      <url>https://repository-cdn.liferay.com/nexus/content/repositories/public/</url>',
+		'      <id>liferay-public-releases</id>',
+		'      <name>Liferay Public Releases (CDN)</name>',
+		'      <url>', repositoryURLs['public'], '</url>',
 		'    </repository>',
 		'    <repository>',
-		'      <id>liferay-public-snapshots</id>',
-		'      <name>Liferay Public Snapshots (CDN)</name>',
-		'      <url>https://repository-cdn.liferay.com/nexus/content/repositories/liferay-public-snapshots/</url>',
+		'      <id>liferay-private-releases</id>',
+		'      <name>Liferay Private Releases (CDN)</name>',
+		'      <url>', repositoryURLs['private'], '</url>',
+		'    </repository>',
+		'    <repository>',
+		'      <id>liferay-third-party</id>',
+		'      <name>Liferay Third Party (CDN)</name>',
+		'      <url>', repositoryURLs['third-party'], '</url>',
 		'    </repository>',
 		'  </repositories>',
 		'  <dependencyManagement>',
@@ -238,10 +249,31 @@ function checkVersionInfo() {
 		modifyState = history.replaceState.bind(history);
 	}
 
+	var getTagName = function(selectValue) {
+		var versionId;
+		var versionNumber = parseInt(selectValue.substring(0, 4));
+
+		if (versionNumber % 100 == 10) {
+			if (selectValue.indexOf('base') == -1) {
+				var classifierPos = selectValue.indexOf('-', 5) + 1;
+				var fixPackPrefix = 'fix-pack-' + selectValue.substring(5, classifierPos);
+				return fixPackPrefix + parseInt(selectValue.substring(classifierPos)) + '-' + versionNumber;
+			}
+			else {
+				return 'fix-pack-base-' + versionNumber;
+			}
+		}
+		else {
+			return Math.floor(versionNumber / 1000) + '.' + Math.floor((versionNumber % 1000) / 100) + '.' + (versionNumber % 100);
+		}
+	}
+
 	var name1 = 'version_' + select1.options[select1.selectedIndex].value;
+	var tagName1 = getTagName(select1.options[select1.selectedIndex].value);
 	var header1 = select1.options[select1.selectedIndex].innerHTML;
 
 	var name2 = 'version_' + select2.options[select2.selectedIndex].value;
+	var tagName2 = getTagName(select2.options[select2.selectedIndex].value);
 	var header2 = select1.options[select2.selectedIndex].innerHTML;
 
 	var nameFilterValue = nameFilter.value;
@@ -320,12 +352,62 @@ function checkVersionInfo() {
 		addRow(true, ['group', 'name', header1, header2]);
 	}
 
+	var usePrivateTag = function(tagName, repository) {
+		if (repository != 'private') {
+			return false;
+		}
+
+		if (tagName.indexOf('fix-pack-de-') != 0) {
+			return true;
+		}
+
+		var deVersionId = tagName.substring(12, tagName.indexOf('-', 12));
+
+		if (parseInt(deVersionId) <= 27) {
+			return false;
+		}
+
+		return true;
+	}
+
+	var getArtifactLink = function(versionInfo, name) {
+		if (!(versionInfo['repository'] in repositoryURLs)) {
+			return versionInfo[name];
+		}
+
+		var version = versionInfo[name];
+
+		if ((version == '0.0.0') || (version.indexOf('-SNAPSHOT') != -1)) {
+			return versionInfo[name];
+		}
+
+		var dependencyClassifier = null;
+		var classifierSeparator = version.indexOf(':');
+
+		if (classifierSeparator != -1) {
+			dependencyClassifier = version.substring(classifierSeparator + 1);
+			version = version.substring(0, classifierSeparator);
+		}
+
+		return [
+			'<a href="',
+			repositoryURLs[versionInfo['repository']],
+			versionInfo['group'].replace(/\./g, '/'), '/',
+			versionInfo['name'], '/',
+			version, '/',
+			versionInfo['name'], '-', version,
+			dependencyClassifier ? '-' + dependencyClassifier : '',
+			'.', versionInfo['packaging'],
+			'">', versionInfo[name], '</a>'
+		].join('');
+	};
+
 	var getRowData = function(versionInfo) {
 		if (name1 == name2) {
-			return [versionInfo['group'], versionInfo['name'], versionInfo[name1]];
+			return [versionInfo['group'], versionInfo['name'], getArtifactLink(versionInfo, name1)];
 		}
 		else {
-			return [versionInfo['group'], versionInfo['name'], versionInfo[name1], versionInfo[name2]];
+			return [versionInfo['group'], versionInfo['name'], getArtifactLink(versionInfo, name1), getArtifactLink(versionInfo, name2)];
 		}
 	};
 

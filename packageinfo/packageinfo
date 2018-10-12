@@ -12,12 +12,15 @@ bundleinfo() {
 			local BUNDLE_NAME="com.liferay.$(echo $folder | tr '-' '.')"
 
 			local BUNDLE_VERSION="$(grep '^Bundle-Version' $folder/bnd.bnd | cut -d' ' -f 2-)-SNAPSHOT"
+			local RELENG_PATH="modules/.releng/${folder}.properties"
 
-			if [ -f modules/.releng/${folder}.properties ]; then
+			if [ -f ${RELENG_PATH} ]; then
 				BUNDLE_VERSION=$(grep 'artifact.url' modules/.releng/${folder}.properties | cut -d'=' -f 2 | grep -o "/${BUNDLE_NAME}/[^/]*" | cut -d'/' -f 3)
+			else
+				RELENG_PATH=
 			fi
 
-			echo "com.liferay.portal,${BUNDLE_NAME},${BUNDLE_VERSION},public,jar" >> ${OUTPUT_FILE}
+			echo "com.liferay.portal,${BUNDLE_NAME},${BUNDLE_VERSION},public,${folder},${RELENG_PATH},jar" >> ${OUTPUT_FILE}
 		fi
 	done
 
@@ -64,6 +67,10 @@ bundleinfo() {
 			BUNDLE_NAME=$(grep '^Bundle-SymbolicName' $folder/bnd.bnd | cut -d' ' -f 2-)
 		elif [ -f "$folder/package.json" ]; then
 			BUNDLE_NAME=$(jq  '.liferayTheme.distName' "${folder}/package.json" | cut -d'"' -f 2)
+
+			if [ "" == "${BUNDLE_NAME}" ]; then
+				BUNDLE_NAME=$(jq  '.name' "${folder}/package.json" | cut -d'"' -f 2)
+			fi
 		else
 			continue
 		fi
@@ -74,22 +81,29 @@ bundleinfo() {
 			PACKAGING=jar
 		fi
 
-		local RELENG_FOLDER=$(echo "${folder}" | sed 's@^modules/@modules/.releng/@g')
+		local RELENG_PATH="$(echo "${folder}" | sed 's@^modules/@modules/.releng/@g')/artifact.properties"
 		local ARTIFACT_URL=
 
-		if [ -f ${RELENG_FOLDER}/artifact.properties ]; then
-			ARTIFACT_URL=$(grep 'artifact.url' ${RELENG_FOLDER}/artifact.properties | cut -d'=' -f 2)
+		if [ -f ${RELENG_PATH} ]; then
+			ARTIFACT_URL=$(grep 'artifact.url' ${RELENG_PATH} | cut -d'=' -f 2)
+		else
+			ARTIFACT_URL=$(git show $(cat git-commit-portal):${RELENG_PATH} 2> /dev/null | grep 'artifact.url' | cut -d'=' -f 2)
+		fi
 
+		if [ "" != "${ARTIFACT_URL}" ]; then
 			BUNDLE_GROUP=$(echo "${ARTIFACT_URL}" | grep -o "com/liferay/.*${BUNDLE_NAME}/" | sed "s@/${BUNDLE_NAME}/@@g" | tr '/' '.')
 			BUNDLE_VERSION=$(echo "${ARTIFACT_URL}" | grep -o "/${BUNDLE_NAME}/[^/]*" | cut -d'/' -f 3)
 			PACKAGING=$(echo "${ARTIFACT_URL}" | grep -o "[^\\.]*$")
 		elif [ -f $folder/bnd.bnd ]; then
+			RELENG_PATH=
 			BUNDLE_VERSION="$(grep '^Bundle-Version' $folder/bnd.bnd | cut -d' ' -f 2-)-SNAPSHOT"
 			REPOSITORY='none'
 		elif [ -f $folder/package.json ]; then
+			RELENG_PATH=
 			BUNDLE_VERSION="$(jq '.version' $folder/package.json | cut -d'"' -f 2)-SNAPSHOT"
 			REPOSITORY='none'
 		else
+			RELENG_PATH=
 			BUNDLE_VERSION='0.0.0'
 			REPOSITORY='none'
 		fi
@@ -100,7 +114,7 @@ bundleinfo() {
 			REPOSITORY='private'
 		fi
 
-		echo "${BUNDLE_GROUP},${BUNDLE_NAME},${BUNDLE_VERSION},${REPOSITORY},${PACKAGING}" >> ${OUTPUT_FILE}
+		echo "${BUNDLE_GROUP},${BUNDLE_NAME},${BUNDLE_VERSION},${REPOSITORY},${folder},${RELENG_PATH},${PACKAGING}" >> ${OUTPUT_FILE}
 	done
 }
 
