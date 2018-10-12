@@ -96,7 +96,7 @@ function appendTimePeriodNavigator() {
 }
 
 function checkEmptyProjects(timeout) {
-  setTimeout(doCheckEmptyTimeouts, 4000);
+  setTimeout(doCheckEmptyTimeouts, 5000);
 }
 
 function doCheckEmptyTimeouts() {
