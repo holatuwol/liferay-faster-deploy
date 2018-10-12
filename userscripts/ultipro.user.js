@@ -95,40 +95,54 @@ function appendTimePeriodNavigator() {
   }, 2000);
 }
 
-function checkEmptyProjects() {
-  setTimeout(function() {
-    var projectNodes = document.querySelectorAll('labor-metric-input[labor-metric="::laborMetric"] div[name="PROJECT"]');
+function checkEmptyProjects(timeout) {
+  setTimeout(doCheckEmptyTimeouts, 4000);
+}
 
-    var selectedProjects = [];
+function doCheckEmptyTimeouts() {
+  var projectNodes = document.querySelectorAll('labor-metric-input[labor-metric="::laborMetric"] div[name="PROJECT"]');
 
-    for (var i = 0; i < projectNodes.length; i++) {
-      var scope = angular.element(projectNodes[i]).scope();
-      var selectedItem = scope.$select.selected;
+  var selectedProjects = [];
 
-      if (selectedItem) {
-        var hasSelectedItem = false;
-        for (var j = 0; j < selectedProjects.length; j++) {
-          hasSelectedItem |= (selectedItem.id == selectedProjects[j].id);
-        }
+  for (var i = 0; i < projectNodes.length; i++) {
+    var scope = angular.element(projectNodes[i]).scope();
+    var selectedItem = scope.$select.selected;
 
-        if (!hasSelectedItem) {
-          selectedProjects.push(selectedItem);
-        }
+    if (selectedItem) {
+      var hasSelectedItem = false;
+      for (var j = 0; j < selectedProjects.length; j++) {
+        hasSelectedItem |= (selectedItem.id == selectedProjects[j].id);
+      }
+
+      if (!hasSelectedItem) {
+        selectedProjects.push(selectedItem);
       }
     }
+  }
 
-    if (selectedProjects.length != 1) {
-      return;
+  if (selectedProjects.length == 0) {
+    var searches = document.querySelectorAll('input[type="search"]');
+
+    for (var i = 0; i < searches.length; i++) {
+      if (searches[i].addedBlur) {
+        continue;
+      }
+
+      searches[i].onblur = doCheckEmptyTimeouts;
+      searches[i].addedBlur = true;
     }
+  }
+  else if (selectedProjects.length != 1) {
+    return;
+  }
 
-    var selectedProject = selectedProjects[0];
+  var selectedProject = selectedProjects[0];
 
-    for (var i = 0; i < projectNodes.length; i++) {
-      var scope = angular.element(projectNodes[i]).scope();
-      scope.$select.selected = selectedProject;
-      scope.$apply();
-    }
-  }, 4000);
+  for (var i = 0; i < projectNodes.length; i++) {
+    var scope = angular.element(projectNodes[i]).scope();
+    scope.$select.selected = selectedProject;
+    scope.$apply();
+  }
 }
 
 if (document.location.hostname == 'nw12.ultipro.com') {
