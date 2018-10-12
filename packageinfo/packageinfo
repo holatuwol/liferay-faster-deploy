@@ -68,7 +68,7 @@ bundleinfo() {
 		elif [ -f "$folder/package.json" ]; then
 			BUNDLE_NAME=$(jq  '.liferayTheme.distName' "${folder}/package.json" | cut -d'"' -f 2)
 
-			if [ "" == "${BUNDLE_NAME}" ]; then
+			if [ "null" == "${BUNDLE_NAME}" ]; then
 				BUNDLE_NAME=$(jq  '.name' "${folder}/package.json" | cut -d'"' -f 2)
 			fi
 		else
@@ -86,7 +86,7 @@ bundleinfo() {
 
 		if [ -f ${RELENG_PATH} ]; then
 			ARTIFACT_URL=$(grep 'artifact.url' ${RELENG_PATH} | cut -d'=' -f 2)
-		else
+		elif [ -f git-commit-portal ]; then
 			ARTIFACT_URL=$(git show $(cat git-commit-portal):${RELENG_PATH} 2> /dev/null | grep 'artifact.url' | cut -d'=' -f 2)
 		fi
 
