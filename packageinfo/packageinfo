@@ -52,6 +52,7 @@ bundleinfo() {
 	fi
 
 	if [ ! -d tools/sdk ]; then
+		fixbuildprops
 		ant setup-sdk
 	fi
 
@@ -195,6 +196,19 @@ dirnames() {
 	python $(dirname $0)/../dirnames.py
 }
 
+fixbuildprops() {
+	if [ -f build.$USER.properties ]; then
+		if [[ 0 -ne $(egrep -o $'\r\n'\$ build.$USER.properties | wc -c ) ]]; then
+			perl -pi -e 's/\r\n|\n|\r/\n/g' build.$USER.properties
+		fi
+	fi
+
+	if [ "" == "$(grep -F baseline.jar.report.level=off build.$USER.properties)" ]; then
+		sed 's/^\s*baseline.jar.report.level=/#baseline.jar.report.level=/g' build.$USER.properties
+		echo -e '\nbaseline.jar.report.level=off' >> build.$USER.properties
+	fi
+}
+
 packageinfo() {
 	if ! checkfile $1 packageinfo; then
 		return 0
@@ -228,6 +242,7 @@ packageinfo_compat() {
 		return 0
 	fi
 
+	fixbuildprops
 	ant setup-sdk
 
 	for file in $(git ls-files modules/core/portal-compat | grep -F imported-files.properties); do
