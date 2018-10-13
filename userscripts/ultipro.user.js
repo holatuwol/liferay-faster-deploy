@@ -103,7 +103,7 @@ function appendTimePeriodNavigator() {
 }
 
 function checkEmptyProjects(timeout) {
-  setTimeout(doCheckEmptyTimeouts, 2000);
+  setTimeout(doCheckEmptyTimeouts, 1000);
 }
 
 function doCheckEmptyTimeouts() {
@@ -111,19 +111,21 @@ function doCheckEmptyTimeouts() {
     return;
   }
 
-  var projectNodes = document.querySelectorAll('labor-metric-input[labor-metric="::laborMetric"] div[name="PROJECT"]');
+  var rows = document.querySelectorAll('.entry-table tr');
 
-  if (projectNodes.length < 7) {
+  if (rows.length < 7) {
     setTimeout(doCheckEmptyTimeouts, 1000);
   }
 
   var selectedProjects = [];
 
-  for (var i = 0; i < projectNodes.length; i++) {
-    var scope = angular.element(projectNodes[i]).scope();
+  var allProjectNodes = document.querySelectorAll('labor-metric-input[labor-metric="::laborMetric"] div[name="PROJECT"]');
+
+  for (var i = 0; i < allProjectNodes.length; i++) {
+    var scope = angular.element(allProjectNodes[i]).scope();
     var selectedItem = scope.$select.selected;
 
-    if (selectedItem) {
+    if (selectedItem && (selectedItem.id != -1)) {
       var hasSelectedItem = false;
       for (var j = 0; j < selectedProjects.length; j++) {
         hasSelectedItem |= (selectedItem.id == selectedProjects[j].id);
@@ -135,28 +137,66 @@ function doCheckEmptyTimeouts() {
     }
   }
 
-  if (selectedProjects.length == 0) {
-    var searches = document.querySelectorAll('input[type="search"]');
+  var buttons = document.querySelectorAll('.add-time-edit-btn');
 
-    for (var i = 0; i < searches.length; i++) {
-      if (searches[i].addedBlur) {
+  for (var i = 0; i < buttons.length; i++) {
+    if (buttons[i].addedClick) {
+      continue;
+    }
+
+    buttons[i].onclick = checkEmptyProjects;
+    buttons[i].addedClick = true;
+  }
+
+  var searches = document.querySelectorAll('input[type="search"]');
+
+  for (var i = 0; i < searches.length; i++) {
+    if (searches[i].addedBlur) {
+      continue;
+    }
+
+    searches[i].onblur = checkEmptyProjects;
+    searches[i].addedBlur = true;
+  }
+
+  for (var i = 0; i < rows.length; i++) {
+    var button = rows[i].querySelector('.add-time-edit-btn');
+
+    if (!button) {
+      continue;
+    }
+
+    var projectNodes = rows[i].querySelectorAll('labor-metric-input[labor-metric="::laborMetric"] div[name="PROJECT"]');
+
+    for (var j = projectNodes.length; j < selectedProjects.length; j++) {
+      button.click();
+    }
+
+    projectNodes = rows[i].querySelectorAll('labor-metric-input[labor-metric="::laborMetric"] div[name="PROJECT"]');
+
+    for (var j = 0; j < selectedProjects.length; j++) {
+      var includedProject = false;
+
+      for (var k = 0; k < projectNodes.length; k++) {
+        var scope = angular.element(projectNodes[k]).scope();
+
+        includedProject |= (scope.$select.selected && (scope.$select.selected.id == selectedProjects[j].id));
+      }
+
+      if (includedProject) {
         continue;
       }
 
-      searches[i].onblur = doCheckEmptyTimeouts;
-      searches[i].addedBlur = true;
+      for (var k = 0; k < projectNodes.length; k++) {
+        var scope = angular.element(projectNodes[k]).scope();
+
+        if (!scope.$select.selected || (scope.$select.selected.id == -1)) {
+          scope.$select.selected = selectedProjects[j];
+          scope.$apply();
+          break;
+        }
+      }
     }
-  }
-  else if (selectedProjects.length != 1) {
-    return;
-  }
-
-  var selectedProject = selectedProjects[0];
-
-  for (var i = 0; i < projectNodes.length; i++) {
-    var scope = angular.element(projectNodes[i]).scope();
-    scope.$select.selected = selectedProject;
-    scope.$apply();
   }
 }
 
