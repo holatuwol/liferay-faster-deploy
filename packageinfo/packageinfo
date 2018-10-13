@@ -250,14 +250,11 @@ packageinfo_compat() {
 
 		local bundle_artifact=
 		local bundle_name=$(grep '^Bundle-SymbolicName' $folder/bnd.bnd | cut -d' ' -f 2)
-		local bundle_version=
 
 		if [[ $bundle_name == com.liferay.portal.kernel* ]]; then
 			bundle_artifact=com.liferay.portal.kernel
-			bundle_version=$(grep -F 'com.liferay.portal.kernel' .gradle/gradle.properties | cut -d'=' -f 2)
 		elif [[ $bundle_name == com.liferay.portal.impl* ]]; then
 			bundle_artifact=com.liferay.portal.impl
-			bundle_version=$(grep -F 'com.liferay.portal.impl' .gradle/gradle.properties | cut -d'=' -f 2)
 		fi
 
 		if [ "" == "$bundle_artifact" ]; then
@@ -272,7 +269,7 @@ packageinfo_compat() {
 			local package_name=$(dirname $packageinfofile | tr '/' '.' | cut -d'.' -f 2-)
 			local package_version=$(cat $packageinfofile | cut -d' ' -f 2)
 
-			echo com.liferay.portal,${bundle_artifact},${bundle_version},${package_name},${package_version} >> $OUTPUT_FILE
+			echo com.liferay.portal,${bundle_artifact},${package_name},${package_version} >> $OUTPUT_FILE
 		done
 
 		popd > /dev/null
