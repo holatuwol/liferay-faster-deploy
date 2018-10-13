@@ -332,7 +332,7 @@ function checkVersionInfo() {
 		var row = document.createElement('tr');
 
 		if (!isHeader && (rowData.length > 3)) {
-			row.style.color = 'rgba(0,0,0,' + getRowForegroundAlpha(rowData[2], rowData[3]) + ')'
+			row.style.opacity = getRowForegroundAlpha(rowData[2], rowData[3]);
 			row.style.backgroundColor = 'rgba(0,0,0,' + getRowBackgroundAlpha(rowData[2], rowData[3]) + ')';
 		}
 
