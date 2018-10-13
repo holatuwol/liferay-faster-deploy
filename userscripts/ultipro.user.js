@@ -5,12 +5,6 @@
 // @match          https://nw12.ultipro.com/default.aspx
 // @grant          none
 
-window.setTimesheetCookie = function() {
-  var expirationDate = new Date();
-  expirationDate.setMonth(expirationDate.getMonth() + 12);
-  document.cookie = 'timeSheetCookie=timesheetCookie; domain=.ultipro.com; expires=' + expirationDate;
-}
-
 function appendQuickLinks() {
   setTimeout(function() {
     var scripts = document.getElementsByTagName('script');
@@ -37,6 +31,12 @@ function appendQuickLinks() {
     var insertIndex = 1;
 
     if (timesheetURL) {
+      window.setTimesheetCookie = function() {
+        var expirationDate = new Date();
+        expirationDate.setMonth(expirationDate.getMonth() + 12);
+        document.cookie = 'timeSheetCookie=timesheetCookie; domain=.ultipro.com; expires=' + expirationDate;
+      }
+
       var cell = row.insertCell(insertIndex++);
       cell.className = 'miscLinkContainer';
       cell.innerHTML = '<span><a class="miscItem" href="https://nw12.ultipro.com/' + timesheetURL + '" onclick="window.setTimesheetCookie();" target="_blank">Timesheet</a></span>';
