@@ -114,7 +114,9 @@ function doCheckEmptyTimeouts() {
   var rows = document.querySelectorAll('.entry-table tr');
 
   if (rows.length < 7) {
-    setTimeout(doCheckEmptyTimeouts, 1000);
+    checkEmptyProjects();
+
+    return;
   }
 
   var selectedProjects = [];
