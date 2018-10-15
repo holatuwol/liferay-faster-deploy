@@ -1,6 +1,7 @@
 // ==UserScript==
 // @name           Liferay Ultipro Timesheet Link
 // @namespace      holatuwol
+// @match          https://wfm-time-web2.ultipro.com/
 // @match          https://wfm-time-web2.ultipro.com/*
 // @match          https://nw12.ultipro.com/default.aspx
 // @grant          none
@@ -31,15 +32,14 @@ function appendQuickLinks() {
     var insertIndex = 1;
 
     if (timesheetURL) {
-      window.setTimesheetCookie = function() {
+      var cell = row.insertCell(insertIndex++);
+      cell.className = 'miscLinkContainer';
+      cell.innerHTML = '<span><a class="miscItem" href="https://nw12.ultipro.com/' + timesheetURL + '" target="_blank">Timesheet</a></span>';
+      cell.onclick = function() {
         var expirationDate = new Date();
         expirationDate.setMonth(expirationDate.getMonth() + 12);
         document.cookie = 'timeSheetCookie=timesheetCookie; domain=.ultipro.com; expires=' + expirationDate;
-      }
-
-      var cell = row.insertCell(insertIndex++);
-      cell.className = 'miscLinkContainer';
-      cell.innerHTML = '<span><a class="miscItem" href="https://nw12.ultipro.com/' + timesheetURL + '" onclick="window.setTimesheetCookie();" target="_blank">Timesheet</a></span>';
+      };
     }
 
     if (ptoURL) {
@@ -118,6 +118,8 @@ function doCheckEmptyTimeouts() {
 
     return;
   }
+
+  var angular = unsafeWindow.angular;
 
   var selectedProjects = [];
 
@@ -216,9 +218,7 @@ else {
     }, 2000);
   }
   else {
-    window.addEventListener('load', function() {
-      appendTimePeriodNavigator();
-      checkEmptyProjects();
-    });
+    window.addEventListener('load', appendTimePeriodNavigator);
+    window.addEventListener('load', checkEmptyProjects);
   }
 }
