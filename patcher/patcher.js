@@ -50,6 +50,19 @@ function getLiferayVersion(version) {
 
 		return parseInt(shortVersion) * 1000 + parseInt(deVersion);
 	}
+	else if (version.indexOf('fix-pack-dxp-') != -1) {
+		var pos = version.indexOf('-', 13);
+		var deVersion = version.substring(13, pos);
+		var shortVersion = version.substring(pos + 1);
+
+		pos = shortVersion.indexOf('-private');
+
+		if (pos != -1) {
+			shortVersion = shortVersion.substring(0, pos);
+		}
+
+		return parseInt(shortVersion) * 1000 + parseInt(deVersion);
+	}
 	else {
 		var shortVersion = version.substring('fix-pack-base-'.length);
 		var pos = shortVersion.indexOf('-private');
