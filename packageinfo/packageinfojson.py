@@ -123,7 +123,7 @@ def read_package_file(folder, file_name):
 	with open('%s/metadata/%s' % (folder, file_name), 'r') as f:
 		reader = csv.reader(f)
 		result = {
-			row[3]: {
+			row[2]: {
 				'group': row[0],
 				'name': row[1],
 				'package': row[2],

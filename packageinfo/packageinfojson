@@ -16,7 +16,9 @@ SCRIPT_FOLDER=$(dirname $0)
 
 # Make sure the packageinfo files are up to date
 
-. ${SCRIPT_FOLDER}/packageinfo
+if [ "update" == "$1" ]; then
+	. ${SCRIPT_FOLDER}/packageinfo
+fi
 
 # Generate the JSON files
 
