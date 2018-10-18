@@ -3,7 +3,7 @@
 . "$(dirname ${BASH_SOURCE[0]})/common"
 
 restorebackup() {
-
+	echo 'Backup creation not supported!'
 }
 
 startdatabase() {
