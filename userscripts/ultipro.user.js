@@ -106,6 +106,17 @@ function checkEmptyProjects() {
   setTimeout(doCheckEmptyTimeouts, 1000);
 }
 
+function addClickListener(buttons) {
+  for (var i = 0; i < buttons.length; i++) {
+    if (buttons[i].addedClick) {
+      continue;
+    }
+
+    buttons[i].onclick = checkEmptyProjects;
+    buttons[i].addedClick = true;
+  }
+}
+
 function doCheckEmptyTimeouts() {
   if ((window.location.hash.indexOf('#/timesheet') != 0) || (window.location.hash.indexOf('#/timesheet/') == 0)) {
     return;
@@ -141,17 +152,6 @@ function doCheckEmptyTimeouts() {
     }
   }
 
-  var buttons = document.querySelectorAll('.add-time-edit-btn');
-
-  for (var i = 0; i < buttons.length; i++) {
-    if (buttons[i].addedClick) {
-      continue;
-    }
-
-    buttons[i].onclick = checkEmptyProjects;
-    buttons[i].addedClick = true;
-  }
-
   var searches = document.querySelectorAll('input[type="search"]');
 
   for (var i = 0; i < searches.length; i++) {
@@ -162,6 +162,8 @@ function doCheckEmptyTimeouts() {
     searches[i].onblur = checkEmptyProjects;
     searches[i].addedBlur = true;
   }
+
+  var daysChecked = 0;
 
   for (var i = 0; i < rows.length; i++) {
     var button = rows[i].querySelector('.add-time-edit-btn');
@@ -174,13 +176,13 @@ function doCheckEmptyTimeouts() {
       break;
     }
 
-    var projectNodes = rows[i].querySelectorAll('labor-metric-input[labor-metric="::laborMetric"] div[name="PROJECT"]');
+    var timeCodeNodes = rows[i].querySelectorAll('labor-metric-input[labor-metric="::$ctrl.timeCode"]');
 
-    for (var j = projectNodes.length; j < selectedProjects.length; j++) {
+    for (var j = timeCodeNodes.length; j < selectedProjects.length; j++) {
       button.click();
     }
 
-    projectNodes = rows[i].querySelectorAll('labor-metric-input[labor-metric="::laborMetric"] div[name="PROJECT"]');
+    var projectNodes = rows[i].querySelectorAll('labor-metric-input[labor-metric="::laborMetric"] div[name="PROJECT"]');
 
     for (var j = 0; j < selectedProjects.length; j++) {
       var includedProject = false;
@@ -206,6 +208,9 @@ function doCheckEmptyTimeouts() {
       }
     }
   }
+
+  addClickListener(document.querySelectorAll('.add-time-edit-btn'));
+  addClickListener(document.querySelectorAll('button[ng-if="$ctrl.onSave"]'));
 }
 
 if (document.location.hostname == 'nw12.ultipro.com') {
