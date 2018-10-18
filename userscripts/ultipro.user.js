@@ -170,6 +170,10 @@ function doCheckEmptyTimeouts() {
       continue;
     }
 
+    if (daysChecked++ == 5) {
+      break;
+    }
+
     var projectNodes = rows[i].querySelectorAll('labor-metric-input[labor-metric="::laborMetric"] div[name="PROJECT"]');
 
     for (var j = projectNodes.length; j < selectedProjects.length; j++) {
