@@ -7,7 +7,13 @@
 // @grant          none
 
 function appendQuickLinks() {
-  setTimeout(function() {
+  setInterval(function() {
+    var row = document.querySelector('#miscLinksInnerContainer table tr');
+
+    if (row.innerText.indexOf('Timesheet') != -1) {
+      return;
+    }
+
     var scripts = document.getElementsByTagName('script');
 
     var timesheetURL = null;
@@ -28,7 +34,6 @@ function appendQuickLinks() {
       }
     }
 
-    var row = document.querySelector('#miscLinksInnerContainer table tr');
     var insertIndex = 1;
 
     if (timesheetURL) {
@@ -48,7 +53,7 @@ function appendQuickLinks() {
       cell.innerHTML = '<span><a class="miscItem" href="https://nw12.ultipro.com/' + ptoURL + '" target="_blank">PTO</a></span>';
     }
 
-  }, 2000);
+  }, 1000);
 }
 
 function appendTimePeriodNavigator() {
