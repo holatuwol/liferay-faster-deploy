@@ -1,5 +1,23 @@
 #!/bin/bash
 
+bootstrap() {
+	if [[ $1 == *-private ]]; then
+		return 0
+	fi
+
+	if ! checkfile $1 bootstrap; then
+		return 0
+	fi
+
+	echo "Generating bootstrap info for $1"
+
+	while read -r line; do
+		local ARTIFACT_NAME=$(echo "${line}" | grep -o 'name: "[^"]*"' | cut -d'"' -f 2)
+		local ARTIFACT_VERSION=$(echo "${line}" | grep -o 'version: "[^"]*"' | cut -d'"' -f 2)
+		echo "com.liferay,${ARTIFACT_NAME},${ARTIFACT_VERSION}" >> ${OUTPUT_FILE}
+	done <<< $(grep -F 'group: "com.liferay"' $(git ls-files modules | grep -F '/portal-bootstrap/build.gradle'))
+}
+
 bundleinfo() {
 	if ! checkfile $1 bundleinfo; then
 		return 0
@@ -298,6 +316,7 @@ packageinfo_release() {
 		packageinfo $tag_id
 		requireschema $tag_id
 		dependencies $tag_id
+		bootstrap $tag_id
 	done
 
 	popd > /dev/null

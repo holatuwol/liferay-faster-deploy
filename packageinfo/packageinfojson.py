@@ -47,6 +47,7 @@ file_suffixes = [metadata[1] for metadata in file_metadata]
 bundle_file_names = ['bundleinfo-%s.txt' % suffix for suffix in file_suffixes]
 dependencies_file_names = ['dependencies-%s.txt' % suffix for suffix in file_suffixes]
 package_file_names = ['packageinfo-%s.txt' % suffix for suffix in file_suffixes]
+bootstrap_file_names = ['bootstrap-%s.txt' % suffix for suffix in file_suffixes]
 
 json_suffixes = [suffix if suffix[5:7] != 'de' and suffix[5:8] != 'dxp' else suffix[0:8] + suffix[8:].zfill(2) for suffix in file_suffixes]
 
@@ -81,6 +82,22 @@ def read_bundle_file(folder, file_name):
 					'repository': row[3],
 					'packaging': row[6]
 				}
+
+	return result
+
+def read_bootstrap_file(folder, file_name):
+	result = {}
+
+	with open('%s/metadata/%s' % (folder, file_name), 'r') as f:
+		reader = csv.reader(f)
+		result = {
+			row[1]: {
+				'group': row[0],
+				'name': row[1],
+				'version': row[2]
+			}
+			for row in reader
+		}
 
 	return result
 
@@ -165,6 +182,12 @@ def add_bundle_file(bundles, folder, file_name, suffix):
 
 	return bundles
 
+def add_bootstrap_file(bundles, folder, file_name, suffix):
+	for key, row in read_bootstrap_file(folder, file_name).items():
+		bundles[key]['version_%s' % suffix] = row['version']
+
+	return bundles
+
 def add_dependencies_file(bundles, folder, file_name, suffix):
 	for key, row in read_dependencies_file(folder, file_name).items():
 		if key not in bundles:
@@ -200,9 +223,12 @@ for folder, file_name, suffix in zip(folders, package_file_names, json_suffixes)
 
 bundles = {}
 
-for folder, bundle_file_name, dependencies_file_name, suffix in zip(folders, bundle_file_names, dependencies_file_names, json_suffixes):
+for folder, bundle_file_name, dependencies_file_name, bootstrap_file_name, suffix in \
+	zip(folders, bundle_file_names, dependencies_file_names, bootstrap_file_names, json_suffixes):
+
 	bundles = add_bundle_file(bundles, folder, bundle_file_name, suffix)
 	bundles = add_dependencies_file(bundles, folder, dependencies_file_name, suffix)
+	bundles = add_bootstrap_file(bundles, folder, bootstrap_file_name, suffix)
 
 # Fill in missing values
 
