@@ -4,7 +4,18 @@
 // @match          https://wfm-time-web2.ultipro.com/
 // @match          https://wfm-time-web2.ultipro.com/*
 // @match          https://nw12.ultipro.com/default.aspx
-// @grant          none
+// @grant          GM.getValue
+// @grant          GM_getValue
+// @grant          GM.setValue
+// @grant          GM_setValue
+
+if (!GM_getValue && GM) {
+  GM_getValue = GM.getValue;
+}
+
+if (!GM_setValue && GM) {
+  GM_setValue = GM.setValue;
+}
 
 function appendQuickLinks() {
   setInterval(function() {
@@ -108,33 +119,10 @@ function appendTimePeriodNavigator() {
 }
 
 function checkEmptyProjects() {
-  setTimeout(doCheckEmptyTimeouts, 1000);
+  setTimeout(doCheckEmptyProjects, 1000);
 }
 
-function addClickListener(buttons) {
-  for (var i = 0; i < buttons.length; i++) {
-    if (buttons[i].addedClick) {
-      continue;
-    }
-
-    buttons[i].onclick = checkEmptyProjects;
-    buttons[i].addedClick = true;
-  }
-}
-
-function doCheckEmptyTimeouts() {
-  if ((window.location.hash.indexOf('#/timesheet') != 0) || (window.location.hash.indexOf('#/timesheet/') == 0)) {
-    return;
-  }
-
-  var rows = document.querySelectorAll('.entry-table tr');
-
-  if (rows.length < 7) {
-    checkEmptyProjects();
-
-    return;
-  }
-
+function getSelectedProjects() {
   var angular = unsafeWindow.angular;
 
   var selectedProjects = [];
@@ -157,18 +145,64 @@ function doCheckEmptyTimeouts() {
     }
   }
 
-  var searches = document.querySelectorAll('input[type="search"]');
+  if (selectedProjects.length > 0) {
+      return selectedProjects;
+  }
 
-  for (var i = 0; i < searches.length; i++) {
-    if (searches[i].addedBlur) {
+  try {
+    selectedProjects = JSON.parse(GM_getValue("selectedProjects", "[]"));
+  }
+  catch (e) {
+  }
+
+  return selectedProjects;
+}
+
+function setSelectedProjects() {
+  GM_setValue("selectedProjects", JSON.stringify(getSelectedProjects()));
+}
+
+function addBlurListener(inputs) {
+  for (var i = 0; i < inputs.length; i++) {
+    if (inputs[i].addedBlur) {
       continue;
     }
 
-    searches[i].onblur = checkEmptyProjects;
-    searches[i].addedBlur = true;
+    inputs[i].onblur = inputs[i].type == 'search' ? checkEmptyProjects : doCheckEmptyProjects;
+    inputs[i].addedBlur = true;
+  }
+}
+
+function addClickListener(buttons) {
+  for (var i = 0; i < buttons.length; i++) {
+    if (buttons[i].addedClick) {
+      continue;
+    }
+
+    buttons[i].onclick = checkEmptyProjects;
+    buttons[i].onclick = setSelectedProjects;
+    buttons[i].addedClick = true;
+  }
+}
+
+function doCheckEmptyProjects() {
+  if ((window.location.hash.indexOf('#/timesheet') != 0) || (window.location.hash.indexOf('#/timesheet/') == 0)) {
+    return;
   }
 
+  var rows = document.querySelectorAll('.entry-table tr');
+
+  if (rows.length < 7) {
+    checkEmptyProjects();
+
+    return;
+  }
+
+  var selectedProjects = getSelectedProjects();
+
   var daysChecked = 0;
+
+  var angular = unsafeWindow.angular;
 
   for (var i = 0; i < rows.length; i++) {
     var button = rows[i].querySelector('.add-time-edit-btn');
@@ -177,9 +211,7 @@ function doCheckEmptyTimeouts() {
       continue;
     }
 
-    if (daysChecked++ == 5) {
-      break;
-    }
+    daysChecked++;
 
     var timeCodeNodes = rows[i].querySelectorAll('labor-metric-input[labor-metric="::$ctrl.timeCode"]');
 
@@ -191,6 +223,17 @@ function doCheckEmptyTimeouts() {
 
     for (var j = 0; j < selectedProjects.length; j++) {
       var includedProject = false;
+
+      if (daysChecked > 5) {
+        var includedTimeInput = false;
+
+        var hourInput = rows[i].querySelector('input[ng-model="$ctrl.hours"]');
+        var minuteInput = rows[i].querySelector('input[ng-model="$ctrl.minutes"]');
+
+        if (parseInt(hourInput.value) == 0 && parseInt(minuteInput.value) == 0) {
+            continue;
+        }
+      }
 
       for (var k = 0; k < projectNodes.length; k++) {
         var scope = angular.element(projectNodes[k]).scope();
@@ -213,6 +256,10 @@ function doCheckEmptyTimeouts() {
       }
     }
   }
+
+  addBlurListener(document.querySelectorAll('input[type="search"]'));
+  addBlurListener(document.querySelectorAll('input[ng-model="$ctrl.hours"]'));
+  addBlurListener(document.querySelectorAll('input[ng-model="$ctrl.minutes"]'));
 
   addClickListener(document.querySelectorAll('.add-time-edit-btn'));
   addClickListener(document.querySelectorAll('button[ng-if="$ctrl.onSave"]'));
