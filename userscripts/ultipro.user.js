@@ -4,9 +4,15 @@
 // @match          https://wfm-time-web2.ultipro.com/
 // @match          https://wfm-time-web2.ultipro.com/*
 // @match          https://nw12.ultipro.com/default.aspx
-// @grant          none
+// @grant          GM_getValue
+// @grant          GM_setValue
+// @grant          GM_deleteValue
+// @grant          GM.getValue
+// @grant          GM.setValue
+// @grant          GM.deleteValue
+// @require        https://greasemonkey.github.io/gm4-polyfill/gm4-polyfill.js
 
-function getValue(name, value) {
+function getCookie(name, value) {
   if (!document.cookie) {
     return value;
   }
@@ -22,9 +28,18 @@ function getValue(name, value) {
   };
 
   return value;
+}
+
+async function getValue(name, value) {
+  if (GM.getValue) {
+    return await GM.getValue(name, value);
+  }
+  else {
+    return getCookie(name, value);
+  }
 };
 
-function setValue(name, value) {
+function setCookie(name, value) {
   if (value) {
     var expirationDate = new Date();
     expirationDate.setMonth(expirationDate.getMonth() + 12);
@@ -32,6 +47,25 @@ function setValue(name, value) {
   }
   else {
     document.cookie = name + '=' + value + '; domain=.ultipro.com; expires=Thu, 01 Jan 1970 00:00:00 UTC';
+  }
+}
+
+async function setValue(name, value) {
+  if (value) {
+    if (GM.setValue) {
+      return await GM.setValue(name, value);
+    }
+    else {
+      return setCookie(name, value);
+    }
+  }
+  else {
+    if (GM.deleteValue) {
+      return await GM.deleteValue(name);
+    }
+    else {
+      return setCookie(name, value);
+    }
   }
 }
 
@@ -136,6 +170,8 @@ function appendTimePeriodNavigator() {
 
 function checkEmptyProjects() {
   if ((window.location.hash.indexOf('#/timesheet') != 0) || (window.location.hash.indexOf('#/timesheet/') == 0)) {
+    setTimeout(checkEmptyProjects, 1000);
+
     return;
   }
 
@@ -148,9 +184,16 @@ function checkEmptyProjects() {
   }
 
   getSelectedProjects(doCheckEmptyProjects);
+
+  addBlurListener(document.querySelectorAll('input[type="search"]'));
+  addBlurListener(document.querySelectorAll('input[ng-model="$ctrl.hours"]'));
+  addBlurListener(document.querySelectorAll('input[ng-model="$ctrl.minutes"]'));
+
+  addClickListener(document.querySelectorAll('.add-time-edit-btn'));
+  addClickListener(document.querySelectorAll('button[ng-if="$ctrl.onSave"]'));
 }
 
-function getSelectedProjects(resolve) {
+async function getSelectedProjects(resolve) {
   var angular = unsafeWindow.angular;
 
   var selectedProjects = [];
@@ -174,16 +217,20 @@ function getSelectedProjects(resolve) {
   }
 
   if (selectedProjects.length > 0) {
-      resolve(selectedProjects);
+    resolve(selectedProjects);
   }
 
-  var selectedProjectsJSON = getValue('selectedProjects', '[]');
+  var selectedProjectsJSON = await getValue('selectedProjects', '[]');
 
   try {
     selectedProjects = JSON.parse(selectedProjectsJSON);
   }
   catch (e) {
     console.log(selectedProjectsJSON);
+  }
+
+  if (typeof cloneInto !== 'undefined') {
+    selectedProjects = cloneInto(selectedProjects, unsafeWindow);
   }
 
   resolve(selectedProjects);
@@ -224,6 +271,10 @@ function addClickListener(buttons) {
 }
 
 function doCheckEmptyProjects(selectedProjects) {
+  if (selectedProjects.length == 0) {
+    return;
+  }
+
   var rows = document.querySelectorAll('.entry-table tr');
 
   var daysChecked = 0;
@@ -275,20 +326,19 @@ function doCheckEmptyProjects(selectedProjects) {
         var scope = angular.element(projectNodes[k]).scope();
 
         if (!scope.$select.selected || (scope.$select.selected.id == -1)) {
-          scope.$select.selected = selectedProjects[j];
-          scope.$apply();
+          scope.$select.select(selectedProjects[j]);
           break;
         }
       }
     }
   }
+}
 
-  addBlurListener(document.querySelectorAll('input[type="search"]'));
-  addBlurListener(document.querySelectorAll('input[ng-model="$ctrl.hours"]'));
-  addBlurListener(document.querySelectorAll('input[ng-model="$ctrl.minutes"]'));
-
-  addClickListener(document.querySelectorAll('.add-time-edit-btn'));
-  addClickListener(document.querySelectorAll('button[ng-if="$ctrl.onSave"]'));
+async function navigateToTimesheet() {
+  if (await getValue('timeSheetCookie')) {
+    await setValue('timeSheetCookie', null);
+    document.location.href = 'https://wfm-time-web2.ultipro.com/#/timesheet';
+  }
 }
 
 if (document.location.hostname == 'nw12.ultipro.com') {
@@ -298,14 +348,7 @@ else {
   window.onhashchange = appendTimePeriodNavigator;
   window.onhashchange = checkEmptyProjects;
 
-  if (getValue('timeSheetCookie')) {
-    setTimeout(function() {
-      setValue('timesheetCookie', null);
-      document.location.href = 'https://wfm-time-web2.ultipro.com/#/timesheet';
-    }, 2000);
-  }
-  else {
-    window.addEventListener('load', appendTimePeriodNavigator);
-    window.addEventListener('load', checkEmptyProjects);
-  }
+  setTimeout(navigateToTimesheet, 2000);
+  appendTimePeriodNavigator();
+  checkEmptyProjects();
 }
