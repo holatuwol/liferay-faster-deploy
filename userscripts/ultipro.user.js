@@ -159,7 +159,13 @@ function getSelectedProjects() {
 }
 
 function setSelectedProjects() {
-  GM_setValue("selectedProjects", JSON.stringify(getSelectedProjects()));
+  var selectedProjects = getSelectedProjects();
+
+  if (selectedProjects.length > 0) {
+    GM_setValue("selectedProjects", JSON.stringify(selectedProjects));
+  }
+
+  setTimeout(doCheckEmptyProjects, 2000);
 }
 
 function addBlurListener(inputs) {
@@ -179,7 +185,6 @@ function addClickListener(buttons) {
       continue;
     }
 
-    buttons[i].onclick = checkEmptyProjects;
     buttons[i].onclick = setSelectedProjects;
     buttons[i].addedClick = true;
   }
