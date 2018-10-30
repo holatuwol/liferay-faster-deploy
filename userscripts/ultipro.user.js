@@ -5,17 +5,9 @@
 // @match          https://wfm-time-web2.ultipro.com/*
 // @match          https://nw12.ultipro.com/default.aspx
 // @grant          GM.getValue
-// @grant          GM_getValue
 // @grant          GM.setValue
+// @grant          GM_getValue
 // @grant          GM_setValue
-
-if (!GM_getValue && GM) {
-  GM_getValue = GM.getValue;
-}
-
-if (!GM_setValue && GM) {
-  GM_setValue = GM.setValue;
-}
 
 function appendQuickLinks() {
   setInterval(function() {
@@ -119,10 +111,22 @@ function appendTimePeriodNavigator() {
 }
 
 function checkEmptyProjects() {
-  setTimeout(doCheckEmptyProjects, 1000);
+  if ((window.location.hash.indexOf('#/timesheet') != 0) || (window.location.hash.indexOf('#/timesheet/') == 0)) {
+    return;
+  }
+
+  var rows = document.querySelectorAll('.entry-table tr');
+
+  if (rows.length < 7) {
+    setTimeout(checkEmptyProjects, 1000);
+
+    return;
+  }
+
+  getSelectedProjects(doCheckEmptyProjects);
 }
 
-function getSelectedProjects() {
+async function getSelectedProjects(resolve) {
   var angular = unsafeWindow.angular;
 
   var selectedProjects = [];
@@ -146,26 +150,47 @@ function getSelectedProjects() {
   }
 
   if (selectedProjects.length > 0) {
-      return selectedProjects;
+      resolve(selectedProjects);
+  }
+
+  var selectedProjectsJSON = '[]';
+
+  if (typeof GM !== 'undefined') {
+    if (GM.getValue) {
+      selectedProjectsJSON = await GM.getValue('selectedProjects', '[]');
+    }
+  }
+  else if (typeof GM_getValue !== 'undefined') {
+    selectedProjectsJSON = GM_getValue('selectedProjects', '[]');
   }
 
   try {
-    selectedProjects = JSON.parse(GM_getValue("selectedProjects", "[]"));
+    selectedProjects = JSON.parse(selectedProjectsJSON);
   }
   catch (e) {
+    console.log(selectedProjectsJSON);
   }
 
-  return selectedProjects;
+  resolve(selectedProjects);
 }
 
-function setSelectedProjects() {
-  var selectedProjects = getSelectedProjects();
+async function setSelectedProjects() {
+  getSelectedProjects(function(selectedProjects) {
+    if (selectedProjects.length == 0) {
+      return;
+    }
 
-  if (selectedProjects.length > 0) {
-    GM_setValue("selectedProjects", JSON.stringify(selectedProjects));
-  }
+    if (typeof GM !== 'undefined') {
+      if (GM.setValue) {
+        GM.setValue('selectedProjects', JSON.stringify(selectedProjects));
+      }
+    }
+    else if (typeof GM_setValue !== 'undefined') {
+      GM_setValue('selectedProjects', JSON.stringify(selectedProjects));
+    }
+  });
 
-  setTimeout(doCheckEmptyProjects, 2000);
+  setTimeout(checkEmptyProjects, 2000);
 }
 
 function addBlurListener(inputs) {
@@ -174,7 +199,7 @@ function addBlurListener(inputs) {
       continue;
     }
 
-    inputs[i].onblur = inputs[i].type == 'search' ? checkEmptyProjects : doCheckEmptyProjects;
+    inputs[i].onblur = checkEmptyProjects;
     inputs[i].addedBlur = true;
   }
 }
@@ -190,20 +215,8 @@ function addClickListener(buttons) {
   }
 }
 
-function doCheckEmptyProjects() {
-  if ((window.location.hash.indexOf('#/timesheet') != 0) || (window.location.hash.indexOf('#/timesheet/') == 0)) {
-    return;
-  }
-
+function doCheckEmptyProjects(selectedProjects) {
   var rows = document.querySelectorAll('.entry-table tr');
-
-  if (rows.length < 7) {
-    checkEmptyProjects();
-
-    return;
-  }
-
-  var selectedProjects = getSelectedProjects();
 
   var daysChecked = 0;
 
