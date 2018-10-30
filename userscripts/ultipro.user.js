@@ -4,10 +4,36 @@
 // @match          https://wfm-time-web2.ultipro.com/
 // @match          https://wfm-time-web2.ultipro.com/*
 // @match          https://nw12.ultipro.com/default.aspx
-// @grant          GM.getValue
-// @grant          GM.setValue
-// @grant          GM_getValue
-// @grant          GM_setValue
+// @grant          none
+
+function getValue(name, value) {
+  if (!document.cookie) {
+    return value;
+  }
+
+  var needle = name + '=';
+  var cookies = decodeURIComponent(document.cookie).split(';');
+
+  for (var i = 0; i < cookies.length; i++) {
+    var cookie = cookies[i].trim();;
+    if (cookie.indexOf(needle) == 0) {
+      return cookie.substring(needle.length);
+    }
+  };
+
+  return value;
+};
+
+function setValue(name, value) {
+  if (value) {
+    var expirationDate = new Date();
+    expirationDate.setMonth(expirationDate.getMonth() + 12);
+    document.cookie = name + '=' + encodeURIComponent(value) + '; domain=.ultipro.com; expires=' + expirationDate;
+  }
+  else {
+    document.cookie = name + '=' + value + '; domain=.ultipro.com; expires=Thu, 01 Jan 1970 00:00:00 UTC';
+  }
+}
 
 function appendQuickLinks() {
   setInterval(function() {
@@ -44,9 +70,7 @@ function appendQuickLinks() {
       cell.className = 'miscLinkContainer';
       cell.innerHTML = '<span><a class="miscItem" href="https://nw12.ultipro.com/' + timesheetURL + '" target="_blank">Timesheet</a></span>';
       cell.onclick = function() {
-        var expirationDate = new Date();
-        expirationDate.setMonth(expirationDate.getMonth() + 12);
-        document.cookie = 'timeSheetCookie=timesheetCookie; domain=.ultipro.com; expires=' + expirationDate;
+        setValue('timeSheetCookie', 'timeSheetCookie');
       };
     }
 
@@ -126,7 +150,7 @@ function checkEmptyProjects() {
   getSelectedProjects(doCheckEmptyProjects);
 }
 
-async function getSelectedProjects(resolve) {
+function getSelectedProjects(resolve) {
   var angular = unsafeWindow.angular;
 
   var selectedProjects = [];
@@ -153,16 +177,7 @@ async function getSelectedProjects(resolve) {
       resolve(selectedProjects);
   }
 
-  var selectedProjectsJSON = '[]';
-
-  if (typeof GM !== 'undefined') {
-    if (GM.getValue) {
-      selectedProjectsJSON = await GM.getValue('selectedProjects', '[]');
-    }
-  }
-  else if (typeof GM_getValue !== 'undefined') {
-    selectedProjectsJSON = GM_getValue('selectedProjects', '[]');
-  }
+  var selectedProjectsJSON = getValue('selectedProjects', '[]');
 
   try {
     selectedProjects = JSON.parse(selectedProjectsJSON);
@@ -174,20 +189,13 @@ async function getSelectedProjects(resolve) {
   resolve(selectedProjects);
 }
 
-async function setSelectedProjects() {
+function setSelectedProjects() {
   getSelectedProjects(function(selectedProjects) {
     if (selectedProjects.length == 0) {
       return;
     }
 
-    if (typeof GM !== 'undefined') {
-      if (GM.setValue) {
-        GM.setValue('selectedProjects', JSON.stringify(selectedProjects));
-      }
-    }
-    else if (typeof GM_setValue !== 'undefined') {
-      GM_setValue('selectedProjects', JSON.stringify(selectedProjects));
-    }
+    setValue('selectedProjects', JSON.stringify(selectedProjects));
   });
 
   setTimeout(checkEmptyProjects, 2000);
@@ -290,9 +298,9 @@ else {
   window.onhashchange = appendTimePeriodNavigator;
   window.onhashchange = checkEmptyProjects;
 
-  if (document.cookie.indexOf('timeSheetCookie=timesheetCookie') != -1) {
+  if (getValue('timeSheetCookie')) {
     setTimeout(function() {
-      document.cookie = 'timeSheetCookie=timesheetCookie; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=.ultipro.com'
+      setValue('timesheetCookie', null);
       document.location.href = 'https://wfm-time-web2.ultipro.com/#/timesheet';
     }, 2000);
   }
