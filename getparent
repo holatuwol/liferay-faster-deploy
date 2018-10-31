@@ -8,8 +8,12 @@ getparent() {
 	BASE_TAG=$(echo "${PARENTS}" | head -1)
 	BASE_BRANCH=$(echo "${PARENTS}" | tail -1)
 
+	echo "Parent branch is ${BASE_BRANCH}"
+
 	if [ "${BASE_TAG}" == "${BASE_BRANCH}" ]; then
 		BASE_TAG=
+	else
+		echo "Parent tag is ${BASE_TAG}"
 	fi
 }
 
