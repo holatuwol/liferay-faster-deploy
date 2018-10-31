@@ -5,6 +5,8 @@ import sys
 
 class LogSplitter:
 
+	# Split by date
+
 	def split(self, foldername, filename):
 
 		# Create the folder if it does not yet exist.
@@ -86,6 +88,44 @@ class LogSplitter:
 
 			# Write to the thread dump file if you've decided that you
 			# are in the middle of parsing a thread dump.
+
+			if thread_dump:
+				thread_dump_file.write(line)
+				thread_dump_file.write('\n')
+
+		if thread_dump:
+			thread_dump_file.close()
+
+	# Split each instance of a thread into its own file
+
+	def split_thread(self, foldername, filename):
+		# Create the folder if it does not yet exist.
+
+		if not os.path.exists(foldername):
+			os.mkdir(foldername)
+
+		lines = open(filename, 'r')
+		thread_dump = False
+		counter = 0
+
+		for line in lines:
+			line = line.rstrip()
+
+			if len(line) == 0:
+				if thread_dump:
+					thread_dump_file.close()
+					thread_dump = False
+			elif line[0] == '"':
+				if thread_dump:
+					thread_dump_file.close()
+
+				counter += 1
+
+				thread_dump_filename = os.path.join(
+					foldername, 'thread_%05d' % counter)
+
+				thread_dump_file = open(thread_dump_filename, 'w')
+				thread_dump = True
 
 			if thread_dump:
 				thread_dump_file.write(line)
