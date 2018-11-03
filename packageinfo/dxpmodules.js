@@ -152,7 +152,7 @@ function asDependencyElement(key, accumulator, versionInfo) {
 	}
 
 	if (dependencyPackaging != 'jar') {
-		accumulator.push('        <packaging>' + dependencyPackaging + '</version>');
+		accumulator.push('        <packaging>' + dependencyPackaging + '</packaging>');
 	}
 
 	accumulator.push('      </dependency>');
