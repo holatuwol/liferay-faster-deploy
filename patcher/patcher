@@ -9,7 +9,7 @@ checkcommonerrors() {
 		return 1
 	fi
 
-	for TAG in $(cat $PATCHER_JSON | jq 'keys | .[]' | cut -d'"' -f 2); do
+	for TAG in $(cat $PATCHER_JSON | jq 'keys | .[]' | cut -d'"' -f 2 | grep -vF '.x'); do
 		if [ "" == "$(git for-each-ref --format='%(refname)' refs/tags/$TAG)" ]; then
 			git fetch --no-tags git@github.com:liferay/liferay-portal-ee.git tags/$TAG:refs/tags/$TAG
 		fi

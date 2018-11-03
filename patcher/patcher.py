@@ -14,6 +14,7 @@ from getparent import getparent
 import git
 from git import git_root, current_branch
 
+base_branch = getparent(False)
 base_tag = getparent(True)
 
 def process_patcher_search_container(base_url, parameters, container_name, column_names, callback):
@@ -81,7 +82,7 @@ def process_patcher_search_container(base_url, parameters, container_name, colum
 def get_baseline_id():
 	with open(join(dirname(sys.argv[0]), 'patcher.json'), 'r') as file:
 		patcher_json = json.load(file)
-		return patcher_json[base_tag]
+		return patcher_json[base_branch], patcher_json[base_tag]
 
 def get_fix_id(typeFilter='0'):
 	if len(sys.argv) == 3 and len(sys.argv[2]) > 0:
@@ -94,7 +95,7 @@ def get_fix_id(typeFilter='0'):
 
 		parameters = {
 			'advancedSearch': 'true',
-			'patcherProjectVersionIdFilter': get_baseline_id(),
+			'patcherProjectVersionIdFilter': get_baseline_id()[1],
 			'patcherFixName': fix_name,
 			'hideOldFixVersions': 'true',
 			'typeFilter': typeFilter,
@@ -170,22 +171,29 @@ def open_patcher_portal():
 		print('Opening window to update fix %s...' % fix_id)
 		base_url = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/fixes/%s/edit' % fix_id
 
-	if base_tag.find('fix-pack-base-6130') == 0 or base_tag.find('fix-pack-base-6210') == 0:
-		product_version = 1
-	else:
-		product_version = 2
+	product_version, project_version = get_baseline_id()
 
 	origin_name = sys.argv[1]
 
 	parameters = {
-		'productVersion': product_version,
-		'patcherProjectVersionId': get_baseline_id(),
+		'patcherProductVersionId': product_version,
+		'patcherProjectVersionId': project_version,
 		'committish': current_branch,
 		'gitRemoteURL': origin_name
 	}
 
-	if fix_name is None and fix_id is not None:
+	if fix_name is not None:
+		parameters['patcherFixName'] = fix_name
+	elif fix_id is not None:
 		parameters['patcherFixName'] = get_fix_name_from_id(fix_id)
+	else:
+		pattern = re.compile('LP[EPS]-[0-9]*')
+		fixes = set()
+
+		for line in git.log('%s..%s' % (base_tag, 'HEAD'), '--pretty=%s').split('\n'):
+			fixes.update(pattern.findall(line))
+
+		parameters['patcherFixName'] = ','.join(sorted(fixes))
 
 	namespaced_parameters = get_namespaced_parameters('1_WAR_osbpatcherportlet', parameters)
 
