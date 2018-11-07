@@ -94,7 +94,9 @@ def read_bootstrap_file(folder, file_name):
 			row[1]: {
 				'group': row[0],
 				'name': row[1],
-				'version': row[2]
+				'version': row[2],
+				'repository': 'public',
+				'packaging': 'jar'
 			}
 			for row in reader
 		}
@@ -184,6 +186,15 @@ def add_bundle_file(bundles, folder, file_name, suffix):
 
 def add_bootstrap_file(bundles, folder, file_name, suffix):
 	for key, row in read_bootstrap_file(folder, file_name).items():
+		if key not in bundles:
+			bundles[key] = {
+				'group': row['group'],
+				'name': row['name'],
+				'version': '0.0.0',
+				'repository': 'public',
+				'packaging': 'jar'
+			}
+
 		bundles[key]['version_%s' % suffix] = row['version']
 
 	return bundles
