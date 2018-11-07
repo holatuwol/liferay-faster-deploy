@@ -134,7 +134,7 @@ checkout() {
 	git reset --hard
 
 	echo "Running git checkout $1"
-	git checkout $1
+	git checkout -f $1
 }
 
 fixpack() {
