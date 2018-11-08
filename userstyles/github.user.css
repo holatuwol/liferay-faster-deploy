@@ -1,0 +1,21 @@
+/* ==UserStyle==
+@name           GitHub User Style
+@namespace      holatuwol
+@version        1.0.0
+@description    A user style for github.com
+@author         holatuwol
+==/UserStyle== */
+
+@-moz-document domain("github.com") {
+  .container {
+    width: 95vw;
+  }
+
+  .discussion-sidebar {
+    width: 10vw;
+  }
+
+  .discussion-timeline {
+    width: 83vw;
+  }
+}

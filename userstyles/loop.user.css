@@ -1,0 +1,43 @@
+/* ==UserStyle==
+@name           Loop User Style
+@namespace      holatuwol
+@version        1.0.0
+@description    A user style for loop.liferay.com
+@author         holatuwol
+==/UserStyle== */
+
+@-moz-document domain("loop.liferay.com") {
+  .aui .markdown-content-container.inline > p:first-child {
+    display: block !important;
+  }
+
+  .aui .portlet-body {
+    max-width: inherit !important;
+  }
+
+  .aui .flex-row .flex-col-6,
+  .aui .flex-row .flex-col-6 .card-container,
+  .aui .flex-row .flex-col-9,
+  .aui .flex-row .flex-col-9 .card-container,
+  .aui .single-entry-container,
+  .aui .single-entry-container .card-container,
+  .aui .single-post-view-container,
+  .aui .single-post-view-container .card-container {
+    max-width: 100vw !important;
+  }
+
+  @media(min-width: 970px) {
+    .aui .flex-row .flex-col-3 {
+      max-width: 250px;
+    }
+
+    .aui .flex-row .flex-col-6 {
+      max-width: calc(100% - 500px) !important;
+    }
+  }
+
+  .aui .notification-feed-container .item {
+    padding: 6px 4px 4px;
+  }
+
+}
