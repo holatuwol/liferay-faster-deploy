@@ -10,7 +10,7 @@ install_jar() {
         <version>'${VERSION}'</version>
       </dependency>' >> "${POM_FILE}"
 
-    #mvn install:install-file -Dpackaging=jar -Dfile=$1 -DgroupId=${GROUP_ID} -DartifactId=${ARTIFACT_ID} -Dversion=${VERSION}
+    mvn install:install-file -Dpackaging=jar -Dfile=$1 -DgroupId=${GROUP_ID} -DartifactId=${ARTIFACT_ID} -Dversion=${VERSION}
 }
 
 install_lpkg() {
