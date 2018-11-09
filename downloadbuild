@@ -121,40 +121,63 @@ downloadbranchbuild() {
 
 downloadbranchmirror() {
 	local REQUEST_URL=
+	local FILES_USERNAME=$(git config --global files.username)
+	local FILES_PASSWORD=$(git config --global files.password)
 
 	if [[ "$BASE_BRANCH" == ee-* ]] || [[ "$BASE_BRANCH" == *-private ]]; then
 		if [ "" == "$LIFERAY_FILES_MIRROR" ]; then
-			return 0
+			if [ "" == "${FILES_USERNAME}" ] || [ "" == "${FILES_PASSWORD}" ]; then
+				return 0
+			fi
+		else
+			REQUEST_URL="$LIFERAY_FILES_MIRROR/private/ee/portal/snapshot-$BASE_BRANCH/"
 		fi
-
-		REQUEST_URL="$LIFERAY_FILES_MIRROR/private/ee/portal/snapshot-$BASE_BRANCH/"
 	else
-		if [ "" == "$LIFERAY_RELEASES_MIRROR" ]; then
-			LIFERAY_RELEASES_MIRROR=https://releases.liferay.com
+		if [ "" != "$LIFERAY_RELEASES_MIRROR" ]; then
+			REQUEST_URL="$LIFERAY_RELEASES_MIRROR/portal/snapshot-$BASE_BRANCH/"
 		fi
-
-		REQUEST_URL="$LIFERAY_RELEASES_MIRROR/portal/snapshot-$BASE_BRANCH/"
 	fi
 
-	echo "Identifying build timestamp via ${REQUEST_URL}"
+	local BUILD_TIMESTAMP=
 
-	local BUILD_TIMESTAMP=$(curl -s --connect-timeout 2 $REQUEST_URL | grep -o '<a href="[0-9]*/">' | cut -d'"' -f 2 | sort | tail -1)
+	if [ "" != "${REQUEST_URL}" ]; then
+		echo "Identifying build timestamp via ${REQUEST_URL}"
+
+		BUILD_TIMESTAMP=$(curl -s --connect-timeout 2 $REQUEST_URL | grep -o '<a href="[0-9]*/">' | cut -d'"' -f 2 | sort | tail -1)
+	fi
 
 	if [ "" == "$BUILD_TIMESTAMP" ]; then
 		if [[ "$BASE_BRANCH" == ee-* ]] || [[ "$BASE_BRANCH" == *-private ]]; then
-			echo "Unable to identify build timestamp (maybe you forgot to connect to a VPN)"
-			return 1
+			if [ "" == "${FILES_USERNAME}" ] || [ "" == "${FILES_PASSWORD}" ]; then
+				echo "Unable to identify build timestamp (maybe you forgot to connect to a VPN)"
+				return 1
+			fi
+
+			if [ "" != "${REQUEST_URL}" ]; then
+				echo "Failed to reach files mirror, switching to files server"
+			fi
+
+			FILES_CREDENTIALS="-u ${FILES_USERNAME}:${FILES_PASSWORD}"
+			REQUEST_URL="https://files.liferay.com/private/ee/portal/snapshot-$BASE_BRANCH/"
+		else
+			if [ "" != "${REQUEST_URL}" ]; then
+				echo "Failed to reach releases mirror, switching to releases server"
+			fi
+
+			REQUEST_URL="https://releases.liferay.com/portal/snapshot-$BASE_BRANCH/"
 		fi
 
-		LIFERAY_RELEASES_MIRROR=https://releases.liferay.com
-		REQUEST_URL="$LIFERAY_RELEASES_MIRROR/portal/snapshot-$BASE_BRANCH/"
+		echo "Identifying build timestamp via ${REQUEST_URL}"
 
-		echo "Failed to reach releases mirror, switching to releases server"
-
-		BUILD_TIMESTAMP=$(curl -s --connect-timeout 2 $REQUEST_URL | grep -o '<a href="[0-9]*/">' | cut -d'"' -f 2 | sort | tail -1)
+		BUILD_TIMESTAMP=$(curl -s --connect-timeout 2 $FILES_CREDENTIALS $REQUEST_URL | grep -o '<a href="[0-9]*/">' | cut -d'"' -f 2 | sort | tail -1)
 
 		if [ "" == "$BUILD_TIMESTAMP" ]; then
-			echo "Unable to identify build timestamp from releases server"
+			if [[ "$BASE_BRANCH" == ee-* ]] || [[ "$BASE_BRANCH" == *-private ]]; then
+				echo "Unable to identify build timestamp from files server"
+			else
+				echo "Unable to identify build timestamp from releases server"
+			fi
+
 			return 1
 		fi
 	fi
@@ -175,7 +198,7 @@ downloadbranchmirror() {
 
 	echo "Downloading snapshot for $SHORT_NAME"
 
-	getbuild $REQUEST_URL ${BUILD_NAME}
+	getbuild $REQUEST_URL ${BUILD_NAME} "$FILES_CREDENTIALS"
 
 	if [ "" != "$(unzip -l $HOME/.liferay/builds/${BUILD_NAME} | grep -F .githash)" ]; then
 		NEW_BASELINE=$(unzip -c -qq $HOME/.liferay/builds/${BUILD_NAME} liferay-portal-${BASE_BRANCH}/.githash)
@@ -306,7 +329,7 @@ getbuild() {
 	if [[ "$1" == s3://* ]]; then
 		aws s3 cp "$1" ${LOCAL_NAME}.tmp
 	else
-		curl -o ${LOCAL_NAME}.tmp "$1"
+		curl -o ${LOCAL_NAME}.tmp $3 "$1"
 	fi
 
 	if [ "" != "$2" ]; then
