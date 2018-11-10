@@ -227,11 +227,15 @@ sendpull() {
 		reviewer_repository=$(git remote -v | grep "^${remote_name}\s" | awk '{ print $2 }' | uniq | cut -d'/' -f 2 | sed 's/\.git$//g' | uniq)
 	fi
 
-	python -m webbrowser "https://github.com/${reviewer}/${reviewer_repository}/compare/${BASE_BRANCH}...${current_user}:${CURRENT_BRANCH}"
+	webbrowser "https://github.com/${reviewer}/${reviewer_repository}/compare/${BASE_BRANCH}...${current_user}:${CURRENT_BRANCH}"
 }
 
 setopts() {
 	. $(dirname "${BASH_SOURCE[0]}")/../setopts
+}
+
+webbrowser() {
+	python $(dirname "${BASH_SOURCE[0]}")/../webbrowser_patch.py "$1"
 }
 
 setopts

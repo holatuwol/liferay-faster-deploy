@@ -6,13 +6,16 @@ from os.path import abspath, dirname, isdir, isfile, join, relpath
 import re
 from scrape_liferay import get_liferay_content, get_namespaced_parameters
 import sys
-import webbrowser
 
-sys.path.insert(0, dirname(dirname(abspath(inspect.getfile(inspect.currentframe())))))
+script_git_root = dirname(dirname(abspath(inspect.getfile(inspect.currentframe()))))
+
+sys.path.insert(0, script_git_root)
 
 from getparent import getparent
 import git
 from git import git_root, current_branch
+import webbrowser
+import webbrowser_patch
 
 base_branch = getparent(False)
 base_tag = getparent(True)

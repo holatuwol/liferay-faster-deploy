@@ -1,10 +1,16 @@
 from bs4 import BeautifulSoup
 from findhotfix import get_patcher_build
+import inspect
 import json
 from patcher import process_patcher_search_container
 from scrape_liferay import get_liferay_content, get_namespaced_parameters
 import sys
+
+script_git_root = dirname(dirname(abspath(inspect.getfile(inspect.currentframe()))))
+sys.path.insert(0, script_git_root)
+
 import webbrowser
+import webbrowser_patch
 
 # Utility methods for bridging Liferay systems
 

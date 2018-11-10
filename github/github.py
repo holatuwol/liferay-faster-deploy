@@ -3,14 +3,19 @@ import os
 from os.path import abspath, dirname, isdir, isfile, join, relpath
 import sys
 
-sys.path.insert(0, dirname(dirname(abspath(inspect.getfile(inspect.currentframe())))))
-sys.path.insert(0, join(dirname(dirname(abspath(inspect.getfile(inspect.currentframe())))), 'gitcd'))
+script_git_root = dirname(dirname(abspath(inspect.getfile(inspect.currentframe()))))
+
+sys.path.insert(0, script_git_root)
 
 from getparent import getparent
 import git
 from git import git_root
-from gitfind import find
 import webbrowser
+import webbrowser_patch
+
+sys.path.insert(0, join(script_git_root, 'gitcd'))
+
+from gitfind import find
 
 def get_relpath(needle):
 	if needle is None:

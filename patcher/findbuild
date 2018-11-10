@@ -6,8 +6,12 @@ findbuildurl() {
 	. "${SCRIPT_FOLDER}/findbuildurl" $1
 }
 
+webbrowser() {
+	python $(dirname "${BASH_SOURCE[0]}")/../webbrowser_patch.py "$1"
+}
+
 findbuildurl $@
 
 if [ "" != "${BUILD_URL}" ]; then
-	python -m webbrowser "${BUILD_URL}"
+	webbrowser "${BUILD_URL}"
 fi
