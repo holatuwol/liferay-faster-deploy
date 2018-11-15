@@ -86,7 +86,11 @@ downloadbranchbuild() {
 	BUILD_NAME=$(getbuildname)
 
 	if [ "" == "$BUILD_NAME" ]; then
-		LOCATED_BUILD=$(find "$HOME/.liferay/builds" -name ${SHORT_NAME}*.tar.gz | sort | tail -1)
+		LOCATED_BUILD=$(find "$HOME/.liferay/builds" -name ${SHORT_NAME}*.tar.xz | sort | tail -1)
+
+		if [ "" == "$LOCATED_BUILD" ]; then
+			LOCATED_BUILD=$(find "$HOME/.liferay/builds" -name ${SHORT_NAME}*.tar.gz | sort | tail -1)
+		fi
 
 		if [ "" == "$LOCATED_BUILD" ]; then
 			echo "Could not find build for $BASE_BRANCH"
@@ -110,7 +114,10 @@ downloadbranchbuild() {
 	# If we're going to download the new build, then delete older builds
 
 	find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.tar.gz*" -exec rm {} +
+	find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.tar.xz*" -exec rm {} +
+
 	find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.zip*" -exec rm {} +
+	find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.7z*" -exec rm {} +
 
 	# Download the build if we haven't done so already, making
 	# sure to clean up past builds to not take up too much space
@@ -182,31 +189,45 @@ downloadbranchmirror() {
 		fi
 	fi
 
-	REQUEST_URL="${REQUEST_URL}${BUILD_TIMESTAMP}liferay-portal-tomcat-$BASE_BRANCH.zip"
-	BUILD_TIMESTAMP=$(echo $BUILD_TIMESTAMP | cut -d'/' -f 1)
-	BUILD_NAME="$SHORT_NAME-$BUILD_TIMESTAMP.zip"
+	REQUEST_URL="${REQUEST_URL}${BUILD_TIMESTAMP}"
+
+	local ARTIFACT_NAME=$(curl -s --connect-timeout 2 $FILES_CREDENTIALS $REQUEST_URL | grep -o '<a href="liferay-portal-tomcat-[^"]*\.\(7z\|zip\)">' | cut -d'"' -f 2)
+
+	REQUEST_URL="${REQUEST_URL}${ARTIFACT_NAME}"
+
+	BUILD_TIMESTAMP=$(echo ${BUILD_TIMESTAMP} | cut -d'/' -f 1)
+	BUILD_NAME=$(echo ${ARTIFACT_NAME} | sed "s/liferay-portal-tomcat-${BASE_BRANCH}/${SHORT_NAME}-$BUILD_TIMESTAMP/g")
 
 	if [ -f "$HOME/.liferay/builds/$BUILD_NAME" ]; then
 		NEW_BASELINE=$(cat $HOME/.liferay/builds/${BUILD_NAME}.githash)
 		return 0
 	fi
 
-	if [ "" != "$(ls -1 "$HOME/.liferay/builds/" | grep "${SHORT_NAME}-[0-9]*\(.tar.gz\|.zip\).*")" ]; then
-		find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.tar.gz*" -exec rm {} +
-		find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.zip*" -exec rm {} +
-	fi
+	find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.tar.gz*" -exec rm {} +
+	find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.tar.xz*" -exec rm {} +
+
+	find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.zip*" -exec rm {} +
+	find "$HOME/.liferay/builds/" -name "${SHORT_NAME}*.7z*" -exec rm {} +
 
 	echo "Downloading snapshot for $SHORT_NAME"
 
 	getbuild $REQUEST_URL ${BUILD_NAME} "$FILES_CREDENTIALS"
 
-	if [ "" != "$(unzip -l $HOME/.liferay/builds/${BUILD_NAME} | grep -F .githash)" ]; then
-		NEW_BASELINE=$(unzip -c -qq $HOME/.liferay/builds/${BUILD_NAME} liferay-portal-${BASE_BRANCH}/.githash)
+	if [[ $BUILD_NAME == *.zip ]]; then
+		if [ "" != "$(unzip -l $HOME/.liferay/builds/${BUILD_NAME} | grep -F .githash)" ]; then
+			NEW_BASELINE=$(unzip -c -qq $HOME/.liferay/builds/${BUILD_NAME} liferay-portal-${BASE_BRANCH}/.githash)
+		else
+			NEW_BASELINE=$(unzip -c -qq $HOME/.liferay/builds/${BUILD_NAME} liferay-portal-${BASE_BRANCH}/git-commit)
+		fi
 	else
-		NEW_BASELINE=$(unzip -c -qq $HOME/.liferay/builds/${BUILD_NAME} liferay-portal-${BASE_BRANCH}/git-commit)
+		if [ "" != "$(7z l $HOME/.liferay/builds/${BUILD_NAME} | grep -F .githash)" ]; then
+			NEW_BASELINE=$(7z -so e $HOME/.liferay/builds/${BUILD_NAME} liferay-portal-${BASE_BRANCH}/.githash)
+		else
+			NEW_BASELINE=$(7z -so e $HOME/.liferay/builds/${BUILD_NAME} liferay-portal-${BASE_BRANCH}/git-commit)
+		fi
 	fi
 
-	echo ${NEW_BASELINE} > $HOME/.liferay/builds/${BUILD_NAME}.githash
+	echo ${NEW_BASELINE} | tee $HOME/.liferay/builds/${BUILD_NAME}.githash
 }
 
 downloadbuild() {
