@@ -4,6 +4,7 @@ javahome() {
 	# Check for a valid operating system
 
 	local BASE_JAVA=
+	local JAVA_VERSION=$1
 
 	if [ -d /usr/java ]; then
 		BASE_JAVA=/usr/java
@@ -16,10 +17,14 @@ javahome() {
 
 	# If this is diagnostic, just report JAVA_HOME
 
-	if [ "" == "$1" ]; then
-		echo JAVA_HOME=$JAVA_HOME
-		$JAVA_HOME/bin/java 2>&1 -version | head -1
-		return 0
+	if [ "" == "${JAVA_VERSION}" ]; then
+		if [ "" != "${JAVA_HOME}" ]; then
+			echo JAVA_HOME=$JAVA_HOME
+			$JAVA_HOME/bin/java 2>&1 -version | head -1
+			return 0
+		fi
+
+		JAVA_VERSION=8
 	fi
 
 	# Remove the existing JAVA_HOME from the path
@@ -34,7 +39,7 @@ javahome() {
 
 	# Choose the closest matching version
 
-	for folder in $(ls -1 ${BASE_JAVA} | grep -F "jdk1.$1.0" | sort -t'_' -k2nr); do
+	for folder in $(ls -1 ${BASE_JAVA} | grep -F "jdk1.${JAVA_VERSION}.0" | sort -t'_' -k2nr); do
 		if [ ! -f $BASE_JAVA/$folder/bin/java ]; then
 			continue
 		fi
@@ -46,7 +51,7 @@ javahome() {
 	# If we couldn't find one, maybe they installed it through a package manager
 
 	if [ "" == "$JAVA_HOME" ]; then
-		for folder in $(ls -1 ${BASE_JAVA} | grep -F java-$1-oracle); do
+		for folder in $(ls -1 ${BASE_JAVA} | grep -F java-${JAVA_VERSION}-oracle); do
 			if [ ! -f $BASE_JAVA/$folder/bin/java ]; then
 				continue
 			fi
@@ -59,7 +64,7 @@ javahome() {
 	# If we still couldn't find it, report that Java could not be found
 
 	if [ "" == "$ALT_ID" ]; then
-		echo "Unable to find Java $1"
+		echo "Unable to find Java ${JAVA_VERSION}"
 		return 1
 	fi
 
