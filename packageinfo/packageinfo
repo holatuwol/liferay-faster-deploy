@@ -202,12 +202,16 @@ dependencies() {
 	echo "Generating dependencies info for $1"
 
 	for library in jsp-api mail servlet-api; do
-		grep "^${library}=" lib/development/dependencies.properties | cut -d'=' -f 2 | sed 's/^\([^:]*\):\([^:]*\):/\1,\2,/g' >> ${OUTPUT_FILE}
+		grep "^${library}=" lib/development/dependencies.properties | sed 's@^\([^=]*\)=\([^:]*\):\([^:]*\):@lib/development/\1.jar,\2,\3,@g' >> ${OUTPUT_FILE}
 	done
 
-	for folder in global portal; do
-		cut -d'=' -f 2 lib/${folder}/dependencies.properties | sed 's/^\([^:]*\):\([^:]*\):/\1,\2,/g' >> ${OUTPUT_FILE}
-	done
+	sed 's@^\([^=]*\)=\([^:]*\):\([^:]*\):@lib/global/\1.jar,\2,\3,@g' lib/global/dependencies.properties >> ${OUTPUT_FILE}
+
+	echo >> ${OUTPUT_FILE}
+
+	sed 's@^\([^=]*\)=\([^:]*\):\([^:]*\):@lib/portal/\1.jar,\2,\3,@g' lib/portal/dependencies.properties >> ${OUTPUT_FILE}
+
+	echo >> ${OUTPUT_FILE}
 }
 
 dirnames() {

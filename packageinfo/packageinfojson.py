@@ -109,15 +109,23 @@ def read_dependencies_file(folder, file_name):
 	if os.path.isfile('%s/metadata/%s' % (folder, file_name)):
 		with open('%s/metadata/%s' % (folder, file_name), 'r') as f:
 			reader = csv.reader(f)
+
+			bad_rows = [row for row in reader if len(row) != 4]
+
+			if len(bad_rows) != 0:
+				print(file_name, bad_rows)
+
+		with open('%s/metadata/%s' % (folder, file_name), 'r') as f:
+			reader = csv.reader(f)
 			result = {
 				row[1]: {
-					'group': row[0],
-					'name': row[1],
-					'version': row[2],
+					'group': row[1],
+					'name': row[2],
+					'version': row[3],
 					'repository': 'third-party',
 					'packaging': 'jar'
 				}
-				for row in reader
+				for row in reader if len(row) == 4
 			}
 
 	private_file_name = file_name[0:-4] + '-private' + file_name[-4:]
