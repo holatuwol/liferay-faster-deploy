@@ -108,6 +108,21 @@ function addBOM(zip, key, artifactId, versionId, dependencies) {
 	zip.file(artifactId + '-' + versionId + '.pom', bomXML.join('\n'));
 }
 
+function getCommand(versionId, artifactId) {
+	return [
+		'mvn install:install-file -Dfile=', artifactId, '-', versionId, '.pom -DgroupId=com.liferay.portal -DartifactId=', artifactId, ' -Dversion=', versionId, ' -Dpackaging=pom'
+	].join('');
+}
+
+function addScripts(zip, baseArtifactId, versionId) {
+	var script = ['#!/bin/bash'];
+	var artifactIds = [baseArtifactId, baseArtifactId + '.private', baseArtifactId + '.third.party'];
+
+	Array.prototype.push.apply(script, artifactIds.map(getCommand.bind(null, versionId)));
+
+	zip.file(baseArtifactId + '-' + versionId + '.sh', script.join('\n'));
+}
+
 function asDependencyElement(key, accumulator, versionInfo) {
 	var dependencyVersion = versionInfo[key];
 
@@ -192,6 +207,8 @@ function generateBOM(selectId) {
 	var thirdPartyDependencies = versionInfoList.filter(isAvailableVersion.bind(null, 'third-party'));
 
 	var zip = new JSZip();
+
+	addScripts(zip, artifactId, versionId);
 
 	addBOM(zip, key, artifactId, versionId, publicDependencies);
 	addBOM(zip, key, artifactId + '.private', versionId, privateDependencies);
