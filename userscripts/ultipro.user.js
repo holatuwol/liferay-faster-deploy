@@ -66,6 +66,34 @@ async function setValue(name, value) {
   }
 }
 
+
+/**
+ * Utility function to append a single quick link to the dashboard page
+ */
+
+function appendQuickLink(script, key, row, insertIndex, label, cookieName, cookieValue) {
+  var start = script.lastIndexOf('{', script.indexOf('"' + key + '"'));
+  var end = script.indexOf('}', start);
+  var timeInfo = JSON.parse(script.substring(start, end + 1));
+  var path = timeInfo.url;
+
+  if (!path) {
+    return insertIndex;
+  }
+
+  var cell = row.insertCell(insertIndex);
+  cell.className = 'miscLinkContainer';
+  cell.innerHTML = '<span><a class="miscItem" href="https://nw12.ultipro.com/' + path + '" target="_blank">' + label + '</a></span>';
+
+  if (cookieName) {
+    cell.onclick = function() {
+      setValue(cookieName, cookieValue);
+    };
+  }
+
+  return insertIndex + 1;
+}
+
 /**
  * Append quick links to Timesheet and PTO to dashboard page
  */
@@ -78,43 +106,18 @@ function appendQuickLinks() {
       return;
     }
 
-    var scripts = document.getElementsByTagName('script');
+    var insertIndex = 1;
 
-    var timesheetURL = null;
-    var ptoURL = null;
+    var scripts = document.getElementsByTagName('script');
 
     for (var i = 0; i < scripts.length; i++) {
       var script = scripts[i].innerHTML;
       if (script.indexOf('"headerLinks"') != -1) {
-        var start = script.lastIndexOf('{', script.indexOf('"Time"'));
-        var end = script.indexOf('}', start);
-        var timeInfo = JSON.parse(script.substring(start, end + 1));
-        timesheetURL = timeInfo.url;
-
-        start = script.lastIndexOf('{', script.indexOf('"Time Off"'));
-        end = script.indexOf('}', start);
-        timeInfo = JSON.parse(script.substring(start, end + 1));
-        ptoURL = timeInfo.url;
+        insertIndex = appendQuickLink(script, 'Time', row, insertIndex, 'Timesheet', 'timeSheetCookie', 'timeSheetCookie');
+        insertIndex = appendQuickLink(script, 'Time Off', row, insertIndex, 'PTO', 'timeOffAllowance', 'PTO');
+        insertIndex = appendQuickLink(script, 'Time Off', row, insertIndex, 'EVP', 'timeOffAllowance', 'EVP');
       }
     }
-
-    var insertIndex = 1;
-
-    if (timesheetURL) {
-      var cell = row.insertCell(insertIndex++);
-      cell.className = 'miscLinkContainer';
-      cell.innerHTML = '<span><a class="miscItem" href="https://nw12.ultipro.com/' + timesheetURL + '" target="_blank">Timesheet</a></span>';
-      cell.onclick = function() {
-        setValue('timeSheetCookie', 'timeSheetCookie');
-      };
-    }
-
-    if (ptoURL) {
-      var cell = row.insertCell(insertIndex++);
-      cell.className = 'miscLinkContainer';
-      cell.innerHTML = '<span><a class="miscItem" href="https://nw12.ultipro.com/' + ptoURL + '" target="_blank">PTO</a></span>';
-    }
-
   }, 1000);
 }
 
@@ -324,10 +327,24 @@ function doCheckEmptyProjects(selectedProjects) {
 }
 
 /**
- * Switches the selected policy to be PTO for new PTO requests.
+ * Attaches a cookie so that we remember to navigate to the PTO create page after SSO completes.
  */
 
-function fixSelectedPolicy() {
+async function navigateToTimeOffRequest() {
+  if ((window.location.hash.indexOf('#/request/create') == 0) && (window.location.hash.indexOf('#/request/create/') != 0)) {
+    return;
+  }
+
+  if (await getValue('timeOffAllowance')) {
+    document.location.href = 'https://wfm-toa-web2.ultipro.com/#/request/create';
+  }
+}
+
+/**
+ * Switches the selected policy to be PTO for new PTO requests and EVP for new EVP requests.
+ */
+
+async function fixSelectedPolicy() {
   if ((window.location.hash.indexOf('#/request/create') != 0) || (window.location.hash.indexOf('#/request/create/') == 0)) {
     setTimeout(fixSelectedPolicy, 1000);
 
@@ -344,6 +361,10 @@ function fixSelectedPolicy() {
 
   var angular = unsafeWindow.angular;
 
+  var selectedPolicyName = await getValue('timeOffAllowance');
+
+  setValue('timeOffAllowance', null);
+
   var scope = angular.element(policyNode).scope();
 
   var fixPolicyInterval = setInterval(function() {
@@ -356,7 +377,7 @@ function fixSelectedPolicy() {
     var policyList = scope.$ctrl.policyControl.policyList;
 
     for (var i = 0; i < policyList.length; i++) {
-      if (policyList[i].name.indexOf('PTO') != -1) {
+      if (policyList[i].name.indexOf(selectedPolicyName) != -1) {
         scope.$ctrl.policyControl.currentPolicy = policyList[i];
         scope.$ctrl.onPolicyChange(policyList[i]);
 
@@ -382,5 +403,6 @@ else if (document.location.hostname == 'wfm-time-web2.ultipro.com') {
 }
 else if (document.location.hostname == 'wfm-toa-web2.ultipro.com') {
   window.onhashchange = fixSelectedPolicy;
+  setTimeout(navigateToTimeOffRequest, 2000);
   fixSelectedPolicy();
 }
