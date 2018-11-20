@@ -2,7 +2,9 @@
 // @name           Liferay Ultipro Timesheet Link
 // @namespace      holatuwol
 // @match          https://wfm-time-web2.ultipro.com/
-// @match          https://wfm-time-web2.ultipro.com/*
+// @match          https://wfm-time-web2.ultipro.com/
+// @match          https://wfm-toa-web2.ultipro.com/*
+// @match          https://wfm-toa-web2.ultipro.com/*
 // @match          https://nw12.ultipro.com/default.aspx
 // @grant          GM_getValue
 // @grant          GM_setValue
@@ -12,7 +14,16 @@
 // @grant          GM.deleteValue
 // @require        https://greasemonkey.github.io/gm4-polyfill/gm4-polyfill.js
 
-function getCookie(name, value) {
+/**
+ * Wrapper function to set value against GM.getValue
+ * If neither function is available, use cookies.
+ */
+
+async function getValue(name, value) {
+  if (GM.getValue) {
+    return await GM.getValue(name, value);
+  }
+
   if (!document.cookie) {
     return value;
   }
@@ -28,46 +39,36 @@ function getCookie(name, value) {
   };
 
   return value;
-}
-
-async function getValue(name, value) {
-  if (GM.getValue) {
-    return await GM.getValue(name, value);
-  }
-  else {
-    return getCookie(name, value);
-  }
 };
 
-function setCookie(name, value) {
-  if (value) {
-    var expirationDate = new Date();
-    expirationDate.setMonth(expirationDate.getMonth() + 12);
-    document.cookie = name + '=' + encodeURIComponent(value) + '; domain=.ultipro.com; expires=' + expirationDate;
-  }
-  else {
-    document.cookie = name + '=' + value + '; domain=.ultipro.com; expires=Thu, 01 Jan 1970 00:00:00 UTC';
-  }
-}
+
+/**
+ * Wrapper function to set value against GM.setValue / GM.getValue
+ * If neither function is available, use cookies.
+ */
 
 async function setValue(name, value) {
   if (value) {
     if (GM.setValue) {
       return await GM.setValue(name, value);
     }
-    else {
-      return setCookie(name, value);
-    }
+
+    var expirationDate = new Date();
+    expirationDate.setMonth(expirationDate.getMonth() + 12);
+    document.cookie = name + '=' + encodeURIComponent(value) + '; domain=.ultipro.com; expires=' + expirationDate;
   }
   else {
     if (GM.deleteValue) {
       return await GM.deleteValue(name);
     }
-    else {
-      return setCookie(name, value);
-    }
+
+    document.cookie = name + '=' + value + '; domain=.ultipro.com; expires=Thu, 01 Jan 1970 00:00:00 UTC';
   }
 }
+
+/**
+ * Append quick links to Timesheet and PTO to dashboard page
+ */
 
 function appendQuickLinks() {
   setInterval(function() {
@@ -117,56 +118,20 @@ function appendQuickLinks() {
   }, 1000);
 }
 
-function appendTimePeriodNavigator() {
-  setTimeout(function() {
-    if (!document.location.hash || document.location.hash.indexOf('#/timesheet/metrics-view') != 0) {
-      return;
-    }
+/**
+ * Attaches a cookie so that we remember to navigate to the Timesheet after SSO completes.
+ */
 
-    var metricsViewDate = new Date();
-
-    if (document.location.hash.length > '#/timesheet/metrics-view?date='.length) {
-      metricsViewDate = new Date(document.location.hash.substring('#/timesheet/metrics-view?date='.length));
-    }
-
-    var newHeader = document.createElement('div');
-    newHeader.style.display = 'flex';
-    newHeader.style.justifyContent = 'space-between';
-
-    var metricsHeader = document.querySelector('h3[translate="page.employee.timesheet.metricsView"]')
-
-    metricsHeader.parentElement.insertBefore(newHeader, metricsHeader);
-    newHeader.appendChild(metricsHeader);
-
-    var timePeriodText = document.querySelector('th[ng-bind="::$ctrl.getPeriod($ctrl.dates) | wskFormatPeriod"]').innerText;
-
-    var weekTime = (1000*60*60*24*7);
-
-    var previousDate = new Date(metricsViewDate.getTime() - weekTime);
-    var previousURL = 'https://wfm-time-web2.ultipro.com/#/timesheet/metrics-view?date=' + previousDate.toISOString().substring(0, 10);
-
-    var nextDate = new Date(metricsViewDate.getTime() + weekTime);
-    var nextURL = 'https://wfm-time-web2.ultipro.com/#/timesheet/metrics-view?date=' + nextDate.toISOString().substring(0, 10);
-
-    var timePeriodHTML = [
-      '<div style="display: flex; align-items: center;">',
-      '<button type="button" class="btn-circle btn btn-sm btn-default navigation-link" onclick="document.location.href=\'' + previousURL + '\'">',
-      '<i class="fa fa-angle-left fa-2x"></i>',
-      '</button>',
-      '<div class="text-large week-text">' + timePeriodText + '</div>',
-      '<button type="button" class="btn-circle btn btn-sm btn-default navigation-link" onclick="document.location.href=\'' + nextURL + '\'">',
-      '<i class="fa fa-angle-right fa-2x"></i>',
-      '</button>',
-      '</div>',
-    ];
-
-    var timePeriod = document.createElement('div');
-    timePeriod.className = 'inline-block pull-right padding-top wsk-period-navigator';
-    timePeriod.innerHTML = timePeriodHTML.join('');
-
-    newHeader.appendChild(timePeriod);
-  }, 2000);
+async function navigateToTimesheet() {
+  if (await getValue('timeSheetCookie')) {
+    await setValue('timeSheetCookie', null);
+    document.location.href = 'https://wfm-time-web2.ultipro.com/#/timesheet';
+  }
 }
+
+/**
+ * Utility function which waits until the Timesheet page has rows, and then calls the appropriate utility functions to setup the page.
+ */
 
 function checkEmptyProjects() {
   if ((window.location.hash.indexOf('#/timesheet') != 0) || (window.location.hash.indexOf('#/timesheet/') == 0)) {
@@ -192,6 +157,11 @@ function checkEmptyProjects() {
   addClickListener(document.querySelectorAll('.add-time-edit-btn'));
   addClickListener(document.querySelectorAll('button[ng-if="$ctrl.onSave"]'));
 }
+
+/**
+ * Utility function to retrieve the projects to auto-populate with on the Timesheet page.
+ * The "resolve" function is the callback, and it will be given the list of those projects.
+ */
 
 async function getSelectedProjects(resolve) {
   var angular = unsafeWindow.angular;
@@ -236,6 +206,11 @@ async function getSelectedProjects(resolve) {
   resolve(selectedProjects);
 }
 
+/**
+ * Utility function which saves the currently selected projects, and then restarts the
+ * auto-populating of drop-downs in two seconds.
+ */
+
 function setSelectedProjects() {
   getSelectedProjects(function(selectedProjects) {
     if (selectedProjects.length == 0) {
@@ -248,6 +223,10 @@ function setSelectedProjects() {
   setTimeout(checkEmptyProjects, 2000);
 }
 
+/**
+ * Utility function which adds a blur listener to call checkEmptyProjects on all listed input fields.
+ */
+
 function addBlurListener(inputs) {
   for (var i = 0; i < inputs.length; i++) {
     if (inputs[i].addedBlur) {
@@ -259,6 +238,11 @@ function addBlurListener(inputs) {
   }
 }
 
+
+/**
+ * Utility function which adds a blur listener to call setSelectedProjects on all listed buttons.
+ */
+
 function addClickListener(buttons) {
   for (var i = 0; i < buttons.length; i++) {
     if (buttons[i].addedClick) {
@@ -269,6 +253,11 @@ function addClickListener(buttons) {
     buttons[i].addedClick = true;
   }
 }
+
+/**
+ * Auto-populates all workdays of the week with the given projects.
+ * If you enter hours into a weekend, the weekend is also auto-populated with the given projects.
+ */
 
 function doCheckEmptyProjects(selectedProjects) {
   if (selectedProjects.length == 0) {
@@ -334,21 +323,64 @@ function doCheckEmptyProjects(selectedProjects) {
   }
 }
 
-async function navigateToTimesheet() {
-  if (await getValue('timeSheetCookie')) {
-    await setValue('timeSheetCookie', null);
-    document.location.href = 'https://wfm-time-web2.ultipro.com/#/timesheet';
+/**
+ * Switches the selected policy to be PTO for new PTO requests.
+ */
+
+function fixSelectedPolicy() {
+  if ((window.location.hash.indexOf('#/request/create') != 0) || (window.location.hash.indexOf('#/request/create/') == 0)) {
+    setTimeout(fixSelectedPolicy, 1000);
+
+    return;
   }
+
+  var policyNode = document.querySelector('#policy');
+
+  if (!policyNode) {
+    setTimeout(fixSelectedPolicy, 1000);
+
+    return;
+  }
+
+  var angular = unsafeWindow.angular;
+
+  var scope = angular.element(policyNode).scope();
+
+  var fixPolicyInterval = setInterval(function() {
+    if (scope.$ctrl.requestForm.$dirty) {
+      clearInterval(fixPolicyInterval);
+
+      return;
+    }
+
+    var policyList = scope.$ctrl.policyControl.policyList;
+
+    for (var i = 0; i < policyList.length; i++) {
+      if (policyList[i].name.indexOf('PTO') != -1) {
+        scope.$ctrl.policyControl.currentPolicy = policyList[i];
+        scope.$ctrl.onPolicyChange(policyList[i]);
+
+        scope.$apply();
+      }
+    }
+
+  }, 1000);
 }
+
+
+/**
+ * if __name__ == "__main__":
+ */
 
 if (document.location.hostname == 'nw12.ultipro.com') {
   appendQuickLinks();
 }
-else {
-  window.onhashchange = appendTimePeriodNavigator;
+else if (document.location.hostname == 'wfm-time-web2.ultipro.com') {
   window.onhashchange = checkEmptyProjects;
-
   setTimeout(navigateToTimesheet, 2000);
-  appendTimePeriodNavigator();
   checkEmptyProjects();
+}
+else if (document.location.hostname == 'wfm-toa-web2.ultipro.com') {
+  window.onhashchange = fixSelectedPolicy;
+  fixSelectedPolicy();
 }
