@@ -5,6 +5,7 @@
 // @match          https://wfm-time-web2.ultipro.com/
 // @match          https://wfm-toa-web2.ultipro.com/*
 // @match          https://wfm-toa-web2.ultipro.com/*
+// @match          https://nw12.ultipro.com/Default.aspx
 // @match          https://nw12.ultipro.com/default.aspx
 // @grant          GM_getValue
 // @grant          GM_setValue
@@ -112,13 +113,16 @@ function appendQuickLink(script, key, row, insertIndex, label, cookieName, cooki
  */
 
 function appendQuickLinks() {
-  setInterval(function() {
-    var row = document.querySelector('#miscLinksInnerContainer table tr');
+  var appendLinkInterval = setInterval(function() {
+    var searchContainer = document.querySelector('div[id$=searchContainer]');
 
-    if (row.innerText.indexOf('Timesheet') != -1) {
+    if (!searchContainer || (searchContainer.parentNode.id != 'navBarRightContainer')) {
       return;
     }
 
+    clearInterval(appendLinkInterval);
+
+    var row = document.querySelector('#miscLinksInnerContainer table tr');
     var insertIndex = 1;
 
     var scripts = document.getElementsByTagName('script');
