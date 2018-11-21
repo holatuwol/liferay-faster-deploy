@@ -69,6 +69,23 @@ function replaceLesaLink(target) {
   }
 }
 
+var buttons = document.querySelectorAll('button[onclick]');
+
+for (var i = 0; i < buttons.length; i++) {
+  var onclickAttribute = buttons[i].attributes['onclick'];
+  var onclickValue = onclickAttribute.value;
+
+  if (onclickValue.indexOf('javascript:') == 0) {
+    onclickValue = onclickValue.substring('javascript:'.length);
+  }
+
+  onclickValue = onclickValue.replace(/Liferay.Patcher.openWindow\('([^']*)',[^\)]*/g, "window.open('$1','_blank'");
+  onclickValue = onclickValue.replace('?p_p_state=pop_up', '');
+  onclickValue = onclickValue.replace('&p_p_state=pop_up', '');
+
+  onclickAttribute.value = onclickValue;
+}
+
 replaceFixes('patcherFixName');
 replaceFixes('patcherBuildName');
 replaceAccountLink('accountEntryCode');
