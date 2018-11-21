@@ -72,9 +72,22 @@ async function setValue(name, value) {
  */
 
 function appendQuickLink(script, key, row, insertIndex, label, cookieName, cookieValue) {
-  var start = script.lastIndexOf('{', script.indexOf('"' + key + '"'));
-  var end = script.indexOf('}', start);
-  var timeInfo = JSON.parse(script.substring(start, end + 1));
+  var end = 0;
+  var timeInfo;
+
+  do {
+    var start = script.lastIndexOf('{', script.indexOf('"' + key + '"', end));
+
+    if (start == -1) {
+      return;
+    }
+
+    end = script.indexOf('}', start);
+    jsonString = script.substring(start, end + 1);
+    timeInfo = JSON.parse(jsonString);
+  }
+  while (!timeInfo.url);
+
   var path = timeInfo.url;
 
   if (!path) {
