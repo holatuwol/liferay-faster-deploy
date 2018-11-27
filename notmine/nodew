@@ -12,6 +12,10 @@ checknode() {
 		exit 1
 	fi
 
+	if [ ! -d node_modules ]; then
+		rm package.json.md5
+	fi
+
 	checknodeversion
 
 	local MD5SUM=
