@@ -47,6 +47,14 @@ create_network() {
 }
 
 get_hotfix_url() {
+	if [ "" == "$1" ]; then
+		if [ -d patches ]; then
+			HOTFIX_URL=$(ls patches/*.zip | tail -1 | cut -d'/' -f 2)
+		fi
+
+		return 0
+	fi
+
 	if [[ $1 != https://patcher.liferay.com/* ]]; then
 		HOTFIX_URL=$1
 		return 0
