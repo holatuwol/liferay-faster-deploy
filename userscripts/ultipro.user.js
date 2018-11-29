@@ -299,6 +299,12 @@ function doCheckEmptyProjects(selectedProjects) {
 
     daysChecked++;
 
+    var isHoliday = rows[i].querySelector('div[ng-bind="::holidayDetail.description"]');
+
+    if (isHoliday) {
+      continue;
+    }
+
     var timeCodeNodes = rows[i].querySelectorAll('labor-metric-input[labor-metric="::$ctrl.timeCode"]');
 
     for (var j = timeCodeNodes.length; j < selectedProjects.length; j++) {
