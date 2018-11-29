@@ -1,6 +1,6 @@
 #!/bin/bash
 
-appserverprops() {
+appserveruserprops() {
 	if [ ! -f "$GIT_ROOT/app.server.properties" ]; then
 		return 0
 	fi
@@ -13,6 +13,8 @@ appserverprops() {
 	if [[ 0 -ne $(egrep -o $'\r\n'\$ "$GIT_ROOT/app.server.$USER.properties" | wc -c ) ]]; then
 		perl -pi -e 's/\r\n|\n|\r/\n/g' "$GIT_ROOT/app.server.$USER.properties"
 	fi
+
+	return 0
 }
 
 buildprops() {
@@ -56,6 +58,9 @@ buildprops() {
 cleanappserver() {
 	local TOMCAT_VERSION=
 
+	TOMCAT_FOLDER=
+	CATALINA_HOME=
+
 	if [ -f $GIT_ROOT/app.server.$USER.properties ]; then
 		TOMCAT_VERSION=$(grep -F app.server.tomcat.version= $GIT_ROOT/app.server.$USER.properties | cut -d'=' -f 2)
 	fi
@@ -64,23 +69,33 @@ cleanappserver() {
 		TOMCAT_VERSION=$(grep -F app.server.tomcat.version= $GIT_ROOT/app.server.properties | cut -d'=' -f 2)
 	fi
 
-	if [ "" == "$TOMCAT_VERSION" ]; then
-		return 0
+	if [ "" != "$TOMCAT_VERSION" ]; then
+		TOMCAT_FOLDER=tomcat-${TOMCAT_VERSION}
+		CATALINA_HOME=${LIFERAY_HOME}/${TOMCAT_FOLDER}
 	fi
 
-	TOMCAT_FOLDER=tomcat-${TOMCAT_VERSION}
-	CATALINA_HOME=${LIFERAY_HOME}/${TOMCAT_FOLDER}
+	if [ ! -d "${CATALINA_HOME}" ] && [ -d "${LIFERAY_HOME}" ]; then
+		echo "Unable to find expected ${CATALINA_HOME}, checking for legacy Tomcat folders"
+
+		local POSSIBLE_CATALINA_HOME=$(find "${LIFERAY_HOME}" -maxdepth 1 -type d -name 'tomcat-*' | sort | tail -1)
+
+		if [ "" != "${POSSIBLE_CATALINA_HOME}" ]; then
+			CATALINA_HOME="${POSSIBLE_CATALINA_HOME}"
+			TOMCAT_FOLDER=$(basename "${CATALINA_HOME}")
+			TOMCAT_VERSION=$(echo "${TOMCAT_FOLDER}" | cut -d'-' -f 2-)
+		fi
+	fi
 
 	if [ "" != "$CURRENT_HASH" ]; then
 		return 0
 	fi
 
-	if [ "" == "$ARCHIVE_HOME" ]; then
-		if [ ! -d ${CATALINA_HOME} ]; then
-			echo "Missing ${CATALINA_HOME}"
-			ant -f build-dist.xml unzip-tomcat
-		fi
+	if [ ! -d ${CATALINA_HOME} ]; then
+		echo "Missing ${CATALINA_HOME}"
+		ant -f build-dist.xml unzip-tomcat
+	fi
 
+	if [ "" == "$ARCHIVE_HOME" ]; then
 		return 0
 	fi
 
@@ -132,7 +147,7 @@ gradleprops() {
 		if [ "" == "${ANT_LIFERAY_HOME}" ]; then
 			ANT_LIFERAY_HOME=$(grep -F 'app.server.parent.dir=' "$GIT_ROOT/app.server.properties" | grep -vF '#' | cut -d'=' -f 2 | sed 's@${project.dir}@'${GIT_ROOT}'@g')
 			echo -e "\napp.server.parent.dir=$ANT_LIFERAY_HOME" >> app.server.$USER.properties
-			return 1
+			return 0
 		fi
 	fi
 
@@ -229,5 +244,5 @@ repopass() {
 setopts
 
 if [[ 0 -eq $? ]]; then
-	appserverprops && buildprops && gradleprops && cleanappserver
+	appserveruserprops && buildprops && gradleprops && cleanappserver
 fi

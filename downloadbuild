@@ -316,7 +316,7 @@ extract() {
 		tar -zxf "$HOME/.liferay/builds/${BUILD_NAME}" $EXCLUDES
 
 		popd > /dev/null
-	elif [[ "$BUILD_NAME" == *.zip ]]; then
+	elif [[ "$BUILD_NAME" == *.zip ]] || [[ "$BUILD_NAME" == *.7z ]]; then
 		local LIFERAY_HOME_BASENAME=$(basename "${LIFERAY_HOME}")
 		local LIFERAY_HOME_DIRNAME=$(dirname "${LIFERAY_HOME}")
 
@@ -330,7 +330,11 @@ extract() {
 			mv "${LIFERAY_HOME_BASENAME}" liferay-portal-${BASE_BRANCH}
 		fi
 
-		unzip -qqn "$HOME/.liferay/builds/${BUILD_NAME}"
+		if [[ "$BUILD_NAME" == *.7z ]]; then
+			7z x "$HOME/.liferay/builds/${BUILD_NAME}"
+		else
+			unzip -qqn "$HOME/.liferay/builds/${BUILD_NAME}"
+		fi
 
 		mv liferay-portal-${BASE_BRANCH} "${LIFERAY_HOME_BASENAME}"
 

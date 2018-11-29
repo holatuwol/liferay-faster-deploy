@@ -89,6 +89,10 @@ applychanges() {
 	done
 }
 
+appserverprops() {
+	. $(dirname "${BASH_SOURCE[0]}")/appserverprops
+}
+
 cdroot() {
 	if [ -f "$GIT_ROOT/release.properties" ] || [ -f "${GIT_ROOT}/build-working-dir.xml" ]; then
 		builtin cd $GIT_ROOT
@@ -181,6 +185,8 @@ gw() {
 redeploy() {
 	downloadbuild $1 && applychanges
 
+	appserverprops
+
 	local DATABASE_SUPPORT_JAR="${CATALINA_HOME}/webapps/ROOT/WEB-INF/lib/com.liferay.portal.dao.db.jar"
 
 	if [ -f "${DATABASE_SUPPORT_JAR}" ]; then
@@ -238,7 +244,7 @@ fi
 
 CURRENT_HASH=$(git log -1 --pretty='%H')
 
-. $(dirname "${BASH_SOURCE[0]}")/appserverprops
+appserverprops
 
 if [[ 0 -ne $? ]]; then
 	exit $?
