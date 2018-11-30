@@ -75,11 +75,11 @@ cleanappserver() {
 	fi
 
 	if [ ! -d "${CATALINA_HOME}" ] && [ -d "${LIFERAY_HOME}" ]; then
-		echo "Unable to find expected ${CATALINA_HOME}, checking for legacy Tomcat folders"
-
 		local POSSIBLE_CATALINA_HOME=$(find "${LIFERAY_HOME}" -maxdepth 1 -type d -name 'tomcat-*' | sort | tail -1)
 
 		if [ "" != "${POSSIBLE_CATALINA_HOME}" ]; then
+			echo "Expected to find ${CATALINA_HOME}, but found ${POSSIBLE_CATALINA_HOME} instead"
+
 			CATALINA_HOME="${POSSIBLE_CATALINA_HOME}"
 			TOMCAT_FOLDER=$(basename "${CATALINA_HOME}")
 			TOMCAT_VERSION=$(echo "${TOMCAT_FOLDER}" | cut -d'-' -f 2-)

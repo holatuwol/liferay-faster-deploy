@@ -183,6 +183,10 @@ gw() {
 }
 
 redeploy() {
+	find ${LIFERAY_HOME} -maxdepth 1 -type d -name 'tomcat-*' -exec rm -rf {} \;
+	rm -rf ${LIFERAY_HOME}/osgi ${LIFERAY_HOME}/tools ${LIFERAY_HOME}/work
+	rm -f ${LIFERAY_HOME}/.liferay-home ${LIFERAY_HOME}/.githash ${LIFERAY_HOME}/git-commit
+
 	downloadbuild $1 && applychanges
 
 	appserverprops

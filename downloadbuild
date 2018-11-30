@@ -323,10 +323,6 @@ extract() {
 		pushd "${LIFERAY_HOME_DIRNAME}" > /dev/null
 
 		if [ -d "${LIFERAY_HOME_BASENAME}" ]; then
-			pushd "$LIFERAY_HOME_BASENAME" > /dev/null
-			rm -rf tomcat* osgi tools work .liferay-home
-			popd > /dev/null
-
 			mv "${LIFERAY_HOME_BASENAME}" liferay-portal-${BASE_BRANCH}
 		fi
 
