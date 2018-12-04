@@ -42,7 +42,12 @@ releaseinfo() {
 		return 1
 	fi
 
-	RELEASE_ID=$(groovy -classpath $RELEASE_INFO_JAR -e 'print com.liferay.portal.kernel.util.ReleaseInfo.getBuildNumber()')
+	echo 'public class GetReleaseInfo { public static void main( String[] args ) { System.out.print( com.liferay.portal.kernel.util.ReleaseInfo.getBuildNumber() ); } }' > GetReleaseInfo.java
+	javac -classpath ".:${RELEASE_INFO_JAR}" GetReleaseInfo.java
+
+	RELEASE_ID=$(java -classpath ".:${RELEASE_INFO_JAR}" GetReleaseInfo)
+
+	rm GetReleaseInfo.java GetReleaseInfo.class
 }
 
 releaseinfo
