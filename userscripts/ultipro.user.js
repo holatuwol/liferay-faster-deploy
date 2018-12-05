@@ -113,6 +113,8 @@ function appendQuickLink(script, key, row, insertIndex, label, cookieName, cooki
  */
 
 function appendQuickLinks() {
+  var successCount = 0;
+
   var appendLinkInterval = setInterval(function() {
     var searchContainer = document.querySelector('div[id$=searchContainer]');
 
@@ -120,10 +122,19 @@ function appendQuickLinks() {
       return;
     }
 
-    clearInterval(appendLinkInterval);
-
     var row = document.querySelector('#miscLinksInnerContainer table tr');
+
     var insertIndex = 1;
+
+    if (row.innerText.indexOf('Timesheet') != -1) {
+      if (++successCount == 3) {
+        clearInterval(appendLinkInterval);
+      }
+
+      return;
+    }
+
+    successCount = 0;
 
     var scripts = document.getElementsByTagName('script');
 
