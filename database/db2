@@ -77,7 +77,7 @@ updateprops() {
 
 	echo "
 jdbc.default.driverClassName=com.ibm.db2.jcc.DB2Driver
-jdbc.default.url=jdbc:db2://${DB_HOST_NAME}:50000/lportal:deferPrepares=false;fullyMaterializeInputStreams=true;fullyMaterializeLobData=true;progresssiveLocators=2;progressiveStreaming=2;currentSchema=;
+jdbc.default.url=jdbc:db2://${DB_HOST_NAME}:50000/lportal:deferPrepares=false;fullyMaterializeInputStreams=true;fullyMaterializeLobData=true;progresssiveLocators=2;progressiveStreaming=2;currentSchema=ADD_SCHEMA_NAME_HERE;
 jdbc.default.username=lportal
 jdbc.default.password=lportal
 " >> ${LIFERAY_HOME}/portal-ext.properties
