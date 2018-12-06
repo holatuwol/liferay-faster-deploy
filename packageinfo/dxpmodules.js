@@ -23,6 +23,12 @@ if (notableOnly) {
 	notableOnly.checked = getParameter('notableOnly') == 'true';
 }
 
+var includeLiferay = document.getElementById('includeLiferay');
+
+if (includeLiferay) {
+	includeLiferay.checked = getParameter('includeLiferay') == 'false';
+}
+
 var includeThirdParty = document.getElementById('includeThirdParty');
 
 if (includeThirdParty) {
@@ -37,7 +43,8 @@ var servicePacks = {
 	'7010-de-30': 5,
 	'7010-de-32': 6,
 	'7010-de-40': 7,
-	'7010-de-50': 8
+	'7010-de-50': 8,
+	'7010-de-60': 9
 };
 
 var repositoryURLs = {
@@ -258,6 +265,10 @@ function checkVersionInfo() {
 			newURL += '&notableOnly=' + (notableOnly.checked);
 		}
 
+		if (includeLiferay) {
+			newURL += '&includeLiferay=' + (includeLiferay.checked);
+		}
+
 		if (includeThirdParty) {
 			newURL += '&includeThirdParty=' + (includeThirdParty.checked);
 		}
@@ -295,10 +306,16 @@ function checkVersionInfo() {
 
 	var nameFilterValue = nameFilter.value;
 	var notableOnlyValue = notableOnly && notableOnly.checked;
-	var includeThirdPartyValue = includeThirdParty && includeThirdParty.checked;
+
+	var includeLiferayValue = !includeLiferay || includeLiferay.checked;
+	var includeThirdPartyValue = !includeThirdParty || includeThirdParty.checked;
 
 	var isMatchingRepositoryFilter = function(versionInfo) {
-		return includeThirdPartyValue || (versionInfo['repository'] != 'third-party');
+		if (versionInfo['repository'] == 'third-party') {
+			return includeThirdPartyValue;
+		}
+
+		return includeLiferayValue;
 	};
 
 	var isMatchingNameFilter = function(versionInfo) {
@@ -490,6 +507,10 @@ request.onreadystatechange = function() {
 
 		if (notableOnly) {
 			notableOnly.onchange = checkVersionInfo;
+		}
+
+		if (includeLiferay) {
+			includeLiferay.onchange = checkVersionInfo;
 		}
 
 		if (includeThirdParty) {
