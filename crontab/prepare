@@ -137,25 +137,45 @@ finish() {
 		local SETVAR=
 		local UNSETVAR='#'
 		local NEWLINE='\n'
+		local VARPREFIX='${'
+		local VARSUFFIX='}'
+		local PATHSEP=':'
 
 		if [ "setenv.bat" == "${file}" ]; then
 			SETVAR='set '
 			UNSETVAR='rem set '
 			NEWLINE='\r\n'
+			VARPREFIX='%'
+			VARSUFFIX='%'
+			PATHSEP=';'
 		fi
 
 		echo -en ${NEWLINE}${UNSETVAR}'JAVA_HOME=' >> $TOMCAT_FOLDER/bin/${file}
-		echo -en ${NEWLINE}${SETVAR}'PATH=$JAVA_HOME/bin:$PATH' >> $TOMCAT_FOLDER/bin/${file}
+		echo -en ${NEWLINE}${SETVAR}'PATH='${VARPREFIX}'JAVA_HOME'${VARSUFFIX}'/bin'${PATHSEP}${VARPREFIX}'PATH'${VARSUFFIX} >> $TOMCAT_FOLDER/bin/${file}
 
-		echo -en ${NEWLINE}${SETVAR}'GIT_HASH="'$GIT_HASH'"' >> $TOMCAT_FOLDER/bin/${file}
-		echo -en ${NEWLINE}${SETVAR}'CATALINA_OPTS="$CATALINA_OPTS -Denv.COMPUTERNAME='$1'-$GIT_HASH"' >> $TOMCAT_FOLDER/bin/${file}
+		echo -en ${NEWLINE}${SETVAR}'GIT_HASH="'${GIT_HASH}'"' >> $TOMCAT_FOLDER/bin/${file}
+		echo -en ${NEWLINE}${SETVAR}'CATALINA_OPTS="'${VARPREFIX}'CATALINA_OPTS'${VARSUFFIX}' -Denv.COMPUTERNAME='$1'"' >> $TOMCAT_FOLDER/bin/${file}
 
 		if [ "ee-6.2.x" == "$BASE_BRANCH" ] || [ "ee-6.1.x" == "$BASE_BRANCH" ]; then
-			echo -en ${NEWLINE}${SETVAR}'CATALINA_OPTS="$CATALINA_OPTS -Xms1g -Xmx1g -XX:MaxPermSize=256m"' >> $TOMCAT_FOLDER/bin/${file}
+			echo -en ${NEWLINE}${SETVAR}'CATALINA_OPTS="'${VARPREFIX}'CATALINA_OPTS'${VARSUFFIX}' -Xms1g -Xmx1g -XX:MaxPermSize=256m"' >> $TOMCAT_FOLDER/bin/${file}
 		else
-			echo -en ${NEWLINE}${SETVAR}'CATALINA_OPTS="$CATALINA_OPTS -Xms2g -Xmx2g -XX:MaxMetaspaceSize=512m"' >> $TOMCAT_FOLDER/bin/${file}
+			echo -en ${NEWLINE}${SETVAR}'CATALINA_OPTS="'${VARPREFIX}'CATALINA_OPTS'${VARSUFFIX}' -Xms2g -Xmx2g"' >> $TOMCAT_FOLDER/bin/${file}
 		fi
 	done
+
+	echo -e '\n<div class="alert alert-info"><ul>' >> $TOMCAT_FOLDER/webapps/ROOT/html/common/themes/bottom-ext.jsp
+
+	if [[ -f git-commit-portal ]]; then
+		echo -n '<li><strong>' >> $TOMCAT_FOLDER/webapps/ROOT/html/common/themes/bottom-ext.jsp
+		echo -n $1 | sed 's/-private$//g' >> $TOMCAT_FOLDER/webapps/ROOT/html/common/themes/bottom-ext.jsp
+		echo -n ' hash</strong>: ' >> $TOMCAT_FOLDER/webapps/ROOT/html/common/themes/bottom-ext.jsp
+		cat git-commit-portal | tr -d '\n' >> $TOMCAT_FOLDER/webapps/ROOT/html/common/themes/bottom-ext.jsp
+		echo '</li>' >> $TOMCAT_FOLDER/webapps/ROOT/html/common/themes/bottom-ext.jsp
+	fi
+
+	echo '<li><strong>'$1' hash</strong>: '${GIT_HASH}'</li>' >> $TOMCAT_FOLDER/webapps/ROOT/html/common/themes/bottom-ext.jsp
+
+	echo '</ul></div>' >> $TOMCAT_FOLDER/webapps/ROOT/html/common/themes/bottom-ext.jsp
 
 	sed -i 's/ start / jpda start /g' $TOMCAT_FOLDER/bin/startup.sh
 	sed -i 's/ start / jpda start /g' $TOMCAT_FOLDER/bin/startup.bat
