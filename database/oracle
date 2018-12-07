@@ -57,7 +57,7 @@ updateprops() {
 
 	echo "
 jdbc.default.driverClassName=oracle.jdbc.OracleDriver
-jdbc.default.url=jdbc:oracle:thin:@${DB_HOST_NAME}:1521:orcl
+jdbc.default.url=jdbc:oracle:thin:@${DB_HOST_NAME}:1521/ORCL
 jdbc.default.username=lportal
 jdbc.default.password=lportal
 " >> ${LIFERAY_HOME}/portal-ext.properties
