@@ -1,6 +1,10 @@
 #!/bin/bash
 
 containername() {
+	if [ "" != "${CONTAINER_NAME}" ]; then
+		return
+	fi
+
 	if [[ ${BASE_BRANCH} == ee-* ]]; then
 		CONTAINER_NAME=$(echo ${BASE_BRANCH} | cut -d'-' -f 2- | tr -d '.')-${DB_TYPE}
 	else

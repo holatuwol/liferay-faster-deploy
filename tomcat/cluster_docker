@@ -159,8 +159,8 @@ mysqldb() {
 
 	timeecho "Starting MySQL database..."
 
-	DB_HOST_NAME='mysqldb' DRIVERS_FOLDER=${DRIVERS_FOLDER} \
-		$(dirname ${BASH_SOURCE[0]})/../database/mysql ${NETWORK_NAME}
+	CONTAINER_NAME=${NETWORK_NAME}-mysql DB_HOST_NAME='mysqldb' DRIVERS_FOLDER=${DRIVERS_FOLDER} \
+		$(dirname ${BASH_SOURCE[0]})/../database/mysql
 
 	if [ "" == "$(docker network inspect ${NETWORK_NAME} | grep -F ${NETWORK_NAME}-mysql)" ]; then
 		docker network connect --alias mysqldb ${NETWORK_NAME} ${NETWORK_NAME}-mysql
