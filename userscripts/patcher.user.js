@@ -43,7 +43,9 @@ function replaceFixes(target) {
   var oldNode = querySelector(target);
 
   if (oldNode && oldNode.readOnly) {
-    replaceNode(oldNode, oldNode.innerHTML.split(',').map(ticket => '<a href="https://issues.liferay.com/browse/' + ticket + '" target="_blank">' + ticket + '</a>').join(', '));
+    replaceNode(oldNode, oldNode.innerHTML.split(',').map(
+      ticket => (ticket.toUpperCase() == ticket) ? '<a href="https://issues.liferay.com/browse/' + ticket + '" target="_blank">' + ticket + '</a>' : ticket
+    ).join(', '));
   }
 }
 
@@ -65,7 +67,19 @@ function replaceLesaLink(target) {
   var oldNode = querySelector(target);
 
   if (oldNode && oldNode.readOnly) {
-    replaceNode(oldNode, '<a href="https://web.liferay.com/group/customer/support/-/support/ticket/' + oldNode.value + '" target="_blank">' + oldNode.value + '</a>');
+    var ticketURL;
+
+    if (oldNode.value.indexOf('https:') == 0) {
+      ticketURL = oldNode.value;
+    }
+    else if (isNaN(oldNode.value)) {
+      ticketURL = 'https://web.liferay.com/group/customer/support/-/support/ticket/' + oldNode.value;
+    }
+    else {
+      ticketURL = 'https://liferay-support.zendesk.com/agent/tickets/' + oldNode.value;
+    }
+
+    replaceNode(oldNode, '<a href="' + ticketURL + '" target="_blank">' + ticketURL + '</a>');
   }
 }
 
