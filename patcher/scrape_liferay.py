@@ -4,7 +4,11 @@ import os
 from os.path import abspath, dirname, isdir, isfile, join, relpath
 import requests
 import sys
-from urllib import parse
+
+try:
+	from urllib import parse
+except:
+	import urlparse as parse
 
 sys.path.insert(0, dirname(dirname(abspath(inspect.getfile(inspect.currentframe())))))
 import git
