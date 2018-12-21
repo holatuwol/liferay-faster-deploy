@@ -24,14 +24,9 @@ function createAttachmentRow(attachment) {
   attachmentInfo.style.align = 'right';
 
   var attachmentAuthor = attachmentComment.querySelector('div.actor .name').innerText;
+  var attachmentTime = attachmentComment.querySelector('time').title;
 
-  attachmentExtraInfo.appendChild(document.createTextNode(attachmentAuthor));
-  attachmentExtraInfo.appendChild(document.createTextNode(' on '));
-
-  var attachmentTime = attachmentComment.querySelector('time');
-  attachmentTime = attachmentTime.cloneNode(true);
-  attachmentTime.innerHTML = attachmentTime.title;
-  attachmentExtraInfo.appendChild(attachmentTime);
+  attachmentExtraInfo.appendChild(document.createTextNode(attachmentAuthor + ' on ' + attachmentTime));
 
   attachmentInfo.appendChild(attachmentExtraInfo);
 
