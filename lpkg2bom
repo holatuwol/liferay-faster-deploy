@@ -10,7 +10,9 @@ install_jar() {
         <version>'${VERSION}'</version>
       </dependency>' >> "${POM_FILE}"
 
-    mvn install:install-file -Dpackaging=jar -Dfile=$1 -DgroupId=${GROUP_ID} -DartifactId=${ARTIFACT_ID} -Dversion=${VERSION}
+    if [ "" != "${GROUP_ID}" ]; then
+        mvn install:install-file -Dpackaging=jar -Dfile=$1 -DgroupId=${GROUP_ID} -DartifactId=${ARTIFACT_ID} -Dversion=${VERSION}
+    fi
 }
 
 install_lpkg() {
@@ -42,13 +44,15 @@ install_lpkg() {
 
     rm -rf temp
 
-    mvn install:install-file -Dpackaging=pom -Dfile="${POM_FILE}" -DgroupId=${GROUP_ID} -DartifactId=${POM_ARTIFACT_ID}.bom -Dversion=${POM_ARTIFACT_VERSION}
+    if [ "" != "${GROUP_ID}" ]; then
+        mvn install:install-file -Dpackaging=pom -Dfile="${POM_FILE}" -DgroupId=${GROUP_ID} -DartifactId=${POM_ARTIFACT_ID}.bom -Dversion=${POM_ARTIFACT_VERSION}
+    fi
 }
 
 GROUP_ID=$1
 LPKG=$2
 
-if [ "" == "${GROUP_ID}" ] || [ ! -f "${LPKG}" ]; then
+if [ ! -f "${LPKG}" ]; then
     echo 'Usage: lpkg2bom <GROUP_ID> <PATH_TO_LPKG>'
     exit 1
 fi
