@@ -88,9 +88,15 @@ set_container_mounts() {
 	LIFERAY_RELEASE_MOUNT="-v ${HOME}/.liferay/release:/release"
 
 	if [ -d document_library ]; then
-		LIFERAY_RELEASE_MOUNT="-v ${PWD}/document_library:/opt/liferay/data/document_library"
+		LIFERAY_RELEASE_MOUNT="${LIFERAY_RELEASE_MOUNT} -v ${PWD}/document_library:/opt/liferay/data/document_library"
 	elif [ -d data/document_library ]; then
-		LIFERAY_RELEASE_MOUNT="-v ${PWD}/data/document_library:/opt/liferay/data/document_library"
+		LIFERAY_RELEASE_MOUNT="${LIFERAY_RELEASE_MOUNT} -v ${PWD}/data/document_library:/opt/liferay/data/document_library"
+	fi
+
+	if [ -d jackrabbit ]; then
+		LIFERAY_RELEASE_MOUNT="${LIFERAY_RELEASE_MOUNT} -v ${PWD}/jackrabbit:/opt/liferay/data/jackrabbit"
+	elif [ -d data/jackrabbit ]; then
+		LIFERAY_RELEASE_MOUNT="${LIFERAY_RELEASE_MOUNT} -v ${PWD}/data/jackrabbit:/opt/liferay/data/jackrabbit"
 	fi
 
 	if [ "" != "${LIFERAY_HOME}" ]; then
