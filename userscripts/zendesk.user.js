@@ -4,6 +4,40 @@
 // @match          https://liferay-support.zendesk.com/*
 // ==/UserScript==
 
+function createAttachmentRow(attachment) {
+  var attachmentComment = attachment.closest('div[data-comment-id]');
+
+  var attachmentInfo = document.createElement('div');
+  attachmentInfo.style.display = 'flex';
+  attachmentInfo.style.flexDirection = 'row';
+  attachmentInfo.style.justifyContent = 'space-between';
+
+  var attachmentLink = document.createElement('a');
+
+  attachmentLink.innerText = attachment.href.substring(attachment.href.indexOf('?') + 6);
+  attachmentLink.href = attachment.href;
+  attachmentLink.style.paddingRight = '1em';
+
+  attachmentInfo.appendChild(attachmentLink);
+
+  var attachmentExtraInfo = document.createElement('div');
+  attachmentInfo.style.align = 'right';
+
+  var attachmentAuthor = attachmentComment.querySelector('div.actor .name').innerText;
+
+  attachmentExtraInfo.appendChild(document.createTextNode(attachmentAuthor));
+  attachmentExtraInfo.appendChild(document.createTextNode(' on '));
+
+  var attachmentTime = attachmentComment.querySelector('time');
+  attachmentTime = attachmentTime.cloneNode(true);
+  attachmentTime.innerHTML = attachmentTime.title;
+  attachmentExtraInfo.appendChild(attachmentTime);
+
+  attachmentInfo.appendChild(attachmentExtraInfo);
+
+  return attachmentInfo;
+}
+
 function recreateLesaUI(conversation) {
   if (conversation.classList.contains('lesa-ui')) {
     return;
@@ -30,22 +64,27 @@ function recreateLesaUI(conversation) {
   description.innerHTML = lastComment.innerHTML;
 
   if (attachments.length > 0) {
-    var attachmentUL = document.createElement('ul');
-    attachmentUL.style.listStyle = 'disc';
+    var attachmentsContainer = document.createElement('div');
+    attachmentsContainer.style.display = 'flex';
+    attachmentsContainer.style.flexDirection = 'row';
+    attachmentsContainer.style.paddingTop = '1em';
+
+    var attachmentsLabel = document.createElement('div');
+    attachmentsLabel.innerHTML = 'Attachments:';
+    attachmentsLabel.style.fontWeight = 600;
+    attachmentsLabel.style.paddingRight = '1em';
+
+    attachmentsContainer.appendChild(attachmentsLabel);
+
+    var attachmentsWrapper = document.createElement('div');
 
     for (var i = 0; i < attachments.length; i++) {
-      var attachmentLI = document.createElement('li');
-
-      var attachmentLink = document.createElement('a');
-
-      attachmentLink.innerText = attachments[i].href.substring(attachments[i].href.indexOf('?') + 6);
-      attachmentLink.href = attachments[i].href;
-
-      attachmentLI.appendChild(attachmentLink);
-      attachmentUL.appendChild(attachmentLI);
+      attachmentsWrapper.appendChild(createAttachmentRow(attachments[i]));
     }
 
-    description.appendChild(attachmentUL);
+    attachmentsContainer.appendChild(attachmentsWrapper);
+
+    description.appendChild(attachmentsContainer);
   }
 
   header.appendChild(description);
