@@ -34,13 +34,13 @@ function createAttachmentRow(attachment) {
 }
 
 function recreateLesaUI(conversation) {
-  if (conversation.classList.contains('lesa-ui')) {
-    return;
-  }
-
   var header = conversation.querySelector('.pane_header');
 
   if (!header) {
+    return;
+  }
+
+  if (header.classList.contains('lesa-ui')) {
     return;
   }
 
@@ -84,7 +84,7 @@ function recreateLesaUI(conversation) {
 
   header.appendChild(description);
 
-  conversation.classList.add('lesa-ui');
+  header.classList.add('lesa-ui');
 }
 
 function checkForConversations() {
