@@ -57,14 +57,13 @@ function generateFormField(propertyBox, className, labelText, formElements) {
     formField.appendChild(formElements[i]);
   }
 
-  var oldFormField = propertyBox.querySelector('.' + className);
+  var oldFormFields = propertyBox.querySelectorAll('.' + className);
 
-  if (oldFormField) {
-    propertyBox.replaceChild(formField, oldFormField);
+  for (var i = 0; i < oldFormFields.length; i++) {
+    propertyBox.removeChild(oldFormFields[i]);
   }
-  else {
-    propertyBox.appendChild(formField);
-  }
+
+  propertyBox.appendChild(formField);
 }
 
 /**
@@ -72,8 +71,6 @@ function generateFormField(propertyBox, className, labelText, formElements) {
  */
 
 function addOrganizationField(propertyBox, ticketInfo) {
-  console.log(ticketInfo);
-
   if (!ticketInfo.organizations || (ticketInfo.organizations.length != 1)) {
     return;
   }
