@@ -90,11 +90,11 @@ function addOrganizationField(propertyBox, ticketInfo) {
     organizationInfo.external_id
   ].join('');
 
-  helpCenterLink.innerHTML = organizationFields.account_code
+  helpCenterLink.innerHTML = organizationFields.account_code;
 
   var slaText = document.createTextNode(' (' + organizationFields.sla.toUpperCase() + ')');
 
-  generateFormField(propertyBox, 'organization_id', 'Organization', [helpCenterLink, slaText])
+  generateFormField(propertyBox, 'organization_id', 'Organization', [helpCenterLink, slaText]);
 }
 
 /**
@@ -126,6 +126,7 @@ function updateSidebarBoxContainer() {
     }
 
     if (propertyBox.getAttribute('data-ticket-id') != ticketId) {
+      propertyBox.setAttribute('data-ticket-id', ticketId);
       propertyBoxes.push(propertyBox);
     }
   }
@@ -154,7 +155,6 @@ function updateSidebarBoxContainer() {
     }
 
     for (var i = 0; i < propertyBoxes.length; i++) {
-      propertyBoxes[i].setAttribute('data-ticket-id', ticketId);
       addOrganizationField(propertyBoxes[i], ticketInfo);
     }
   };
@@ -241,4 +241,4 @@ function checkForConversations() {
   }
 }
 
-setInterval(checkForConversations, 1000)
+setInterval(checkForConversations, 1000);
