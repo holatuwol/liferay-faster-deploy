@@ -72,6 +72,8 @@ function generateFormField(propertyBox, className, labelText, formElements) {
  */
 
 function addOrganizationField(propertyBox, ticketInfo) {
+  console.log(ticketInfo);
+
   if (!ticketInfo.organizations || (ticketInfo.organizations.length != 1)) {
     return;
   }
@@ -103,25 +105,35 @@ function addOrganizationField(propertyBox, ticketInfo) {
  */
 
 function updateSidebarBoxContainer() {
-  var ticketBaseHREF = 'https://liferay-support.zendesk.com/agent/tickets/';
+  var ticketPath = '/agent/tickets/';
 
-  if (document.location.href.indexOf(ticketBaseHREF) != 0) {
+  if (document.location.href.indexOf(ticketPath) == -1) {
     return;
   }
 
-  var sidebar = document.querySelector('.sidebar_box_container');
+  var ticketId = document.location.href.substring(document.location.href.indexOf(ticketPath) + ticketPath.length);
 
-  if (!sidebar) {
+  var sidebars = document.querySelectorAll('.sidebar_box_container');
+
+  if (sidebars.length == 0) {
     return;
   }
 
-  var propertyBox = sidebar.querySelector('.property_box');
+  var propertyBoxes = [];
 
-  if (!propertyBox) {
-    return;
+  for (var i = 0; i < sidebars.length; i++) {
+    var propertyBox = sidebars[i].querySelector('.property_box');
+
+    if (!propertyBox) {
+      continue;
+    }
+
+    if (propertyBox.getAttribute('data-ticket-id') != ticketId) {
+      propertyBoxes.push(propertyBox);
+    }
   }
 
-  if (propertyBox.querySelector('.lesa-ui')) {
+  if (propertyBoxes.length == 0) {
     return;
   }
 
@@ -144,10 +156,11 @@ function updateSidebarBoxContainer() {
       return;
     }
 
-    addOrganizationField(propertyBox, ticketInfo);
+    for (var i = 0; i < propertyBoxes.length; i++) {
+      propertyBoxes[i].setAttribute('data-ticket-id', ticketId);
+      addOrganizationField(propertyBoxes[i], ticketInfo);
+    }
   };
-
-  var ticketId = document.location.href.substring(ticketBaseHREF.length);
 
   var ticketDetailsURL = [
     'https://liferay-support.zendesk.com/api/v2/tickets/',
