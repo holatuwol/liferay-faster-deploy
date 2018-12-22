@@ -4,6 +4,10 @@
 // @match          https://liferay-support.zendesk.com/*
 // ==/UserScript==
 
+/**
+ * Utility function to generate the div for a single attachment
+ */
+
 function createAttachmentRow(attachment) {
   var attachmentComment = attachment.closest('div[data-comment-id]');
 
@@ -33,6 +37,132 @@ function createAttachmentRow(attachment) {
   return attachmentInfo;
 }
 
+/**
+ * Utility function to generate a single dummy field to add to the sidebar.
+ */
+
+function generateFormField(propertyBox, className, labelText, formElements) {
+  var formField = document.createElement('div');
+  formField.classList.add('ember-view');
+  formField.classList.add('form_field');
+  formField.classList.add('lesa-ui');
+  formField.classList.add(className);
+
+  var label = document.createElement('label');
+  label.innerHTML = labelText;
+
+  formField.appendChild(label);
+
+  for (var i = 0; i < formElements.length; i++) {
+    formField.appendChild(formElements[i]);
+  }
+
+  var oldFormField = propertyBox.querySelector('.' + className);
+
+  if (oldFormField) {
+    propertyBox.replaceChild(formField, oldFormField);
+  }
+  else {
+    propertyBox.appendChild(formField);
+  }
+}
+
+/**
+ * Utility function to add the "Organization" field to the sidebar.
+ */
+
+function addOrganizationField(propertyBox, ticketInfo) {
+  if (!ticketInfo.organizations || (ticketInfo.organizations.length != 1)) {
+    return;
+  }
+
+  var organizationInfo = ticketInfo.organizations[0];
+  var organizationFields = organizationInfo.organization_fields;
+
+  var helpCenterLink = document.createElement('a');
+
+  helpCenterLink.target = '_blank';
+
+  helpCenterLink.href = [
+    'https://customer.liferay.com/project-details',
+    '?p_p_id=com_liferay_osb_customer_account_entry_details_web_AccountEntryDetailsPortlet',
+    '&_com_liferay_osb_customer_account_entry_details_web_AccountEntryDetailsPortlet_mvcRenderCommandName=%2Fview_account_entry',
+    '&_com_liferay_osb_customer_account_entry_details_web_AccountEntryDetailsPortlet_accountEntryId=',
+    organizationInfo.external_id
+  ].join('');
+
+  helpCenterLink.innerHTML = organizationFields.account_code
+
+  var slaText = document.createTextNode(' (' + organizationFields.sla.toUpperCase() + ')');
+
+  generateFormField(propertyBox, 'organization_id', 'Organization', [helpCenterLink, slaText])
+}
+
+/**
+ * Update the sidebar with any ticket details we can pull from the ZenDesk API.
+ */
+
+function updateSidebarBoxContainer() {
+  var ticketBaseHREF = 'https://liferay-support.zendesk.com/agent/tickets/';
+
+  if (document.location.href.indexOf(ticketBaseHREF) != 0) {
+    return;
+  }
+
+  var sidebar = document.querySelector('.sidebar_box_container');
+
+  if (!sidebar) {
+    return;
+  }
+
+  var propertyBox = sidebar.querySelector('.property_box');
+
+  if (!propertyBox) {
+    return;
+  }
+
+  if (propertyBox.querySelector('.lesa-ui')) {
+    return;
+  }
+
+  var added = false;
+  var xhr = new XMLHttpRequest();
+
+  xhr.onreadystatechange = function() {
+    if (added || xhr.readyState != 4 || xhr.status != 200) {
+      return;
+    }
+
+    added = true;
+
+    var ticketInfo;
+
+    try {
+      ticketInfo = JSON.parse(xhr.responseText);
+    }
+    catch (e) {
+      return;
+    }
+
+    addOrganizationField(propertyBox, ticketInfo);
+  };
+
+  var ticketId = document.location.href.substring(ticketBaseHREF.length);
+
+  var ticketDetailsURL = [
+    'https://liferay-support.zendesk.com/api/v2/tickets/',
+    ticketId,
+    '?include=organizations'
+  ].join('');
+
+  xhr.open('GET', ticketDetailsURL);
+  xhr.send();
+}
+
+/**
+ * Update the conversation view with the attachments and the first comment.
+ */
+
 function recreateLesaUI(conversation) {
   var header = conversation.querySelector('.pane_header');
 
@@ -43,6 +173,8 @@ function recreateLesaUI(conversation) {
   if (header.classList.contains('lesa-ui')) {
     return;
   }
+
+  header.classList.add('lesa-ui');
 
   var comments = conversation.querySelectorAll('.zd-comment');
 
@@ -83,11 +215,15 @@ function recreateLesaUI(conversation) {
   }
 
   header.appendChild(description);
-
-  header.classList.add('lesa-ui');
 }
 
+/**
+ * Regularly attempt to apply the updates.
+ */
+
 function checkForConversations() {
+  updateSidebarBoxContainer();
+
   var conversations = document.querySelectorAll('div[data-side-conversations-anchor-id]');
 
   for (var i = 0; i < conversations.length; i++) {
