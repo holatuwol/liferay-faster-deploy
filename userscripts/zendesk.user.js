@@ -101,15 +101,7 @@ function addOrganizationField(propertyBox, ticketInfo) {
  * Update the sidebar with any ticket details we can pull from the ZenDesk API.
  */
 
-function updateSidebarBoxContainer() {
-  var ticketPath = '/agent/tickets/';
-
-  if (document.location.href.indexOf(ticketPath) == -1) {
-    return;
-  }
-
-  var ticketId = document.location.href.substring(document.location.href.indexOf(ticketPath) + ticketPath.length);
-
+function updateSidebarBoxContainer(ticketId) {
   var sidebars = document.querySelectorAll('.sidebar_box_container');
 
   if (sidebars.length == 0) {
@@ -232,12 +224,18 @@ function recreateLesaUI(conversation) {
  */
 
 function checkForConversations() {
-  updateSidebarBoxContainer();
+  var ticketPath = '/agent/tickets/';
 
-  var conversations = document.querySelectorAll('div[data-side-conversations-anchor-id]');
+  if (document.location.href.indexOf(ticketPath) != -1) {
+    var ticketId = document.location.href.substring(document.location.href.indexOf(ticketPath) + ticketPath.length);
 
-  for (var i = 0; i < conversations.length; i++) {
-    recreateLesaUI(conversations[i]);
+    updateSidebarBoxContainer(ticketId);
+
+    var conversation = document.querySelector('div[data-side-conversations-anchor-id="' + ticketId + '"]');
+
+    if (conversation) {
+      recreateLesaUI(conversation);
+    }
   }
 }
 
