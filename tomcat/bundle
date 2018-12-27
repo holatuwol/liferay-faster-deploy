@@ -154,8 +154,40 @@ set_image_name() {
 	fi
 
 	if [[ $1 == 6.1.* ]] || [[ $1 == *-6130 ]] || [[ $1 == *-6130.zip ]]; then
-		IMAGE_NAME="holatuwol/liferay:openjdk7"
+		IMAGE_NAME="holatuwol/liferay:jdk6"
+		return 0
 	elif [[ $1 == portal-* ]] || [[ $1 == 6.2.* ]] || [[ $1 == *-6210 ]] || [[ $1 == *-6210.zip ]]; then
+		IMAGE_NAME="holatuwol/liferay:openjdk7"
+		return 0
+	elif [ "" == "${LIFERAY_HOME}" ]; then
+		IMAGE_NAME="holatuwol/liferay:openjdk8"
+		return 0
+	fi
+
+	# Use portal-kernel/portal-service to determine the current
+	# Liferay version in order to decide on the Java version to use
+
+	local RELEASE_INFO_JAR=$(find "${LIFERAY_HOME}" -name portal-kernel.jar)
+
+	if [ "" == "${RELEASE_INFO_JAR}" ]; then
+		RELEASE_INFO_JAR=$(find "${LIFERAY_HOME}" -name portal-service.jar)
+	fi
+
+	if [ "" == "${RELEASE_INFO_JAR}" ]; then
+		echo "Unable to find portal-kernel.jar or portal-service.jar in ${LIFERAY_HOME}"
+		return 1
+	fi
+
+	echo "Attempting to detect version using ${RELEASE_INFO_JAR}"
+
+	echo 'public class GetReleaseInfo { public static void main( String[] args ) { System.out.print( com.liferay.portal.kernel.util.ReleaseInfo.getBuildNumber() ); } }' > GetReleaseInfo.java
+	javac -classpath ".:${RELEASE_INFO_JAR}" GetReleaseInfo.java
+
+	local RELEASE_NUMBER=$(java -classpath ".:${RELEASE_INFO_JAR}" GetReleaseInfo)
+
+	if [[ ${RELEASE_NUMBER} == 61* ]]; then
+		IMAGE_NAME="holatuwol/liferay:jdk6"
+	elif [[ ${RELEASE_NUMBER} == 62* ]]; then
 		IMAGE_NAME="holatuwol/liferay:openjdk7"
 	else
 		IMAGE_NAME="holatuwol/liferay:openjdk8"
