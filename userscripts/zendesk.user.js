@@ -18,7 +18,7 @@ function createAttachmentRow(attachment) {
 
   var attachmentLink = document.createElement('a');
 
-  attachmentLink.innerText = attachment.href.substring(attachment.href.indexOf('?') + 6);
+  attachmentLink.innerText = decodeURIComponent(attachment.href.substring(attachment.href.indexOf('?') + 6));
   attachmentLink.href = attachment.href;
   attachmentLink.style.paddingRight = '1em';
 
