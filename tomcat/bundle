@@ -148,11 +148,7 @@ set_container_name() {
 	fi
 }
 
-set_image_name() {
-	if [ "" != "${IMAGE_NAME}" ]; then
-		return 0
-	fi
-
+set_image_name_by_patch() {
 	if [[ $1 == 6.1.* ]] || [[ $1 == *-6130 ]] || [[ $1 == *-6130.zip ]]; then
 		IMAGE_NAME="holatuwol/liferay:jdk6"
 		return 0
@@ -168,6 +164,28 @@ set_image_name() {
 	elif [ "" == "${LIFERAY_HOME}" ]; then
 		IMAGE_NAME="holatuwol/liferay:openjdk8"
 		return 0
+	fi
+}
+
+set_image_name() {
+	if [ "" != "${IMAGE_NAME}" ]; then
+		return 0
+	fi
+
+	set_image_name_by_patch $1
+
+	if [ "" != "${IMAGE_NAME}" ]; then
+		return 0
+	fi
+
+	if [ -d "${LIFERAY_HOME}/patches" ]; then
+		for file in ${LIFERAY_HOME}/patches/*; do
+			set_image_name_by_patch ${file}
+
+			if [ "" != "${IMAGE_NAME}" ]; then
+				return 0
+			fi
+		done
 	fi
 
 	# Use portal-kernel/portal-service to determine the current
