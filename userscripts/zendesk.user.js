@@ -5,6 +5,80 @@
 // ==/UserScript==
 
 /**
+ * Utility function to generate a URL to patcher portal's accounts view.
+ */
+
+function getPatcherPortalAccountsHREF(params) {
+  var portletId = '1_WAR_osbpatcherportlet';
+  var ns = '_' + portletId + '_';
+
+  var queryString = Object.keys(params).map(key => (key.indexOf('p_p_') == 0 ? key : (ns + key)) + '=' + params[key]).join('&');
+  return 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/accounts/view?p_p_id=' + portletId + '&' + queryString;
+}
+
+/**
+ * Utility function to retrieve the Liferay version from the sidebar.
+ */
+
+function getProductVersion(propertyBox) {
+  var productVersionField = propertyBox.parentNode.querySelector('.custom_field_360006076471 .zd-selectmenu-base-content');
+
+  if (!productVersionField) {
+    return '';
+  }
+
+  var version = productVersionField.innerText.trim();
+
+  if (version.indexOf('7.') == 0) {
+    return version;
+  }
+
+  if (version.indexOf('6.') == 0) {
+    return '6.x';
+  }
+
+  return '';
+}
+
+/**
+ * Utility function to indicate which patcher portal product version ID to use.
+ */
+
+function getProductVersionId(version) {
+  if (version == '7.1') {
+    return '102311424';
+  }
+
+  if (version == '7.0') {
+    return '101625504';
+  }
+
+  if (version == '6.2') {
+    return '101625503';
+  }
+
+  if (version == '6.1') {
+    return '101625503';
+  }
+
+  return '';
+}
+
+/**
+ * Function to generate an anchor tag.
+ */
+
+function createAnchorTag(text, href) {
+  var link = document.createElement('a');
+
+  link.innerText = text;
+  link.href = href;
+  link.target = '_blank';
+
+  return link;
+}
+
+/**
  * Utility function to generate the div for a single attachment
  */
 
@@ -16,10 +90,7 @@ function createAttachmentRow(attachment) {
   attachmentInfo.style.flexDirection = 'row';
   attachmentInfo.style.justifyContent = 'space-between';
 
-  var attachmentLink = document.createElement('a');
-
-  attachmentLink.innerText = decodeURIComponent(attachment.href.substring(attachment.href.indexOf('?') + 6));
-  attachmentLink.href = attachment.href;
+  var attachmentLink = createAnchorTag(decodeURIComponent(attachment.href.substring(attachment.href.indexOf('?') + 6)), attachment.href);
   attachmentLink.style.paddingRight = '1em';
 
   attachmentInfo.appendChild(attachmentLink);
@@ -47,6 +118,9 @@ function generateFormField(propertyBox, className, labelText, formElements) {
   formField.classList.add('form_field');
   formField.classList.add('lesa-ui');
   formField.classList.add(className);
+
+  formField.style.display = 'flex';
+  formField.style.flexDirection = 'column';
 
   var label = document.createElement('label');
   label.innerHTML = labelText;
@@ -78,11 +152,7 @@ function addOrganizationField(propertyBox, ticketInfo) {
   var organizationInfo = ticketInfo.organizations[0];
   var organizationFields = organizationInfo.organization_fields;
 
-  var helpCenterLink = document.createElement('a');
-
-  helpCenterLink.target = '_blank';
-
-  helpCenterLink.href = [
+  var helpCenterLinkHREF = [
     'https://customer.liferay.com/project-details',
     '?p_p_id=com_liferay_osb_customer_account_entry_details_web_AccountEntryDetailsPortlet',
     '&_com_liferay_osb_customer_account_entry_details_web_AccountEntryDetailsPortlet_mvcRenderCommandName=%2Fview_account_entry',
@@ -90,11 +160,49 @@ function addOrganizationField(propertyBox, ticketInfo) {
     organizationInfo.external_id
   ].join('');
 
-  helpCenterLink.innerHTML = organizationFields.account_code;
+  var helpCenterLink = createAnchorTag(organizationFields.account_code, helpCenterLinkHREF);
 
-  var slaText = document.createTextNode(' (' + organizationFields.sla.toUpperCase() + ')');
+  var container = document.createElement('div');
 
-  generateFormField(propertyBox, 'organization_id', 'Organization', [helpCenterLink, slaText]);
+  container.appendChild(helpCenterLink);
+  container.appendChild(document.createTextNode(' '));
+  container.appendChild(document.createTextNode('(' + organizationFields.sla.toUpperCase() + ')'));
+
+  generateFormField(propertyBox, 'organization_id', 'Organization', [container]);
+}
+
+/**
+ * Utility function to add Patcher Portal fields to the sidebar.
+ */
+
+function addPatcherPortalField(propertyBox, ticketInfo) {
+  if (!ticketInfo.organizations || (ticketInfo.organizations.length != 1)) {
+    return;
+  }
+
+  var organizationInfo = ticketInfo.organizations[0];
+  var organizationFields = organizationInfo.organization_fields;
+
+  var links = [];
+
+  var allBuildsLinkHREF = getPatcherPortalAccountsHREF({
+    'patcherBuildAccountEntryCode': organizationFields.account_code
+  });
+
+  links.push(createAnchorTag('All Builds', allBuildsLinkHREF));
+
+  var version = getProductVersion(propertyBox);
+
+  if (version) {
+    var versionBuildsLinkHREF = getPatcherPortalAccountsHREF({
+      'patcherBuildAccountEntryCode': organizationFields.account_code,
+      'patcherProductVersionId': getProductVersionId(version)
+    });
+
+    links.push(createAnchorTag(version + ' Builds', versionBuildsLinkHREF));
+  }
+
+  generateFormField(propertyBox, 'patcher_portal', 'Patcher Portal', links);
 }
 
 /**
@@ -148,6 +256,7 @@ function updateSidebarBoxContainer(ticketId) {
 
     for (var i = 0; i < propertyBoxes.length; i++) {
       addOrganizationField(propertyBoxes[i], ticketInfo);
+      addPatcherPortalField(propertyBoxes[i], ticketInfo);
     }
   };
 
@@ -165,18 +274,24 @@ function updateSidebarBoxContainer(ticketId) {
  * Update the conversation view with the attachments and the first comment.
  */
 
-function recreateLesaUI(conversation) {
+function recreateLesaUI(ticketId, conversation) {
   var header = conversation.querySelector('.pane_header');
 
   if (!header) {
     return;
   }
 
-  if (header.classList.contains('lesa-ui')) {
+  var oldDescriptions = header.querySelectorAll('.lesa-ui');
+
+  if ((header.getAttribute('data-ticket-id') == ticketId) && (oldDescriptions.length == 1)) {
     return;
   }
 
-  header.classList.add('lesa-ui');
+  header.setAttribute('data-ticket-id', ticketId);
+
+  for (var i = 0; i < oldDescriptions.length; i++) {
+    header.removeChild(oldDescriptions[i]);
+  }
 
   var comments = conversation.querySelectorAll('.zd-comment');
 
@@ -189,6 +304,7 @@ function recreateLesaUI(conversation) {
   var lastComment = comments[comments.length - 1];
 
   var description = document.createElement('div');
+  description.classList.add('lesa-ui');
   description.style.fontWeight = 100;
   description.innerHTML = lastComment.innerHTML;
 
@@ -234,7 +350,7 @@ function checkForConversations() {
     var conversation = document.querySelector('div[data-side-conversations-anchor-id="' + ticketId + '"]');
 
     if (conversation) {
-      recreateLesaUI(conversation);
+      recreateLesaUI(ticketId, conversation);
     }
   }
 }
