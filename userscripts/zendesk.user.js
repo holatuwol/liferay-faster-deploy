@@ -53,11 +53,7 @@ function getProductVersionId(version) {
     return '101625504';
   }
 
-  if (version == '6.2') {
-    return '101625503';
-  }
-
-  if (version == '6.1') {
+  if (version == '6.x') {
     return '101625503';
   }
 
