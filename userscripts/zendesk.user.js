@@ -266,29 +266,7 @@ function updateSidebarBoxContainer(ticketId) {
   xhr.send();
 }
 
-/**
- * Update the conversation view with the attachments and the first comment.
- */
-
-function recreateLesaUI(ticketId, conversation) {
-  var header = conversation.querySelector('.pane_header');
-
-  if (!header) {
-    return;
-  }
-
-  var oldDescriptions = header.querySelectorAll('.lesa-ui');
-
-  if ((header.getAttribute('data-ticket-id') == ticketId) && (oldDescriptions.length == 1)) {
-    return;
-  }
-
-  header.setAttribute('data-ticket-id', ticketId);
-
-  for (var i = 0; i < oldDescriptions.length; i++) {
-    header.removeChild(oldDescriptions[i]);
-  }
-
+function addTicketDescription(conversation, header) {
   var comments = conversation.querySelectorAll('.event.is-public .zd-comment');
 
   if (comments.length == 0) {
@@ -309,7 +287,7 @@ function recreateLesaUI(ticketId, conversation) {
     var attachmentsContainer = document.createElement('div');
     attachmentsContainer.style.display = 'flex';
     attachmentsContainer.style.flexDirection = 'row';
-    attachmentsContainer.style.paddingTop = '1em';
+    attachmentsContainer.style.marginTop = '1em';
 
     var attachmentsLabel = document.createElement('div');
     attachmentsLabel.innerHTML = 'Attachments:';
@@ -343,14 +321,94 @@ function recreateLesaUI(ticketId, conversation) {
 }
 
 /**
+ * Scroll to a specific comment if its comment ID is included in a
+ * query string parameter.
+ */
+
+function highlightComment() {
+  var commentString = '?comment=';
+
+  if (!document.location.search || (document.location.search.indexOf(commentString) != 0)) {
+    return;
+  }
+
+  var commentId = document.location.search.substring(commentString.length);
+
+  var comment = document.querySelector('div[data-comment-id="' + commentId + '"]');
+
+  if (!comment) {
+    return;
+  }
+
+  if (comment.classList.contains('lesa-ui')) {
+    return;
+  }
+
+  comment.classList.add('lesa-ui');
+  comment.closest('.event').style.backgroundColor = '#eee';
+  comment.scrollIntoView();
+}
+
+/**
+ * Add the comment ID as a query string parameter to function as a
+ * pseudo permalink (since this script scrolls to it).
+ */
+
+function addPermaLinks(conversation) {
+  var comments = conversation.querySelectorAll('div[data-comment-id]');
+
+  for (var i = 0; i < comments.length; i++) {
+    var commentId = comments[i].getAttribute('data-comment-id');
+
+    var permalinkContainer = document.createElement('div');
+    permalinkContainer.style.marginBottom = '1em';
+
+    var permalinkHREF = 'https://liferay-support.zendesk.com' + document.location.pathname + '?comment=' + commentId;
+    var permalink = document.createTextNode(permalinkHREF);
+
+    permalinkContainer.appendChild(permalink);
+
+    var commentHeader = comments[i].querySelector('.content .header');
+    commentHeader.appendChild(permalinkContainer);
+  }
+}
+
+/**
+ * Update the conversation view with the attachments and the first comment.
+ */
+
+function recreateLesaUI(ticketId, conversation) {
+  var header = conversation.querySelector('.pane_header');
+
+  if (!header) {
+    return;
+  }
+
+  var oldDescriptions = header.querySelectorAll('.lesa-ui');
+
+  if ((header.getAttribute('data-ticket-id') == ticketId) && (oldDescriptions.length == 1)) {
+    return;
+  }
+
+  header.setAttribute('data-ticket-id', ticketId);
+
+  for (var i = 0; i < oldDescriptions.length; i++) {
+    header.removeChild(oldDescriptions[i]);
+  }
+
+  addTicketDescription(conversation, header);
+  addPermaLinks(conversation);
+}
+
+/**
  * Regularly attempt to apply the updates.
  */
 
 function checkForConversations() {
   var ticketPath = '/agent/tickets/';
 
-  if (document.location.href.indexOf(ticketPath) != -1) {
-    var ticketId = document.location.href.substring(document.location.href.indexOf(ticketPath) + ticketPath.length);
+  if (document.location.pathname.indexOf(ticketPath) == 0) {
+    var ticketId = document.location.pathname.substring(ticketPath.length);
 
     updateSidebarBoxContainer(ticketId);
 
@@ -359,6 +417,8 @@ function checkForConversations() {
     if (conversation) {
       recreateLesaUI(ticketId, conversation);
     }
+
+    highlightComment();
   }
 }
 
