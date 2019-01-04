@@ -289,7 +289,7 @@ function recreateLesaUI(ticketId, conversation) {
     header.removeChild(oldDescriptions[i]);
   }
 
-  var comments = conversation.querySelectorAll('.zd-comment');
+  var comments = conversation.querySelectorAll('.event.is-public .zd-comment');
 
   if (comments.length == 0) {
     return;
@@ -301,6 +301,7 @@ function recreateLesaUI(ticketId, conversation) {
 
   var description = document.createElement('div');
   description.classList.add('lesa-ui');
+  description.classList.add('comment');
   description.style.fontWeight = 100;
   description.innerHTML = lastComment.innerHTML;
 
@@ -328,7 +329,17 @@ function recreateLesaUI(ticketId, conversation) {
     description.appendChild(attachmentsContainer);
   }
 
-  header.appendChild(description);
+  var descriptionAncestor1 = document.createElement('div');
+  descriptionAncestor1.classList.add('rich_text');
+
+  var descriptionAncestor0 = document.createElement('div');
+  descriptionAncestor0.classList.add('event');
+  descriptionAncestor0.classList.add('is-public');
+
+  descriptionAncestor1.appendChild(descriptionAncestor0);
+  descriptionAncestor0.appendChild(description);
+
+  header.appendChild(descriptionAncestor1);
 }
 
 /**
