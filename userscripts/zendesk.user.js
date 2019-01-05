@@ -266,7 +266,29 @@ function updateSidebarBoxContainer(ticketId) {
   xhr.send();
 }
 
-function addTicketDescription(conversation, header) {
+/**
+ * Function to add the description and attachments to the top of the page.
+ */
+
+function addTicketDescription(ticketId, conversation) {
+  var header = conversation.querySelector('.pane_header');
+
+  if (!header) {
+    return;
+  }
+
+  var oldDescriptions = header.querySelectorAll('.lesa-ui');
+
+  if ((header.getAttribute('data-ticket-id') == ticketId) || (oldDescriptions.length == 1)) {
+    return;
+  }
+
+  header.setAttribute('data-ticket-id', ticketId);
+
+  for (var i = 0; i < oldDescriptions.length; i++) {
+    header.removeChild(oldDescriptions[i]);
+  }
+
   var comments = conversation.querySelectorAll('.event.is-public .zd-comment');
 
   if (comments.length == 0) {
@@ -354,7 +376,7 @@ function highlightComment() {
  * pseudo permalink (since this script scrolls to it).
  */
 
-function addPermaLinks(conversation) {
+function addPermaLinks(ticketId, conversation) {
   var permalinks = conversation.querySelectorAll('div[data-comment-id] div.lesa-ui');
 
   if (permalinks.length > 0) {
@@ -381,32 +403,6 @@ function addPermaLinks(conversation) {
 }
 
 /**
- * Update the conversation view with the attachments and the first comment.
- */
-
-function recreateLesaUI(ticketId, conversation) {
-  var header = conversation.querySelector('.pane_header');
-
-  if (!header) {
-    return;
-  }
-
-  var oldDescriptions = header.querySelectorAll('.lesa-ui');
-
-  if ((header.getAttribute('data-ticket-id') != ticketId) || (oldDescriptions.length != 1)) {
-    header.setAttribute('data-ticket-id', ticketId);
-
-    for (var i = 0; i < oldDescriptions.length; i++) {
-      header.removeChild(oldDescriptions[i]);
-    }
-
-    addTicketDescription(conversation, header);
-  }
-
-  addPermaLinks(conversation);
-}
-
-/**
  * Regularly attempt to apply the updates.
  */
 
@@ -421,7 +417,8 @@ function checkForConversations() {
     var conversation = document.querySelector('div[data-side-conversations-anchor-id="' + ticketId + '"]');
 
     if (conversation) {
-      recreateLesaUI(ticketId, conversation);
+      addTicketDescription(ticketId, conversation);
+      addPermaLinks(ticketId, conversation);
     }
 
     highlightComment();
