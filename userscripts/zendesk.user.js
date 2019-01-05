@@ -355,12 +355,19 @@ function highlightComment() {
  */
 
 function addPermaLinks(conversation) {
+  var permalinks = conversation.querySelectorAll('div[data-comment-id] div.lesa-ui');
+
+  if (permalinks.length > 0) {
+    return;
+  }
+
   var comments = conversation.querySelectorAll('div[data-comment-id]');
 
   for (var i = 0; i < comments.length; i++) {
     var commentId = comments[i].getAttribute('data-comment-id');
 
     var permalinkContainer = document.createElement('div');
+    permalinkContainer.classList.add('lesa-ui');
     permalinkContainer.style.marginBottom = '1em';
 
     var permalinkHREF = 'https://liferay-support.zendesk.com' + document.location.pathname + '?comment=' + commentId;
@@ -386,17 +393,16 @@ function recreateLesaUI(ticketId, conversation) {
 
   var oldDescriptions = header.querySelectorAll('.lesa-ui');
 
-  if ((header.getAttribute('data-ticket-id') == ticketId) && (oldDescriptions.length == 1)) {
-    return;
+  if ((header.getAttribute('data-ticket-id') != ticketId) || (oldDescriptions.length != 1)) {
+    header.setAttribute('data-ticket-id', ticketId);
+
+    for (var i = 0; i < oldDescriptions.length; i++) {
+      header.removeChild(oldDescriptions[i]);
+    }
+
+    addTicketDescription(conversation, header);
   }
 
-  header.setAttribute('data-ticket-id', ticketId);
-
-  for (var i = 0; i < oldDescriptions.length; i++) {
-    header.removeChild(oldDescriptions[i]);
-  }
-
-  addTicketDescription(conversation, header);
   addPermaLinks(conversation);
 }
 
