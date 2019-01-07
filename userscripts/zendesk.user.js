@@ -2,6 +2,7 @@
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
 // @match          https://liferay-support.zendesk.com/*
+// @grant          none
 // ==/UserScript==
 
 /**
@@ -393,7 +394,11 @@ function addPermaLinks(ticketId, conversation) {
     permalinkContainer.style.marginBottom = '1em';
 
     var permalinkHREF = 'https://liferay-support.zendesk.com' + document.location.pathname + '?comment=' + commentId;
-    var permalink = document.createTextNode(permalinkHREF);
+    var permalink = document.createElement('input');
+
+    permalink.value = permalinkHREF;
+    permalink.style.width = '100%';
+    permalink.style.backgroundColor = 'transparent';
 
     permalinkContainer.appendChild(permalink);
 
