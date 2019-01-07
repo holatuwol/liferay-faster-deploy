@@ -397,8 +397,12 @@ function addPermaLinks(ticketId, conversation) {
     var permalink = document.createElement('input');
 
     permalink.value = permalinkHREF;
+
     permalink.style.width = '100%';
     permalink.style.backgroundColor = 'transparent';
+    permalink.onclick = function() {
+      this.setSelectionRange(0, this.value.length);
+    };
 
     permalinkContainer.appendChild(permalink);
 
