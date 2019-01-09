@@ -65,12 +65,43 @@ function getProductVersionId(version) {
  * Function to generate an anchor tag.
  */
 
-function createAnchorTag(text, href) {
+function createAnchorTag(text, href, download) {
   var link = document.createElement('a');
 
   link.innerText = text;
   link.href = href;
+
+  if (link.download) {
+    link.download = download;
+  }
+
   link.target = '_blank';
+
+  var isDownloadImage = download && ((download.indexOf('.png') != -1) || (download.indexOf('.jpg') != -1) || (download.indexOf('.jpeg') != -1) || (download.indexOf('.gif') != -1));
+
+  if (isDownloadImage) {
+    link.onclick = function() {
+      var instance = this;
+
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', href);
+      xhr.responseType = 'blob';
+
+      xhr.onload = function(e) {
+        var downloadLink = document.createElement('a');
+        downloadLink.href = URL.createObjectURL(this.response);
+        downloadLink.download = download;
+        downloadLink.style.display = 'none';
+
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+      };
+
+      xhr.send(null);
+      return false;
+    };
+  }
 
   return link;
 }
@@ -87,7 +118,9 @@ function createAttachmentRow(attachment) {
   attachmentInfo.style.flexDirection = 'row';
   attachmentInfo.style.justifyContent = 'space-between';
 
-  var attachmentLink = createAnchorTag(decodeURIComponent(attachment.href.substring(attachment.href.indexOf('?') + 6)), attachment.href);
+  var attachmentFileName = decodeURIComponent(attachment.href.substring(attachment.href.indexOf('?') + 6));
+
+  var attachmentLink = createAnchorTag(attachmentFileName, attachment.href, attachmentFileName);
   attachmentLink.style.paddingRight = '1em';
 
   attachmentInfo.appendChild(attachmentLink);
