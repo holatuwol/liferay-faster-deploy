@@ -3,7 +3,54 @@
 // @namespace      holatuwol
 // @match          https://liferay-support.zendesk.com/*
 // @grant          none
+// @require        https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.5/jszip.min.js
 // ==/UserScript==
+
+var styleElement = document.createElement('style');
+
+styleElement.textContent = `
+a.downloading {
+  color: #999;
+}
+
+a.downloading::after {
+  content: ' (downloading...)';
+  color: #999;
+}
+
+.lesa-ui-attachments {
+  display: flex;
+  flex-direction: row;
+  margin-top: 1em;
+}
+
+.lesa-ui-attachment-info {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+.lesa-ui-attachment-info a {
+  margin-right: 1em;
+}
+
+.lesa-ui-attachments-download-all {
+  margin-top: 0.5em;
+  text-align: right;
+  text-decoration: underline;
+}
+
+.lesa-ui-attachments-label {
+  font-weight: 600;
+  margin-right: 1em;
+}
+
+.lesa-ui-comment {
+  font-weight: 100;
+}
+`;
+
+document.querySelector('head').appendChild(styleElement);
 
 /**
  * Utility function to generate a URL to patcher portal's accounts view.
@@ -28,7 +75,7 @@ function getProductVersion(propertyBox) {
     return '';
   }
 
-  var version = productVersionField.innerText.trim();
+  var version = productVersionField.textContent.trim();
 
   if (version.indexOf('7.') == 0) {
     return version;
@@ -61,6 +108,36 @@ function getProductVersionId(version) {
   return '';
 }
 
+function downloadAttachment(link, callback) {
+  link.classList.add('downloading');
+
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', link.href);
+  xhr.responseType = 'blob';
+
+  xhr.onload = function() {
+    link.classList.remove('downloading');
+    callback(link.download, this.response);
+  }
+
+  xhr.send(null);
+}
+
+/**
+ * Utility function to download a generated Blob object.
+ */
+
+function downloadBlob(fileName, blob) {
+  var downloadLink = document.createElement('a');
+  downloadLink.href = URL.createObjectURL(blob);
+  downloadLink.download = fileName;
+  downloadLink.style.display = 'none';
+
+  document.body.appendChild(downloadLink);
+  downloadLink.click();
+  document.body.removeChild(downloadLink);
+}
+
 /**
  * Function to generate an anchor tag.
  */
@@ -68,37 +145,24 @@ function getProductVersionId(version) {
 function createAnchorTag(text, href, download) {
   var link = document.createElement('a');
 
-  link.innerText = text;
-  link.href = href;
+  link.textContent = text;
 
-  if (link.download) {
-    link.download = download;
+  if (href) {
+    link.href = href;
   }
 
-  link.target = '_blank';
+  if (download) {
+    link.download = download;
+  }
+  else {
+    link.target = '_blank';
+  }
 
   var isDownloadImage = download && ((download.indexOf('.png') != -1) || (download.indexOf('.jpg') != -1) || (download.indexOf('.jpeg') != -1) || (download.indexOf('.gif') != -1));
 
   if (isDownloadImage) {
     link.onclick = function() {
-      var instance = this;
-
-      var xhr = new XMLHttpRequest();
-      xhr.open('GET', href);
-      xhr.responseType = 'blob';
-
-      xhr.onload = function(e) {
-        var downloadLink = document.createElement('a');
-        downloadLink.href = URL.createObjectURL(this.response);
-        downloadLink.download = download;
-        downloadLink.style.display = 'none';
-
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-        document.body.removeChild(downloadLink);
-      };
-
-      xhr.send(null);
+      downloadFile(link, downloadBlob);
       return false;
     };
   }
@@ -114,21 +178,17 @@ function createAttachmentRow(attachment) {
   var attachmentComment = attachment.closest('div[data-comment-id]');
 
   var attachmentInfo = document.createElement('div');
-  attachmentInfo.style.display = 'flex';
-  attachmentInfo.style.flexDirection = 'row';
-  attachmentInfo.style.justifyContent = 'space-between';
+  attachmentInfo.classList.add('lesa-ui-attachment-info')
 
-  var attachmentFileName = decodeURIComponent(attachment.href.substring(attachment.href.indexOf('?') + 6));
+  var encodedFileName = attachment.href.substring(attachment.href.indexOf('?') + 6);
+  encodedFileName = encodedFileName.replace(/\+/g, '%20');
+  var attachmentFileName = decodeURIComponent(encodedFileName);
 
   var attachmentLink = createAnchorTag(attachmentFileName, attachment.href, attachmentFileName);
-  attachmentLink.style.paddingRight = '1em';
-
   attachmentInfo.appendChild(attachmentLink);
 
   var attachmentExtraInfo = document.createElement('div');
-  attachmentInfo.style.align = 'right';
-
-  var attachmentAuthor = attachmentComment.querySelector('div.actor .name').innerText;
+  var attachmentAuthor = attachmentComment.querySelector('div.actor .name').textContent;
   var attachmentTime = attachmentComment.querySelector('time').title;
 
   attachmentExtraInfo.appendChild(document.createTextNode(attachmentAuthor + ' on ' + attachmentTime));
@@ -136,6 +196,35 @@ function createAttachmentRow(attachment) {
   attachmentInfo.appendChild(attachmentExtraInfo);
 
   return attachmentInfo;
+}
+
+/**
+ * Utility function to generate a zip file containing all items.
+ */
+
+function createAttachmentZip(ticketId) {
+  var downloadCount = 0;
+
+  var zip = new JSZip();
+
+  var attachmentLinks = document.querySelectorAll('div[data-side-conversations-anchor-id="' + ticketId + '"] .lesa-ui-attachment-info a');
+
+  for (var i = 0; i < attachmentLinks.length; i++) {
+    downloadAttachment(attachmentLinks[i], function(fileName, blob) {
+      zip.file(fileName, blob);
+
+      if (++downloadCount < attachmentLinks.length) {
+        return;
+      }
+
+      zip.generateAsync({
+          type: 'blob',
+          compression: 'DEFLATE'
+      }).then(
+        downloadBlob.bind(null, ticketId + '.zip')
+      );
+    })
+  }
 }
 
 /**
@@ -311,7 +400,7 @@ function addTicketDescription(ticketId, conversation) {
     return;
   }
 
-  var oldDescriptions = header.querySelectorAll('.lesa-ui');
+  var oldDescriptions = header.querySelectorAll('.lesa-ui-comment');
 
   if ((header.getAttribute('data-ticket-id') == ticketId) || (oldDescriptions.length == 1)) {
     return;
@@ -334,21 +423,17 @@ function addTicketDescription(ticketId, conversation) {
   var lastComment = comments[comments.length - 1];
 
   var description = document.createElement('div');
-  description.classList.add('lesa-ui');
+  description.classList.add('lesa-ui-comment');
   description.classList.add('comment');
-  description.style.fontWeight = 100;
   description.innerHTML = lastComment.innerHTML;
 
   if (attachments.length > 0) {
     var attachmentsContainer = document.createElement('div');
-    attachmentsContainer.style.display = 'flex';
-    attachmentsContainer.style.flexDirection = 'row';
-    attachmentsContainer.style.marginTop = '1em';
+    attachmentsContainer.classList.add('lesa-ui-attachments')
 
     var attachmentsLabel = document.createElement('div');
+    attachmentsLabel.classList.add('lesa-ui-attachments-label')
     attachmentsLabel.innerHTML = 'Attachments:';
-    attachmentsLabel.style.fontWeight = 600;
-    attachmentsLabel.style.paddingRight = '1em';
 
     attachmentsContainer.appendChild(attachmentsLabel);
 
@@ -356,6 +441,18 @@ function addTicketDescription(ticketId, conversation) {
 
     for (var i = 0; i < attachments.length; i++) {
       attachmentsWrapper.appendChild(createAttachmentRow(attachments[i]));
+    }
+
+    if (JSZip) {
+      var downloadAllContainer = document.createElement('div');
+      downloadAllContainer.classList.add('lesa-ui-attachments-download-all');
+
+      var attachmentsZipLink = createAnchorTag('Download All', null);
+      attachmentsZipLink.onclick = createAttachmentZip.bind(null, ticketId);
+
+      downloadAllContainer.appendChild(attachmentsZipLink);
+
+      attachmentsWrapper.appendChild(downloadAllContainer);
     }
 
     attachmentsContainer.appendChild(attachmentsWrapper);
