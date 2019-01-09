@@ -45,7 +45,7 @@ a.downloading::after {
   margin-right: 1em;
 }
 
-.lesa-ui-comment {
+.lesa-ui-description {
   font-weight: 100;
 }
 `;
@@ -162,7 +162,7 @@ function createAnchorTag(text, href, download) {
 
   if (isDownloadImage) {
     link.onclick = function() {
-      downloadFile(link, downloadBlob);
+      downloadAttachment(link, downloadBlob);
       return false;
     };
   }
@@ -400,16 +400,21 @@ function addTicketDescription(ticketId, conversation) {
     return;
   }
 
-  var oldDescriptions = header.querySelectorAll('.lesa-ui-comment');
+  var oldDescriptions = conversation.querySelectorAll('.lesa-ui-description');
 
-  if ((header.getAttribute('data-ticket-id') == ticketId) || (oldDescriptions.length == 1)) {
-    return;
-  }
-
-  header.setAttribute('data-ticket-id', ticketId);
+  var hasNewDescription = false;
 
   for (var i = 0; i < oldDescriptions.length; i++) {
-    header.removeChild(oldDescriptions[i]);
+    if (oldDescriptions[i].getAttribute('data-ticket-id') == ticketId) {
+      hasNewDescription = true;
+    }
+    else {
+      header.removeChild(oldDescriptions[i]);
+    }
+  }
+
+  if (hasNewDescription) {
+    return;
   }
 
   var comments = conversation.querySelectorAll('.event.is-public .zd-comment');
@@ -423,8 +428,10 @@ function addTicketDescription(ticketId, conversation) {
   var lastComment = comments[comments.length - 1];
 
   var description = document.createElement('div');
-  description.classList.add('lesa-ui-comment');
+
   description.classList.add('comment');
+  description.setAttribute('data-ticket-id', ticketId);
+
   description.innerHTML = lastComment.innerHTML;
 
   if (attachments.length > 0) {
@@ -461,6 +468,7 @@ function addTicketDescription(ticketId, conversation) {
   }
 
   var descriptionAncestor1 = document.createElement('div');
+  descriptionAncestor1.classList.add('lesa-ui-description');
   descriptionAncestor1.classList.add('rich_text');
 
   var descriptionAncestor0 = document.createElement('div');
