@@ -18,6 +18,15 @@ a.downloading::after {
   color: #999;
 }
 
+a.generating {
+  color: #999;
+}
+
+a.generating::after {
+  content: ' (generating...)';
+  color: #999;
+}
+
 .lesa-ui-attachments {
   display: flex;
   flex-direction: row;
@@ -108,18 +117,28 @@ function getProductVersionId(version) {
   return '';
 }
 
+/**
+ * Utility function to download the attachment mentioned in the
+ * specified link, and then invoke a callback once the download
+ * has completed.
+ */
+
 function downloadAttachment(link, callback) {
   link.classList.add('downloading');
 
   var xhr = new XMLHttpRequest();
-  xhr.open('GET', link.href);
   xhr.responseType = 'blob';
 
-  xhr.onload = function() {
-    link.classList.remove('downloading');
-    callback(link.download, this.response);
-  }
+  var downloaded = false;
 
+  xhr.addEventListener('loadend', function() {
+    downloaded = true;
+
+    callback(link.download, this.response);
+    link.classList.remove('downloading');
+  });
+
+  xhr.open('GET', link.href);
   xhr.send(null);
 }
 
@@ -128,11 +147,10 @@ function downloadAttachment(link, callback) {
  */
 
 function downloadBlob(fileName, blob) {
-  var downloadLink = document.createElement('a');
-  downloadLink.href = URL.createObjectURL(blob);
+  var downloadLink = createAnchorTag(fileName, URL.createObjectURL(blob));
   downloadLink.download = fileName;
-  downloadLink.style.display = 'none';
 
+  downloadLink.style.display = 'none';
   document.body.appendChild(downloadLink);
   downloadLink.click();
   document.body.removeChild(downloadLink);
@@ -203,6 +221,10 @@ function createAttachmentRow(attachment) {
  */
 
 function createAttachmentZip(ticketId) {
+  var instance = this;
+
+  instance.classList.add('downloading');
+
   var downloadCount = 0;
 
   var zip = new JSZip();
@@ -217,12 +239,15 @@ function createAttachmentZip(ticketId) {
         return;
       }
 
+      instance.classList.remove('downloading');
+      instance.classList.add('generating');
+
       zip.generateAsync({
-          type: 'blob',
-          compression: 'DEFLATE'
-      }).then(
-        downloadBlob.bind(null, ticketId + '.zip')
-      );
+        type: 'blob'
+      }).then(function(blob) {
+        var downloadLink = createAnchorTag('Download ' + ticketId + '.zip', URL.createObjectURL(blob), ticketId + '.zip');
+        instance.parentNode.replaceChild(downloadLink, instance);
+      });
     })
   }
 }
@@ -357,11 +382,7 @@ function updateSidebarBoxContainer(ticketId) {
   var added = false;
   var xhr = new XMLHttpRequest();
 
-  xhr.onreadystatechange = function() {
-    if (added || xhr.readyState != 4 || xhr.status != 200) {
-      return;
-    }
-
+  xhr.onload = function() {
     added = true;
 
     var ticketInfo;
@@ -430,7 +451,6 @@ function addTicketDescription(ticketId, conversation) {
   var description = document.createElement('div');
 
   description.classList.add('comment');
-  description.setAttribute('data-ticket-id', ticketId);
 
   description.innerHTML = lastComment.innerHTML;
 
@@ -454,8 +474,8 @@ function addTicketDescription(ticketId, conversation) {
       var downloadAllContainer = document.createElement('div');
       downloadAllContainer.classList.add('lesa-ui-attachments-download-all');
 
-      var attachmentsZipLink = createAnchorTag('Download All', null);
-      attachmentsZipLink.onclick = createAttachmentZip.bind(null, ticketId);
+      var attachmentsZipLink = createAnchorTag('Generate Download All', null);
+      attachmentsZipLink.onclick = createAttachmentZip.bind(attachmentsZipLink, ticketId);
 
       downloadAllContainer.appendChild(attachmentsZipLink);
 
@@ -469,6 +489,7 @@ function addTicketDescription(ticketId, conversation) {
 
   var descriptionAncestor1 = document.createElement('div');
   descriptionAncestor1.classList.add('lesa-ui-description');
+  descriptionAncestor1.setAttribute('data-ticket-id', ticketId);
   descriptionAncestor1.classList.add('rich_text');
 
   var descriptionAncestor0 = document.createElement('div');
