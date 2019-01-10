@@ -57,6 +57,24 @@ a.generating::after {
 .lesa-ui-description {
   font-weight: 100;
 }
+
+.lesa-ui-event-highlighted {
+  background-color: #eee;
+}
+
+.lesa-ui-form-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.lesa-ui-permalink {
+  margin-bottom: 1em;
+}
+
+.lesa-ui-permalink input {
+  background-color: transparent;
+  width: 100%;
+}
 `;
 
 document.querySelector('head').appendChild(styleElement);
@@ -129,14 +147,10 @@ function downloadAttachment(link, callback) {
   var xhr = new XMLHttpRequest();
   xhr.responseType = 'blob';
 
-  var downloaded = false;
-
-  xhr.addEventListener('loadend', function() {
-    downloaded = true;
-
+  xhr.onload = function() {
     callback(link.download, this.response);
     link.classList.remove('downloading');
-  });
+  };
 
   xhr.open('GET', link.href);
   xhr.send(null);
@@ -268,11 +282,8 @@ function generateFormField(propertyBox, className, labelText, formElements) {
   var formField = document.createElement('div');
   formField.classList.add('ember-view');
   formField.classList.add('form_field');
-  formField.classList.add('lesa-ui');
+  formField.classList.add('lesa-ui-form-field');
   formField.classList.add(className);
-
-  formField.style.display = 'flex';
-  formField.style.flexDirection = 'column';
 
   var label = document.createElement('label');
   label.innerHTML = labelText;
@@ -387,12 +398,9 @@ function updateSidebarBoxContainer(ticketId) {
     return;
   }
 
-  var added = false;
   var xhr = new XMLHttpRequest();
 
   xhr.onload = function() {
-    added = true;
-
     var ticketInfo;
 
     try {
@@ -536,13 +544,14 @@ function highlightComment() {
     return;
   }
 
-  if (comment.classList.contains('lesa-ui')) {
+  var event = comment.closest('.event');
+
+  if (event.classList.contains('lesa-ui-event-highlighted')) {
     return;
   }
 
-  comment.classList.add('lesa-ui');
-  comment.closest('.event').style.backgroundColor = '#eee';
-  comment.scrollIntoView();
+  event.classList.add('lesa-ui-event-highlighted');
+  event.scrollIntoView();
 }
 
 /**
@@ -551,7 +560,7 @@ function highlightComment() {
  */
 
 function addPermaLinks(ticketId, conversation) {
-  var permalinks = conversation.querySelectorAll('div[data-comment-id] div.lesa-ui');
+  var permalinks = conversation.querySelectorAll('div[data-comment-id] div.lesa-ui-permalink');
 
   if (permalinks.length > 0) {
     return;
@@ -563,16 +572,13 @@ function addPermaLinks(ticketId, conversation) {
     var commentId = comments[i].getAttribute('data-comment-id');
 
     var permalinkContainer = document.createElement('div');
-    permalinkContainer.classList.add('lesa-ui');
-    permalinkContainer.style.marginBottom = '1em';
+    permalinkContainer.classList.add('lesa-ui-permalink');
 
     var permalinkHREF = 'https://liferay-support.zendesk.com' + document.location.pathname + '?comment=' + commentId;
     var permalink = document.createElement('input');
 
     permalink.value = permalinkHREF;
 
-    permalink.style.width = '100%';
-    permalink.style.backgroundColor = 'transparent';
     permalink.onclick = function() {
       this.setSelectionRange(0, this.value.length);
     };
