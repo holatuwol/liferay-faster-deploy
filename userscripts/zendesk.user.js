@@ -80,6 +80,33 @@ a.generating::after {
 document.querySelector('head').appendChild(styleElement);
 
 /**
+ * Utility function to generate a Blob URL so that we can remember
+ * to unload it if we navigate away from the page.
+ */
+
+var blobURLs = [];
+
+function createObjectURL(blob) {
+  var blobURL = URL.createObjectURL(blob);
+
+  blobURLs.push(blobURL);
+
+  return blobURL;
+}
+
+/**
+ * Utility function to revoke all generated Blob URLs.
+ */
+
+function revokeObjectURLs() {
+  for (var i = 0; i < blobURLs.length; i++) {
+    URL.revokeObjectURL(blobURLs[i]);
+  }
+
+  blobURLs = [];
+}
+
+/**
  * Utility function to generate a URL to patcher portal's accounts view.
  */
 
@@ -161,7 +188,7 @@ function downloadAttachment(link, callback) {
  */
 
 function downloadBlob(fileName, blob) {
-  var blobURL = URL.createObjectURL(blob);
+  var blobURL = createObjectURL(blob);
 
   var downloadLink = createAnchorTag(fileName, blobURL);
   downloadLink.download = fileName;
@@ -170,10 +197,6 @@ function downloadBlob(fileName, blob) {
   document.body.appendChild(downloadLink);
   downloadLink.click();
   document.body.removeChild(downloadLink);
-
-  setTimeout(function() {
-    URL.revokeObjectURL(blobURL);
-  }, 1000);
 }
 
 /**
@@ -452,12 +475,7 @@ function addTicketDescription(ticketId, conversation) {
       hasNewDescription = true;
     }
     else {
-      var oldDownloadURLs = oldDescriptions[i].querySelectorAll('.lesa-ui-attachments-download-blob');
-
-      for (var j = 0; j < oldDownloadURLs.length; j++) {
-        URL.revokeObjectURL(oldDownloadURLs[j].href);
-      }
-
+      revokeObjectURLs();
       header.removeChild(oldDescriptions[i]);
     }
   }
@@ -616,6 +634,9 @@ function checkForConversations() {
     }
 
     highlightComment();
+  }
+  else {
+    revokeObjectURLs();
   }
 }
 
