@@ -269,7 +269,7 @@ function createAttachmentRow(attachment) {
  * Utility function to generate a zip file containing all items.
  */
 
-function createAttachmentZip(ticketId) {
+function createAttachmentZip(ticketId, ticketInfo) {
   var instance = this;
 
   instance.classList.add('downloading');
@@ -294,7 +294,12 @@ function createAttachmentZip(ticketId) {
       zip.generateAsync({
         type: 'blob'
       }).then(function(blob) {
-        var downloadLink = createAnchorTag('Download ' + ticketId + '.zip', URL.createObjectURL(blob), ticketId + '.zip');
+        var organizationInfo = ticketInfo.organizations[0];
+        var organizationFields = organizationInfo.organization_fields;
+
+        var zipFileName = organizationFields.account_code + '.zendesk-' + ticketId + '.zip';
+
+        var downloadLink = createAnchorTag('Download ' + zipFileName, URL.createObjectURL(blob), zipFileName);
         downloadLink.classList.add('.lesa-ui-attachments-download-blob');
 
         instance.parentNode.replaceChild(downloadLink, instance);
@@ -401,7 +406,7 @@ function addPatcherPortalField(propertyBox, ticketInfo) {
  * Update the sidebar with any ticket details we can pull from the ZenDesk API.
  */
 
-function updateSidebarBoxContainer(ticketId) {
+function updateSidebarBoxContainer(ticketId, ticketInfo) {
   var sidebars = document.querySelectorAll('.sidebar_box_container');
 
   if (sidebars.length == 0) {
@@ -427,39 +432,17 @@ function updateSidebarBoxContainer(ticketId) {
     return;
   }
 
-  var xhr = new XMLHttpRequest();
-
-  xhr.onload = function() {
-    var ticketInfo;
-
-    try {
-      ticketInfo = JSON.parse(xhr.responseText);
-    }
-    catch (e) {
-      return;
-    }
-
-    for (var i = 0; i < propertyBoxes.length; i++) {
-      addOrganizationField(propertyBoxes[i], ticketInfo);
-      addPatcherPortalField(propertyBoxes[i], ticketInfo);
-    }
-  };
-
-  var ticketDetailsURL = [
-    'https://liferay-support.zendesk.com/api/v2/tickets/',
-    ticketId,
-    '?include=organizations'
-  ].join('');
-
-  xhr.open('GET', ticketDetailsURL);
-  xhr.send();
+  for (var i = 0; i < propertyBoxes.length; i++) {
+    addOrganizationField(propertyBoxes[i], ticketInfo);
+    addPatcherPortalField(propertyBoxes[i], ticketInfo);
+  }
 }
 
 /**
  * Function to add the description and attachments to the top of the page.
  */
 
-function addTicketDescription(ticketId, conversation) {
+function addTicketDescription(ticketId, ticketInfo, conversation) {
   var header = conversation.querySelector('.pane_header');
 
   if (!header) {
@@ -521,7 +504,7 @@ function addTicketDescription(ticketId, conversation) {
       downloadAllContainer.classList.add('lesa-ui-attachments-download-all');
 
       var attachmentsZipLink = createAnchorTag('Generate Download All', null);
-      attachmentsZipLink.onclick = createAttachmentZip.bind(attachmentsZipLink, ticketId);
+      attachmentsZipLink.onclick = createAttachmentZip.bind(attachmentsZipLink, ticketId, ticketInfo);
 
       downloadAllContainer.appendChild(attachmentsZipLink);
 
@@ -615,6 +598,64 @@ function addPermaLinks(ticketId, conversation) {
 }
 
 /**
+ * Retrieve information about a ticket, and then call a function
+ * once that information is retrieved.
+ */
+
+var ticketInfoCache = {};
+
+function checkTicket(ticketId, callback) {
+  if (ticketInfoCache[ticketId]) {
+    callback(ticketId, ticketInfoCache[ticketId]);
+
+    return;
+  }
+
+  var xhr = new XMLHttpRequest();
+
+  xhr.onload = function() {
+    var ticketInfo;
+
+    try {
+      ticketInfo = JSON.parse(xhr.responseText);
+    }
+    catch (e) {
+      return;
+    }
+
+    ticketInfoCache[ticketId] = ticketInfo;
+
+    callback(ticketId, ticketInfo)
+  };
+
+  var ticketDetailsURL = [
+    'https://liferay-support.zendesk.com/api/v2/tickets/',
+    ticketId,
+    '?include=organizations'
+  ].join('');
+
+  xhr.open('GET', ticketDetailsURL);
+  xhr.send();
+}
+
+/**
+ * Updates a single conversation.
+ */
+
+function checkTicketConversation(ticketId, ticketInfo) {
+  updateSidebarBoxContainer(ticketId, ticketInfo);
+
+  var conversation = document.querySelector('div[data-side-conversations-anchor-id="' + ticketId + '"]');
+
+  if (conversation) {
+    addTicketDescription(ticketId, ticketInfo, conversation);
+    addPermaLinks(ticketId, conversation);
+  }
+
+  highlightComment();
+}
+
+/**
  * Regularly attempt to apply the updates.
  */
 
@@ -624,16 +665,7 @@ function checkForConversations() {
   if (document.location.pathname.indexOf(ticketPath) == 0) {
     var ticketId = document.location.pathname.substring(ticketPath.length);
 
-    updateSidebarBoxContainer(ticketId);
-
-    var conversation = document.querySelector('div[data-side-conversations-anchor-id="' + ticketId + '"]');
-
-    if (conversation) {
-      addTicketDescription(ticketId, conversation);
-      addPermaLinks(ticketId, conversation);
-    }
-
-    highlightComment();
+    checkTicket(ticketId, checkTicketConversation);
   }
   else {
     revokeObjectURLs();
