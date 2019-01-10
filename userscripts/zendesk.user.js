@@ -147,13 +147,19 @@ function downloadAttachment(link, callback) {
  */
 
 function downloadBlob(fileName, blob) {
-  var downloadLink = createAnchorTag(fileName, URL.createObjectURL(blob));
+  var blobURL = URL.createObjectURL(blob);
+
+  var downloadLink = createAnchorTag(fileName, blobURL);
   downloadLink.download = fileName;
 
   downloadLink.style.display = 'none';
   document.body.appendChild(downloadLink);
   downloadLink.click();
   document.body.removeChild(downloadLink);
+
+  setTimeout(function() {
+    URL.revokeObjectURL(blobURL);
+  }, 1000);
 }
 
 /**
@@ -246,6 +252,8 @@ function createAttachmentZip(ticketId) {
         type: 'blob'
       }).then(function(blob) {
         var downloadLink = createAnchorTag('Download ' + ticketId + '.zip', URL.createObjectURL(blob), ticketId + '.zip');
+        downloadLink.classList.add('.lesa-ui-attachments-download-blob');
+
         instance.parentNode.replaceChild(downloadLink, instance);
       });
     })
@@ -430,6 +438,12 @@ function addTicketDescription(ticketId, conversation) {
       hasNewDescription = true;
     }
     else {
+      var oldDownloadURLs = oldDescriptions[i].querySelectorAll('.lesa-ui-attachments-download-blob');
+
+      for (var j = 0; j < oldDownloadURLs.length; j++) {
+        URL.revokeObjectURL(oldDownloadURLs[j].href);
+      }
+
       header.removeChild(oldDescriptions[i]);
     }
   }
