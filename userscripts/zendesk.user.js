@@ -191,18 +191,24 @@ function createAnchorTag(text, href, download) {
 
   if (download) {
     link.download = download;
+
+    var lowerCaseName = download.toLowerCase();
+
+    var isLikelyInline = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.pdf'].some(function(substr) {
+      return lowerCaseName.length > substr.length &&
+        lowerCaseName.indexOf(substr) == lowerCaseName.length - substr.length;
+    });
+
+    if (isLikelyInline) {
+      link.onclick = function() {
+        downloadAttachment(link, downloadBlob);
+        return false;
+      };
+    }
+
   }
   else {
     link.target = '_blank';
-  }
-
-  var isDownloadImage = download && ((download.indexOf('.png') != -1) || (download.indexOf('.jpg') != -1) || (download.indexOf('.jpeg') != -1) || (download.indexOf('.gif') != -1));
-
-  if (isDownloadImage) {
-    link.onclick = function() {
-      downloadAttachment(link, downloadBlob);
-      return false;
-    };
   }
 
   return link;
