@@ -1,0 +1,51 @@
+#!/bin/bash
+
+SCRIPT_FOLDER=$(dirname ${BASH_SOURCE[0]})
+
+basenames() {
+	python $(dirname ${SCRIPT_FOLDER})/basenames.py
+}
+
+dirnames() {
+	python $(dirname ${SCRIPT_FOLDER})/dirnames.py
+}
+
+generate_patch_files() {
+	mkdir -p .redeploy
+
+	local error_state=0
+	local commit_index=0
+
+	for commit in $(git log --reverse master --pretty='%H' --grep=$1); do
+	  commit_index=$((commit_index+1))
+	  mv $(git format-patch ${commit}~1..${commit}) $(printf '%04d' ${commit_index})-${commit}.patch
+	done
+
+	git ls-files modules/apps/ | grep -F bnd.bnd | dirnames > .redeploy/folders.txt
+
+	for source_folder in $(grep -oh 'modules/apps/[^ ]*/src/' *.patch | dirnames | dirnames | sort -u); do
+		project_name=$(basename ${source_folder})
+		target_folder=$(grep "/${project_name}$" .redeploy/folders.txt)
+
+		if [ "" == "${target_folder}" ]; then
+			echo "Unknown folder ${source_folder}"
+			error_state=1
+		fi
+
+		if [ "${source_folder}" == "${target_folder}" ]; then
+			continue
+		fi
+
+		echo "Replacing ${source_folder}/ with ${target_folder}/"
+
+		ls *.patch | xargs sed -i.bak "s@${source_folder}/@${target_folder}/@g"
+	done
+
+	return error_state
+}
+
+apply_patch_files() {
+	ls *.patch | xargs git am
+}
+
+generate_patch_files $1 && apply_patch_files
