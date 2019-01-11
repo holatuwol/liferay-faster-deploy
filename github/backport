@@ -41,7 +41,7 @@ generate_patch_files() {
 		ls *.patch | xargs sed -i.bak "s@${source_folder}/@${target_folder}/@g"
 	done
 
-	return error_state
+	return ${error_state}
 }
 
 apply_patch_files() {
