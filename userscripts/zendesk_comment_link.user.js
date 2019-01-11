@@ -29,14 +29,23 @@ document.querySelector('head').appendChild(styleElement);
  * query string parameter.
  */
 
-function highlightComment() {
-  var commentString = '?comment=';
+function highlightComment(commentId) {
+  if (commentId) {
+    var highlightedComments = document.querySelectorAll('.lesa-ui-event-highlighted');
 
-  if (!document.location.search || (document.location.search.indexOf(commentString) != 0)) {
-    return;
+    for (var i = 0; i < highlightedComments.length; i++) {
+      highlightedComments[i].classList.remove('lesa-ui-event-highlighted');
+    }
   }
+  else {
+    var commentString = '?comment=';
 
-  var commentId = document.location.search.substring(commentString.length);
+    if (!document.location.search || (document.location.search.indexOf(commentString) != 0)) {
+      return;
+    }
+
+    commentId = document.location.search.substring(commentString.length);
+  }
 
   var comment = document.querySelector('div[data-comment-id="' + commentId + '"]');
 
@@ -53,6 +62,7 @@ function highlightComment() {
   event.classList.add('lesa-ui-event-highlighted');
   event.scrollIntoView();
 }
+
 
 /**
  * Add the comment ID as a query string parameter to function as a
