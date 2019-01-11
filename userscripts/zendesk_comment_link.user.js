@@ -91,7 +91,8 @@ function addPermaLinks(ticketId, conversation) {
 }
 
 /**
- * Regularly attempt to apply the updates.
+ * Since there's an SPA framework in place that I don't fully understand, attempt to
+ * apply updates once per second, once we have the ticket information.
  */
 
 function checkForConversations() {

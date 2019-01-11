@@ -80,8 +80,8 @@ a.generating::after {
 document.querySelector('head').appendChild(styleElement);
 
 /**
- * Utility function to generate a Blob URL so that we can remember
- * to unload it if we navigate away from the page.
+ * Generate a Blob URL, and remember it so that we can unload it if we
+ * navigate away from the page.
  */
 
 var blobURLs = [];
@@ -95,7 +95,7 @@ function createObjectURL(blob) {
 }
 
 /**
- * Utility function to revoke all generated Blob URLs.
+ * Unload any generated Blob URLs that we remember.
  */
 
 function revokeObjectURLs() {
@@ -107,7 +107,7 @@ function revokeObjectURLs() {
 }
 
 /**
- * Utility function to generate a URL to patcher portal's accounts view.
+ * Generate a URL to Patcher Portal's accounts view.
  */
 
 function getPatcherPortalAccountsHREF(params) {
@@ -119,7 +119,7 @@ function getPatcherPortalAccountsHREF(params) {
 }
 
 /**
- * Utility function to retrieve the Liferay version from the sidebar.
+ * Retrieve the Liferay version from the sidebar.
  */
 
 function getProductVersion(propertyBox) {
@@ -143,7 +143,7 @@ function getProductVersion(propertyBox) {
 }
 
 /**
- * Utility function to indicate which patcher portal product version ID to use.
+ * Convert the Liferay version into the Patcher Portal product version.
  */
 
 function getProductVersionId(version) {
@@ -163,9 +163,8 @@ function getProductVersionId(version) {
 }
 
 /**
- * Utility function to download the attachment mentioned in the
- * specified link, and then invoke a callback once the download
- * has completed.
+ * Download the attachment mentioned in the specified link, and then invoke a callback
+ * once the download has completed.
  */
 
 function downloadAttachment(link, callback) {
@@ -184,7 +183,8 @@ function downloadAttachment(link, callback) {
 }
 
 /**
- * Utility function to download a generated Blob object.
+ * Download a generated Blob object by generating a dummy link and simulating a click.
+ * Avoid doing this too much, because browsers may have security to block this.
  */
 
 function downloadBlob(fileName, blob) {
@@ -200,7 +200,9 @@ function downloadBlob(fileName, blob) {
 }
 
 /**
- * Function to generate an anchor tag.
+ * Generate an anchor tag with the specified text, href, and download attributes.
+ * If the download attribute has an extension that looks like it will probably be
+ * served inline, use the downloadBlob function instead.
  */
 
 function createAnchorTag(text, href, download) {
@@ -238,7 +240,7 @@ function createAnchorTag(text, href, download) {
 }
 
 /**
- * Utility function to generate the div for a single attachment
+ * Generate a single row in the attachment table based on the provided link.
  */
 
 function createAttachmentRow(attachment) {
@@ -247,12 +249,18 @@ function createAttachmentRow(attachment) {
   var attachmentInfo = document.createElement('div');
   attachmentInfo.classList.add('lesa-ui-attachment-info')
 
+  // Since we're using the query string in order to determine the name (since the actual text
+  // in the link has a truncated name), we need to decode the query string.
+
   var encodedFileName = attachment.href.substring(attachment.href.indexOf('?') + 6);
   encodedFileName = encodedFileName.replace(/\+/g, '%20');
   var attachmentFileName = decodeURIComponent(encodedFileName);
 
   var attachmentLink = createAnchorTag(attachmentFileName, attachment.href, attachmentFileName);
   attachmentInfo.appendChild(attachmentLink);
+
+  // Attach an author and a timestamp. We'll have the timestamp be a comment permalink, since
+  // other parts in this script provide us with that functionality.
 
   var attachmentExtraInfo = document.createElement('div');
   var attachmentAuthor = attachmentComment.querySelector('div.actor .name').textContent;
@@ -271,7 +279,7 @@ function createAttachmentRow(attachment) {
 }
 
 /**
- * Utility function to generate a zip file containing all items.
+ * Generate a zip file containing all attachments for the specified ticket.
  */
 
 function createAttachmentZip(ticketId, ticketInfo) {
@@ -314,7 +322,7 @@ function createAttachmentZip(ticketId, ticketInfo) {
 }
 
 /**
- * Utility function to generate a single dummy field to add to the sidebar.
+ * Generate a single dummy field to add to the sidebar.
  */
 
 function generateFormField(propertyBox, className, labelText, formElements) {
@@ -343,7 +351,8 @@ function generateFormField(propertyBox, className, labelText, formElements) {
 }
 
 /**
- * Utility function to add the "Organization" field to the sidebar.
+ * Add the Organization field to the sidebar, which will contain a link to Help Center
+ * for the account details and the customer's SLA level.
  */
 
 function addOrganizationField(propertyBox, ticketInfo) {
@@ -374,7 +383,8 @@ function addOrganizationField(propertyBox, ticketInfo) {
 }
 
 /**
- * Utility function to add Patcher Portal fields to the sidebar.
+ * Add the Patcher Portal field to the sidebar, which will contain two links to
+ * the customer's builds in Patcher Portal.
  */
 
 function addPatcherPortalField(propertyBox, ticketInfo) {
@@ -444,7 +454,51 @@ function updateSidebarBoxContainer(ticketId, ticketInfo) {
 }
 
 /**
- * Function to add the description and attachments to the top of the page.
+ * Create a container to hold all of the attachments in the ticket, and a convenience
+ * link which allows the user to download all of the attachments at once.
+ */
+
+function createAttachmentsContainer(ticketId, ticketInfo, conversation) {
+  var attachments = conversation.querySelectorAll('.attachment');
+
+  if (attachments.length == 0) {
+    return null;
+  }
+
+  var attachmentsContainer = document.createElement('div');
+  attachmentsContainer.classList.add('lesa-ui-attachments')
+
+  var attachmentsLabel = document.createElement('div');
+  attachmentsLabel.classList.add('lesa-ui-attachments-label')
+  attachmentsLabel.innerHTML = 'Attachments:';
+
+  attachmentsContainer.appendChild(attachmentsLabel);
+
+  var attachmentsWrapper = document.createElement('div');
+
+  for (var i = 0; i < attachments.length; i++) {
+    attachmentsWrapper.appendChild(createAttachmentRow(attachments[i]));
+  }
+
+  if (JSZip) {
+    var downloadAllContainer = document.createElement('div');
+    downloadAllContainer.classList.add('lesa-ui-attachments-download-all');
+
+    var attachmentsZipLink = createAnchorTag('Generate Download All', null);
+    attachmentsZipLink.onclick = createAttachmentZip.bind(attachmentsZipLink, ticketId, ticketInfo);
+
+    downloadAllContainer.appendChild(attachmentsZipLink);
+
+    attachmentsWrapper.appendChild(downloadAllContainer);
+  }
+
+  attachmentsContainer.appendChild(attachmentsWrapper);
+
+  return attachmentsContainer;
+}
+
+/**
+ * Add a ticket description and a complete list of attachments to the top of the page.
  */
 
 function addTicketDescription(ticketId, ticketInfo, conversation) {
@@ -453,6 +507,8 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
   if (!header) {
     return;
   }
+
+  // Check to see if we have any descriptions that we need to remove.
 
   var oldDescriptions = conversation.querySelectorAll('.lesa-ui-description');
 
@@ -472,66 +528,44 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
     return;
   }
 
+  // Since comments are listed in reverse order, the last comment is the first
+  // comment (from a time perspective), and can be used as a description.
+
   var comments = conversation.querySelectorAll('.event.is-public .zd-comment');
 
   if (comments.length == 0) {
     return;
   }
 
-  var attachments = conversation.querySelectorAll('.attachment');
-
   var lastComment = comments[comments.length - 1];
 
   var description = document.createElement('div');
 
   description.classList.add('comment');
-
   description.innerHTML = lastComment.innerHTML;
 
-  if (attachments.length > 0) {
-    var attachmentsContainer = document.createElement('div');
-    attachmentsContainer.classList.add('lesa-ui-attachments')
+  // Generate something to hold all of our attachments.
 
-    var attachmentsLabel = document.createElement('div');
-    attachmentsLabel.classList.add('lesa-ui-attachments-label')
-    attachmentsLabel.innerHTML = 'Attachments:';
+  var attachmentsContainer = createAttachmentsContainer(ticketId, ticketInfo, conversation);
 
-    attachmentsContainer.appendChild(attachmentsLabel);
-
-    var attachmentsWrapper = document.createElement('div');
-
-    for (var i = 0; i < attachments.length; i++) {
-      attachmentsWrapper.appendChild(createAttachmentRow(attachments[i]));
-    }
-
-    if (JSZip) {
-      var downloadAllContainer = document.createElement('div');
-      downloadAllContainer.classList.add('lesa-ui-attachments-download-all');
-
-      var attachmentsZipLink = createAnchorTag('Generate Download All', null);
-      attachmentsZipLink.onclick = createAttachmentZip.bind(attachmentsZipLink, ticketId, ticketInfo);
-
-      downloadAllContainer.appendChild(attachmentsZipLink);
-
-      attachmentsWrapper.appendChild(downloadAllContainer);
-    }
-
-    attachmentsContainer.appendChild(attachmentsWrapper);
-
+  if (attachmentsContainer) {
     description.appendChild(attachmentsContainer);
   }
 
-  var descriptionAncestor1 = document.createElement('div');
-  descriptionAncestor1.classList.add('lesa-ui-description');
-  descriptionAncestor1.setAttribute('data-ticket-id', ticketId);
-  descriptionAncestor1.classList.add('rich_text');
+  // Create the element class hierarchy so that the text in the comment renders correctly.
 
   var descriptionAncestor0 = document.createElement('div');
   descriptionAncestor0.classList.add('event');
   descriptionAncestor0.classList.add('is-public');
 
-  descriptionAncestor1.appendChild(descriptionAncestor0);
   descriptionAncestor0.appendChild(description);
+
+  var descriptionAncestor1 = document.createElement('div');
+  descriptionAncestor1.classList.add('lesa-ui-description');
+  descriptionAncestor1.classList.add('rich_text');
+  descriptionAncestor1.setAttribute('data-ticket-id', ticketId);
+
+  descriptionAncestor1.appendChild(descriptionAncestor0);
 
   header.appendChild(descriptionAncestor1);
 }
@@ -620,10 +654,16 @@ var ticketInfoCache = {};
 
 function checkTicket(ticketId, callback) {
   if (ticketInfoCache[ticketId]) {
+    if (ticketInfoCache[ticketId] == 'PENDING') {
+      return;
+    }
+
     callback(ticketId, ticketInfoCache[ticketId]);
 
     return;
   }
+
+  ticketInfoCache[ticketId] = 'PENDING';
 
   var xhr = new XMLHttpRequest();
 
@@ -656,7 +696,8 @@ function checkTicket(ticketId, callback) {
 }
 
 /**
- * Updates a single conversation.
+ * Apply updates to the page based on the retrieved ticket information. Since the
+ * ticket corresponds to a "conversation", find that conversation.
  */
 
 function checkTicketConversation(ticketId, ticketInfo) {
@@ -673,7 +714,8 @@ function checkTicketConversation(ticketId, ticketInfo) {
 }
 
 /**
- * Regularly attempt to apply the updates.
+ * Since there's an SPA framework in place that I don't fully understand, attempt to
+ * apply updates once per second, once we have the ticket information.
  */
 
 function checkForConversations() {
