@@ -258,7 +258,12 @@ function createAttachmentRow(attachment) {
   var attachmentAuthor = attachmentComment.querySelector('div.actor .name').textContent;
   var attachmentTime = attachmentComment.querySelector('time').title;
 
-  attachmentExtraInfo.appendChild(document.createTextNode(attachmentAuthor + ' on ' + attachmentTime));
+  attachmentExtraInfo.appendChild(document.createTextNode(attachmentAuthor + ' on '));
+
+  var attachmentCommentLink = createAnchorTag(attachmentTime, null);
+  attachmentCommentLink.onclick = highlightComment.bind(null, attachmentComment.getAttribute('data-comment-id'));
+
+  attachmentExtraInfo.appendChild(attachmentCommentLink)
 
   attachmentInfo.appendChild(attachmentExtraInfo);
 
@@ -536,14 +541,23 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
  * query string parameter.
  */
 
-function highlightComment() {
-  var commentString = '?comment=';
+function highlightComment(commentId) {
+  if (commentId) {
+    var highlightedComments = document.querySelectorAll('.lesa-ui-event-highlighted');
 
-  if (!document.location.search || (document.location.search.indexOf(commentString) != 0)) {
-    return;
+    for (var i = 0; i < highlightedComments.length; i++) {
+      highlightedComments[i].classList.remove('lesa-ui-event-highlighted');
+    }
   }
+  else {
+    var commentString = '?comment=';
 
-  var commentId = document.location.search.substring(commentString.length);
+    if (!document.location.search || (document.location.search.indexOf(commentString) != 0)) {
+      return;
+    }
+
+    commentId = document.location.search.substring(commentString.length);
+  }
 
   var comment = document.querySelector('div[data-comment-id="' + commentId + '"]');
 
