@@ -232,7 +232,7 @@ function createAnchorTag(text, href, download) {
     }
 
   }
-  else {
+  else if (href) {
     link.target = '_blank';
   }
 
