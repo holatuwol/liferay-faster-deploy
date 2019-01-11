@@ -581,7 +581,7 @@ function addPermaLinks(ticketId, conversation) {
     var permalinkContainer = document.createElement('div');
     permalinkContainer.classList.add('lesa-ui-permalink');
 
-    var permalinkHREF = 'https://liferay-support.zendesk.com' + document.location.pathname + '?comment=' + commentId;
+    var permalinkHREF = 'https://' + document.location.host + document.location.pathname + '?comment=' + commentId;
     var permalink = document.createElement('input');
 
     permalink.value = permalinkHREF;
@@ -629,7 +629,10 @@ function checkTicket(ticketId, callback) {
   };
 
   var ticketDetailsURL = [
-    'https://liferay-support.zendesk.com/api/v2/tickets/',
+    document.location.protocol,
+    '//',
+    document.location.host,
+    '/api/v2/tickets/',
     ticketId,
     '?include=organizations'
   ].join('');
