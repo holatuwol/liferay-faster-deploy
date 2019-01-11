@@ -17,6 +17,10 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 
 	MCD_RD_CLONE_PATH=/path/to/clone/location
 
+	backport() {
+		${MCD_RD_CLONE_PATH}/github/backport $1
+	}
+
 	github() {
 		${MCD_RD_CLONE_PATH}/github/github $@
 	}
@@ -37,6 +41,11 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 	itest() {
 		${MCD_RD_CLONE_PATH}/github/ci_retest_group
 	}
+
+Attempt to Backport LPS Tickets
+===============================
+
+This script generates ``.patch`` files (which you get from ``git format-patch``) to the current branch and replaces any paths that appear to have changed between the base branch and the current branch, based on the path to the folder containing a ``bnd.bnd``.
 
 Open GitHub In Web Browser
 ==========================
