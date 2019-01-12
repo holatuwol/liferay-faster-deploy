@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version 1.0
+// @version        1.1
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @match          https://liferay-support.zendesk.com/*
@@ -260,6 +260,7 @@ function createAttachmentRow(attachment) {
   var attachmentFileName = decodeURIComponent(encodedFileName);
 
   var attachmentLink = createAnchorTag(attachmentFileName, attachment.href, attachmentFileName);
+  attachmentLink.classList.add('attachment');
   attachmentInfo.appendChild(attachmentLink);
 
   // Attach an author and a timestamp. We'll have the timestamp be a comment permalink, since
@@ -272,6 +273,8 @@ function createAttachmentRow(attachment) {
   attachmentExtraInfo.appendChild(document.createTextNode(attachmentAuthor + ' on '));
 
   var attachmentCommentLink = createAnchorTag(attachmentTime, null);
+  attachmentCommentLink.classList.add('attachment-comment-link');
+
   attachmentCommentLink.onclick = highlightComment.bind(null, attachmentComment.getAttribute('data-comment-id'));
 
   attachmentExtraInfo.appendChild(attachmentCommentLink)
@@ -294,7 +297,7 @@ function createAttachmentZip(ticketId, ticketInfo) {
 
   var zip = new JSZip();
 
-  var attachmentLinks = document.querySelectorAll('div[data-side-conversations-anchor-id="' + ticketId + '"] .lesa-ui-attachment-info a');
+  var attachmentLinks = document.querySelectorAll('div[data-side-conversations-anchor-id="' + ticketId + '"] .lesa-ui-attachment-info a.attachment');
 
   for (var i = 0; i < attachmentLinks.length; i++) {
     downloadAttachment(attachmentLinks[i], function(fileName, blob) {
