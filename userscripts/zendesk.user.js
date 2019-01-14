@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        1.2
+// @version        1.3
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @match          https://liferay-support.zendesk.com/*
@@ -74,8 +74,13 @@ a.generating::after {
   margin-bottom: 1em;
 }
 
-.lesa-ui-permalink input {
+.lesa-ui-permalink > input,
+.lesa-ui-form-field.lesa-ui-helpcenter > input {
   background-color: transparent;
+  border: 0px;
+  font-size: 12px;
+  margin: 0px;
+  padding: 0px;
   width: 100%;
 }
 `;
@@ -385,7 +390,9 @@ function addOrganizationField(propertyBox, ticketInfo) {
   container.appendChild(document.createTextNode(' '));
   container.appendChild(document.createTextNode('(' + organizationFields.sla.toUpperCase() + ')'));
 
-  generateFormField(propertyBox, 'organization_id', 'Organization', [container]);
+  var permalinkHREF = 'https://help.liferay.com/hc/en-us/requests/' + ticketInfo.ticket.id;
+
+  generateFormField(propertyBox, 'lesa-ui-helpcenter', 'Help Center', [container, createPermaLinkInputField(permalinkHREF)]);
 }
 
 /**
@@ -420,7 +427,7 @@ function addPatcherPortalField(propertyBox, ticketInfo) {
     links.push(createAnchorTag(version + ' Builds', versionBuildsLinkHREF));
   }
 
-  generateFormField(propertyBox, 'patcher_portal', 'Patcher Portal', links);
+  generateFormField(propertyBox, 'lesa-ui-patcher', 'Patcher Portal', links);
 }
 
 /**
@@ -616,6 +623,22 @@ function highlightComment(commentId) {
 }
 
 /**
+ * Creates a self-highlighting input field.
+ */
+
+function createPermaLinkInputField(permalinkHREF) {
+  var permalink = document.createElement('input');
+
+  permalink.value = permalinkHREF;
+
+  permalink.onclick = function() {
+    this.setSelectionRange(0, this.value.length);
+  };
+
+  return permalink;
+}
+
+/**
  * Add the comment ID as a query string parameter to function as a
  * pseudo permalink (since this script scrolls to it).
  */
@@ -636,13 +659,7 @@ function addPermaLinks(ticketId, conversation) {
     permalinkContainer.classList.add('lesa-ui-permalink');
 
     var permalinkHREF = 'https://' + document.location.host + document.location.pathname + '?comment=' + commentId;
-    var permalink = document.createElement('input');
-
-    permalink.value = permalinkHREF;
-
-    permalink.onclick = function() {
-      this.setSelectionRange(0, this.value.length);
-    };
+    var permalink = createPermaLinkInputField(permalinkHREF);
 
     permalinkContainer.appendChild(permalink);
 
@@ -682,8 +699,6 @@ function checkTicket(ticketId, callback) {
     catch (e) {
       return;
     }
-
-    console.log(ticketInfo);
 
     ticketInfoCache[ticketId] = ticketInfo;
 
