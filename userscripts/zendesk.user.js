@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        1.1
+// @version        1.2
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @match          https://liferay-support.zendesk.com/*
@@ -683,6 +683,8 @@ function checkTicket(ticketId, callback) {
       return;
     }
 
+    console.log(ticketInfo);
+
     ticketInfoCache[ticketId] = ticketInfo;
 
     callback(ticketId, ticketInfo)
@@ -730,7 +732,14 @@ function checkForConversations() {
   if (document.location.pathname.indexOf(ticketPath) == 0) {
     var ticketId = document.location.pathname.substring(ticketPath.length);
 
-    checkTicket(ticketId, checkTicketConversation);
+    var pos = ticketId.indexOf('/');
+
+    if (pos != -1) {
+      revokeObjectURLs();
+    }
+    else {
+      checkTicket(ticketId, checkTicketConversation);
+    }
   }
   else {
     revokeObjectURLs();
