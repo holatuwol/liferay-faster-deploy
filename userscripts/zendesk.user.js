@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        1.4
+// @version        1.5
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @match          https://liferay-support.zendesk.com/*
@@ -122,8 +122,52 @@ function getPatcherPortalAccountsHREF(params) {
   var portletId = '1_WAR_osbpatcherportlet';
   var ns = '_' + portletId + '_';
 
-  var queryString = Object.keys(params).map(key => (key.indexOf('p_p_') == 0 ? key : (ns + key)) + '=' + params[key]).join('&');
+  var queryString = Object.keys(params).map(key => (key.indexOf('p_p_') == 0 ? key : (ns + key)) + '=' + encodeURIComponent(params[key])).join('&');
   return 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/accounts/view?p_p_id=' + portletId + '&' + queryString;
+}
+
+/**
+ * Generate a URL to Customer Portal's account details view.
+ */
+
+function getCustomerPortalAccountsHREF(params) {
+  var portletId = 'com_liferay_osb_customer_account_entry_details_web_AccountEntryDetailsPortlet';
+  var ns = '_' + portletId + '_';
+
+  var queryString = Object.keys(params).map(key => (key.indexOf('p_p_') == 0 ? key : (ns + key)) + '=' + encodeURIComponent(params[key])).join('&');
+  return 'https://customer.liferay.com/project-details?p_p_id=' + portletId + '&' + queryString;
+}
+
+/**
+ * Retrieve the account code from the sidebar.
+ */
+
+var accountCodeCache = {};
+
+function getAccountCode(ticketId, ticketInfo, propertyBox) {
+  if (accountCodeCache.hasOwnProperty(ticketId)) {
+    return accountCodeCache[ticketId];
+  }
+
+  var accountCode = null;
+
+  if (ticketInfo.organizations && (ticketInfo.organizations.length == 1)) {
+    var organizationInfo = ticketInfo.organizations[0];
+    var organizationFields = organizationInfo.organization_fields;
+
+    accountCode = organizationFields.account_code;
+  }
+  else if (propertyBox) {
+    var accountCodeField = propertyBox.parentNode.querySelector('.custom_field_360013377592 .ember-text-field');
+
+    if (accountCodeField) {
+      accountCode = accountCodeField.value;
+    }
+  }
+
+  accountCodeCache[ticketId] = accountCode;
+
+  return accountCode;
 }
 
 /**
@@ -318,18 +362,8 @@ function createAttachmentZip(ticketId, ticketInfo) {
       zip.generateAsync({
         type: 'blob'
       }).then(function(blob) {
-        var zipFileName = null;
-
-        if (ticketInfo && (ticketInfo.organizations.length > 0)) {
-          organizationInfo = ticketInfo.organizations[0];
-          organizationFields = organizationInfo.organization_fields;
-
-          zipFileName = organizationFields.account_code + '.zendesk-' + ticketId + '.zip';
-        }
-
-        if (!zipFileName) {
-          zipFileName = 'UNKNOWN.zendesk-' + ticketId + '.zip';
-        }
+        var accountCode = getAccountCode(ticketId, ticketInfo) || 'UNKNOWN';
+        var zipFileName = accountCode + '.zendesk-' + ticketId + '.zip';
 
         var downloadLink = createAnchorTag('Download ' + zipFileName, URL.createObjectURL(blob), zipFileName);
         downloadLink.classList.add('.lesa-ui-attachments-download-blob');
@@ -374,33 +408,48 @@ function generateFormField(propertyBox, className, labelText, formElements) {
  * for the account details and the customer's SLA level.
  */
 
-function addOrganizationField(propertyBox, ticketInfo) {
-  if (!ticketInfo.organizations || (ticketInfo.organizations.length != 1)) {
-    return;
+function addOrganizationField(propertyBox, ticketId, ticketInfo) {
+  var accountCode = getAccountCode(ticketId, ticketInfo, propertyBox);
+
+  var helpCenterLinkHREF = null;
+  var serviceLevel = null;
+
+  if (ticketInfo.organizations && (ticketInfo.organizations.length == 1)) {
+    var organizationInfo = ticketInfo.organizations[0];
+    var organizationFields = organizationInfo.organization_fields;
+
+    serviceLevel = organizationFields.sla.toUpperCase();
+
+    helpCenterLinkHREF = getCustomerPortalAccountsHREF({
+      mvcRenderCommandName: '/view_account_entry',
+      accountEntryId: organizationInfo.external_id
+    });
+  }
+  else if (accountCode) {
+    helpCenterLinkHREF = getCustomerPortalAccountsHREF({
+      keywords: accountCode
+    });
   }
 
-  var organizationInfo = ticketInfo.organizations[0];
-  var organizationFields = organizationInfo.organization_fields;
+  var helpCenterItems = [];
 
-  var helpCenterLinkHREF = [
-    'https://customer.liferay.com/project-details',
-    '?p_p_id=com_liferay_osb_customer_account_entry_details_web_AccountEntryDetailsPortlet',
-    '&_com_liferay_osb_customer_account_entry_details_web_AccountEntryDetailsPortlet_mvcRenderCommandName=%2Fview_account_entry',
-    '&_com_liferay_osb_customer_account_entry_details_web_AccountEntryDetailsPortlet_accountEntryId=',
-    organizationInfo.external_id
-  ].join('');
+  if (accountCode && helpCenterLinkHREF) {
+    var helpCenterLinkContainer = document.createElement('div');
 
-  var helpCenterLink = createAnchorTag(organizationFields.account_code, helpCenterLinkHREF);
+    var helpCenterLink = createAnchorTag(accountCode, helpCenterLinkHREF);
+    helpCenterLinkContainer.appendChild(helpCenterLink);
 
-  var container = document.createElement('div');
+    if (serviceLevel) {
+      helpCenterLinkContainer.appendChild(document.createTextNode(' (' + serviceLevel + ')'));
+    }
 
-  container.appendChild(helpCenterLink);
-  container.appendChild(document.createTextNode(' '));
-  container.appendChild(document.createTextNode('(' + organizationFields.sla.toUpperCase() + ')'));
+    helpCenterItems.push(helpCenterLinkContainer);
+  }
 
   var permalinkHREF = 'https://help.liferay.com/hc/en-us/requests/' + ticketInfo.ticket.id;
+  helpCenterItems.push(createPermaLinkInputField(permalinkHREF))
 
-  generateFormField(propertyBox, 'lesa-ui-helpcenter', 'Help Center', [container, createPermaLinkInputField(permalinkHREF)]);
+  generateFormField(propertyBox, 'lesa-ui-helpcenter', 'Help Center', helpCenterItems);
 }
 
 /**
@@ -408,34 +457,34 @@ function addOrganizationField(propertyBox, ticketInfo) {
  * the customer's builds in Patcher Portal.
  */
 
-function addPatcherPortalField(propertyBox, ticketInfo) {
-  if (!ticketInfo.organizations || (ticketInfo.organizations.length != 1)) {
-    return;
-  }
+function addPatcherPortalField(propertyBox, ticketId, ticketInfo) {
+  var accountCode = getAccountCode(ticketId, ticketInfo, propertyBox);
 
-  var organizationInfo = ticketInfo.organizations[0];
-  var organizationFields = organizationInfo.organization_fields;
+  var patcherPortalItems = [];
 
-  var links = [];
-
-  var allBuildsLinkHREF = getPatcherPortalAccountsHREF({
-    'patcherBuildAccountEntryCode': organizationFields.account_code
-  });
-
-  links.push(createAnchorTag('All Builds', allBuildsLinkHREF));
-
-  var version = getProductVersion(propertyBox);
-
-  if (version) {
-    var versionBuildsLinkHREF = getPatcherPortalAccountsHREF({
-      'patcherBuildAccountEntryCode': organizationFields.account_code,
-      'patcherProductVersionId': getProductVersionId(version)
+  if (accountCode) {
+    var allBuildsLinkHREF = getPatcherPortalAccountsHREF({
+      'patcherBuildAccountEntryCode': accountCode
     });
 
-    links.push(createAnchorTag(version + ' Builds', versionBuildsLinkHREF));
+    patcherPortalItems.push(createAnchorTag('All Builds', allBuildsLinkHREF));
+
+    var version = getProductVersion(propertyBox);
+
+    if (version) {
+      var versionBuildsLinkHREF = getPatcherPortalAccountsHREF({
+        'patcherBuildAccountEntryCode': accountCode,
+        'patcherProductVersionId': getProductVersionId(version)
+      });
+
+      patcherPortalItems.push(createAnchorTag(version + ' Builds', versionBuildsLinkHREF));
+    }
+  }
+  else {
+    patcherPortalItems.push(document.createTextNode('N/A'));
   }
 
-  generateFormField(propertyBox, 'lesa-ui-patcher', 'Patcher Portal', links);
+  generateFormField(propertyBox, 'lesa-ui-patcher', 'Patcher Portal', patcherPortalItems);
 }
 
 /**
@@ -458,6 +507,12 @@ function updateSidebarBoxContainer(ticketId, ticketInfo) {
       continue;
     }
 
+    var workspace = propertyBox.closest('.workspace');
+
+    if (workspace.style.display == 'none') {
+      continue;
+    }
+
     if (propertyBox.getAttribute('data-ticket-id') != ticketId) {
       propertyBox.setAttribute('data-ticket-id', ticketId);
       propertyBoxes.push(propertyBox);
@@ -469,8 +524,8 @@ function updateSidebarBoxContainer(ticketId, ticketInfo) {
   }
 
   for (var i = 0; i < propertyBoxes.length; i++) {
-    addOrganizationField(propertyBoxes[i], ticketInfo);
-    addPatcherPortalField(propertyBoxes[i], ticketInfo);
+    addOrganizationField(propertyBoxes[i], ticketId, ticketInfo);
+    addPatcherPortalField(propertyBoxes[i], ticketId, ticketInfo);
   }
 }
 
@@ -684,7 +739,7 @@ function addPermaLinks(ticketId, ticketInfo, conversation) {
 var ticketInfoCache = {};
 
 function checkTicket(ticketId, callback) {
-  if (ticketInfoCache[ticketId]) {
+  if (ticketInfoCache.hasOwnProperty(ticketId)) {
     if (ticketInfoCache[ticketId] == 'PENDING') {
       return;
     }
@@ -699,19 +754,24 @@ function checkTicket(ticketId, callback) {
   var xhr = new XMLHttpRequest();
 
   xhr.onload = function() {
-    var ticketInfo;
+    var ticketInfo = null;
 
     try {
       ticketInfo = JSON.parse(xhr.responseText);
     }
     catch (e) {
-      return;
     }
 
     ticketInfoCache[ticketId] = ticketInfo;
 
     callback(ticketId, ticketInfo)
   };
+
+  xhr.onerror = function() {
+    ticketInfoCache[ticketId] = null;
+
+    callback(ticketId, null);
+  }
 
   var ticketDetailsURL = [
     document.location.protocol,
