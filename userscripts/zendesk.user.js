@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        1.3
+// @version        1.4
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @match          https://liferay-support.zendesk.com/*
@@ -318,10 +318,18 @@ function createAttachmentZip(ticketId, ticketInfo) {
       zip.generateAsync({
         type: 'blob'
       }).then(function(blob) {
-        var organizationInfo = ticketInfo.organizations[0];
-        var organizationFields = organizationInfo.organization_fields;
+        var zipFileName = null;
 
-        var zipFileName = organizationFields.account_code + '.zendesk-' + ticketId + '.zip';
+        if (ticketInfo && (ticketInfo.organizations.length > 0)) {
+          organizationInfo = ticketInfo.organizations[0];
+          organizationFields = organizationInfo.organization_fields;
+
+          zipFileName = organizationFields.account_code + '.zendesk-' + ticketId + '.zip';
+        }
+
+        if (!zipFileName) {
+          zipFileName = 'UNKNOWN.zendesk-' + ticketId + '.zip';
+        }
 
         var downloadLink = createAnchorTag('Download ' + zipFileName, URL.createObjectURL(blob), zipFileName);
         downloadLink.classList.add('.lesa-ui-attachments-download-blob');
@@ -643,7 +651,7 @@ function createPermaLinkInputField(permalinkHREF) {
  * pseudo permalink (since this script scrolls to it).
  */
 
-function addPermaLinks(ticketId, conversation) {
+function addPermaLinks(ticketId, ticketInfo, conversation) {
   var permalinks = conversation.querySelectorAll('div[data-comment-id] div.lesa-ui-permalink');
 
   if (permalinks.length > 0) {
@@ -730,7 +738,7 @@ function checkTicketConversation(ticketId, ticketInfo) {
 
   if (conversation) {
     addTicketDescription(ticketId, ticketInfo, conversation);
-    addPermaLinks(ticketId, conversation);
+    addPermaLinks(ticketId, ticketInfo, conversation);
   }
 
   highlightComment();
