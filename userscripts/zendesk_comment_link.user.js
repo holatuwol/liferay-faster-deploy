@@ -16,7 +16,7 @@ styleElement.textContent = `
   margin-bottom: 1em;
 }
 
-.lesa-ui-permalink input {
+.lesa-ui-permalink > input {
   background-color: transparent;
   width: 100%;
 }
@@ -63,6 +63,21 @@ function highlightComment(commentId) {
   event.scrollIntoView();
 }
 
+/**
+ * Creates a self-highlighting input field.
+ */
+
+function createPermaLinkInputField(permalinkHREF) {
+  var permalink = document.createElement('input');
+
+  permalink.value = permalinkHREF;
+
+  permalink.onclick = function() {
+    this.setSelectionRange(0, this.value.length);
+  };
+
+  return permalink;
+}
 
 /**
  * Add the comment ID as a query string parameter to function as a
@@ -85,13 +100,7 @@ function addPermaLinks(ticketId, conversation) {
     permalinkContainer.classList.add('lesa-ui-permalink');
 
     var permalinkHREF = 'https://' + document.location.host + document.location.pathname + '?comment=' + commentId;
-    var permalink = document.createElement('input');
-
-    permalink.value = permalinkHREF;
-
-    permalink.onclick = function() {
-      this.setSelectionRange(0, this.value.length);
-    };
+    var permalink = createPermaLinkInputField(permalinkHREF);
 
     permalinkContainer.appendChild(permalink);
 
