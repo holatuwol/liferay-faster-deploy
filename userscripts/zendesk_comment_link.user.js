@@ -84,7 +84,7 @@ function createPermaLinkInputField(permalinkHREF) {
  * pseudo permalink (since this script scrolls to it).
  */
 
-function addPermaLinks(ticketId, conversation) {
+function addPermaLinks(ticketId, ticketInfo, conversation) {
   var permalinks = conversation.querySelectorAll('div[data-comment-id] div.lesa-ui-permalink');
 
   if (permalinks.length > 0) {
@@ -120,13 +120,23 @@ function checkForConversations() {
   if (document.location.pathname.indexOf(ticketPath) == 0) {
     var ticketId = document.location.pathname.substring(ticketPath.length);
 
-    var conversation = document.querySelector('div[data-side-conversations-anchor-id="' + ticketId + '"]');
+    var pos = ticketId.indexOf('/');
 
-    if (conversation) {
-      addPermaLinks(ticketId, conversation);
+    if (pos != -1) {
+
     }
+    else {
+      var conversation = document.querySelector('div[data-side-conversations-anchor-id="' + ticketId + '"]');
 
-    highlightComment();
+      if (conversation) {
+        addPermaLinks(ticketId, null, conversation);
+      }
+
+      highlightComment();
+    }
+  }
+  else {
+
   }
 }
 
