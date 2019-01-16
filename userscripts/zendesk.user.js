@@ -408,14 +408,21 @@ function generateFormField(propertyBox, className, labelText, formElements) {
  * for the account details and the customer's SLA level.
  */
 
+var organizationCache = {};
+
 function addOrganizationField(propertyBox, ticketId, ticketInfo) {
   var accountCode = getAccountCode(ticketId, ticketInfo, propertyBox);
 
   var helpCenterLinkHREF = null;
   var serviceLevel = null;
 
-  if (ticketInfo.organizations && (ticketInfo.organizations.length == 1)) {
-    var organizationInfo = ticketInfo.organizations[0];
+  var organizationInfo = null;
+
+  if (accountCode) {
+    organizationInfo = organizationCache[accountCode];
+  }
+
+  if (organizationInfo) {
     var organizationFields = organizationInfo.organization_fields;
 
     serviceLevel = organizationFields.sla.toUpperCase();
@@ -736,7 +743,23 @@ function addPermaLinks(ticketId, ticketInfo, conversation) {
  * once that information is retrieved.
  */
 
+function cacheOrganizations(organizations) {
+  for (var i = 0; i < organizations.length; i++) {
+    organizationCache[organizations[i].organization_fields.account_code] = organizations[i];
+  }
+}
+
+/**
+ * Retrieve information about a ticket, and then call a function
+ * once that information is retrieved.
+ */
+
 var ticketInfoCache = {};
+
+/**
+ * Retrieve information about a ticket, and then call a function
+ * once that information is retrieved.
+ */
 
 function checkTicket(ticketId, callback) {
   if (ticketInfoCache.hasOwnProperty(ticketId)) {
@@ -762,9 +785,16 @@ function checkTicket(ticketId, callback) {
     catch (e) {
     }
 
-    ticketInfoCache[ticketId] = ticketInfo;
+    if (ticketInfo.organizations.length == 0) {
+      checkUser(ticketId, ticketInfo, callback);
+    }
+    else {
+      ticketInfoCache[ticketId] = ticketInfo;
 
-    callback(ticketId, ticketInfo)
+      cacheOrganizations(ticketInfo.organizations);
+
+      callback(ticketId, ticketInfo)
+    }
   };
 
   xhr.onerror = function() {
@@ -783,6 +813,45 @@ function checkTicket(ticketId, callback) {
   ].join('');
 
   xhr.open('GET', ticketDetailsURL);
+  xhr.send();
+}
+
+/**
+ * When the ticket doesn't contain enough information on the organization,
+ * fetch the user and the user's organization and invoke the callback.
+ */
+
+function checkUser(ticketId, ticketInfo, callback) {
+  var userId = ticketInfo.ticket.requester_id;
+
+  var xhr = new XMLHttpRequest();
+
+  xhr.onload = function() {
+    var userInfo = null;
+
+    try {
+      userInfo = JSON.parse(xhr.responseText);
+    }
+    catch (e) {
+    }
+
+    cacheOrganizations(userInfo.organizations);
+
+    ticketInfoCache[ticketId] = ticketInfo;
+
+    callback(ticketId, ticketInfo)
+  };
+
+  var userDetailsURL = [
+    document.location.protocol,
+    '//',
+    document.location.host,
+    '/api/v2/users/',
+    userId,
+    '?include=organizations'
+  ].join('');
+
+  xhr.open('GET', userDetailsURL);
   xhr.send();
 }
 
