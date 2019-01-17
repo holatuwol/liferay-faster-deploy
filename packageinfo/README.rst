@@ -32,7 +32,15 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 Extract Import/Export Package from Manifest
 ===========================================
 
-It's not immediately obvious what packages are imported/exported from the build artifact, because the generated MANIFEST.MF is not formatted in a human-readable way (it line wraps every 72 characters). To make things human readable, you could use the ``headers`` command via Gogo shell, but everything is still all gathered together on one line.
+If you know an artifact exports a specific package, you can check which version it exports with the ``inspect`` command:
+
+.. code-block:: bash
+
+	inspect cap osgi.wiring.package BUNDLE_ID | grep PACKAGE_NAME
+
+However, if you don't know what packages are exported, and you want to check everything in bulk, it's not immediately obvious what packages are imported/exported from the build artifact, because ``inspect cap osgi.wiring.package`` includes metadata on what uses the package as well, which is a lot of noise if your package is used by a lot of packages, or if you want to check what Liferay itself (bundle 0) exports.
+
+You could try reading the generated MANIFEST.MF, but is not formatted in a human-readable way (it line wraps every 72 characters). You might also consider the ``headers`` command via Gogo shell, but everything is still all gathered together on one line.
 
 A little bit of stream editing, and you can convert the manifest into a CSV file.
 
