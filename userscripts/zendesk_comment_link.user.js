@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk Comment Permalinks
 // @namespace      holatuwol
-// @match          https://liferay-support.zendesk.com/*
+// @match          https://liferay-support.zendesk.com/agent/*
 // @grant          none
 // ==/UserScript==
 
