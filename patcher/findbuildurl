@@ -27,7 +27,7 @@ gethotfix() {
 }
 
 findbuildurl() {
-	gethotfix $1
+	gethotfix $@
 
 	local BUILD_ID=$(unzip -p $FIX_NAME.zip fixpack_documentation.xml | grep -F '<build-id>' | cut -d'>' -f 2 | cut -d'<' -f 1)
 

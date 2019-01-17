@@ -3,7 +3,7 @@
 SCRIPT_FOLDER=$(dirname ${BASH_SOURCE[0]})
 
 findbuildurl() {
-	. "${SCRIPT_FOLDER}/findbuildurl" $1
+	. "${SCRIPT_FOLDER}/findbuildurl" $@
 }
 
 webbrowser() {
