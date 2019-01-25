@@ -3,7 +3,7 @@ function setProductVersions(accumulator, next) {
 	_1_WAR_osbpatcherportlet_productVersionOnChange(next.value);
 
 	AUI().all('#_1_WAR_osbpatcherportlet_patcherProjectVersionId option')._nodes.reduce(
-		next.innerText.trim().indexOf('6.x') != -1 ? setProjectVersions6 : setProjectVersions7,
+		next.innerText.trim() == 'Portal 6.x' ? setProjectVersions6 : setProjectVersions7,
 		accumulator
 	);
 
@@ -11,11 +11,13 @@ function setProductVersions(accumulator, next) {
 };
 
 function setProjectVersions6(accumulator, next) {
-	if (next.innerText == '') {
+	var key = next.innerText.trim();
+
+	if (key == '') {
 		return accumulator;
 	}
 
-	var key = 'fix-pack-base-' + next.innerText.replace(/ /g, '-').replace(/\./g, '').toLowerCase();
+	var key = 'fix-pack-base-' + key.replace(/ /g, '-').replace(/\./g, '').toLowerCase();
 
 	accumulator[key] = parseInt(next.value);
 
@@ -23,11 +25,11 @@ function setProjectVersions6(accumulator, next) {
 };
 
 function setProjectVersions7(accumulator, next) {
-	if (next.innerText == '') {
+	var key = next.innerText.trim();
+
+	if ((key == '') || (key.indexOf('marketplace') != -1)) {
 		return accumulator;
 	}
-
-	var key = next.innerText.trim();
 
 	accumulator[key] = parseInt(next.value);
 
