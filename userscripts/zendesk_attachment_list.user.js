@@ -56,6 +56,8 @@ a.generating::after {
 
 .lesa-ui-description {
   font-weight: 100;
+  max-height: 25em;
+  overflow-y: auto;
 }
 `;
 

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        1.6
+// @version        1.7
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @match          https://liferay-support.zendesk.com/agent/*
@@ -59,6 +59,8 @@ a.generating::after {
 
 .lesa-ui-description {
   font-weight: 100;
+  max-height: 25em;
+  overflow-y: auto;
 }
 
 .lesa-ui-event-highlighted {
@@ -165,7 +167,9 @@ function getAccountCode(ticketId, ticketInfo, propertyBox) {
     }
   }
 
-  accountCodeCache[ticketId] = accountCode;
+  if (accountCode) {
+    accountCodeCache[ticketId] = accountCode;
+  }
 
   return accountCode;
 }
@@ -625,6 +629,7 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
   var description = document.createElement('div');
 
   description.classList.add('comment');
+  description.classList.add('zd-comment');
   description.innerHTML = lastComment.innerHTML;
 
   // Generate something to hold all of our attachments.
@@ -898,4 +903,51 @@ function checkForConversations() {
   }
 }
 
+
+/**
+ * Update the selected tab with the account code.
+ */
+
+function updateSubtitle(tab, ticketId, ticketInfo) {
+  var accountCode = getAccountCode(ticketId, ticketInfo, null);
+
+  if (!accountCode) {
+    return;
+  }
+
+  tab.classList.add('lesa-ui-subtitle');
+  tab.appendChild(document.createTextNode(accountCode));
+}
+
+/**
+ * Since there's an SPA framework in place that I don't fully understand, attempt to
+ * update the tab subtitles once per second.
+ */
+
+function checkForSubtitles() {
+  var ticketPath = '/agent/tickets/';
+
+  var subtitles = document.querySelectorAll('.subtitle');
+
+  for (var i = 0; i < subtitles.length; i++) {
+    var subtitle = subtitles[i];
+    var tab = subtitle.parentNode;
+
+    if (tab.classList.contains('lesa-ui-subtitle')) {
+      continue;
+    }
+
+    var textContent = subtitle.textContent.trim();
+
+    if (textContent[0] != '#') {
+      continue;
+    }
+
+    var ticketId = textContent.substring(1);
+
+    checkTicket(ticketId, updateSubtitle.bind(null, tab));
+  }
+}
+
 setInterval(checkForConversations, 1000);
+setInterval(checkForSubtitles, 1000);
