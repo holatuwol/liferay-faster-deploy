@@ -46,7 +46,9 @@ baseline() {
 	for folder in $(cat "$GIT_ROOT/.redeploy/changes_gradle_1.txt" "$GIT_ROOT/.redeploy/changes_gradle_2.txt"); do
 		if [ "" != "$(grep -F "$folder" $GIT_ROOT/.redeploy/changes.txt | grep -F '.java')" ]; then
 			if [ -d modules ]; then
-				echo $folder | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":baseline" }' >> $GIT_ROOT/.redeploy/baseline.txt
+				if [[ $folder != modules/third-party/* ]]; then
+					echo $folder | cut -d'/' -f 2- | tr '/' ':' | awk '{ print ":" $1 ":baseline" }' >> $GIT_ROOT/.redeploy/baseline.txt
+				fi
 			else
 				local project_prefix=$(grep -F 'project.path.prefix=' gradle.properties | cut -d'=' -f 2)
 				echo $folder | cut -d'/' -f 2- | tr '/' ':' | awk '{ print "'${project_prefix}':" $1 ":baseline" }' >> $GIT_ROOT/.redeploy/baseline.txt
