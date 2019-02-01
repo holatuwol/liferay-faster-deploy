@@ -73,6 +73,22 @@ get_hotfix_url() {
 	fi
 }
 
+notify_finish() {
+	if [ "" == "$(which notify-send)" ]; then
+		return 0
+	fi
+
+	if [[ ${IMAGE_NAME} != holatuwol/liferay:jdk* ]] && [[ ${IMAGE_NAME} != holatuwol/liferay:openjdk* ]]; then
+		return 0
+	fi
+
+	while [ "" == "$(docker logs --since="${START_TIME}" ${CONTAINER_NAME} 2>&1 | grep -F 'Server startup')" ]; do
+		sleep 1
+	done
+
+	notify-send -i utilities-terminal -u "critical" "$(pwd; echo -e "bundle (${CONTAINER_NAME})")"
+}
+
 remove_container() {
 	docker stop ${CONTAINER_NAME} 1> /dev/null 2> /dev/null
 	docker rm -v ${CONTAINER_NAME} 1> /dev/null 2> /dev/null
@@ -268,6 +284,8 @@ start_liferay() {
 		MIRRORS="${MIRRORS} -e LICENSE_MIRROR=${LICENSE_MIRROR}"
 	fi
 
+	START_TIME=$(date '+%s')
+
 	if get_hotfix_url $1; then
 		docker run ${GLOBAL_BIND} ${LOCAL_BIND} ${EXPOSE_ONLY} \
 			${LIFERAY_HOME_MOUNT} ${LIFERAY_RDBUILD_MOUNT} ${LIFERAY_RELEASE_MOUNT} ${DOCLIB_MOUNT} \
@@ -278,8 +296,10 @@ start_liferay() {
 			${MIRRORS} ${NETWORK_METADATA} ${EXTRA_ARGS} --name ${CONTAINER_NAME} \
 			--detach ${IMAGE_NAME} ${HOTFIX_URL}
 
+		notify_finish &
+
 		if [ "no" != "${ATTACH_LOG}" ]; then
-			docker logs -f ${CONTAINER_NAME}
+			docker logs -f --since="${START_TIME}" ${CONTAINER_NAME}
 		fi
 	else
 		return 1
