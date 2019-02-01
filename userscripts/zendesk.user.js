@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        1.8
+// @version        1.9
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @match          https://liferay-support.zendesk.com/agent/*
@@ -459,7 +459,7 @@ function addOrganizationField(propertyBox, ticketId, ticketInfo) {
     helpCenterItems.push(helpCenterLinkContainer);
   }
 
-  var permalinkHREF = 'https://help.liferay.com/hc/en-us/requests/' + ticketInfo.ticket.id;
+  var permalinkHREF = 'https://help.liferay.com/hc/requests/' + ticketInfo.ticket.id;
   helpCenterItems.push(createPermaLinkInputField(permalinkHREF))
 
   generateFormField(propertyBox, 'lesa-ui-helpcenter', 'Help Center', helpCenterItems);
