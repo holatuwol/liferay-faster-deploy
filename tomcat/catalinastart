@@ -3,10 +3,6 @@
 SCRIPT_FOLDER=$(dirname ${BASH_SOURCE[0]})
 
 catalinaconf() {
-	# Delete existing logs
-
-	rm -f $CATALINA_HOME/logs/*
-
 	# Identify a usable port
 
 	local TOMCAT_PORT=$(python ${SCRIPT_FOLDER}/getport.py)
@@ -19,9 +15,9 @@ catalinaconf() {
 
 	# Update the port in server.xml to the usable prot
 
-	cd $CATALINA_HOME/conf
+	cd ${CATALINA_HOME}/conf
 
-	if [ -f $CATALINA_HOME/conf/server.copy.xml ]; then
+	if [ -f ${CATALINA_HOME}/conf/server.copy.xml ]; then
 		cp -f server.copy.xml server.xml
 	else
 		cp -f server.xml server.copy.xml
@@ -32,15 +28,11 @@ catalinaconf() {
 
 	# Startup with JPDA by default
 
-	cd $CATALINA_HOME/bin
+	cd ${CATALINA_HOME}/bin
 	chmod u+x *.sh
 
 	sed -i 's/ jpda start / start /g' startup.sh
 	sed -i 's/ start / jpda start /g' startup.sh
-
-	# Setup tcnative
-
-	tcnative $1
 
 	# Copy setenv.sh that knows how to adjust the default JPDA port
 	# and use more memory.
@@ -54,9 +46,28 @@ catalinaconf() {
 
 	touch $LIFERAY_HOME/portal-ext.properties
 
-	if [ -d $CATALINA_HOME/webapps/manager ]; then
-		echo '<?xml version="1.0" encoding="utf-8"?><tomcat-users><user username="tomcat" password="tomcat" roles="manager-gui,manager-script,manager-status,manager-jmx"/></tomcat-users>' > $CATALINA_HOME/conf/tomcat-users.xml
+	if [ -d ${CATALINA_HOME}/webapps/manager ]; then
+		echo '<?xml version="1.0" encoding="utf-8"?><tomcat-users><user username="tomcat" password="tomcat" roles="manager-gui,manager-script,manager-status,manager-jmx"/></tomcat-users>' > ${CATALINA_HOME}/conf/tomcat-users.xml
 	fi
+}
+
+catalinapid() {
+	CATALINA_PID=
+
+	local IS_RUNNING=
+
+	for PROCESS_ID in $(jps | grep Bootstrap | cut -d' ' -f 1); do
+		IS_RUNNING=$(ps --no-headers $PROCESS_ID | grep $LIFERAY_VERSION)
+
+		if [ "" == "$IS_RUNNING" ]; then
+			CATALINA_PID=${PROCESS_ID}
+			return 0
+		fi
+	done
+
+	# Delete existing logs if nothing is running
+
+	rm -f ${CATALINA_HOME}/logs/*
 }
 
 catalinastart() {
@@ -82,17 +93,11 @@ catalinastart() {
 	# If the server is already running, we won't need to start it.
 	# Check if the server is running.
 
-	IS_RUNNING=
+	catalinapid
 
-	for PROCESS_ID in $(jps | grep Bootstrap | cut -d' ' -f 1); do
-		IS_RUNNING=$(ps --no-headers $PROCESS_ID | grep $LIFERAY_VERSION)
+	CATALINA_OUT=${CATALINA_HOME}/logs/catalina.out
 
-		if [ "" == "$IS_RUNNING" ]; then
-			break
-		fi
-	done
-
-	if [ "" == "$IS_RUNNING" ]; then
+	if [ "" == "${CATALINA_PID}" ]; then
 		catalinaconf
 
 		if [[ 0 -ne $? ]]; then
@@ -113,9 +118,11 @@ catalinastart() {
 
 		# Start Tomcat
 
-		$CATALINA_HOME/bin/catalina.sh jpda run
-	elif [ -f $CATALINA_HOME/logs/catalina.out ]; then
-		tail -f $CATALINA_HOME/logs/catalina.out
+		notifyfinish &
+		${CATALINA_HOME}/bin/catalina.sh jpda run > >(tee -a ${CATALINA_OUT}) 2> >(tee -a ${CATALINA_OUT} >&2)
+	elif [ -f ${CATALINA_OUT} ]; then
+		notifyfinish &
+		tail -f ${CATALINA_OUT}
 	else
 		echo Failed to start tomcat!
 	fi
@@ -123,6 +130,31 @@ catalinastart() {
 
 javahome() {
 	. ${SCRIPT_FOLDER}/../javahome $@
+}
+
+notifyfinish() {
+	if [ "" == "$(which notify-send)" ]; then
+		return 0
+	fi
+
+	while [ "" == "${CATALINA_PID}" ]; do
+		sleep 1
+		catalinapid
+	done
+
+	while [ ! -f "${CATALINA_OUT}" ]; do
+		sleep 1
+	done
+
+	while [ "" == "$(grep -F 'Server startup' ${CATALINA_OUT})" ]; do
+		if ps -p ${CATALINA_PID} > /dev/null; then
+			sleep 1
+		else
+			break
+		fi
+	done
+
+	notify-send -i utilities-terminal -u "critical" "$(echo -e "${CATALINA_HOME}\n./catalina.sh jpda run")"
 }
 
 tcnative() {
@@ -134,7 +166,7 @@ tcnative() {
 
 	# If we already generated tcnative, then we don't have to do anything.
 
-	if [ -d $CATALINA_HOME/lib/apr ]; then
+	if [ -d ${CATALINA_HOME}/lib/apr ]; then
 		return 0
 	fi
 
@@ -147,16 +179,16 @@ tcnative() {
 
 	# Now untar tcnative and build it
 
-	cd $CATALINA_HOME/bin
+	cd ${CATALINA_HOME}/bin
 	tar -zxf tomcat-native.tar.gz
 
 	TOMCAT_NATIVE_FOLDER=
 
-	for file in $(ls -1 $CATALINA_HOME/bin | grep tomcat-native | grep src); do
+	for file in $(ls -1 ${CATALINA_HOME}/bin | grep tomcat-native | grep src); do
 		TOMCAT_NATIVE_FOLDER=$file
 	done
 
-	if [ ! -d $CATALINA_HOME/bin/$TOMCAT_NATIVE_FOLDER ]; then
+	if [ ! -d ${CATALINA_HOME}/bin/$TOMCAT_NATIVE_FOLDER ]; then
 		return 1
 	fi
 
@@ -166,7 +198,7 @@ tcnative() {
 		cd $TOMCAT_NATIVE_FOLDER/native
 	fi
 
-	./configure --with-apr=/usr --prefix=$CATALINA_HOME/lib/apr && make && make install
+	./configure --with-apr=/usr --prefix=${CATALINA_HOME}/lib/apr && make && make install
 }
 
 catalinastart $@
