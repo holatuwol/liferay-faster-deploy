@@ -1,6 +1,9 @@
 // ==UserScript==
 // @name           ZenDesk Attachment List
 // @namespace      holatuwol
+// @version        1.0
+// @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk_attachment_list.user.js
+// @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk_attachment_list.user.js
 // @match          https://*.zendesk.com/agent/*
 // @grant          none
 // @require        https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.5/jszip.min.js
