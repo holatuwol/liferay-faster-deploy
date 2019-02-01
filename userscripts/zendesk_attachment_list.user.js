@@ -30,7 +30,6 @@ a.generating::after {
 .lesa-ui-attachments {
   display: flex;
   flex-direction: row;
-  margin-top: 1em;
 }
 
 .lesa-ui-attachment-info {
@@ -56,6 +55,9 @@ a.generating::after {
 
 .lesa-ui-description {
   font-weight: 100;
+}
+
+.lesa-ui-description .zd-comment {
   max-height: 25em;
   overflow-y: auto;
 }
@@ -338,15 +340,8 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
   var description = document.createElement('div');
 
   description.classList.add('comment');
+  description.classList.add('zd-comment');
   description.innerHTML = lastComment.innerHTML;
-
-  // Generate something to hold all of our attachments.
-
-  var attachmentsContainer = createAttachmentsContainer(ticketId, ticketInfo, conversation);
-
-  if (attachmentsContainer) {
-    description.appendChild(attachmentsContainer);
-  }
 
   // Create the element class hierarchy so that the text in the comment renders correctly.
 
@@ -362,6 +357,14 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
   descriptionAncestor1.setAttribute('data-ticket-id', ticketId);
 
   descriptionAncestor1.appendChild(descriptionAncestor0);
+
+  // Generate something to hold all of our attachments.
+
+  var attachmentsContainer = createAttachmentsContainer(ticketId, ticketInfo, conversation);
+
+  if (attachmentsContainer) {
+    descriptionAncestor1.appendChild(attachmentsContainer);
+  }
 
   header.appendChild(descriptionAncestor1);
 }

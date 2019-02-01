@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        1.7
+// @version        1.8
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @match          https://liferay-support.zendesk.com/agent/*
@@ -33,7 +33,6 @@ a.generating::after {
 .lesa-ui-attachments {
   display: flex;
   flex-direction: row;
-  margin-top: 1em;
 }
 
 .lesa-ui-attachment-info {
@@ -59,6 +58,9 @@ a.generating::after {
 
 .lesa-ui-description {
   font-weight: 100;
+}
+
+.lesa-ui-description .zd-comment {
   max-height: 25em;
   overflow-y: auto;
 }
@@ -632,14 +634,6 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
   description.classList.add('zd-comment');
   description.innerHTML = lastComment.innerHTML;
 
-  // Generate something to hold all of our attachments.
-
-  var attachmentsContainer = createAttachmentsContainer(ticketId, ticketInfo, conversation);
-
-  if (attachmentsContainer) {
-    description.appendChild(attachmentsContainer);
-  }
-
   // Create the element class hierarchy so that the text in the comment renders correctly.
 
   var descriptionAncestor0 = document.createElement('div');
@@ -654,6 +648,14 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
   descriptionAncestor1.setAttribute('data-ticket-id', ticketId);
 
   descriptionAncestor1.appendChild(descriptionAncestor0);
+
+  // Generate something to hold all of our attachments.
+
+  var attachmentsContainer = createAttachmentsContainer(ticketId, ticketInfo, conversation);
+
+  if (attachmentsContainer) {
+    descriptionAncestor1.appendChild(attachmentsContainer);
+  }
 
   header.appendChild(descriptionAncestor1);
 }
