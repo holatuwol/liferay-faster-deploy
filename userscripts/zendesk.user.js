@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        1.9
+// @version        2.0
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @match          https://liferay-support.zendesk.com/agent/*
@@ -927,8 +927,6 @@ function updateSubtitle(tab, ticketId, ticketInfo) {
  */
 
 function checkForSubtitles() {
-  var ticketPath = '/agent/tickets/';
-
   var subtitles = document.querySelectorAll('.subtitle');
 
   for (var i = 0; i < subtitles.length; i++) {
