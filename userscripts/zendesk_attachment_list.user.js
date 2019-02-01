@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk Attachment List
 // @namespace      holatuwol
-// @match          https://liferay-support.zendesk.com/agent/*
+// @match          https://*.zendesk.com/agent/*
 // @grant          none
 // @require        https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.5/jszip.min.js
 // ==/UserScript==
