@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        2.1
+// @version        2.2
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @match          https://liferay-support.zendesk.com/agent/*
@@ -895,7 +895,7 @@ function checkUser(ticketId, ticketInfo, callback) {
 
     ticketInfoCache[ticketId] = ticketInfo;
 
-    callback(ticketId, ticketInfo)
+    callback(ticketId, ticketInfo);
   };
 
   var userDetailsURL = [
@@ -912,6 +912,87 @@ function checkUser(ticketId, ticketInfo, callback) {
 }
 
 /**
+ * Cache the account information for the current ZenDesk site.
+ */
+
+var accountInfo = null;
+
+function setAccountInfo(callback) {
+  if (accountInfo) {
+    return;
+  }
+
+  var xhr = new XMLHttpRequest();
+
+  xhr.onload = function() {
+    try {
+      accountInfo = JSON.parse(xhr.responseText);
+    }
+    catch (e) {
+    }
+
+    callback();
+  };
+
+  var accountDetailsURL = [
+    document.location.protocol,
+    '//',
+    document.location.host,
+    '/api/v2/account.json'
+  ].join('');
+
+  xhr.open('GET', accountDetailsURL);
+  xhr.send();
+}
+
+/**
+ * Set the window title based on which URL you are currently visiting, so that if you
+ * use browser history, you have useful information.
+ */
+
+function updateWindowTitle(ticketId, ticketInfo) {
+  if (!accountInfo) {
+    setAccountInfo(updateWindowTitle.bind(null, ticketId, ticketInfo));
+    return;
+  }
+
+  var accountName = accountInfo.account.name;
+
+  if (document.location.pathname.indexOf('/agent/dashboard') == 0) {
+    document.title = accountName + ' - Agent Dashboard';
+    return;
+  }
+
+  if (document.location.pathname.indexOf('/agent/admin/') == 0) {
+    document.title = accountName + ' - Agent Admin';
+    return;
+  }
+
+  if (ticketId && ticketInfo) {
+    var accountCode = getAccountCode(ticketId, ticketInfo, null);
+
+    if (accountCode) {
+      document.title = accountName + ' - Agent Ticket - ' + accountCode + ' - ' + ticketInfo.ticket.raw_subject;
+    }
+    else {
+      document.title = accountName + ' - Agent Ticket - ' + ticketInfo.ticket.raw_subject;
+    }
+
+    return;
+  }
+
+  if (document.location.pathname.indexOf('/agent/filters/') == 0) {
+    var filterElement = document.querySelector('.filter-title');
+
+    if (filterElement) {
+      document.title = accountName + ' - Agent Filter - ' + filterElement.textContent;
+    }
+
+    return;
+  }
+}
+
+/**
  * Apply updates to the page based on the retrieved ticket information. Since the
  * ticket corresponds to a "conversation", find that conversation.
  */
@@ -925,6 +1006,7 @@ function checkTicketConversation(ticketId, ticketInfo) {
     addJiraLinks(ticketId, ticketInfo, conversation);
     addTicketDescription(ticketId, ticketInfo, conversation);
     addPermaLinks(ticketId, ticketInfo, conversation);
+    updateWindowTitle(ticketId, ticketInfo);
   }
 
   highlightComment();
@@ -951,6 +1033,7 @@ function checkForConversations() {
     }
   }
   else {
+    updateWindowTitle();
     revokeObjectURLs();
   }
 }
