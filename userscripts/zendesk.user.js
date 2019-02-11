@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        2.0
+// @version        2.1
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @match          https://liferay-support.zendesk.com/agent/*
@@ -746,6 +746,55 @@ function addPermaLinks(ticketId, ticketInfo, conversation) {
 }
 
 /**
+ * Recursively scan LPS tickets and LPE tickets, and replace any
+ * plain text with HTML.
+ */
+
+var jiraTicketId = /(LP[EPS]-[0-9]+)/g;
+
+function addJiraLinksToElement(element) {
+  if ((element.childNodes.length == 0) && (element.tagName != 'A')) {
+    if (element.nodeName == '#text') {
+      var spanContent = element.textContent.replace(jiraTicketId, '<a class="lesa-ui-jiralink" href="https://issues.liferay.com/browse/$1">$1</a>');
+
+      if (spanContent != element.textContent) {
+        var span = document.createElement('span');
+        span.innerHTML = spanContent;
+        element.replaceWith(span);
+      }
+    }
+    else if (element.innerHTML) {
+      element.innerHTML = element.innerHTML.replace(jiraTicketId, '<a class="lesa-ui-jiralink" href="https://issues.liferay.com/browse/$1">$1</a>');
+    }
+
+    return;
+  }
+
+  for (var i = 0; i < element.childNodes.length; i++) {
+    addJiraLinksToElement(element.childNodes[i]);
+  }
+}
+
+/**
+ * Scan the ticket for LPS tickets and LPE tickets, and replace any
+ * plain text with HTML.
+ */
+
+function addJiraLinks(ticketId, ticketInfo, conversation) {
+  if (conversation.classList.contains('lesa-ui-jiralink')) {
+    return;
+  }
+
+  conversation.classList.add('lesa-ui-jiralink');
+
+  var comments = conversation.querySelectorAll('div[data-comment-id]');
+
+  for (var i = 0; i < comments.length; i++) {
+    addJiraLinksToElement(comments[i]);
+  }
+}
+
+/**
  * Retrieve information about a ticket, and then call a function
  * once that information is retrieved.
  */
@@ -873,6 +922,7 @@ function checkTicketConversation(ticketId, ticketInfo) {
   var conversation = document.querySelector('div[data-side-conversations-anchor-id="' + ticketId + '"]');
 
   if (conversation) {
+    addJiraLinks(ticketId, ticketInfo, conversation);
     addTicketDescription(ticketId, ticketInfo, conversation);
     addPermaLinks(ticketId, ticketInfo, conversation);
   }
@@ -904,7 +954,6 @@ function checkForConversations() {
     revokeObjectURLs();
   }
 }
-
 
 /**
  * Update the selected tab with the account code.
