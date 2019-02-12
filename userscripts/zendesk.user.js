@@ -1049,8 +1049,22 @@ function updateSubtitle(tab, ticketId, ticketInfo) {
     return;
   }
 
-  tab.classList.add('lesa-ui-subtitle');
-  tab.appendChild(document.createTextNode(accountCode));
+  var oldSpan = tab.querySelector('.lesa-ui-subtitle');
+
+  if (oldSpan && (oldSpan.textContent == accountCode)) {
+    return;
+  }
+
+  var newSpan = document.createElement('span');
+  newSpan.classList.add('lesa-ui-subtitle');
+  newSpan.textContent = accountCode;
+
+  if (oldSpan) {
+    oldSpan.replaceWith(newSpan);
+  }
+  else {
+    tab.appendChild(newSpan);
+  }
 }
 
 /**
@@ -1064,10 +1078,6 @@ function checkForSubtitles() {
   for (var i = 0; i < subtitles.length; i++) {
     var subtitle = subtitles[i];
     var tab = subtitle.parentNode;
-
-    if (tab.classList.contains('lesa-ui-subtitle')) {
-      continue;
-    }
 
     var textContent = subtitle.textContent.trim();
 
