@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        2.3
+// @version        2.4
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @match          https://liferay-support.zendesk.com/agent/*
@@ -750,28 +750,21 @@ function addPermaLinks(ticketId, ticketInfo, conversation) {
  * plain text with HTML.
  */
 
-var jiraTicketId = /(LP[EPS]-[0-9]+)/g;
+var jiraTicketId = /([^/])(LP[EPS]-[0-9]+)/g;
+var jiraTicketLink = /<a [^>]*href="https:\/\/issues.liferay.com\/browse\/(LP[EPS]-[0-9]+)"[^>]*>[^<]*<\/a>/g
 
 function addJiraLinksToElement(element) {
-  if ((element.childNodes.length == 0) && (element.tagName != 'A')) {
-    if (element.nodeName == '#text') {
-      var spanContent = element.textContent.replace(jiraTicketId, '<a class="lesa-ui-jiralink" href="https://issues.liferay.com/browse/$1">$1</a>');
+  var newHTML = element.innerHTML.replace(jiraTicketLink, '$1');
 
-      if (spanContent != element.textContent) {
-        var span = document.createElement('span');
-        span.innerHTML = spanContent;
-        element.replaceWith(span);
-      }
-    }
-    else if (element.innerHTML) {
-      element.innerHTML = element.innerHTML.replace(jiraTicketId, '<a class="lesa-ui-jiralink" href="https://issues.liferay.com/browse/$1">$1</a>');
-    }
-
-    return;
+  if (element.contentEditable) {
+    newHTML = newHTML.replace(jiraTicketId, '$1<a href="https://issues.liferay.com/browse/$2">$2</a>');
+  }
+  else {
+    newHTML = newHTML.replace(jiraTicketId, '$1<a href="https://issues.liferay.com/browse/$2" target="_blank">$2</a>');
   }
 
-  for (var i = 0; i < element.childNodes.length; i++) {
-    addJiraLinksToElement(element.childNodes[i]);
+  if (element.innerHTML != newHTML) {
+    element.innerHTML = newHTML;
   }
 }
 
@@ -786,6 +779,12 @@ function addJiraLinks(ticketId, ticketInfo, conversation) {
   }
 
   conversation.classList.add('lesa-ui-jiralink');
+
+  var newComments = conversation.querySelectorAll('.zendesk-editor--rich-text-container .zendesk-editor--rich-text-comment');
+
+  for (var i = 0; i < newComments.length; i++) {
+    newComments[i].onblur = addJiraLinksToElement.bind(null, newComments[i]);
+  }
 
   var comments = conversation.querySelectorAll('div[data-comment-id]');
 
