@@ -466,6 +466,28 @@ function addOrganizationField(propertyBox, ticketId, ticketInfo) {
 }
 
 /**
+ * Add the JIRA Search field to the sidebar, which will contain a link to
+ * the relevant JIRA tickets.
+ */
+
+function addJIRASearchField(propertyBox, ticketId) {
+  var query = 'https://' + document.location.host + document.location.pathname;
+
+  var jiraSearchItems = [];
+
+  var jiraSearchLinkHREF = "https://issues.liferay.com/issues/?jql=%22Customer%20Ticket%20Permalink%22%20%3D%20%22" + query + "%22";
+
+  var jiraSearchLinkContainer = document.createElement('div');
+
+  var jiraSearchLink = createAnchorTag("JIRA Search", jiraSearchLinkHREF);
+  jiraSearchLinkContainer.appendChild(jiraSearchLink);
+
+  jiraSearchItems.push(jiraSearchLinkContainer);
+
+  generateFormField(propertyBox, 'lesa-ui-jirasearch', 'JIRA Search', jiraSearchItems);
+}
+
+/**
  * Add the Patcher Portal field to the sidebar, which will contain two links to
  * the customer's builds in Patcher Portal.
  */
@@ -538,6 +560,7 @@ function updateSidebarBoxContainer(ticketId, ticketInfo) {
 
   for (var i = 0; i < propertyBoxes.length; i++) {
     addOrganizationField(propertyBoxes[i], ticketId, ticketInfo);
+    addJIRASearchField(propertyBoxes[i], ticketId);
     addPatcherPortalField(propertyBoxes[i], ticketId, ticketInfo);
   }
 }
