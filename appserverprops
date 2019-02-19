@@ -27,6 +27,10 @@ buildprops() {
 			perl -pi -e 's/\r\n|\n|\r/\n/g' "$GIT_ROOT/build.$USER.properties"
 		fi
 
+		if [ "" == "$(grep -F baseline.jar.report.level build.${USER}.properties)" ]; then
+			echo -e '\nbaseline.jar.report.level=off' >> build.${USER}.properties
+		fi
+
 		repopass
 
 		return 0
@@ -48,6 +52,10 @@ buildprops() {
 
 	if [ -f build.properties ]; then
 		grep -F '#nodejs.npm.args' build.properties | sed 's/^\s*#//g' >> $GIT_ROOT/build.$USER.properties
+	fi
+
+	if [ "" == "$(grep -F baseline.jar.report.level build.${USER}.properties)" ]; then
+		echo -e '\nbaseline.jar.report.level=off' >> build.${USER}.properties
 	fi
 
 	# Ensure we have an up-to-date repository password for private repositories
