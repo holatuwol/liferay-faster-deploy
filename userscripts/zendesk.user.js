@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        2.5
+// @version        2.6
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @match          https://liferay-support.zendesk.com/agent/*
@@ -466,12 +466,15 @@ function addOrganizationField(propertyBox, ticketId, ticketInfo) {
 }
 
 /**
- * Add the JIRA Search field to the sidebar, which will contain a link to
+ * Add the Linked JIRA Issues field to the sidebar, which will contain a link to
  * the relevant JIRA tickets.
  */
 
 function addJIRASearchField(propertyBox, ticketId) {
-  var query = `"Customer Ticket Permalink" = "https://${document.location.host}${document.location.pathname}"`;
+  var query = `
+"Customer Ticket Permalink" = "https://${document.location.host}${document.location.pathname}" OR
+"Zendesk Ticket IDs" ~ ${ticketId}
+  `.trim();
 
   var encodedQuery = encodeURIComponent(query);
 
@@ -481,7 +484,7 @@ function addJIRASearchField(propertyBox, ticketId) {
 
   var jiraSearchLinkContainer = document.createElement('div');
 
-  var jiraSearchLink = createAnchorTag("JIRA Search", jiraSearchLinkHREF);
+  var jiraSearchLink = createAnchorTag("Linked Issues", jiraSearchLinkHREF);
   jiraSearchLinkContainer.appendChild(jiraSearchLink);
 
   jiraSearchItems.push(jiraSearchLinkContainer);
