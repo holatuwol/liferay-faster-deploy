@@ -471,11 +471,13 @@ function addOrganizationField(propertyBox, ticketId, ticketInfo) {
  */
 
 function addJIRASearchField(propertyBox, ticketId) {
-  var query = 'https://' + document.location.host + document.location.pathname;
+  var query = `"Customer Ticket Permalink" = "https://${document.location.host}${document.location.pathname}"`;
+
+  var encodedQuery = encodeURIComponent(query);
 
   var jiraSearchItems = [];
 
-  var jiraSearchLinkHREF = "https://issues.liferay.com/issues/?jql=%22Customer%20Ticket%20Permalink%22%20%3D%20%22" + query + "%22";
+  var jiraSearchLinkHREF = 'https://issues.liferay.com/issues/?jql=' + encodedQuery;
 
   var jiraSearchLinkContainer = document.createElement('div');
 
