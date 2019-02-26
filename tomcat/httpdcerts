@@ -1,0 +1,250 @@
+#!/bin/bash
+
+generate_certificate() {
+	if [ -f /etc/apache2/ssl/localhost.cnf ]; then
+		return 0
+	fi
+
+	echo '
+[ req ]
+
+default_bits = 2048
+default_keyfile = /etc/apache2/ssl/localhost.key
+distinguished_name = subject
+req_extensions = req_ext
+x509_extensions = x509_ext
+string_mask = utf8only
+
+[ subject ]
+
+organizationName = Organization Name (eg, company)
+organizationName_default = localhost
+
+[ x509_ext ]
+
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid,issuer
+
+basicConstraints = CA:FALSE
+keyUsage = digitalSignature, keyEncipherment
+subjectAltName = @alternate_names
+nsComment = "OpenSSL Generated Certificate"
+
+[ req_ext ]
+
+subjectKeyIdentifier = hash
+
+basicConstraints = CA:FALSE
+keyUsage = digitalSignature, keyEncipherment
+subjectAltName = @alternate_names
+nsComment = "OpenSSL Generated Certificate"
+
+[ alternate_names ]
+
+IP.1 = 127.0.0.1'> /etc/apache2/ssl/localhost.cnf
+
+	echo | openssl req -config /etc/apache2/ssl/localhost.cnf -new -sha256 -newkey rsa:2048 \
+		-nodes -keyout /etc/apache2/ssl/localhost.key -x509 -days 365 \
+		-out /etc/apache2/ssl/localhost.crt
+
+	importcert localhost /etc/apache2/ssl/localhost.crt
+}
+
+generate_certificates() {
+	local today=$(date --iso-8601)
+
+	pushd /etc/apache2/ssl > /dev/null
+
+	# Certificates for routing to Docker containers
+
+	local site=
+	local cert_expire_date=
+
+	for host in $(grep -o "[a-z0-9]*.${USER}.liferay.int" /etc/hosts); do
+		site=$(echo ${host} | cut -d'.' -f 1)
+
+		if [ -f ${site}.crt ]; then
+			cert_expire_date=$(date --date="$(openssl x509 -enddate -noout -in ${site}.crt | cut -d'=' -f 2)" --iso-8601)
+
+			if [ "${today}" == "${cert_expire_date}" ] || [[ ${today} > ${cert_expire_date} ]]; then
+				rm ${site}.*
+			fi
+		fi
+
+		if [ ! -f ${site}.crt ]; then
+			echo Generating new certificate for ${site} using ${CFSSL_SITE}
+
+			echo -n '{"CN": "'${site}'.'${USER}'.liferay.int",' > ${site}.json
+			echo -n '"hosts": [' >> ${site}.json
+			grep "${host}" /etc/hosts | cut -f 1 | sed 's/^#//g' | sort -u | awk '{ print "\"" $1 "\"" }' | tr '\n' ',' >> ${site}.json
+			echo -n '"'${site}'","'${host}'"], "key": {"algo": "rsa", "size": 2048}, "names": [{"C": "US","ST": "CA","L": "Diamond Bar"}]}' >> ${site}.json
+
+			cfssl gencert --remote ${CFSSL_SITE} ${site}.json | cfssljson -bare client -
+
+			if [ ! -f client.pem ]; then
+				continue
+			fi
+
+			mv client.pem ${site}.crt
+			mv client-key.pem ${site}.key
+			mv client.csr ${site}.csr
+
+			cert_expire_date=$(date --date="$(openssl x509 -enddate -noout -in ${site}.crt | cut -d'=' -f 2)" --iso-8601)
+		fi
+
+		echo ${site}.crt expires ${cert_expire_date}
+
+		importcert ${site} /etc/apache2/ssl/${site}.crt
+		echo ''
+	done
+
+	# Certificate for cloud servers
+
+	if [ -f cloud.crt ]; then
+		cert_expire_date=$(date --date="$(openssl x509 -enddate -noout -in cloud.crt | cut -d'=' -f 2)" --iso-8601)
+
+		if [ "${today}" == "${cert_expire_date}" ] || [[ ${today} > ${cert_expire_date} ]]; then
+			rm cloud.*
+		fi
+	fi
+
+	if [ ! -f cloud.crt ]; then
+		echo Generating new certificate for cloud servers using ${CFSSL_SITE}
+
+		echo -n '{"CN": "lrsupport.com",' > cloud.json
+		echo -n '"hosts": [' >> cloud.json
+
+		echo -e 'cloud-10-0-30-27\ncloud-10-50-0-165' | awk '{ print "\"" $1 "\"" }' | tr '\n' ',' >> cloud.json
+
+		for host in $(grep -o '[a-z0-9]*.lrsupport.com' /etc/hosts | sort -u); do
+			site=$(echo ${host} | cut -d'.' -f 1)
+			echo -n '"'${site}'","'${host}'",' >> cloud.json
+		done
+
+		(
+			for host in $(grep -o '[a-z0-9]*.lrsupport.com' /etc/hosts | sort -u); do
+				grep "${host}" /etc/hosts | cut -f 1
+			done
+		) | sed 's/^#//g' | sort -u | awk '{ print "\"" $1 "\"" }' | tr '\n' ',' >> cloud.json
+
+
+		echo -n '"lrsupport.com"], "key": {"algo": "rsa", "size": 2048}, "names": [{"C": "US","ST": "CA","L": "Diamond Bar"}]}' >> cloud.json
+
+		cfssl gencert --remote ${CFSSL_SITE} cloud.json | cfssljson -bare client -
+
+		if [ ! -f client.pem ]; then
+			continue
+		fi
+
+		mv client.pem cloud.crt
+		mv client-key.pem cloud.key
+		mv client.csr cloud.csr
+
+		cert_expire_date=$(date --date="$(openssl x509 -enddate -noout -in cloud.crt | cut -d'=' -f 2)" --iso-8601)
+
+		echo cloud.crt expires ${cert_expire_date}
+	fi
+
+	importcert cloud /etc/apache2/ssl/cloud.crt
+	echo ''
+
+	popd > /dev/null
+}
+
+importcert() {
+	NAME=$1
+	CERT=$2
+
+	echo "Updating /usr/local/share/ca-certificates/"
+	sudo cp $CERT /usr/local/share/ca-certificates/
+	sudo update-ca-certificates > /dev/null 2> /dev/null
+
+	if [ -d ${HOME}/.pki ]; then
+		echo "Updating ${HOME}/.pki"
+		certutil -A -t "C,," -d sql:$HOME/.pki/nssdb -n $NAME -i $CERT > /dev/null 2> /dev/null
+	fi
+
+	declare -A KEYTOOL_OPTIONS
+	KEYTOOL_OPTIONS[5]="-import"
+	KEYTOOL_OPTIONS[6]="-importcert"
+	KEYTOOL_OPTIONS[7]="-importcert"
+	KEYTOOL_OPTIONS[8]="-importcert"
+
+	for JAVA_VERSION in $(seq 5 8); do
+		javahome $JAVA_VERSION > /dev/null
+		KEYSTORE=$(find $JAVA_HOME -name cacerts)
+
+		chmod u+w $KEYSTORE
+
+		echo "Updating keystore ${KEYSTORE}"
+
+		(
+			yes | keytool -delete -storepass changeit -alias $NAME -keystore $KEYSTORE
+			yes | keytool ${KEYTOOL_OPTIONS[$JAVA_VERSION]} -storepass changeit -alias $NAME -file $CERT -keystore $KEYSTORE
+		) > /dev/null 2> /dev/null
+
+		chmod a-w $KEYSTORE
+	done
+}
+
+javahome() {
+	. $(dirname ${BASH_SOURCE[0]})/../javahome $@
+}
+
+scan_etc_hosts() {
+	for FQDN in $(grep -o '[a-z0-9]*.${USER}.liferay.int' /etc/hosts); do
+		local HOST=$(echo ${FQDN} | cut -d'.' -f 1)
+
+		if [ -f /etc/apache2/sites-available/000-${HOST}.conf ]; then
+			continue
+		fi
+
+		local IP_ADDRESS=$(grep ${FQDN} /etc/hosts | cut -f 1)
+
+		if [ "" == "${IP_ADDRESS}" ]; then
+			echo "Please specify the IP address for ${HOST} in your /etc/hosts file"
+			continue
+		fi
+
+		echo "NameVirtualHost On
+
+<Proxy \"balancer://${HOST}\">
+    BalancerMember \"ajp://${IP_ADDRESS}:8009\"
+</Proxy>
+
+<VirtualHost ${FQDN}:80>
+	ServerName ${FQDN}
+
+    ProxyPreserveHost On
+    ProxyPass        \"/\" \"balancer://${HOST}/\"
+    ProxyPassReverse \"/\" \"balancer://${HOST}/\"
+</VirtualHost>
+
+<VirtualHost ${FQDN}:443>
+	ServerName ${FQDN}
+
+    SSLEngine on
+	SSLCertificateKeyFile /etc/apache2/ssl/${HOST}.key
+	SSLCertificateFile /etc/apache2/ssl/${HOST}.crt
+
+    SSLProxyEngine On
+    SSLProxyVerify none
+    SSLProxyCheckPeerCN off
+    SSLProxyCheckPeerName off
+    SSLProxyCheckPeerExpire off
+
+    ProxyRequests off
+    ProxyPreserveHost On
+    ProxyPass        \"/\" \"balancer://${HOST}/\"
+    ProxyPassReverse \"/\" \"balancer://${HOST}/\"
+</VirtualHost>" >> /etc/apache2/sites-available/000-${HOST}.conf
+
+		sudo a2ensite 000-${HOST}.conf
+	done
+
+	generate_certificates
+
+	sudo service apache2 restart
+}
+
+scan_etc_hosts
