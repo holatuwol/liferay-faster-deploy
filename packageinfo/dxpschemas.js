@@ -79,7 +79,7 @@ function checkSchemaInfo() {
 	var isDEVersionIncrease = (name2 > name1);
 
 	var isMatchingNameFilter = function(schemaInfo) {
-		return (schemaInfo['name'].indexOf(nameFilterValue) != -1) || (schemaInfo['package'].indexOf(nameFilterValue) != -1);
+		return (schemaInfo['name'].indexOf(nameFilterValue) != -1);
 	};
 
 	var isAvailableVersion = function(schemaInfo) {
