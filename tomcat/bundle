@@ -127,8 +127,7 @@ set_container_mounts() {
 	elif [ -d bundles ]; then
 		LIFERAY_HOME="${PWD}/bundles"
 		LIFERAY_HOME_MOUNT="-v ${PWD}/bundles:/build"
-	elif [ -f app.server.$USER.properties ]; then
-		. "$(dirname ${SCRIPT_FOLDER})/appserverprops"
+	elif . "$(dirname ${SCRIPT_FOLDER})/appserverprops"; then
 		LIFERAY_HOME_MOUNT="-v ${LIFERAY_HOME}:/build"
 	else
 		echo "Unable to determine LIFERAY_HOME"
