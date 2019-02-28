@@ -28,7 +28,7 @@ buildprops() {
 		fi
 
 		if [ "" == "$(grep -F baseline.jar.report.level build.${USER}.properties)" ]; then
-			echo -e '\nbaseline.jar.report.level=off' >> build.${USER}.properties
+			echo -e '\nbaseline.jar.report.level=off' >> $GIT_ROOT/build.${USER}.properties
 		fi
 
 		repopass
