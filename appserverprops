@@ -50,12 +50,12 @@ buildprops() {
 
 	# Make sure nodejs arguments are set
 
-	if [ -f build.properties ]; then
-		grep -F '#nodejs.npm.args' build.properties | sed 's/^\s*#//g' >> $GIT_ROOT/build.$USER.properties
+	if [ -f $GIT_ROOT/build.properties ]; then
+		grep -F '#nodejs.npm.args' $GIT_ROOT/build.properties | sed 's/^\s*#//g' >> $GIT_ROOT/build.$USER.properties
 	fi
 
 	if [ "" == "$(grep -F baseline.jar.report.level build.${USER}.properties)" ]; then
-		echo -e '\nbaseline.jar.report.level=off' >> build.${USER}.properties
+		echo -e '\nbaseline.jar.report.level=off' >> $GIT_ROOT/build.${USER}.properties
 	fi
 
 	# Ensure we have an up-to-date repository password for private repositories
