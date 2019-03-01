@@ -2,6 +2,7 @@ from bs4 import BeautifulSoup
 from findhotfix import get_patcher_build
 import inspect
 import json
+from os.path import abspath, dirname
 from patcher import process_patcher_search_container
 from scrape_liferay import get_liferay_content, get_namespaced_parameters
 import sys
@@ -14,13 +15,15 @@ import webbrowser_patch
 
 # Utility methods for bridging Liferay systems
 
+master_version = '7.2'
+
 def get_liferay_version(url):
 	if url.find('https://files.liferay.com/') == 0 or url.find('http://files.liferay.com/') == 0:
 		url_parts = url.split('/')
 		version_id = url_parts[6]
 		return version_id[:version_id.rfind('.')]
 
-	if url.find('https://github.com/'):
+	if url.find('https://github.com/') == 0:
 		# TODO
 		return 'master'
 
@@ -216,7 +219,7 @@ def get_project_id(url):
 		print('Unable to determine testray project from %s' % url)
 		return None
 
-	matching_name = 'Liferay Portal %s' % (version if version != 'master' else '7.1')
+	matching_name = 'Liferay Portal %s' % (master_version if version == 'master' else version)
 
 	matching_project_ids = [
 		project['testrayProjectId'] for project in json_response['data']
@@ -278,7 +281,7 @@ def get_routine_id(url):
 	return matching_routine_ids[0]
 
 def get_build_id(routine_id, search_name, matching_name, archived=False):
-	print('Looking up testray build by routine')
+	print('Looking up testray build by routine (archived = %r)' % archived)
 
 	base_url = 'https://testray.liferay.com/api/jsonws/osb-testray-web.builds/index'
 
@@ -404,7 +407,7 @@ def open_testray(url):
 
 	if url.find('https://github.com/') == 0:
 		build_id = get_github_build_id(url)
-	if url.find('https://patcher.liferay.com/') == 0:
+	elif url.find('https://patcher.liferay.com/') == 0:
 		patcher_url = url
 	elif url.find('https://files.liferay.com/') == 0:
 		build_id = get_hotfix_build_id(url)
