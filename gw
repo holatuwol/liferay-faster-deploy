@@ -38,6 +38,10 @@ findgradle() {
 }
 
 fixdefaults() {
+	if [ -f bnd.bnd ] && [ "" == "${JENKINS_HOME}" ] && [ "" != "$(grep -F Bundle-Version bnd.bnd | grep -F hotfix)" ]; then
+		export JENKINS_HOME=.
+	fi
+
 	if [ -f "${GIT_ROOT}/modules/build.gradle" ] && [ "" != "$(grep -F useNpmCI "${GIT_ROOT}/modules/build.gradle")" ]; then
 		return 0
 	fi
