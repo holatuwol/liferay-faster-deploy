@@ -65,7 +65,11 @@ fixdefaults() {
 	fi
 
 	if [[ $(expr ${PUBLIC_PACKAGE_JSON} '+' ${PRIVATE_PACKAGE_JSON}) -ne $(expr ${PUBLIC_PACKAGE_LOCK_JSON} '+' ${PRIVATE_PACKAGE_LOCK_JSON}) ]]; then
-		sed -i.bak '/com.liferay.gradle.plugins.defaults/s/version: "[^"]*"/version: "5.3.29"/' modules/build-buildscript.gradle
+		local PLUGINS_DEFAULTS_MAJOR_VERSION=$(grep com.liferay.gradle.plugins.defaults modules/build-buildscript.gradle | grep -o 'version: "[^"]*"' | cut -d'"' -f 2 | cut -d '.' -f 1)
+
+		if [ "${PLUGINS_DEFAULTS_MAJOR_VERSION}" == 5 ]; then
+			sed -i.bak '/com.liferay.gradle.plugins.defaults/s/version: "[^"]*"/version: "5.3.29"/' modules/build-buildscript.gradle
+		fi
 	fi
 
 	if [ "" != "${GIT_ROOT}" ]; then
