@@ -93,17 +93,26 @@ def getparent(check_tags):
 	if base_branch == '7.1.x' or base_branch == '7.1.x-private':
 		base_tag = git.describe('--tags', 'HEAD', '--abbrev=0', '--match=fix-pack-dxp-*')
 
-		if base_tag is None:
+		if base_tag is None or len(base_tag) == 0:
+			base_tag = git.describe('--tags', 'HEAD', '--abbrev=0', '--match=fix-pack-base-71*')
+
+		if base_tag is None or len(base_tag) == 0:
 			base_tag = git.describe('--tags', 'HEAD', '--abbrev=0', '--match=7.1.*-ga*')
 
 	elif base_branch == '7.0.x' or base_branch == '7.0.x-private':
 		base_tag = git.describe('--tags', 'HEAD', '--abbrev=0', '--match=fix-pack-de-*')
 
-		if base_tag is None:
+		if base_tag is None or len(base_tag) == 0:
+			base_tag = git.describe('--tags', 'HEAD', '--abbrev=0', '--match=fix-pack-base-70*')
+
+		if base_tag is None or len(base_tag) == 0:
 			base_tag = git.describe('--tags', 'HEAD', '--abbrev=0', '--match=7.0.*-ga*')
 
 	elif base_branch == 'ee-6.2.x':
-		base_tag = git.describe('--tags', 'HEAD', '--abbrev=0', '--match=fix-pack-base-*')
+		base_tag = git.describe('--tags', 'HEAD', '--abbrev=0', '--match=fix-pack-base-62*')
+
+	elif base_branch == 'ee-6.1.x':
+		base_tag = git.describe('--tags', 'HEAD', '--abbrev=0', '--match=fix-pack-base-6130')
 
 	if base_tag.find('fix-pack-base-') == 0 or base_tag.find('fix-pack-de-') == 0 or base_tag.find('fix-pack-dxp-') == 0 or base_tag.find('-ga') > -1:
 		return base_tag
