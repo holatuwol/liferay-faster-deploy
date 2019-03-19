@@ -1,5 +1,11 @@
 #!/bin/bash
 
+SCRIPT_FOLDER=$(dirname $0)
+
+s3upload() {
+	. ${SCRIPT_FOLDER}/s3upload $1
+}
+
 if [ -z "${PORTAL_SOURCE_ROOT_70}" ]; then
 	echo "Please set a PORTAL_SOURCE_ROOT_70 for the build"
 	exit 1
@@ -9,10 +15,6 @@ if [ -z "${PORTAL_SOURCE_ROOT_71}" ]; then
 	echo "Please set a PORTAL_SOURCE_ROOT_71 for the build"
 	exit 1
 fi
-
-SCRIPT_FOLDER=$(dirname $0)
-
-. ${SCRIPT_FOLDER}/s3upload
 
 # Make sure the packageinfo files are up to date
 
@@ -28,5 +30,12 @@ python ${SCRIPT_FOLDER}/requireschemajson.py $(dirname $PORTAL_SOURCE_ROOT_70) $
 # Upload the files to the designated bucket
 
 for file in dxppackages dxpmodules dxpschemas; do
-	s3upload ${file}
+	s3upload ${file}.json
+
+	pushd $(dirname ${BASH_SOURCE[0]}) > /dev/null
+
+	s3upload ${file}.html
+	s3upload ${file}.js
+
+	popd > /dev/null
 done

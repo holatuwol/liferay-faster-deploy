@@ -9,24 +9,15 @@ if [ -z "${AWS_PROFILE}" ]; then
 	AWS_PROFILE=default
 fi
 
-s3upload() {
-	rm -f ${1}.json.gz
-	gzip ${1}.json
-	aws s3 --profile $AWS_PROFILE cp ${1}.json.gz s3://$S3_BUCKET/${1}.json --acl public-read --metadata-directive REPLACE --content-encoding gzip
-	rm -f ${1}.json.gz
-
-	pushd $(dirname ${BASH_SOURCE[0]}) > /dev/null
-
-	for ext in html js; do
-		if [ ! -f ${1}.${ext} ]; then
-			continue
-		fi
-
-		rm -f ${1}.${ext}.gz
-		gzip ${1}.${ext}
-		aws s3 --profile $AWS_PROFILE cp ${1}.${ext}.gz s3://$S3_BUCKET/${1}.${ext} --acl public-read --metadata-directive REPLACE --content-encoding gzip
-		gunzip ${1}.${ext}.gz
-	done
-
-	popd > /dev/null
+s3cp() {
+	if [[ $1 == *.gz ]] || [[ $1 == *.zip ]]; then
+		aws s3 --profile $AWS_PROFILE cp ${1} s3://$S3_BUCKET/${1} --acl public-read --metadata-directive REPLACE
+	else
+		rm -f ${1}.gz
+		gzip ${1}
+		aws s3 --profile $AWS_PROFILE cp ${1}.gz s3://$S3_BUCKET/${1} --acl public-read --metadata-directive REPLACE --content-encoding gzip
+		rm -f ${1}.gz
+	fi
 }
+
+s3cp $@
