@@ -303,6 +303,12 @@ packageinfo_release() {
 
 	pushd "${GIT_ROOT}" > /dev/null
 
+	. $(dirname ${BASH_SOURCE[0]})/../setopts
+
+	if [[ 0 -ne $? ]]; then
+		return 1
+	fi
+
 	OUTPUT_FOLDER=$(dirname $PWD)/metadata
 
 	mkdir -p $OUTPUT_FOLDER
@@ -371,11 +377,6 @@ if [ -z "${PORTAL_SOURCE_ROOT_71}" ]; then
 	exit 1
 fi
 
-. $(dirname ${BASH_SOURCE[0]})/../setopts
-
-if [[ 0 -ne $? ]]; then
-	exit 1
-fi
 
 packageinfo_release ${PORTAL_SOURCE_ROOT_70} 7.0 70
 packageinfo_release ${PORTAL_SOURCE_ROOT_71} 7.1 71
