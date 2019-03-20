@@ -39,3 +39,13 @@ for file in dxppackages dxpmodules dxpschemas; do
 
 	popd > /dev/null
 done
+
+cd /run/shm
+
+rm -f metadata-70x.zip
+zip -jqqr metadata-70x.zip $(dirname $PORTAL_SOURCE_ROOT_70)/metadata
+s3upload metadata-70x.zip
+
+rm -f metadata-71x.zip
+zip -jqqr metadata-71x.zip $(dirname $PORTAL_SOURCE_ROOT_71)/metadata
+s3upload metadata-71x.zip

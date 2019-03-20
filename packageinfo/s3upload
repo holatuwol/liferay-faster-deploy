@@ -10,13 +10,13 @@ if [ -z "${AWS_PROFILE}" ]; then
 fi
 
 s3cp() {
-	if [[ $1 == *.gz ]] || [[ $1 == *.zip ]]; then
+	if [[ $1 == *.gz ]]; then
 		aws s3 --profile $AWS_PROFILE cp ${1} s3://$S3_BUCKET/${1} --acl public-read --metadata-directive REPLACE
 	else
 		rm -f ${1}.gz
 		gzip ${1}
 		aws s3 --profile $AWS_PROFILE cp ${1}.gz s3://$S3_BUCKET/${1} --acl public-read --metadata-directive REPLACE --content-encoding gzip
-		rm -f ${1}.gz
+		gunzip ${1}.gz
 	fi
 }
 
