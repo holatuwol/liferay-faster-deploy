@@ -14,8 +14,22 @@ bootstrap() {
 	while read -r line; do
 		local ARTIFACT_NAME=$(echo "${line}" | grep -o 'name: "[^"]*"' | cut -d'"' -f 2)
 		local ARTIFACT_VERSION=$(echo "${line}" | grep -o 'version: "[^"]*"' | cut -d'"' -f 2)
-		echo "com.liferay,${ARTIFACT_NAME},${ARTIFACT_VERSION}" >> ${OUTPUT_FILE}
+
+		if [ "" != "${ARTIFACT_NAME}" ] && [ "" != "${ARTIFACT_VERSION}" ]; then
+			echo "com.liferay,${ARTIFACT_NAME},${ARTIFACT_VERSION}" >> ${OUTPUT_FILE}
+		fi
 	done <<< $(grep -F 'group: "com.liferay"' $(git ls-files modules | grep -F '/portal-bootstrap/build.gradle'))
+
+	while read -r line; do
+		local PROJECT_PATH=$(echo ${line} | sed 's@:@/@g')
+		local ARTIFACT_NAME=$(grep -F Bundle-SymbolicName "modules${PROJECT_PATH}/bnd.bnd" | cut -d' ' -f 2-)
+		local ARTIFACT_VERSION=
+
+		if [ -f modules/.releng${PROJECT_PATH}/artifact.properties ]; then
+			ARTIFACT_VERSION=$(grep 'artifact.url' modules/.releng${PROJECT_PATH}/artifact.properties | cut -d'=' -f 2 | grep -o "/${ARTIFACT_NAME}/[^/]*" | cut -d'/' -f 3)
+			echo "com.liferay,${ARTIFACT_NAME},${ARTIFACT_VERSION}" >> ${OUTPUT_FILE}
+		fi
+	done <<< $(grep -F 'project("' $(git ls-files modules | grep -F '/portal-bootstrap/build.gradle') | grep -o '".*"' | cut -d'"' -f 2)
 }
 
 bundleinfo() {
@@ -376,7 +390,6 @@ if [ -z "${PORTAL_SOURCE_ROOT_71}" ]; then
 	echo "Please set a PORTAL_SOURCE_ROOT_71 for the build"
 	exit 1
 fi
-
 
 packageinfo_release ${PORTAL_SOURCE_ROOT_70} 7.0 70
 packageinfo_release ${PORTAL_SOURCE_ROOT_71} 7.1 71
