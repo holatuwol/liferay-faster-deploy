@@ -118,7 +118,7 @@ def read_dependencies_file(folder, file_name):
 		with open('%s/metadata/%s' % (folder, file_name), 'r') as f:
 			reader = csv.reader(f)
 			result = {
-				row[1]: {
+				row[2]: {
 					'group': row[1],
 					'name': row[2],
 					'version': row[3],
