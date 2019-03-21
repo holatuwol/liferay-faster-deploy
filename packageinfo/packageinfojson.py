@@ -128,20 +128,6 @@ def read_dependencies_file(folder, file_name):
 				for row in reader if len(row) == 4
 			}
 
-	private_file_name = file_name[0:-4] + '-private' + file_name[-4:]
-
-	if os.path.isfile('%s/metadata/%s' % (folder, private_file_name)):
-		with open('%s/metadata/%s' % (folder, private_file_name), 'r') as f:
-			reader = csv.reader(f)
-			for row in reader:
-				result[row[1]] = {
-					'group': row[0],
-					'name': row[1],
-					'version': row[2],
-					'repository': row[3],
-					'packaging': row[4]
-				}
-
 	return result
 
 def read_package_file(folder, file_name):
