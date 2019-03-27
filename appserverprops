@@ -27,7 +27,7 @@ buildprops() {
 			perl -pi -e 's/\r\n|\n|\r/\n/g' "$GIT_ROOT/build.$USER.properties"
 		fi
 
-		if [ "" == "$(grep -F baseline.jar.report.level build.${USER}.properties)" ]; then
+		if [ "" == "$(grep -F baseline.jar.report.level $GIT_ROOT/build.${USER}.properties)" ]; then
 			echo -e '\nbaseline.jar.report.level=off' >> $GIT_ROOT/build.${USER}.properties
 		fi
 
