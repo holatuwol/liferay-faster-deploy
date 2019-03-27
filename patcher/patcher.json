@@ -137,6 +137,10 @@
 	"fix-pack-de-74-7010-private": 121641794,
 	"fix-pack-de-75-7010": 122252910,
 	"fix-pack-de-75-7010-private": 122252909,
+	"fix-pack-de-76-7010": 122942407,
+	"fix-pack-de-76-7010-private": 122942402,
+	"fix-pack-de-77-7010": 123461269,
+	"fix-pack-de-77-7010-private": 123461264,
 	"7.1.x": 102311424,
 	"7.1.x-private": 102311424,
 	"fix-pack-base-7110": 102857159,
@@ -156,5 +160,7 @@
 	"fix-pack-dxp-7-7110": 121033093,
 	"fix-pack-dxp-7-7110-private": 121033092,
 	"fix-pack-dxp-8-7110": 121751464,
-	"fix-pack-dxp-8-7110-private": 121751459
+	"fix-pack-dxp-8-7110-private": 121751459,
+	"fix-pack-dxp-9-7110": 123105933,
+	"fix-pack-dxp-9-7110-private": 123105932
 }
