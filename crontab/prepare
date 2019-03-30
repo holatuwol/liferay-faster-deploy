@@ -197,6 +197,7 @@ finish() {
 
 	if [ -d "${ARCHIVE_FOLDER}" ]; then
 		find ${ARCHIVE_FOLDER} -name "${1}-[0-9]*.tar.gz" | xargs rm
+		cp ${SCRIPT_FOLDER}/BUNDLE_NOT_PATCHABLE .
 
 		if [ "" != "$TIMESTAMP" ]; then
 			tar -zcf ${ARCHIVE_FOLDER}/${1}-${TIMESTAMP}.tar.gz *

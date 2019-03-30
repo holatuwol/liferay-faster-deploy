@@ -1,0 +1,14 @@
+This bundle is a reference bundle created by building a tag or branch from
+source.
+
+Because it is not a release bundle with .lpkg files, you can deploy changes
+from portal-impl or portal-kernel, or changes to a small number of modules,
+without having to use marketplace overrides and without running 'ant all'.
+
+However, also because it is not a release bundle with .lpkg files, you
+cannot apply fix packs or hotfixes to this bundle using patching tool.
+
+If you are evaluating a customer hotfix, please use a release bundle or use
+the 'bundle' command from the liferay-faster-deploy repository.
+
+http://mirrors/files.liferay.com/private/ee/portal/
