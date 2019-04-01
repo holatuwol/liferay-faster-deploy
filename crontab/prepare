@@ -8,6 +8,8 @@ compile() {
 	echo "Starting compilation for $1"
 	GIT_HASH=$(git log -1 --pretty='%H')
 
+	rm -rf ${HOME}/.liferay/node-modules-cache
+
 	enable_marketplace_app_deployment
 	disable_javascript_fast_load
 
