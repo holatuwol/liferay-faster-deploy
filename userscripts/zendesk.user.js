@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        2.7
+// @version        2.8
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @match          https://liferay-support.zendesk.com/agent/*
@@ -87,6 +87,16 @@ a.generating::after {
   margin: 0px;
   padding: 0px;
   width: 100%;
+}
+
+.lesa-ui-stackedit-icon {
+  height: 16px;
+  width: 16px;
+  padding: 4px;
+}
+
+.lesaui-stackedit-lastcontent {
+  display: none;
 }
 `;
 
@@ -798,29 +808,57 @@ function addJiraLinksToElement(element) {
 }
 
 /**
- * Formats a comment. This includes automatic detection of an attempt to
- * use Markdown, and replacing plain text mentions of LPS tickets and LPE
- * tickets with HTML.
+ * Adds a button which loads a window which allows you to compose a
+ * post with Markdown.
  */
 
-function formatCommentElement(element) {
-  if (element.innerText.substring(0, 3) == '.md') {
-    var stackedit = new Stackedit();
+function addStackeditButton(element) {
+  var img = document.createElement('img');
+  img.title = 'Compose with Stackedit';
+  img.classList.add('lesa-ui-stackedit-icon');
+  img.src = 'https://benweet.github.io/stackedit.js/icon.svg';
 
-    stackedit.openFile({
-      content: {
-        text: element.innerText.substring(3).trim()
-      }
-    });
+  var listItem = document.createElement('li');
+  listItem.appendChild(img);
+  listItem.onclick = composeWithStackedit.bind(null, element);
 
-    stackedit.on('fileChange', (file) => {
-      element.innerHTML = file.content.html;
-      addJiraLinksToElement(element);
-    });
+  element.parentNode.parentNode.querySelector('.zendesk-editor--toolbar ul').appendChild(listItem);
+}
+
+/**
+ * Allows you to compose a post with Markdown, even if we are still
+ * configured to use Zendesk's WYSIWYG editor.
+ */
+
+function composeWithStackedit(element) {
+  var lastContentElement = element.parentNode.querySelector('.lesaui-stackedit-lastcontent');
+  var lastContent = null;
+
+  if (lastContentElement) {
+    lastContent = lastContentElement.innerHTML;
   }
   else {
-    addJiraLinksToElement(element);
+    lastContentElement = document.createElement('div');
+    lastContentElement.classList.add('lesaui-stackedit-lastcontent');
+    element.parentNode.appendChild(lastContentElement);
+
+    lastContent = element.innerText;
   }
+
+  var stackedit = new Stackedit();
+
+  stackedit.openFile({
+    content: {
+      text: lastContent
+    }
+  });
+
+  stackedit.on('fileChange', (file) => {
+    element.innerHTML = file.content.html;
+    lastContentElement.innerHTML = file.content.text;
+
+    addJiraLinksToElement(element);
+  });
 }
 
 /**
@@ -838,7 +876,8 @@ function addJiraLinks(ticketId, ticketInfo, conversation) {
   var newComments = conversation.querySelectorAll('.zendesk-editor--rich-text-container .zendesk-editor--rich-text-comment');
 
   for (var i = 0; i < newComments.length; i++) {
-    newComments[i].onblur = formatCommentElement.bind(null, newComments[i]);
+    addStackeditButton(newComments[i]);
+    newComments[i].onblur = addJiraLinksToElement.bind(null, newComments[i]);
   }
 
   var comments = conversation.querySelectorAll('div[data-comment-id]');
