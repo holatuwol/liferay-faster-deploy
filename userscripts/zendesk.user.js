@@ -1,13 +1,14 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        2.8
+// @version        2.9
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @match          https://liferay-support.zendesk.com/agent/*
 // @grant          none
 // @require        https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.5/jszip.min.js
 // @require        https://unpkg.com/stackedit-js@1.0.7/docs/lib/stackedit.min.js
+// @require        https://unpkg.com/turndown/dist/turndown.js
 // ==/UserScript==
 
 var styleElement = document.createElement('style');
@@ -830,32 +831,19 @@ function addStackeditButton(element) {
  * configured to use Zendesk's WYSIWYG editor.
  */
 
+var turndownService = new TurndownService();
+
 function composeWithStackedit(element) {
-  var lastContentElement = element.parentNode.querySelector('.lesaui-stackedit-lastcontent');
-  var lastContent = null;
-
-  if (lastContentElement) {
-    lastContent = lastContentElement.innerHTML;
-  }
-  else {
-    lastContentElement = document.createElement('div');
-    lastContentElement.classList.add('lesaui-stackedit-lastcontent');
-    element.parentNode.appendChild(lastContentElement);
-
-    lastContent = element.innerText;
-  }
-
   var stackedit = new Stackedit();
 
   stackedit.openFile({
     content: {
-      text: lastContent
+      text: turndownService.turndown(element.innerHTML)
     }
   });
 
   stackedit.on('fileChange', (file) => {
     element.innerHTML = file.content.html;
-    lastContentElement.innerHTML = file.content.text;
 
     addJiraLinksToElement(element);
   });
