@@ -1,12 +1,13 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        2.6
+// @version        2.7
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @match          https://liferay-support.zendesk.com/agent/*
 // @grant          none
 // @require        https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.5/jszip.min.js
+// @require        https://unpkg.com/stackedit-js@1.0.7/docs/lib/stackedit.min.js
 // ==/UserScript==
 
 var styleElement = document.createElement('style');
@@ -797,6 +798,32 @@ function addJiraLinksToElement(element) {
 }
 
 /**
+ * Formats a comment. This includes automatic detection of an attempt to
+ * use Markdown, and replacing plain text mentions of LPS tickets and LPE
+ * tickets with HTML.
+ */
+
+function formatCommentElement(element) {
+  if (element.innerText.substring(0, 3) == '.md') {
+    var stackedit = new Stackedit();
+
+    stackedit.openFile({
+      content: {
+        text: element.innerText.substring(3).trim()
+      }
+    });
+
+    stackedit.on('fileChange', (file) => {
+      element.innerHTML = file.content.html;
+      addJiraLinksToElement(element);
+    });
+  }
+  else {
+    addJiraLinksToElement(element);
+  }
+}
+
+/**
  * Scan the ticket for LPS tickets and LPE tickets, and replace any
  * plain text with HTML.
  */
@@ -811,7 +838,7 @@ function addJiraLinks(ticketId, ticketInfo, conversation) {
   var newComments = conversation.querySelectorAll('.zendesk-editor--rich-text-container .zendesk-editor--rich-text-comment');
 
   for (var i = 0; i < newComments.length; i++) {
-    newComments[i].onblur = addJiraLinksToElement.bind(null, newComments[i]);
+    newComments[i].onblur = formatCommentElement.bind(null, newComments[i]);
   }
 
   var comments = conversation.querySelectorAll('div[data-comment-id]');
