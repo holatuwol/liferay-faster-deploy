@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        2.9
+// @version        3.0
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @match          https://liferay-support.zendesk.com/agent/*
@@ -831,10 +831,21 @@ function addStackeditButton(element) {
  * configured to use Zendesk's WYSIWYG editor.
  */
 
-var turndownService = new TurndownService();
+var paragraphTag = /<(\/)?p>/g;
+
+var turndownService = new TurndownService({
+	codeBlockStyle: 'fenced'
+});
 
 function composeWithStackedit(element) {
   var stackedit = new Stackedit();
+
+  var preElements = element.querySelectorAll('pre');
+
+  for (var i = 0; i < preElements.length; i++) {
+    preElements[i].style = '';
+    preElements[i].innerHTML = preElements[i].innerHTML.replace(paragraphTag, '<$1code>');
+  }
 
   stackedit.openFile({
     content: {
