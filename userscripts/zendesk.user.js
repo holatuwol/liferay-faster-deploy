@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        3.1
+// @version        3.2
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
-// @match          https://liferay-support.zendesk.com/agent/*
+// @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
 // @grant          none
 // @require        https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.5/jszip.min.js
 // @require        https://unpkg.com/stackedit-js@1.0.7/docs/lib/stackedit.min.js
