@@ -1,14 +1,14 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        3.0
+// @version        3.1
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @match          https://liferay-support.zendesk.com/agent/*
 // @grant          none
 // @require        https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.5/jszip.min.js
 // @require        https://unpkg.com/stackedit-js@1.0.7/docs/lib/stackedit.min.js
-// @require        https://unpkg.com/turndown/dist/turndown.js
+// @require        https://unpkg.com/turndown@5.0.3/dist/turndown.js
 // ==/UserScript==
 
 var styleElement = document.createElement('style');
@@ -94,10 +94,6 @@ a.generating::after {
   height: 16px;
   width: 16px;
   padding: 4px;
-}
-
-.lesaui-stackedit-lastcontent {
-  display: none;
 }
 `;
 
@@ -813,7 +809,7 @@ function addJiraLinksToElement(element) {
  * post with Markdown.
  */
 
-function addStackeditButton(element) {
+function addStackeditButton(element, callback) {
   var img = document.createElement('img');
   img.title = 'Compose with Stackedit';
   img.classList.add('lesa-ui-stackedit-icon');
@@ -821,9 +817,28 @@ function addStackeditButton(element) {
 
   var listItem = document.createElement('li');
   listItem.appendChild(img);
-  listItem.onclick = composeWithStackedit.bind(null, element);
+  listItem.onclick = composeWithStackedit.bind(null, element, callback);
 
   element.parentNode.parentNode.querySelector('.zendesk-editor--toolbar ul').appendChild(listItem);
+}
+
+/**
+ * Add buttons which load windows that allow you to compose a post
+ * with Markdown.
+ */
+
+function addStackeditButtons(ticketId, ticketInfo, conversation) {
+  if (conversation.classList.contains('lesa-ui-stackedit')) {
+    return;
+  }
+
+  conversation.classList.add('lesa-ui-stackedit');
+
+  var newComments = conversation.querySelectorAll('.zendesk-editor--rich-text-container .zendesk-editor--rich-text-comment');
+
+  for (var i = 0; i < newComments.length; i++) {
+    addStackeditButton(newComments[i], addJiraLinksToElement);
+  }
 }
 
 /**
@@ -837,7 +852,7 @@ var turndownService = new TurndownService({
 	codeBlockStyle: 'fenced'
 });
 
-function composeWithStackedit(element) {
+function composeWithStackedit(element, callback) {
   var stackedit = new Stackedit();
 
   var preElements = element.querySelectorAll('pre');
@@ -856,7 +871,9 @@ function composeWithStackedit(element) {
   stackedit.on('fileChange', (file) => {
     element.innerHTML = file.content.html;
 
-    addJiraLinksToElement(element);
+    if (callback) {
+      callback(element);
+    }
   });
 }
 
@@ -875,7 +892,6 @@ function addJiraLinks(ticketId, ticketInfo, conversation) {
   var newComments = conversation.querySelectorAll('.zendesk-editor--rich-text-container .zendesk-editor--rich-text-comment');
 
   for (var i = 0; i < newComments.length; i++) {
-    addStackeditButton(newComments[i]);
     newComments[i].onblur = addJiraLinksToElement.bind(null, newComments[i]);
   }
 
@@ -1095,6 +1111,7 @@ function checkTicketConversation(ticketId, ticketInfo) {
   var conversation = document.querySelector('div[data-side-conversations-anchor-id="' + ticketId + '"]');
 
   if (conversation) {
+    addStackeditButtons(ticketId, ticketInfo, conversation);
     addJiraLinks(ticketId, ticketInfo, conversation);
     addTicketDescription(ticketId, ticketInfo, conversation);
     addPermaLinks(ticketId, ticketInfo, conversation);
