@@ -150,6 +150,14 @@ deploymodules() {
 
 	for folder in $(cat ${GIT_ROOT}/.redeploy/changes_gradle_2.txt); do
 		if [ -f $folder/.lfrbuild-portal ]; then
+			if [[ $NEW_BASELINE == fix-pack-* ]] && [ "" == "$(grep -F hotfix $folder/bnd.bnd)" ]; then
+				local RELEASE_ID=$(echo $NEW_BASELINE | grep -o '[0-9]*$')
+
+				sed -i.bak '/^Bundle-Version: /s@\(.*\)$@\1.hotfix-0-'${RELEASE_ID}'@g' $folder/bnd.bnd
+				test -f $folder/package.json && sed -i.bak '/^\t"version":/s@\(.*\)"$@\1.hotfix-0-'${RELEASE_ID}'"@g' $folder/package.json
+				test -f $folder/package-lock.json && sed -i.bak '/^\t"version":/s@\(.*\)",$@\1.hotfix-0-'${RELEASE_ID}'",@g' $folder/package-lock.json
+			fi
+
 			echo $folder >> ${GIT_ROOT}/.redeploy/changes_gradle_3.txt
 			unziposgijar $folder
 		fi
