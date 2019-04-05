@@ -151,6 +151,7 @@ deploymodules() {
 	for folder in $(cat ${GIT_ROOT}/.redeploy/changes_gradle_2.txt); do
 		if [ -f $folder/.lfrbuild-portal ]; then
 			if [[ $NEW_BASELINE == fix-pack-* ]] && [ "" == "$(grep -F hotfix $folder/bnd.bnd)" ]; then
+				export JENKINS_HOME=/tmp
 				local RELEASE_ID=$(echo $NEW_BASELINE | grep -o '[0-9]*$')
 
 				sed -i.bak '/^Bundle-Version: /s@\(.*\)$@\1.hotfix-0-'${RELEASE_ID}'@g' $folder/bnd.bnd
@@ -174,7 +175,7 @@ deploymodules() {
 	done
 
 	cd modules
-	cat ${GIT_ROOT}/.redeploy/deploy_gradle.txt | sort | xargs $(dirname "${BASH_SOURCE[0]}")/gw
+	cat ${GIT_ROOT}/.redeploy/deploy_gradle.txt | sort | xargs $(dirname "${BASH_SOURCE[0]}")/gw --continue
 	cd ..
 }
 
