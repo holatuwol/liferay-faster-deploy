@@ -716,12 +716,6 @@ function clearHighlightedComments() {
 function highlightComment(commentId, updateHistory) {
   if (commentId) {
     clearHighlightedComments();
-
-    if (updateHistory) {
-      var commentURL = 'https://' + document.location.host + document.location.pathname + '?comment=' + commentId;
-
-      history.pushState({path: commentURL}, '', commentURL);
-    }
   }
   else {
     var commentString = '?comment=';
@@ -735,10 +729,20 @@ function highlightComment(commentId, updateHistory) {
     commentId = document.location.search.substring(commentString.length);
   }
 
+  if (!Number.isInteger(commentId)) {
+    return;
+  }
+
   var comment = document.querySelector('div[data-comment-id="' + commentId + '"]');
 
   if (!comment) {
     return;
+  }
+
+  if (updateHistory) {
+    var commentURL = 'https://' + document.location.host + document.location.pathname + '?comment=' + commentId;
+
+    history.pushState({path: commentURL}, '', commentURL);
   }
 
   var event = comment.closest('.event');
@@ -839,13 +843,9 @@ function fixPermaLinkAnchors(ticketId, ticketInfo, conversation) {
     }
 
     if (href.substring(x + 9, y) == ticketId) {
-      try {
-        var commentId = parseInt(href.substring(y + 9));
+      var commentId = href.substring(y + 9);
 
-        anchor.onclick = highlightComment.bind(null, commentId, true);
-      }
-      catch (e) {
-      }
+      anchor.onclick = highlightComment.bind(null, commentId, true);
     }
     else {
       var commentURL = 'https://' + document.location.host + '/agent' + href.substring(x);
