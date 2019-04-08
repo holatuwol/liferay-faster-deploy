@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        3.2
+// @version        3.3
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -697,22 +697,38 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
 }
 
 /**
+ * Removes the highlight class from all comments.
+ */
+
+function clearHighlightedComments() {
+  var highlightedComments = document.querySelectorAll('.lesa-ui-event-highlighted');
+
+  for (var i = 0; i < highlightedComments.length; i++) {
+    highlightedComments[i].classList.remove('lesa-ui-event-highlighted');
+  }
+}
+
+/**
  * Scroll to a specific comment if its comment ID is included in a
  * query string parameter.
  */
 
-function highlightComment(commentId) {
+function highlightComment(commentId, updateHistory) {
   if (commentId) {
-    var highlightedComments = document.querySelectorAll('.lesa-ui-event-highlighted');
+    clearHighlightedComments();
 
-    for (var i = 0; i < highlightedComments.length; i++) {
-      highlightedComments[i].classList.remove('lesa-ui-event-highlighted');
+    if (updateHistory) {
+      var commentURL = 'https://' + document.location.host + document.location.pathname + '?comment=' + commentId;
+
+      history.pushState({path: commentURL}, '', commentURL);
     }
   }
   else {
     var commentString = '?comment=';
 
     if (!document.location.search || (document.location.search.indexOf(commentString) != 0)) {
+      clearHighlightedComments();
+
       return;
     }
 
@@ -778,6 +794,65 @@ function addPermaLinks(ticketId, ticketInfo, conversation) {
 
     var commentHeader = comments[i].querySelector('.content .header');
     commentHeader.appendChild(permalinkContainer);
+  }
+}
+
+/**
+ * Attempt to bypass the single page application framework used by
+ * ZenDesk and force a page reload.
+ */
+
+function skipSinglePageApplication(href) {
+  document.location.href = href;
+
+  return false;
+}
+
+/**
+ * Detect any existing permalinks on the page, and make them open in
+ * a new tab (if they are an existing ticket) or auto-scroll.
+ */
+
+function fixPermaLinkAnchors(ticketId, ticketInfo, conversation) {
+  var permalinks = conversation.querySelectorAll('div[data-comment-id] div.lesa-ui-permalink');
+
+  if (permalinks.length > 0) {
+    return;
+  }
+
+  var anchors = conversation.querySelectorAll('a');
+
+  for (var i = 0; i < anchors.length; i++) {
+    var anchor = anchors[i];
+    var href = anchors[i].href;
+
+    var x = href.indexOf('/tickets/');
+
+    if (x == -1) {
+      continue;
+    }
+
+    var y = href.indexOf('?comment=');
+
+    if (y == -1) {
+      continue;
+    }
+
+    if (href.substring(x + 9, y) == ticketId) {
+      try {
+        var commentId = parseInt(href.substring(y + 9));
+
+        anchor.onclick = highlightComment.bind(null, commentId, true);
+      }
+      catch (e) {
+      }
+    }
+    else {
+      var commentURL = 'https://' + document.location.host + '/agent' + href.substring(x);
+
+      anchor.href = '';
+      anchor.onclick = skipSinglePageApplication.bind(null, commentURL);
+    }
   }
 }
 
@@ -1114,6 +1189,7 @@ function checkTicketConversation(ticketId, ticketInfo) {
     addStackeditButtons(ticketId, ticketInfo, conversation);
     addJiraLinks(ticketId, ticketInfo, conversation);
     addTicketDescription(ticketId, ticketInfo, conversation);
+    fixPermaLinkAnchors(ticketId, ticketInfo, conversation);
     addPermaLinks(ticketId, ticketInfo, conversation);
     updateWindowTitle(ticketId, ticketInfo);
   }
