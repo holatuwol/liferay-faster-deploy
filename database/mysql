@@ -59,7 +59,7 @@ updateprops() {
 
 	echo "
 jdbc.default.driverClassName=com.mysql.jdbc.Driver
-jdbc.default.url=jdbc:mysql://${DB_HOST_NAME}/lportal?characterEncoding=UTF-8&dontTrackOpenResources=true&holdResultsOpenOverStatementClose=true&useFastDateParsing=false&useUnicode=true
+jdbc.default.url=jdbc:mysql://${DB_HOST_NAME}/lportal?characterEncoding=UTF-8&dontTrackOpenResources=true&holdResultsOpenOverStatementClose=true&useFastDateParsing=false&useUnicode=true&serverTimezone=GMT
 jdbc.default.username=lportal
 jdbc.default.password=lportal
 " >> ${LIFERAY_HOME}/portal-ext.properties
