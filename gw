@@ -168,7 +168,8 @@ gw() {
 		echo $GRADLE_HOME/gradlew $GRADLE_ARGS $@
 
 		if [ -f bnd.bnd ] && [ "" == "${JENKINS_HOME}" ] && [ "" != "$(grep -F Bundle-Version bnd.bnd | grep -F hotfix)" ]; then
-			JENKINS_HOME=. $GRADLE_HOME/gradlew $GRADLE_ARGS $@
+			FIX_PACKS_RELEASE_ENVIRONMENT=production JENKINS_HOME=. $GRADLE_HOME/gradlew $GRADLE_ARGS $@
+
 		else
 			$GRADLE_HOME/gradlew $GRADLE_ARGS $@
 		fi
