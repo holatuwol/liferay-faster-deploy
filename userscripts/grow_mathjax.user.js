@@ -1,6 +1,9 @@
 // ==UserScript==
 // @name           Add MathJax to Grow
 // @namespace      holatuwol
+// @version        1.0
+// @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/grow_mathjax.user.js
+// @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/grow_mathjax.user.js
 // @match          https://grow.liferay.com/*
 // @grant          none
 // ==/UserScript==

@@ -1,6 +1,9 @@
 // ==UserScript==
 // @name           Liferay Ultipro Timesheet Link
 // @namespace      holatuwol
+// @version        1.0
+// @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/ultipro.user.js
+// @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/ultipro.user.js
 // @match          https://wfm-time-web2.ultipro.com/
 // @match          https://wfm-time-web2.ultipro.com/
 // @match          https://wfm-toa-web2.ultipro.com/*
