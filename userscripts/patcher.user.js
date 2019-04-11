@@ -1,13 +1,26 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        1.0
+// @version        1.1
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/*
 // @match          https://patcher.liferay.com/group/guest/patching/-/osb_patcher/fixes/*
 // @grant          none
 // ==/UserScript==
+
+var styleElement = document.createElement('style');
+
+styleElement.textContent = `
+a.included-in-baseline,
+a.included-in-baseline:hover {
+  color: #ddd;
+  text-decoration: line-through;
+}
+`;
+
+document.querySelector('head').appendChild(styleElement);
+
 
 var portletId = '1_WAR_osbpatcherportlet';
 var ns = '_' + portletId + '_';
@@ -47,7 +60,20 @@ function replaceFixes(target) {
 
   if (oldNode && oldNode.readOnly) {
     replaceNode(oldNode, oldNode.innerHTML.split(',').map(
-      ticket => (ticket.toUpperCase() == ticket) ? '<a href="https://issues.liferay.com/browse/' + ticket + '" target="_blank">' + ticket + '</a>' : ticket
+      ticket => {
+        if (ticket.toUpperCase() != ticket) {
+          return ticket;
+        }
+
+        var ticketURL = 'https://issues.liferay.com/browse/' + ticket;
+        var className = '';
+
+        if (target == 'patcherBuildOriginalName' && !document.querySelector('a[href="' + ticketURL + '"]')) {
+          className = 'included-in-baseline'
+        }
+
+        return '<a class="' + className + '" href="' + ticketURL + '" target="_blank">' + ticket + '</a>';
+      }
     ).join(', '));
   }
 }
