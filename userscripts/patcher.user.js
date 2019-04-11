@@ -102,6 +102,7 @@ for (var i = 0; i < buttons.length; i++) {
 
 replaceFixes('patcherFixName');
 replaceFixes('patcherBuildName');
+replaceFixes('patcherBuildOriginalName');
 replaceAccountLink('accountEntryCode');
 replaceAccountLink('patcherBuildAccountEntryCode');
 replaceLesaLink('lesaTicket');
