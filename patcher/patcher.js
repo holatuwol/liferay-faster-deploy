@@ -2,7 +2,9 @@ function setProductVersions(accumulator, next) {
 	next.selected = true;
 	_1_WAR_osbpatcherportlet_productVersionOnChange(next.value);
 
-	AUI().all('#_1_WAR_osbpatcherportlet_patcherProjectVersionId option')._nodes.reduce(
+	var projectVersions = document.querySelectorAll('#_1_WAR_osbpatcherportlet_patcherProjectVersionId option');
+
+	Array.from(projectVersions).reduce(
 		next.innerText.trim() == 'Portal 6.x' ? setProjectVersions6 : setProjectVersions7,
 		accumulator
 	);
@@ -97,24 +99,30 @@ function compareLiferayVersions(a, b) {
 	return a > b ? 1 : a < b ? -1 : 0;
 };
 
-var projectVersionIds = {
-	'ee-6.1.x': 101625503,
-	'ee-6.2.x': 101625503,
-	'ee-7.0.x': 101625504,
-	'7.0.x': 101625504,
-	'7.0.x-private': 101625504,
-	'7.1.x': 102311424,
-	'7.1.x-private': 102311424
-};
+function generatePatcherJSON() {
+	var productVersionOptions = document.querySelectorAll('#_1_WAR_osbpatcherportlet_patcherProductVersionId option');
 
-AUI().all('#_1_WAR_osbpatcherportlet_patcherProductVersionId option')._nodes.reduce(setProductVersions, projectVersionIds);
+	var projectVersionIds = {
+			'ee-6.1.x': 101625503,
+			'ee-6.2.x': 101625503,
+			'ee-7.0.x': 101625504,
+			'7.0.x': 101625504,
+			'7.0.x-private': 101625504,
+			'7.1.x': 102311424,
+			'7.1.x-private': 102311424
+	};
 
-delete projectVersionIds['fix-pack-base-6210-sp18'];
+	Array.from(productVersionOptions).reduce(setProductVersions, projectVersionIds);
 
-var jsonString = JSON.stringify(
-	projectVersionIds,
-	Object.keys(projectVersionIds).sort(compareLiferayVersions),
-	4
-);
+	delete projectVersionIds['fix-pack-base-6210-sp18'];
 
-console.log(jsonString.replace(/    /g, '\t'));
+	var jsonString = JSON.stringify(
+			projectVersionIds,
+			Object.keys(projectVersionIds).sort(compareLiferayVersions),
+			4
+	);
+
+	console.log(jsonString.replace(/		/g, '\t'));
+}
+
+generatePatcherJSON();
