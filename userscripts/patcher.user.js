@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        1.2
+// @version        1.3
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/*
@@ -58,6 +58,14 @@ function replaceNode(oldNode, newHTML) {
 function replaceFixes(target) {
   var oldNode = querySelector(target);
 
+  var isConflict = false;
+
+  var statusNode = document.querySelector('label[for="_1_WAR_osbpatcherportlet_patcher-status"]');
+
+  if (statusNode) {
+    isConflict = statusNode.parentNode.textContent.indexOf('Conflict') != -1;
+  }
+
   if (oldNode && oldNode.readOnly) {
     replaceNode(oldNode, oldNode.innerHTML.split(',').map(
       ticket => {
@@ -66,6 +74,23 @@ function replaceFixes(target) {
         }
 
         var ticketURL = 'https://issues.liferay.com/browse/' + ticket;
+
+        if (isConflict) {
+          var productVersionId = querySelector('patcherProductVersionId').value;
+          var projectVersionId = querySelector('patcherProjectVersionId').value;
+
+          var params = {
+            advancedSearch: true,
+            andOperator: true,
+            hideOldFixVersions: true,
+            patcherFixName: ticket,
+            patcherProductVersionId: productVersionId,
+            patcherProjectVersionIdFilter: projectVersionId
+          };
+
+          ticketURL = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher?' + getQueryString(params);
+        }
+
         var className = '';
 
         if (target == 'patcherBuildOriginalName' && !document.querySelector('a[href="' + ticketURL + '"]')) {
