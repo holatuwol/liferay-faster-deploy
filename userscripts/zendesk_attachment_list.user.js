@@ -2,7 +2,7 @@
 // @name           ZenDesk Attachment List
 // @namespace      holatuwol
 // @license        0BSD
-// @version        1.1
+// @version        1.2
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk_attachment_list.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk_attachment_list.user.js
 // @match          https://*.zendesk.com/agent/*
@@ -174,23 +174,60 @@ function createAnchorTag(text, href, download) {
 }
 
 /**
- * Generate a single row in the attachment table based on the provided link.
+ * Generate a single object representing the metadata for the attachment.
  */
 
-function createAttachmentRow(attachment) {
-  var attachmentComment = attachment.closest('div[data-comment-id]');
-
-  var attachmentInfo = document.createElement('div');
-  attachmentInfo.classList.add('lesa-ui-attachment-info')
+function extractAttachmentLinkMetadata(attachmentLink) {
+  var comment = attachmentLink.closest('div[data-comment-id]');
 
   // Since we're using the query string in order to determine the name (since the actual text
   // in the link has a truncated name), we need to decode the query string.
 
-  var encodedFileName = attachment.href.substring(attachment.href.indexOf('?') + 6);
+  var encodedFileName = attachmentLink.href.substring(attachmentLink.href.indexOf('?') + 6);
   encodedFileName = encodedFileName.replace(/\+/g, '%20');
   var attachmentFileName = decodeURIComponent(encodedFileName);
 
-  var attachmentLink = createAnchorTag(attachmentFileName, attachment.href, attachmentFileName);
+  return {
+    text: attachmentFileName,
+    href: attachmentLink.href,
+    download: attachmentFileName,
+    commentId: comment.getAttribute('data-comment-id'),
+    author: comment.querySelector('div.actor .name').textContent,
+    time: comment.querySelector('time').title,
+    timestamp: comment.querySelector('time').getAttribute('datetime')
+  }
+}
+
+/**
+ * Generate a single object representing the metadata for an external link.
+ */
+
+function extractExternalLinkMetadata(externalLink) {
+  var comment = externalLink.closest('div[data-comment-id]');
+
+  // Since we're using the query string in order to determine the name (since the actual text
+  // in the link has a truncated name), we need to decode the query string.
+
+  return {
+    text: externalLink.textContent,
+    href: externalLink.href,
+    download: externalLink.textContent,
+    commentId: comment.getAttribute('data-comment-id'),
+    author: comment.querySelector('div.actor .name').textContent,
+    time: comment.querySelector('time').title,
+    timestamp: comment.querySelector('time').getAttribute('datetime')
+  }
+}
+
+/**
+ * Generate a single row in the attachment table based on the provided link.
+ */
+
+function createAttachmentRow(attachment) {
+  var attachmentInfo = document.createElement('div');
+  attachmentInfo.classList.add('lesa-ui-attachment-info')
+
+  var attachmentLink = createAnchorTag(attachment.text, attachment.href, attachment.download);
   attachmentLink.classList.add('attachment');
   attachmentInfo.appendChild(attachmentLink);
 
@@ -198,18 +235,14 @@ function createAttachmentRow(attachment) {
   // other parts in this script provide us with that functionality.
 
   var attachmentExtraInfo = document.createElement('div');
-  var attachmentAuthor = attachmentComment.querySelector('div.actor .name').textContent;
-  var attachmentTime = attachmentComment.querySelector('time').title;
 
-  attachmentExtraInfo.appendChild(document.createTextNode(attachmentAuthor + ' on '));
+  attachmentExtraInfo.appendChild(document.createTextNode(attachment.author + ' on '));
 
-  var attachmentCommentLink = createAnchorTag(attachmentTime, null);
+  var attachmentCommentLink = createAnchorTag(attachment.time, null);
   attachmentCommentLink.classList.add('attachment-comment-link');
-
-  attachmentCommentLink.onclick = highlightComment.bind(null, attachmentComment.getAttribute('data-comment-id'));
+  attachmentCommentLink.onclick = highlightComment.bind(null, attachment.commentId);
 
   attachmentExtraInfo.appendChild(attachmentCommentLink)
-
   attachmentInfo.appendChild(attachmentExtraInfo);
 
   return attachmentInfo;
@@ -261,9 +294,9 @@ function createAttachmentZip(ticketId, ticketInfo) {
  */
 
 function createAttachmentsContainer(ticketId, ticketInfo, conversation) {
-  var attachments = conversation.querySelectorAll('.attachment');
+  var attachmentLinks = conversation.querySelectorAll('.attachment');
 
-  if (attachments.length == 0) {
+  if (attachmentLinks.length == 0) {
     return null;
   }
 
@@ -277,6 +310,21 @@ function createAttachmentsContainer(ticketId, ticketInfo, conversation) {
   attachmentsContainer.appendChild(attachmentsLabel);
 
   var attachmentsWrapper = document.createElement('div');
+
+  // Accumulate the attachments, and then sort them by date
+
+  var attachments = [];
+
+  for (var i = 0; i < attachmentLinks.length; i++) {
+    attachments.push(extractAttachmentLinkMetadata(attachmentLinks[i]));
+  }
+
+  attachments.sort(function(a, b) {
+    return a.timestamp > b.timestamp ? -1 : a.timestamp < b.timestamp ? 1 :
+      a.text > b.text ? 1 : a.text < b.text ? -1 : 0;
+  })
+
+  // Generate the table and a 'download all' link for convenience
 
   for (var i = 0; i < attachments.length; i++) {
     attachmentsWrapper.appendChild(createAttachmentRow(attachments[i]));
