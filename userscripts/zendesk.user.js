@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        3.8
+// @version        3.9
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -947,7 +947,7 @@ function fixHelpCenterLink(anchor, ticketId) {
 
   anchor.removeAttribute('href');
 
-  var linkTicketId = href.substring(y + 10, z);
+  var linkTicketId = href.substring(y + 10, Math.min(href.indexOf('?'), z));
 
   if (linkTicketId == ticketId) {
     anchor.onclick = highlightComment.bind(null, commentId);
