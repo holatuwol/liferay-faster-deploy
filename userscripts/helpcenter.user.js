@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           LESAfied Help Center
 // @namespace      holatuwol
-// @version        1.1
+// @version        1.2
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/helpcenter.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/helpcenter.user.js
 // @match          https://help.liferay.com/hc/en-us/requests/*
@@ -12,7 +12,8 @@ var styleElement = document.createElement('style');
 var headerHeight = document.querySelector('.header').clientHeight;
 
 styleElement.textContent = `
-nav.pagination {
+nav.pagination,
+dl.request-attachments {
   display: none;
 }
 
@@ -492,5 +493,7 @@ function preparePage() {
   highlightComment();
 }
 
-requestCommentList(2, preparePage);
-window.onhashchange = highlightComment.bind(null, null);
+if (!document.location.search) {
+  requestCommentList(2, preparePage);
+  window.onhashchange = highlightComment.bind(null, null);
+}
