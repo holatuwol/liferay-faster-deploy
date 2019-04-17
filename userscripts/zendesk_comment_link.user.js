@@ -2,7 +2,7 @@
 // @name           ZenDesk Comment Permalinks
 // @namespace      holatuwol
 // @license        0BSD
-// @version        1.3
+// @version        1.4
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk_comment_link.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk_comment_link.user.js
 // @match          https://*.zendesk.com/agent/*
@@ -45,7 +45,9 @@ function clearHighlightedComments() {
  * query string parameter.
  */
 
-function highlightComment(commentId, updateHistory) {
+var integerRegex = /^[0-9]*$/
+
+function highlightComment(commentId) {
   if (commentId) {
     clearHighlightedComments();
   }
@@ -61,7 +63,7 @@ function highlightComment(commentId, updateHistory) {
     commentId = document.location.search.substring(commentString.length);
   }
 
-  if (!Number.isInteger(commentId)) {
+  if (!commentId || !integerRegex.test(commentId)) {
     return;
   }
 
@@ -71,11 +73,9 @@ function highlightComment(commentId, updateHistory) {
     return;
   }
 
-  if (updateHistory) {
-    var commentURL = 'https://' + document.location.host + document.location.pathname + '?comment=' + commentId;
+  var commentURL = 'https://' + document.location.host + document.location.pathname + '?comment=' + commentId;
 
-    history.pushState({path: commentURL}, '', commentURL);
-  }
+  history.pushState({path: commentURL}, '', commentURL);
 
   var event = comment.closest('.event');
 
@@ -145,6 +145,40 @@ function skipSinglePageApplication(href) {
 }
 
 /**
+ * If it's a regular ZenDesk link, fix it by making the anchor's onclick
+ * event scroll to the comment (if applicable).
+ */
+
+function fixZenDeskLink(anchor) {
+  var href = anchor.href;
+
+  var x = href.indexOf('/tickets/');
+
+  if (x == -1) {
+    return;
+  }
+
+  var y = href.indexOf('?comment=');
+
+  if (y == -1) {
+    return;
+  }
+
+  anchor.removeAttribute('href');
+
+  if (href.substring(x + 9, y) == ticketId) {
+    var commentId = href.substring(y + 9);
+
+    anchor.onclick = highlightComment.bind(null, commentId);
+  }
+  else {
+    var commentURL = 'https://' + document.location.host + '/agent' + href.substring(x);
+
+    anchor.onclick = skipSinglePageApplication.bind(null, commentURL);
+  }
+}
+
+/**
  * Detect any existing permalinks on the page, and make them open in
  * a new tab (if they are an existing ticket) or auto-scroll.
  */
@@ -160,31 +194,8 @@ function fixPermaLinkAnchors(ticketId, ticketInfo, conversation) {
 
   for (var i = 0; i < anchors.length; i++) {
     var anchor = anchors[i];
-    var href = anchors[i].href;
 
-    var x = href.indexOf('/tickets/');
-
-    if (x == -1) {
-      continue;
-    }
-
-    var y = href.indexOf('?comment=');
-
-    if (y == -1) {
-      continue;
-    }
-
-    if (href.substring(x + 9, y) == ticketId) {
-      var commentId = href.substring(y + 9);
-
-      anchor.onclick = highlightComment.bind(null, commentId, true);
-    }
-    else {
-      var commentURL = 'https://' + document.location.host + '/agent' + href.substring(x);
-
-      anchor.href = '';
-      anchor.onclick = skipSinglePageApplication.bind(null, commentURL);
-    }
+    fixZenDeskLink(anchor);
   }
 }
 
