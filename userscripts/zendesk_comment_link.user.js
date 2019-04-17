@@ -2,7 +2,7 @@
 // @name           ZenDesk Comment Permalinks
 // @namespace      holatuwol
 // @license        0BSD
-// @version        1.4
+// @version        1.5
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk_comment_link.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk_comment_link.user.js
 // @match          https://*.zendesk.com/agent/*
@@ -47,20 +47,21 @@ function clearHighlightedComments() {
 
 var integerRegex = /^[0-9]*$/
 
-function highlightComment(commentId) {
-  if (commentId) {
+function highlightComment(commentId, event) {
+  if (!commentId && !document.location.search) {
     clearHighlightedComments();
+
+    return;
   }
-  else {
-    var commentString = '?comment=';
 
-    if (!document.location.search || (document.location.search.indexOf(commentString) != 0)) {
-      clearHighlightedComments();
+  if (!commentId && document.location.search && document.location.search.indexOf('?comment=') == 0) {
+    commentId = document.location.search.substring(9);
 
-      return;
+    var pos = commentId.indexOf('&');
+
+    if (pos != -1) {
+      commentId = commentId.substring(0, pos);
     }
-
-    commentId = document.location.search.substring(commentString.length);
   }
 
   if (!commentId || !integerRegex.test(commentId)) {
@@ -73,15 +74,17 @@ function highlightComment(commentId) {
     return;
   }
 
-  var commentURL = 'https://' + document.location.host + document.location.pathname + '?comment=' + commentId;
-
-  history.pushState({path: commentURL}, '', commentURL);
-
   var event = comment.closest('.event');
 
   if (event.classList.contains('lesa-ui-event-highlighted')) {
     return;
   }
+
+  var commentURL = 'https://' + document.location.host + document.location.pathname + '?comment=' + commentId;
+
+  history.pushState({path: commentURL}, '', commentURL);
+
+  clearHighlightedComments();
 
   event.classList.add('lesa-ui-event-highlighted');
   event.scrollIntoView();

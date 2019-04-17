@@ -2,7 +2,7 @@
 // @name           ZenDesk Attachment List
 // @namespace      holatuwol
 // @license        0BSD
-// @version        1.3
+// @version        1.4
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk_attachment_list.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk_attachment_list.user.js
 // @match          https://*.zendesk.com/agent/*
@@ -166,7 +166,7 @@ function createAnchorTag(text, href, download) {
     }
 
   }
-  else if (href) {
+  else if (href && href.charAt(0) != '#') {
     link.target = '_blank';
   }
 
@@ -428,22 +428,21 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
 
 var integerRegex = /^[0-9]*$/
 
-function highlightComment(commentId) {
-  if (commentId) {
-    var highlightedComments = document.querySelectorAll('.lesa-ui-event-highlighted');
+function highlightComment(commentId, event) {
+  if (!commentId && !document.location.search) {
+    clearHighlightedComments();
 
-    for (var i = 0; i < highlightedComments.length; i++) {
-      highlightedComments[i].classList.remove('lesa-ui-event-highlighted');
-    }
+    return;
   }
-  else {
-    var commentString = '?comment=';
 
-    if (!document.location.search || (document.location.search.indexOf(commentString) != 0)) {
-      return;
+  if (!commentId && document.location.search && document.location.search.indexOf('?comment=') == 0) {
+    commentId = document.location.search.substring(9);
+
+    var pos = commentId.indexOf('&');
+
+    if (pos != -1) {
+      commentId = commentId.substring(0, pos);
     }
-
-    commentId = document.location.search.substring(commentString.length);
   }
 
   if (!commentId || !integerRegex.test(commentId)) {
@@ -461,6 +460,12 @@ function highlightComment(commentId) {
   if (event.classList.contains('lesa-ui-event-highlighted')) {
     return;
   }
+
+  var commentURL = 'https://' + document.location.host + document.location.pathname + '?comment=' + commentId;
+
+  history.pushState({path: commentURL}, '', commentURL);
+
+  clearHighlightedComments();
 
   event.classList.add('lesa-ui-event-highlighted');
   event.scrollIntoView();
