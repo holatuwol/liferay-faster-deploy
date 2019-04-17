@@ -1,12 +1,13 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        3.6
+// @version        3.7
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
 // @grant          none
 // @require        https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.5/jszip.min.js
+// @require        https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js
 // @require        https://unpkg.com/stackedit-js@1.0.7/docs/lib/stackedit.min.js
 // @require        https://unpkg.com/turndown@5.0.3/dist/turndown.js
 // ==/UserScript==
@@ -770,7 +771,7 @@ function clearHighlightedComments() {
 
 var integerRegex = /^[0-9]*$/
 
-function highlightComment(commentId) {
+function highlightComment(commentId, event) {
   if (commentId) {
     clearHighlightedComments();
   }
@@ -872,7 +873,7 @@ function skipSinglePageApplication(href) {
  * event scroll to the comment (if applicable).
  */
 
-function fixZenDeskLink(anchor) {
+function fixZenDeskLink(anchor, ticketId) {
   var href = anchor.href;
 
   var x = href.indexOf('/tickets/');
@@ -942,7 +943,6 @@ function fixHelpCenterLink(anchor, ticketId) {
   var commentURL = 'https://' + document.location.host + '/agent/tickets/' + ticketId + '?commentId=' + commentId;
 
   anchor.removeAttribute('href');
-  anchor.textContent = commentURL;
 
   var linkTicketId = href.substring(y + 10, z);
 
@@ -971,7 +971,7 @@ function fixPermaLinkAnchors(ticketId, ticketInfo, conversation) {
   for (var i = 0; i < anchors.length; i++) {
     var anchor = anchors[i];
 
-    fixZenDeskLink(anchor);
+    fixZenDeskLink(anchor, ticketId);
     fixHelpCenterLink(anchor, ticketId);
   }
 }
@@ -982,13 +982,18 @@ function fixPermaLinkAnchors(ticketId, ticketInfo, conversation) {
  */
 
 var jiraTicketId = /([^/])(LP[EPS]-[0-9]+)/g;
-var jiraTicketLink = /<a [^>]*href="https:\/\/issues.liferay.com\/browse\/(LP[EPS]-[0-9]+)"[^>]*>[^<]*<\/a>/g
+var jiraTicketLink = /<a [^>]*href="https:\/\/issues.liferay.com\/browse\/(LP[EPS]-[0-9]+)"[^>]*>[^<]*<\/a>/g;
+
+var zenDeskPermalink = /https:\/\/liferay-support.zendesk.com\/agent\/tickets\/([0-9]+)\?comment=([0-9]+)/g;
+var helpCenterPermalink = /https:\/\/help.liferay.com\/hc\/en-us\/requests\/([0-9]+)\?comment=([0-9]+)/g;
 
 function addJiraLinksToElement(element) {
   var newHTML = element.innerHTML.replace(jiraTicketLink, '$1');
 
-  if (element.contentEditable) {
+  if (element.contentEditable == 'true') {
     newHTML = newHTML.replace(jiraTicketId, '$1<a href="https://issues.liferay.com/browse/$2">$2</a>');
+    newHTML = newHTML.replace(zenDeskPermalink, 'https://help.liferay.com/hc/en-us/requests/$1#request_comment_$2');
+    newHTML = newHTML.replace(helpCenterPermalink, 'https://help.liferay.com/hc/en-us/requests/$1#request_comment_$2');
   }
   else {
     newHTML = newHTML.replace(jiraTicketId, '$1<a href="https://issues.liferay.com/browse/$2" target="_blank">$2</a>');
@@ -1087,7 +1092,7 @@ function addJiraLinks(ticketId, ticketInfo, conversation) {
   var newComments = conversation.querySelectorAll('.zendesk-editor--rich-text-container .zendesk-editor--rich-text-comment');
 
   for (var i = 0; i < newComments.length; i++) {
-    newComments[i].onblur = addJiraLinksToElement.bind(null, newComments[i]);
+    newComments[i].onblur = _.debounce(addJiraLinksToElement.bind(null, newComments[i]), 500);
   }
 
   var comments = conversation.querySelectorAll('div[data-comment-id]');
