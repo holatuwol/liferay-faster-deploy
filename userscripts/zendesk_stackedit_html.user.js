@@ -2,7 +2,7 @@
 // @name           ZenDesk Compose with Stackedit
 // @namespace      holatuwol
 // @license        0BSD
-// @version        1.0
+// @version        1.1
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk_stackedit_html.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk_stackedit_html.user.js
 // @match          https://*.zendesk.com/agent/*
@@ -49,7 +49,7 @@ function addStackeditButton(element, callback) {
 var paragraphTag = /<(\/)?p>/g;
 
 var turndownService = new TurndownService({
-	codeBlockStyle: 'fenced'
+  codeBlockStyle: 'fenced'
 });
 
 function composeWithStackedit(element, callback) {
