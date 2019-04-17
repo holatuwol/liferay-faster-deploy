@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           LESAfied Help Center
 // @namespace      holatuwol
-// @version        1.5
+// @version        1.6
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/helpcenter.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/helpcenter.user.js
 // @match          https://help.liferay.com/hc/en-us/requests/*
@@ -62,8 +62,7 @@ li.comment {
 
 // Also allow disabling of pagination for testing purposes.
 
-var alwaysPaginate = false;
-var isPaginated = alwaysPaginate || (document.location.search && document.location.search.indexOf('page=') != -1);
+var isPaginated = !document.location.search || document.location.search.indexOf('page=0') == -1;
 
 if (!isPaginated) {
   styleElement.textContent = styleElement.textContent + `
