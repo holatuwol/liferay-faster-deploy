@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           LESAfied Help Center
 // @namespace      holatuwol
-// @version        1.0
+// @version        1.1
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/helpcenter.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/helpcenter.user.js
 // @match          https://help.liferay.com/hc/en-us/requests/*
@@ -14,6 +14,19 @@ var headerHeight = document.querySelector('.header').clientHeight;
 styleElement.textContent = `
 nav.pagination {
   display: none;
+}
+
+ul.comment-list {
+  display: flex;
+  flex-direction: column-reverse;
+}
+
+.comment-list .comment:first-child {
+  border: none;
+}
+
+.comment-list .comment:last-child {
+  border-top: 1px solid #ced3de;
 }
 
 li.comment {
@@ -37,6 +50,27 @@ li.comment {
   margin: 0em;
   padding: 0.2em;
 }
+
+.lesa-ui-attachments {
+  display: flex;
+  flex-direction: row;
+  margin-bottom: 2em;
+}
+
+.lesa-ui-attachment-info {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+.lesa-ui-attachment-info a {
+  margin-right: 1em;
+}
+
+.lesa-ui-attachments-label {
+  font-weight: 600;
+  margin-right: 1em;
+}
 `;
 
 document.querySelector('head').appendChild(styleElement);
@@ -47,12 +81,259 @@ var maxPageId = Math.max.apply(null, Array.from(availablePages).map(x => parseIn
 var currentCommentList = document.querySelector('ul.comment-list');
 
 /**
+ * Generate a Blob URL, and remember it so that we can unload it if we
+ * navigate away from the page.
+ */
+
+var blobURLs = [];
+
+function createObjectURL(blob) {
+  var blobURL = URL.createObjectURL(blob);
+
+  blobURLs.push(blobURL);
+
+  return blobURL;
+}
+
+/**
+ * Unload any generated Blob URLs that we remember.
+ */
+
+function revokeObjectURLs() {
+  for (var i = 0; i < blobURLs.length; i++) {
+    URL.revokeObjectURL(blobURLs[i]);
+  }
+
+  blobURLs = [];
+}
+
+/**
+ * Download the attachment mentioned in the specified link, and then invoke a callback
+ * once the download has completed.
+ */
+
+function downloadAttachment(link, callback) {
+  link.classList.add('downloading');
+
+  var xhr = new XMLHttpRequest();
+  xhr.responseType = 'blob';
+
+  xhr.onload = function() {
+    callback(link.download, this.response);
+    link.classList.remove('downloading');
+  };
+
+  xhr.open('GET', link.href);
+  xhr.send(null);
+}
+
+/**
+ * Download a generated Blob object by generating a dummy link and simulating a click.
+ * Avoid doing this too much, because browsers may have security to block this.
+ */
+
+function downloadBlob(fileName, blob) {
+  var blobURL = createObjectURL(blob);
+
+  var downloadLink = createAnchorTag(fileName, blobURL);
+  downloadLink.download = fileName;
+
+  downloadLink.style.display = 'none';
+  document.body.appendChild(downloadLink);
+  downloadLink.click();
+  document.body.removeChild(downloadLink);
+}
+
+/**
+ * Generate an anchor tag with the specified text, href, and download attributes.
+ * If the download attribute has an extension that looks like it will probably be
+ * served inline, use the downloadBlob function instead.
+ */
+
+function createAnchorTag(text, href, download) {
+  var link = document.createElement('a');
+
+  link.textContent = text;
+
+  if (href) {
+    link.href = href;
+  }
+
+  if (download) {
+    link.download = download;
+
+    var lowerCaseName = download.toLowerCase();
+
+    var isLikelyInline = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.pdf'].some(function(substr) {
+      return lowerCaseName.length > substr.length &&
+        lowerCaseName.indexOf(substr) == lowerCaseName.length - substr.length;
+    });
+
+    if (isLikelyInline) {
+      link.onclick = function() {
+        downloadAttachment(link, downloadBlob);
+        return false;
+      };
+    }
+
+  }
+  else if (href && href.charAt(0) != '#') {
+    link.target = '_blank';
+  }
+
+  return link;
+}
+
+/**
+ * Generate a single object representing the metadata for the attachment.
+ */
+
+function extractAttachmentLinkMetadata(attachmentLink) {
+  var comment = attachmentLink.closest('li.comment');
+
+  // Since we're using the query string in order to determine the name (since the actual text
+  // in the link has a truncated name), we need to decode the query string.
+
+  var encodedFileName = attachmentLink.href.substring(attachmentLink.href.indexOf('?') + 6);
+  encodedFileName = encodedFileName.replace(/\+/g, '%20');
+  var attachmentFileName = decodeURIComponent(encodedFileName);
+
+  return {
+    text: attachmentFileName,
+    href: attachmentLink.href,
+    download: attachmentFileName,
+    commentId: comment.id.substring(16),
+    author: comment.querySelector('.comment-author').title,
+    time: comment.querySelector('time').getAttribute('datetime'),
+    timestamp: comment.querySelector('time').getAttribute('datetime')
+  }
+}
+
+/**
+ * Generate a single object representing the metadata for an external link.
+ */
+
+function extractExternalLinkMetadata(externalLink) {
+  var comment = externalLink.closest('li.comment');
+
+  // Since we're using the query string in order to determine the name (since the actual text
+  // in the link has a truncated name), we need to decode the query string.
+
+  return {
+    text: externalLink.textContent,
+    href: externalLink.href,
+    download: externalLink.textContent,
+    commentId: comment.id.substring(16),
+    author: comment.querySelector('.comment-author').title,
+    time: comment.querySelector('time').getAttribute('datetime'),
+    timestamp: comment.querySelector('time').getAttribute('datetime')
+  }
+}
+
+/**
+ * Generate a single row in the attachment table based on the provided link.
+ */
+
+function createAttachmentRow(attachment) {
+  var attachmentInfo = document.createElement('div');
+  attachmentInfo.classList.add('lesa-ui-attachment-info')
+
+  var attachmentLink = createAnchorTag(attachment.text, attachment.href, attachment.download);
+  attachmentLink.classList.add('attachment');
+  attachmentInfo.appendChild(attachmentLink);
+
+  // Attach an author and a timestamp. We'll have the timestamp be a comment permalink, since
+  // other parts in this script provide us with that functionality.
+
+  var attachmentExtraInfo = document.createElement('div');
+
+  attachmentExtraInfo.appendChild(document.createTextNode(attachment.author + ' on '));
+
+  var attachmentCommentLink = createAnchorTag(attachment.time, '#request_comment_' + attachment.commentId);
+  attachmentCommentLink.classList.add('attachment-comment-link');
+
+  attachmentExtraInfo.appendChild(attachmentCommentLink)
+  attachmentInfo.appendChild(attachmentExtraInfo);
+
+  return attachmentInfo;
+}
+
+/**
+ * Create a container to hold all of the attachments in the ticket, and a convenience
+ * link which allows the user to download all of the attachments at once.
+ */
+
+function createAttachmentsContainer() {
+  var attachmentLinks = document.querySelectorAll('.attachment-item > a');
+  var externalLinks = document.querySelectorAll('.zd-comment > a:not(.attachment)');
+
+  if (attachmentLinks.length + externalLinks.length == 0) {
+    return null;
+  }
+
+  var attachmentsContainer = document.createElement('div');
+  attachmentsContainer.classList.add('lesa-ui-attachments')
+
+  var attachmentsLabel = document.createElement('div');
+  attachmentsLabel.classList.add('lesa-ui-attachments-label')
+  attachmentsLabel.innerHTML = 'Attachments:';
+
+  attachmentsContainer.appendChild(attachmentsLabel);
+
+  var attachmentsWrapper = document.createElement('div');
+
+  // Accumulate the attachments, and then sort them by date
+
+  var attachments = [];
+
+  for (var i = 0; i < attachmentLinks.length; i++) {
+    attachments.push(extractAttachmentLinkMetadata(attachmentLinks[i]));
+  }
+
+  for (var i = 0; i < externalLinks.length; i++) {
+    if (externalLinks[i].href.indexOf('ticketAttachmentId') != -1) {
+      attachments.push(extractExternalLinkMetadata(externalLinks[i]));
+    }
+  }
+
+  attachments.sort(function(a, b) {
+    return a.timestamp > b.timestamp ? -1 : a.timestamp < b.timestamp ? 1 :
+      a.text > b.text ? 1 : a.text < b.text ? -1 : 0;
+  })
+
+  // Generate the table and a 'download all' link for convenience
+
+  for (var i = 0; i < attachments.length; i++) {
+    attachmentsWrapper.appendChild(createAttachmentRow(attachments[i]));
+  }
+
+  attachmentsContainer.appendChild(attachmentsWrapper);
+
+  return attachmentsContainer;
+}
+
+/**
+ * Add a ticket description and a complete list of attachments to the top of the page.
+ */
+
+function addAttachments() {
+
+  // Generate something to hold all of our attachments.
+
+  var attachmentsContainer = createAttachmentsContainer();
+
+  if (attachmentsContainer) {
+    currentCommentList.parentNode.insertBefore(attachmentsContainer, currentCommentList);
+  }
+}
+
+/**
  * Load the comment list from the response XML, and then call the specified
  * callback once all pages have been loaded.
  */
 
 function loadCommentList(pageId, callback) {
-  var newCommentListItems = this.responseXML.querySelectorAll('ul.comment-list li');
+  var newCommentListItems = this.responseXML.querySelectorAll('ul.comment-list > li');
 
   for (var j = 0; j < newCommentListItems.length; j++) {
     currentCommentList.appendChild(newCommentListItems[j]);
@@ -100,23 +381,24 @@ function clearHighlightedComments() {
 
 var integerRegex = /^[0-9]*$/
 
-function highlightComment(commentId, updateHistory) {
-  if (commentId) {
+function highlightComment(commentId, event) {
+  if (!commentId && !document.location.search && !document.location.hash) {
     clearHighlightedComments();
+
+    return;
   }
-  else {
-    if (document.location.hash && document.location.hash.indexOf('#request_comment_') == 0) {
-      commentId = document.location.hash.substring(17);
-    }
-    else if (document.location.search && document.location.search.indexOf('?comment=') == 0) {
-      commentId = document.location.search.substring(9);
-    }
 
-    if (!commentId) {
-      clearHighlightedComments();
+  if (!commentId && document.location.search && document.location.search.indexOf('?comment=') == 0) {
+    commentId = document.location.search.substring(9);
 
-      return;
+    var pos = commentId.indexOf('&');
+
+    if (pos != -1) {
+      commentId = commentId.substring(0, pos);
     }
+  }
+  else if (!commentId && document.location.hash && document.location.hash.indexOf('#request_comment_') == 0) {
+    commentId = document.location.hash.substring(17);
   }
 
   if (!commentId || !integerRegex.test(commentId)) {
@@ -129,18 +411,17 @@ function highlightComment(commentId, updateHistory) {
     return;
   }
 
-  if (updateHistory) {
-    var commentURL = 'https://' + document.location.host + document.location.pathname + '#request_comment_' + commentId;
+  var commentURL = 'https://' + document.location.host + document.location.pathname + '#request_comment_' + commentId;
 
-    history.pushState({path: commentURL}, '', commentURL);
-  }
+  history.pushState({path: commentURL}, '', commentURL);
 
   if (comment.classList.contains('lesa-ui-event-highlighted')) {
     return;
   }
 
+  clearHighlightedComments();
+
   comment.classList.add('lesa-ui-event-highlighted');
-  comment.style.scrollMargin = headerHeight;
   comment.scrollIntoView();
 }
 
@@ -190,10 +471,26 @@ function addPermaLinks() {
   }
 }
 
-function preparePermalinks() {
+/**
+ * Moves the comment form to the top of the page.
+ */
+
+function moveRequestCommentForm() {
+  var requestCommentForm = document.getElementById('requestCommentForm');
+
+  requestCommentForm.parentNode.insertBefore(requestCommentForm, currentCommentList);
+}
+
+/**
+ * Utility function to do everything once we've loaded all the comments.
+ */
+
+function preparePage() {
+  addAttachments();
+  moveRequestCommentForm();
   addPermaLinks();
   highlightComment();
 }
 
-requestCommentList(2, preparePermalinks);
+requestCommentList(2, preparePage);
 window.onhashchange = highlightComment.bind(null, null);
