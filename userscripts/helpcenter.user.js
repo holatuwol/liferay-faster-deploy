@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           LESAfied Help Center
 // @namespace      holatuwol
-// @version        1.2
+// @version        1.3
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/helpcenter.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/helpcenter.user.js
 // @match          https://help.liferay.com/hc/en-us/requests/*
@@ -12,22 +12,8 @@ var styleElement = document.createElement('style');
 var headerHeight = document.querySelector('.header').clientHeight;
 
 styleElement.textContent = `
-nav.pagination,
 dl.request-attachments {
   display: none;
-}
-
-ul.comment-list {
-  display: flex;
-  flex-direction: column-reverse;
-}
-
-.comment-list .comment:first-child {
-  border: none;
-}
-
-.comment-list .comment:last-child {
-  border-top: 1px solid #ced3de;
 }
 
 li.comment {
@@ -74,12 +60,45 @@ li.comment {
 }
 `;
 
+// Also allow disabling of pagination for testing purposes.
+
+var alwaysPaginate = false;
+var isPaginated = alwaysPaginate || (document.location.search && document.location.search.indexOf('page=') != -1);
+
+if (!isPaginated) {
+  styleElement.textContent = styleElement.textContent + `
+nav.pagination {
+  display: none;
+}
+
+ul.comment-list {
+  display: flex;
+  flex-direction: column-reverse;
+}
+
+.comment-list .comment:first-child {
+  border: none;
+}
+
+.comment-list .comment:last-child {
+  border-top: 1px solid #ced3de;
+}
+`
+}
+
 document.querySelector('head').appendChild(styleElement);
 
 var availablePages = document.querySelectorAll('.pagination li');
-var maxPageId = Math.max.apply(null, Array.from(availablePages).map(x => parseInt(x.textContent.trim())).filter(x => !Number.isNaN(x)));
+var currentPageItem = document.querySelector('nav.pagination .pagination-current');
+
+var currentPageId = currentPageItem ? parseInt(currentPageItem.textContent) : 1;
+var maxPageId = Math.max.apply(null, Array.from(availablePages).map(x => parseInt(x.textContent.trim())).filter(x => !Number.isNaN(x))) || 1;
 
 var currentCommentList = document.querySelector('ul.comment-list');
+
+var commentPageLookup = {};
+var pageCommentLookup = {};
+pageCommentLookup[currentPageId] = currentCommentList;
 
 /**
  * Generate a Blob URL, and remember it so that we can unload it if we
@@ -178,9 +197,6 @@ function createAnchorTag(text, href, download) {
     }
 
   }
-  else if (href && href.charAt(0) != '#') {
-    link.target = '_blank';
-  }
 
   return link;
 }
@@ -250,7 +266,12 @@ function createAttachmentRow(attachment) {
 
   attachmentExtraInfo.appendChild(document.createTextNode(attachment.author + ' on '));
 
-  var attachmentCommentLink = createAnchorTag(attachment.time, '#request_comment_' + attachment.commentId);
+  var commentId = attachment.commentId;
+  var pageId = commentPageLookup[commentId];
+
+  var commentURL = 'https://' + document.location.host + document.location.pathname + '?page=' + pageId + '#request_comment_' + commentId;
+
+  var attachmentCommentLink = createAnchorTag(attachment.time, commentURL);
   attachmentCommentLink.classList.add('attachment-comment-link');
 
   attachmentExtraInfo.appendChild(attachmentCommentLink)
@@ -265,8 +286,15 @@ function createAttachmentRow(attachment) {
  */
 
 function createAttachmentsContainer() {
-  var attachmentLinks = document.querySelectorAll('.attachment-item > a');
-  var externalLinks = document.querySelectorAll('.zd-comment > a:not(.attachment)');
+  var attachmentLinks = [];
+  var externalLinks = [];
+
+  for (key in pageCommentLookup) {
+    var comments = pageCommentLookup[key];
+
+    Array.prototype.push.apply(attachmentLinks, Array.from(comments.querySelectorAll('.attachment-item > a')));
+    Array.prototype.push.apply(externalLinks, Array.from(comments.querySelectorAll('.zd-comment > a:not(.attachment)')));
+  }
 
   if (attachmentLinks.length + externalLinks.length == 0) {
     return null;
@@ -329,16 +357,34 @@ function addAttachments() {
 }
 
 /**
+ * Process any comments that we've loaded.
+ */
+
+function processCommentList(pageId, newCommentListItems) {
+  for (var j = 0; j < newCommentListItems.length; j++) {
+    var commentId = newCommentListItems[j].id.substring(16);
+
+    commentPageLookup[commentId] = pageId;
+  }
+}
+
+/**
  * Load the comment list from the response XML, and then call the specified
  * callback once all pages have been loaded.
  */
 
 function loadCommentList(pageId, callback) {
+  pageCommentLookup[pageId] = this.responseXML.querySelector('ul.comment-list');
+
   var newCommentListItems = this.responseXML.querySelectorAll('ul.comment-list > li');
 
-  for (var j = 0; j < newCommentListItems.length; j++) {
-    currentCommentList.appendChild(newCommentListItems[j]);
-  };
+  processCommentList(pageId, newCommentListItems);
+
+  if (!isPaginated) {
+    for (var j = 0; j < newCommentListItems.length; j++) {
+      currentCommentList.appendChild(newCommentListItems[j]);
+    }
+  }
 
   requestCommentList(pageId + 1, callback);
 }
@@ -412,9 +458,13 @@ function highlightComment(commentId, event) {
     return;
   }
 
-  var commentURL = 'https://' + document.location.host + document.location.pathname + '#request_comment_' + commentId;
+  var pageId = commentPageLookup[commentId];
 
-  history.pushState({path: commentURL}, '', commentURL);
+  if (pageId) {
+    var commentURL = 'https://' + document.location.host + document.location.pathname + '?page=' + pageId + '#request_comment_' + commentId;
+
+    history.pushState({path: commentURL}, '', commentURL);
+  }
 
   if (comment.classList.contains('lesa-ui-event-highlighted')) {
     return;
@@ -447,7 +497,7 @@ function createPermaLinkInputField(permalinkHREF) {
  * pseudo permalink (since this script scrolls to it).
  */
 
-function addPermaLinks() {
+function addPermaLinks(defaultPageId) {
   if (currentCommentList.classList.contains('lesa-ui-permalink')) {
     return;
   }
@@ -462,7 +512,9 @@ function addPermaLinks() {
     var permalinkContainer = document.createElement('div');
     permalinkContainer.classList.add('lesa-ui-permalink');
 
-    var permalinkHREF = 'https://' + document.location.host + document.location.pathname + '#request_comment_' + commentId;
+    var pageId = commentPageLookup[commentId] || defaultPageId;
+
+    var permalinkHREF = 'https://' + document.location.host + document.location.pathname + '?page=' + pageId + '#request_comment_' + commentId;
     var permalink = createPermaLinkInputField(permalinkHREF);
 
     permalinkContainer.appendChild(permalink);
@@ -483,17 +535,34 @@ function moveRequestCommentForm() {
 }
 
 /**
- * Utility function to do everything once we've loaded all the comments.
+ * Utility function to prepare paginated pages.
  */
 
-function preparePage() {
+function preparePaginatedPage() {
+  addAttachments();
+  highlightComment();
+}
+
+/**
+ * Utility function to prepare unpaginated pages.
+ */
+
+function prepareUnpaginatedPage() {
   addAttachments();
   moveRequestCommentForm();
   addPermaLinks();
   highlightComment();
 }
 
-if (!document.location.search) {
-  requestCommentList(2, preparePage);
-  window.onhashchange = highlightComment.bind(null, null);
+if (isPaginated) {
+  addPermaLinks(currentPageId);
+  highlightComment();
+
+  requestCommentList(1, preparePaginatedPage);
 }
+else {
+  processCommentList(1, document.querySelectorAll('ul.comment-list > li'));
+  requestCommentList(2, prepareUnpaginatedPage);
+}
+
+window.onhashchange = highlightComment.bind(null, null);
