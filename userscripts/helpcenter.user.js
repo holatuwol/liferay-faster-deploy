@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           LESAfied Help Center
 // @namespace      holatuwol
-// @version        1.4
+// @version        1.5
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/helpcenter.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/helpcenter.user.js
 // @match          https://help.liferay.com/hc/en-us/requests/*
@@ -269,7 +269,11 @@ function createAttachmentRow(attachment) {
   var commentId = attachment.commentId;
   var pageId = commentPageLookup[commentId];
 
-  var commentURL = 'https://' + document.location.host + document.location.pathname + '?page=' + pageId + '#request_comment_' + commentId;
+  var commentURL = '#request_comment_' + commentId;
+
+  if (isPaginated && (pageId != currentPageId)) {
+    commentURL = 'https://' + document.location.host + document.location.pathname + '?page=' + pageId + '#request_comment_' + commentId;
+  }
 
   var attachmentCommentLink = createAnchorTag(attachment.time, commentURL);
   attachmentCommentLink.classList.add('attachment-comment-link');
