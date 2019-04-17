@@ -2,7 +2,7 @@
 // @name           ZenDesk Attachment List
 // @namespace      holatuwol
 // @license        0BSD
-// @version        1.2
+// @version        1.3
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk_attachment_list.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk_attachment_list.user.js
 // @match          https://*.zendesk.com/agent/*
@@ -426,6 +426,8 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
  * query string parameter.
  */
 
+var integerRegex = /^[0-9]*$/
+
 function highlightComment(commentId) {
   if (commentId) {
     var highlightedComments = document.querySelectorAll('.lesa-ui-event-highlighted');
@@ -442,6 +444,10 @@ function highlightComment(commentId) {
     }
 
     commentId = document.location.search.substring(commentString.length);
+  }
+
+  if (!commentId || !integerRegex.test(commentId)) {
+    return;
   }
 
   var comment = document.querySelector('div[data-comment-id="' + commentId + '"]');
