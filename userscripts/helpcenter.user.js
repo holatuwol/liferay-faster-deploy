@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           LESAfied Help Center
 // @namespace      holatuwol
-// @version        1.3
+// @version        1.4
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/helpcenter.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/helpcenter.user.js
 // @match          https://help.liferay.com/hc/en-us/requests/*
@@ -453,18 +453,25 @@ function highlightComment(commentId, event) {
   }
 
   var comment = document.querySelector('#request_comment_' + commentId);
+  var pageId = commentPageLookup[commentId];
 
-  if (!comment) {
+  if (!comment && !pageId) {
     return;
   }
 
-  var pageId = commentPageLookup[commentId];
-
-  if (pageId) {
-    var commentURL = 'https://' + document.location.host + document.location.pathname + '?page=' + pageId + '#request_comment_' + commentId;
-
-    history.pushState({path: commentURL}, '', commentURL);
+  if (!pageId) {
+    pageId = currentPageId;
   }
+
+  var commentURL = 'https://' + document.location.host + document.location.pathname + '?page=' + pageId + '#request_comment_' + commentId;
+
+  if (!comment) {
+    document.location.href = commentURL;
+
+    return;
+  }
+
+  history.pushState({path: commentURL}, '', commentURL);
 
   if (comment.classList.contains('lesa-ui-event-highlighted')) {
     return;
