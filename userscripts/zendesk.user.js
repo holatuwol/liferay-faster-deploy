@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        3.4
+// @version        3.5
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -768,7 +768,9 @@ function clearHighlightedComments() {
  * query string parameter.
  */
 
-function highlightComment(commentId, updateHistory) {
+var integerRegex = /^[0-9]*$/
+
+function highlightComment(commentId) {
   if (commentId) {
     clearHighlightedComments();
   }
@@ -784,7 +786,7 @@ function highlightComment(commentId, updateHistory) {
     commentId = document.location.search.substring(commentString.length);
   }
 
-  if (!Number.isInteger(commentId)) {
+  if (!commentId || !integerRegex.test(commentId)) {
     return;
   }
 
@@ -900,7 +902,7 @@ function fixPermaLinkAnchors(ticketId, ticketInfo, conversation) {
     if (href.substring(x + 9, y) == ticketId) {
       var commentId = href.substring(y + 9);
 
-      anchor.onclick = highlightComment.bind(null, commentId, true);
+      anchor.onclick = highlightComment.bind(null, commentId);
     }
     else {
       var commentURL = 'https://' + document.location.host + '/agent' + href.substring(x);
@@ -979,7 +981,7 @@ function addStackeditButtons(ticketId, ticketInfo, conversation) {
 var paragraphTag = /<(\/)?p>/g;
 
 var turndownService = new TurndownService({
-	codeBlockStyle: 'fenced'
+  codeBlockStyle: 'fenced'
 });
 
 function composeWithStackedit(element, callback) {
