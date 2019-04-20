@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        3.9
+// @version        4.0
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -843,6 +843,7 @@ function addPermaLinks(ticketId, ticketInfo, conversation) {
   }
 
   var comments = conversation.querySelectorAll('div[data-comment-id]');
+  var isPublicTab = document.querySelector('.publicConversation.is-selected')
 
   for (var i = 0; i < comments.length; i++) {
     var commentId = comments[i].getAttribute('data-comment-id');
@@ -851,8 +852,13 @@ function addPermaLinks(ticketId, ticketInfo, conversation) {
     permalinkContainer.classList.add('lesa-ui-permalink');
 
     var permalinkHREF = 'https://' + document.location.host + document.location.pathname + '?comment=' + commentId;
-    var permalink = createPermaLinkInputField(permalinkHREF);
 
+    if (isPublicTab) {
+      var pageId = Math.ceil((comments.length - i) / 30);
+      permalinkHREF = 'https://help.liferay.com/hc/requests/' + ticketId + '?page=' + pageId + '#request_comment_' + commentId;
+    }
+
+    var permalink = createPermaLinkInputField(permalinkHREF);
     permalinkContainer.appendChild(permalink);
 
     var commentHeader = comments[i].querySelector('.content .header');
@@ -987,16 +993,11 @@ function fixPermaLinkAnchors(ticketId, ticketInfo, conversation) {
 var jiraTicketId = /([^/])(LP[EPS]-[0-9]+)/g;
 var jiraTicketLink = /<a [^>]*href="https:\/\/issues.liferay.com\/browse\/(LP[EPS]-[0-9]+)"[^>]*>[^<]*<\/a>/g;
 
-var zenDeskPermalink = /https:\/\/liferay-support.zendesk.com\/agent\/tickets\/([0-9]+)\?comment=([0-9]+)/g;
-var helpCenterPermalink = /https:\/\/help.liferay.com\/hc\/en-us\/requests\/([0-9]+)\?comment=([0-9]+)/g;
-
 function addJiraLinksToElement(element) {
   var newHTML = element.innerHTML.replace(jiraTicketLink, '$1');
 
   if (element.contentEditable == 'true') {
     newHTML = newHTML.replace(jiraTicketId, '$1<a href="https://issues.liferay.com/browse/$2">$2</a>');
-    newHTML = newHTML.replace(zenDeskPermalink, 'https://help.liferay.com/hc/en-us/requests/$1#request_comment_$2');
-    newHTML = newHTML.replace(helpCenterPermalink, 'https://help.liferay.com/hc/en-us/requests/$1#request_comment_$2');
   }
   else {
     newHTML = newHTML.replace(jiraTicketId, '$1<a href="https://issues.liferay.com/browse/$2" target="_blank">$2</a>');
@@ -1304,6 +1305,20 @@ function updateWindowTitle(ticketId, ticketInfo) {
 }
 
 /**
+ * Shows the public conversation tab so that you can get help.liferay.com links to
+ * share with customers.
+ */
+
+function enablePublicConversation(ticketId, ticketInfo, conversation) {
+  var fullTab = conversation.querySelector('.event-nav.conversation .fullConversation');
+  var publicTab = conversation.querySelector('.event-nav.conversation .publicConversation');
+
+  if (parseInt(publicTab.getAttribute('data-count')) == 0) {
+    publicTab.setAttribute('data-count', fullTab.getAttribute('data-count'));
+  }
+}
+
+/**
  * Apply updates to the page based on the retrieved ticket information. Since the
  * ticket corresponds to a "conversation", find that conversation.
  */
@@ -1314,6 +1329,7 @@ function checkTicketConversation(ticketId, ticketInfo) {
   var conversation = document.querySelector('div[data-side-conversations-anchor-id="' + ticketId + '"]');
 
   if (conversation) {
+    enablePublicConversation(ticketId, ticketInfo, conversation);
     addStackeditButtons(ticketId, ticketInfo, conversation);
     addJiraLinks(ticketId, ticketInfo, conversation);
     addTicketDescription(ticketId, ticketInfo, conversation);
