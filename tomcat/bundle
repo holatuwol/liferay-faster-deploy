@@ -164,10 +164,10 @@ set_container_name() {
 }
 
 set_image_name_by_patch() {
-	if [[ $1 == 6.1.* ]] || [[ $1 == *-6130 ]] || [[ $1 == *-6130.zip ]]; then
+	if [[ $1 == 6.1.* ]] || [[ $1 == *-6130 ]] || [[ $1 == fix-pack-base-6130-sp* ]] || [[ $1 == *-6130.zip ]]; then
 		IMAGE_NAME="holatuwol/liferay:jdk6"
 		return 0
-	elif [[ $1 == portal-* ]] || [[ $1 == 6.2.* ]] || [[ $1 == *-6210 ]] || [[ $1 == *-6210.zip ]]; then
+	elif [[ $1 == portal-* ]] || [[ $1 == 6.2.* ]] || [[ $1 == *-6210 ]] || [[ $1 == fix-pack-base-6210-sp* ]] || [[ $1 == *-6210.zip ]]; then
 		IMAGE_NAME="holatuwol/liferay:openjdk7"
 		return 0
 	elif [[ $1 == de-* ]] || [[ $1 == 7.0.* ]] || [[ $1 == *-7010 ]] || [[ $1 == *-7010.zip ]]; then
