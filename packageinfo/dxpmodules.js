@@ -33,7 +33,7 @@ if (notableOnly) {
 var includeLiferay = document.getElementById('includeLiferay');
 
 if (includeLiferay) {
-	includeLiferay.checked = getParameter('includeLiferay') == 'false';
+	includeLiferay.checked = getParameter('includeLiferay') != 'false';
 }
 
 var includeThirdParty = document.getElementById('includeThirdParty');
