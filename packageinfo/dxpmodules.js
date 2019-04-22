@@ -17,6 +17,13 @@ var select2 = document.getElementById('targetVersion');
 var select2Value = getParameter('targetVersion');
 var nameFilter = document.getElementById('nameFilter');
 nameFilter.value = getParameter('nameFilter');
+
+var changesOnly = document.getElementById('changesOnly');
+
+if (changesOnly) {
+	changesOnly.checked = getParameter('changesOnly') == 'true';
+}
+
 var notableOnly = document.getElementById('notableOnly');
 
 if (notableOnly) {
@@ -261,6 +268,10 @@ function checkVersionInfo() {
 			newURL += '&nameFilter=' + nameFilter.value;
 		}
 
+		if (changesOnly) {
+			newURL += '&changesOnly=' + (changesOnly.checked);
+		}
+
 		if (notableOnly) {
 			newURL += '&notableOnly=' + (notableOnly.checked);
 		}
@@ -305,7 +316,10 @@ function checkVersionInfo() {
 	var header2 = select1.options[select2.selectedIndex].innerHTML;
 
 	var nameFilterValue = nameFilter.value;
+	var changesOnlyValue = changesOnly && changesOnly.checked;
 	var notableOnlyValue = notableOnly && notableOnly.checked;
+
+	var isDEVersionIncrease = (name2 > name1);
 
 	var includeLiferayValue = !includeLiferay || includeLiferay.checked;
 	var includeThirdPartyValue = !includeThirdParty || includeThirdParty.checked;
@@ -329,7 +343,7 @@ function checkVersionInfo() {
 		return (version1 != '0.0.0') || (version2 != '0.0.0');
 	};
 
-	var isNotableVersionChange = function(versionInfo) {
+	var isVersionChange = function(versionInfo) {
 		var name = versionInfo['name'];
 
 		var version1 = versionInfo[name1];
@@ -338,10 +352,38 @@ function checkVersionInfo() {
 		return (version1 != version2);
 	};
 
+	var isNotableVersionChange = function(versionInfo) {
+		var name = versionInfo['name'];
+
+		var version1 = versionInfo[name1];
+		var version2 = versionInfo[name2];
+
+		var pos11 = version1.indexOf('.');
+		var majorVersion1 = version1.substring(0, pos11);
+
+		var pos21 = version2.indexOf('.');
+		var majorVersion2 = version2.substring(0, pos21);
+
+		if (majorVersion1 != majorVersion2) {
+			return (majorVersion1 != '0') || !isDEVersionIncrease;
+		}
+
+		var pos12 = version1.indexOf('.', pos11 + 1);
+		var minorVersion1 = version1.substring(pos11, pos12);
+
+		var pos22 = version2.indexOf('.', pos21 + 1);
+		var minorVersion2 = version2.substring(pos21, pos22);
+
+		return minorVersion1 != minorVersion2;
+	};
+
 	var filteredVersionInfoList = versionInfoList.filter(isMatchingRepositoryFilter).filter(isMatchingNameFilter).filter(isAvailableVersion);
 
 	if ((name1 != name2) && notableOnlyValue) {
 		filteredVersionInfoList = filteredVersionInfoList.filter(isNotableVersionChange);
+	}
+	else if ((name1 != name2) && changesOnlyValue) {
+		filteredVersionInfoList = filteredVersionInfoList.filter(isVersionChange);
 	}
 
 	var summary = document.getElementById('summary');
@@ -504,6 +546,10 @@ request.onreadystatechange = function() {
 		select2.onchange = checkVersionInfo;
 		nameFilter.oninput = checkVersionInfo;
 		nameFilter.onpropertychange = checkVersionInfo;
+
+		if (changesOnly) {
+			changesOnly.onchange = checkVersionInfo;
+		}
 
 		if (notableOnly) {
 			notableOnly.onchange = checkVersionInfo;
