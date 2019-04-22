@@ -1,0 +1,13 @@
+/* ==UserStyle==
+@name           Grow User Style
+@namespace      holatuwol
+@version        1.0.0
+@description    A user style for grow.liferay.com
+@author         holatuwol
+==/UserStyle== */
+
+@-moz-document domain("grow.liferay.com") {
+  h1, h2, h3, h4 {
+    scroll-margin: 50px;
+  }
+}
