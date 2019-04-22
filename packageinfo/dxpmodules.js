@@ -276,7 +276,7 @@ function checkVersionInfo() {
 			newURL += '&notableOnly=' + (notableOnly.checked);
 		}
 
-		if (includeLiferay) {
+		if (!includeLiferay) {
 			newURL += '&includeLiferay=' + (includeLiferay.checked);
 		}
 
