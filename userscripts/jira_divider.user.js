@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Add JIRA Order By Dividers
 // @namespace      holatuwol
-// @version        1.0
+// @version        1.1
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_divider.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_divider.user.js
 // @match          https://issues.liferay.com/issues/*
@@ -41,6 +41,8 @@ function addBreakpoints() {
   var indices = breakpoints.map((x, i) => [i, x]).filter((x, i) => (i == 0) || (breakpoints[i-1] != breakpoints[i])).reverse();
 
   for (var i = 0; i < indices.length; i++) {
+    var ticketCount = (i == 0) ? rows.length - indices[i][0] : indices[i-1][0] - indices[i][0]
+
     var row = rows[indices[i][0]];
 
     var colspan = row.cells.length;
@@ -48,7 +50,7 @@ function addBreakpoints() {
 
     var newCell = document.createElement('th');
     newCell.colSpan = colspan;
-    newCell.innerText = indices[i][1];
+    newCell.innerText = indices[i][1] + ' (' + ticketCount + ')';
     newCell.style.paddingTop = '2em';
 
     newRow.appendChild(newCell);
