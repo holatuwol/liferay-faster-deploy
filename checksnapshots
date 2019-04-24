@@ -60,6 +60,12 @@ updatesnapshots() {
 			elif [ -f ${artifact_folder}/git-commit ]; then
 				snapshot_hash=$(cat ${artifact_folder}/git-commit)
 			fi
+		elif [ -f ${artifact_folder}/${artifact}-${artifact_version}.war ]; then
+			if [ -f ${artifact_folder}/.githash ]; then
+				snapshot_hash=$(cat ${artifact_folder}/.githash)
+			elif [ -f ${artifact_folder}/git-commit ]; then
+				snapshot_hash=$(cat ${artifact_folder}/git-commit)
+			fi
 		fi
 
 		if [ "${update_hash}" != "${snapshot_hash}" ]; then
@@ -102,7 +108,7 @@ updatesnapshots() {
 		local artifact_version=$(grep -F "${artifact}.version" .gradle/gradle.properties | cut -d'=' -f 2)
 		local artifact_folder=${repository_root}/com/liferay/portal/${artifact}/${artifact_version}
 
-		if [ -f ${artifact_folder}/${artifact}-${artifact_version}.jar ]; then
+		if [ -f ${artifact_folder}/${artifact}-${artifact_version}.jar ] || [ -f ${artifact_folder}/${artifact}-${artifact_version}.war ]; then
 			local source_folder=$(echo $artifact | cut -d'.' -f 3- | tr '.' '-')
 			git log -1 --pretty='%H' -- ${source_folder} > ${artifact_folder}/.githash
 			git log -1 --pretty='%H' -- ${source_folder} > ${artifact_folder}/git-commit
