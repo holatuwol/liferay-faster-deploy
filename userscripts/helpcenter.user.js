@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name           LESAfied Help Center
 // @namespace      holatuwol
-// @version        1.6
+// @version        1.7
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/helpcenter.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/helpcenter.user.js
-// @match          https://help.liferay.com/hc/en-us/requests/*
+// @include        /https:\/\/help\.liferay\.com\/hc\/.*\/requests\/.*/
 // @grant          none
 // ==/UserScript==
 
@@ -96,6 +96,7 @@ var maxPageId = Math.max.apply(null, Array.from(availablePages).map(x => parseIn
 var currentCommentList = document.querySelector('ul.comment-list');
 
 var commentPageLookup = {};
+
 var pageCommentLookup = {};
 pageCommentLookup[currentPageId] = currentCommentList;
 
@@ -402,6 +403,12 @@ function requestCommentList(pageId, callback) {
     return callback();
   }
 
+  if (pageId in pageCommentLookup) {
+    requestCommentList(pageId + 1, callback);
+
+    return;
+  }
+
   var xhr = new XMLHttpRequest();
 
   var href = 'https://' + document.location.host + document.location.pathname + '?page=' + pageId;
@@ -564,6 +571,8 @@ function prepareUnpaginatedPage() {
   highlightComment();
 }
 
+processCommentList(currentPageId, document.querySelectorAll('ul.comment-list > li'));
+
 if (isPaginated) {
   addPermaLinks(currentPageId);
   highlightComment();
@@ -571,7 +580,6 @@ if (isPaginated) {
   requestCommentList(1, preparePaginatedPage);
 }
 else {
-  processCommentList(1, document.querySelectorAll('ul.comment-list > li'));
   requestCommentList(2, prepareUnpaginatedPage);
 }
 
