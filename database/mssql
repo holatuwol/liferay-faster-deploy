@@ -1,0 +1,87 @@
+#!/bin/bash
+
+. "$(dirname ${BASH_SOURCE[0]})/common"
+
+restorebackup() {
+	echo 'Backup creation not supported!'
+}
+
+startdatabase() {
+	if docker inspect ${CONTAINER_NAME} 1>/dev/null 2>/dev/null; then
+		echo "Using existing container ${CONTAINER_NAME}"
+		docker start ${CONTAINER_NAME}
+		return 0
+	fi
+
+	random_password > dbpass.txt
+
+	local MSSQL_PASSWORD=$(cat dbpass.txt)
+
+	docker run --name ${CONTAINER_NAME} \
+		-e 'ACCEPT_EULA=y' -e "SA_PASSWORD=${MSSQL_PASSWORD}" \
+		--detach --expose 1433 mcr.microsoft.com/mssql/server:${MSSQL_VERSION}
+}
+
+updateprops() {
+	if [ "" == "${DB_HOST_NAME}" ]; then
+		local DB_HOST_NAME=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${CONTAINER_NAME})
+		echo "Microsoft SQL Server database is started with IP address ${DB_HOST_NAME}"
+	fi
+
+
+	echo "Updating ${LIFERAY_HOME}/portal-ext.properties with database connection information"
+
+	if [ -f ${LIFERAY_HOME}/portal-ext.properties ]; then
+		if [ "" != "$(grep -F ${DB_HOST_NAME} ${LIFERAY_HOME}/portal-ext.properties | grep -vF '#')" ]; then
+			return 0
+		fi
+
+		sed -i.bak 's/^jdbc.default/#jdbc.default/g' ${LIFERAY_HOME}/portal-ext.properties
+	fi
+
+	local MSSQL_PASSWORD=$(cat dbpass.txt)
+
+	echo "
+jdbc.default.driverClassName=com.microsoft.sqlserver.jdbc.SQLServerDriver
+jdbc.default.url=jdbc:sqlserver://${DB_HOST_NAME};databaseName=lportal
+jdbc.default.username=sa
+jdbc.default.password=${MSSQL_PASSWORD}
+" >> ${LIFERAY_HOME}/portal-ext.properties
+}
+
+waitfor_database() {
+	echo 'Waiting for database startup to complete...'
+
+	while [ "" == "$(docker logs ${CONTAINER_NAME} | grep -F '<ipv4> 1433')" ]; do
+		sleep 1
+	done
+
+	local MSSQL_PASSWORD=$(cat dbpass.txt)
+
+	echo '
+create database lportal;
+GO
+' > setup.sql
+
+	echo "#/bin/bash
+
+/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P ${MSSQL_PASSWORD} -d master -i setup.sql
+" > setup.sh
+
+	chmod u+x setup.sh
+
+	docker cp setup.sql ${CONTAINER_NAME}:/setup.sql
+	docker cp setup.sh ${CONTAINER_NAME}:/setup.sh
+
+	docker exec -it ${CONTAINER_NAME} bash -c 'chmod u+x setup.sh && /setup.sh'
+
+	echo 'Database startup complete!'
+}
+
+DB_TYPE='mssql'
+
+if [ "" == "${MSSQL_VERSION}" ]; then
+	MSSQL_VERSION='2017-CU12-ubuntu'
+fi
+
+runcontainer $@
