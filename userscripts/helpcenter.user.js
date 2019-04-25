@@ -1,17 +1,43 @@
 // ==UserScript==
 // @name           LESAfied Help Center
 // @namespace      holatuwol
-// @version        1.8
+// @version        1.9
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/helpcenter.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/helpcenter.user.js
 // @include        /https:\/\/help\.liferay\.com\/hc\/.*\/requests\/.*/
 // @grant          none
 // ==/UserScript==
 
+// Polyfills for IE11
+
+if (!Array.from) {
+  Array.from = function(x) {
+    return Array.prototype.slice.call(x, 0);
+  }
+}
+
+if (!Element.prototype.matches) {
+  Element.prototype.matches = Element.prototype.msMatchesSelector || Element.prototype.webkitMatchesSelector;
+}
+
+if (!Element.prototype.closest) {
+  Element.prototype.closest = function(s) {
+    var el = this;
+
+    do {
+      if (el.matches(s)) return el;
+      el = el.parentElement || el.parentNode;
+    } while (el !== null && el.nodeType === 1);
+    return null;
+  };
+}
+
+// Append styling to the beginning of the page
+
 var styleElement = document.createElement('style');
 var headerHeight = document.querySelector('.header').clientHeight;
 
-styleElement.textContent = `
+var customCSS = function() {/**
 dl.request-attachments {
   display: none;
 }
@@ -32,10 +58,10 @@ li.comment {
 .lesa-ui-permalink > input {
   background-color: transparent;
   width: 100%;
-  font-size: 0.9em;
-  height: 1.2em;
-  margin: 0em;
-  padding: 0.2em;
+  font-size: 0.8em;
+  height: 2em;
+  margin: 0;
+  padding: 0;
 }
 
 .lesa-ui-attachments {
@@ -58,14 +84,16 @@ li.comment {
   font-weight: 600;
   margin-right: 1em;
 }
-`;
+**/}.toString().split('\n').slice(1, -1).join('\n');
+
+customCSS = customCSS.replace(/\$\{headerHeight\}/, headerHeight);
 
 // Also allow disabling of pagination for testing purposes.
 
 var isPaginated = !document.location.search || document.location.search.indexOf('page=0') == -1;
 
 if (!isPaginated) {
-  styleElement.textContent = styleElement.textContent + `
+  customCSS += function() {/**
 nav.pagination {
   display: none;
 }
@@ -82,16 +110,20 @@ ul.comment-list {
 .comment-list .comment:last-child {
   border-top: 1px solid #ced3de;
 }
-`
+**/}.toString().split('\n').slice(1, -1).join('\n');
 }
+
+styleElement.textContent = customCSS;
 
 document.querySelector('head').appendChild(styleElement);
 
 var availablePages = document.querySelectorAll('.pagination li');
 var currentPageItem = document.querySelector('nav.pagination .pagination-current');
 
+var integerRegex = /^[0-9]*$/
+
 var currentPageId = currentPageItem ? parseInt(currentPageItem.textContent) : 1;
-var maxPageId = Math.max.apply(null, Array.from(availablePages).map(function(x) { return parseInt(x.textContent.trim()) }).filter(function(x) { return !Number.isNaN(x) })) || 1;
+var maxPageId = Math.max.apply(null, Array.from(availablePages).map(function(x) { return x.children[0].textContent.trim() }).filter(function(x) { return integerRegex.test(x) }).map(function(x) { return parseInt(x) })) || 1;
 
 var currentCommentList = document.querySelector('ul.comment-list');
 
@@ -435,8 +467,6 @@ function clearHighlightedComments() {
  * Scroll to a specific comment if its comment ID is included in a
  * query string parameter.
  */
-
-var integerRegex = /^[0-9]*$/
 
 function highlightComment(commentId, event) {
   if (!commentId && !document.location.search && !document.location.hash) {
