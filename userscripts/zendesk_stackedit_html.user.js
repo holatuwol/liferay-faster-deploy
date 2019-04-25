@@ -2,7 +2,7 @@
 // @name           ZenDesk Compose with Stackedit
 // @namespace      holatuwol
 // @license        0BSD
-// @version        1.1
+// @version        1.2
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk_stackedit_html.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk_stackedit_html.user.js
 // @match          https://*.zendesk.com/agent/*
@@ -68,7 +68,7 @@ function composeWithStackedit(element, callback) {
     }
   });
 
-  stackedit.on('fileChange', (file) => {
+  stackedit.on('fileChange', function(file) {
     element.innerHTML = file.content.html;
 
     if (callback) {

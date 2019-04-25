@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           LESAfied Help Center
 // @namespace      holatuwol
-// @version        1.7
+// @version        1.8
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/helpcenter.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/helpcenter.user.js
 // @include        /https:\/\/help\.liferay\.com\/hc\/.*\/requests\/.*/
@@ -91,7 +91,7 @@ var availablePages = document.querySelectorAll('.pagination li');
 var currentPageItem = document.querySelector('nav.pagination .pagination-current');
 
 var currentPageId = currentPageItem ? parseInt(currentPageItem.textContent) : 1;
-var maxPageId = Math.max.apply(null, Array.from(availablePages).map(x => parseInt(x.textContent.trim())).filter(x => !Number.isNaN(x))) || 1;
+var maxPageId = Math.max.apply(null, Array.from(availablePages).map(function(x) { return parseInt(x.textContent.trim()) }).filter(function(x) { return !Number.isNaN(x) })) || 1;
 
 var currentCommentList = document.querySelector('ul.comment-list');
 

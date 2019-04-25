@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        4.0
+// @version        4.1
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -135,7 +135,7 @@ function getPatcherPortalAccountsHREF(params) {
   var portletId = '1_WAR_osbpatcherportlet';
   var ns = '_' + portletId + '_';
 
-  var queryString = Object.keys(params).map(key => (key.indexOf('p_p_') == 0 ? key : (ns + key)) + '=' + encodeURIComponent(params[key])).join('&');
+  var queryString = Object.keys(params).map(function(key) { return (key.indexOf('p_p_') == 0 ? key : (ns + key)) + '=' + encodeURIComponent(params[key]) }).join('&');
   return 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/accounts/view?p_p_id=' + portletId + '&' + queryString;
 }
 
@@ -147,7 +147,7 @@ function getCustomerPortalAccountsHREF(params) {
   var portletId = 'com_liferay_osb_customer_account_entry_details_web_AccountEntryDetailsPortlet';
   var ns = '_' + portletId + '_';
 
-  var queryString = Object.keys(params).map(key => (key.indexOf('p_p_') == 0 ? key : (ns + key)) + '=' + encodeURIComponent(params[key])).join('&');
+  var queryString = Object.keys(params).map(function(key) { return (key.indexOf('p_p_') == 0 ? key : (ns + key)) + '=' + encodeURIComponent(params[key]) }).join('&');
   return 'https://customer.liferay.com/project-details?p_p_id=' + portletId + '&' + queryString;
 }
 
@@ -1072,7 +1072,7 @@ function composeWithStackedit(element, callback) {
     }
   });
 
-  stackedit.on('fileChange', (file) => {
+  stackedit.on('fileChange', function(file) {
     element.innerHTML = file.content.html;
 
     if (callback) {
