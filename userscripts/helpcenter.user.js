@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           LESAfied Help Center
 // @namespace      holatuwol
-// @version        1.9
+// @version        2.0
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/helpcenter.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/helpcenter.user.js
 // @include        /https:\/\/help\.liferay\.com\/hc\/.*\/requests\/.*/
@@ -38,10 +38,6 @@ var styleElement = document.createElement('style');
 var headerHeight = document.querySelector('.header').clientHeight;
 
 var customCSS = function() {/**
-dl.request-attachments {
-  display: none;
-}
-
 li.comment {
   scroll-margin: ${headerHeight}px;
 }
@@ -386,6 +382,16 @@ function addAttachments() {
   // Generate something to hold all of our attachments.
 
   var attachmentsContainer = createAttachmentsContainer();
+
+  // Detach the old container
+
+  var oldAttachmentsContainer = document.querySelector('dl.request-attachments');
+
+  if (oldAttachmentsContainer) {
+    oldAttachmentsContainer.parentNode.removeChild(oldAttachmentsContainer);
+  }
+
+  // Attach the new container
 
   if (attachmentsContainer) {
     currentCommentList.parentNode.insertBefore(attachmentsContainer, currentCommentList);
