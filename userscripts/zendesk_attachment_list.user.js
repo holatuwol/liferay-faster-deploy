@@ -2,7 +2,7 @@
 // @name           ZenDesk Attachment List
 // @namespace      holatuwol
 // @license        0BSD
-// @version        1.4
+// @version        1.5
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk_attachment_list.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk_attachment_list.user.js
 // @match          https://*.zendesk.com/agent/*
@@ -37,16 +37,15 @@ a.generating::after {
 }
 
 .lesa-ui-attachment-info {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: repeat(2, auto);
 }
 
 .lesa-ui-attachment-info a {
   margin-right: 1em;
 }
 
-.lesa-ui-attachments-download-all {
+.lesa-ui-attachments-bulk-download {
   margin-top: 0.5em;
   text-align: right;
   text-decoration: underline;
@@ -223,13 +222,10 @@ function extractExternalLinkMetadata(externalLink) {
  * Generate a single row in the attachment table based on the provided link.
  */
 
-function createAttachmentRow(attachment) {
-  var attachmentInfo = document.createElement('div');
-  attachmentInfo.classList.add('lesa-ui-attachment-info')
-
+function addAttachmentRow(container, attachment) {
   var attachmentLink = createAnchorTag(attachment.text, attachment.href, attachment.download);
   attachmentLink.classList.add('attachment');
-  attachmentInfo.appendChild(attachmentLink);
+  container.appendChild(attachmentLink);
 
   // Attach an author and a timestamp. We'll have the timestamp be a comment permalink, since
   // other parts in this script provide us with that functionality.
@@ -243,9 +239,9 @@ function createAttachmentRow(attachment) {
   attachmentCommentLink.onclick = highlightComment.bind(null, attachment.commentId);
 
   attachmentExtraInfo.appendChild(attachmentCommentLink)
-  attachmentInfo.appendChild(attachmentExtraInfo);
+  container.appendChild(attachmentExtraInfo);
 
-  return attachmentInfo;
+  return container;
 }
 
 /**
@@ -324,17 +320,22 @@ function createAttachmentsContainer(ticketId, ticketInfo, conversation) {
       a.text > b.text ? 1 : a.text < b.text ? -1 : 0;
   })
 
-  // Generate the table and a 'download all' link for convenience
+  // Generate the table and a 'bulk download' link for convenience
+
+  var attachmentInfo = document.createElement('div');
+  attachmentInfo.classList.add('lesa-ui-attachment-info');
 
   for (var i = 0; i < attachments.length; i++) {
-    attachmentsWrapper.appendChild(createAttachmentRow(attachments[i]));
+    addAttachmentRow(attachmentInfo, attachments[i]);
   }
+
+  attachmentsWrapper.appendChild(attachmentInfo);
 
   if (JSZip) {
     var downloadAllContainer = document.createElement('div');
-    downloadAllContainer.classList.add('lesa-ui-attachments-download-all');
+    downloadAllContainer.classList.add('lesa-ui-attachments-bulk-download');
 
-    var attachmentsZipLink = createAnchorTag('Generate Download All', null);
+    var attachmentsZipLink = createAnchorTag('Generate Bulk Download', null);
     attachmentsZipLink.onclick = createAttachmentZip.bind(attachmentsZipLink, ticketId, ticketInfo);
 
     downloadAllContainer.appendChild(attachmentsZipLink);
