@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        4.2
+// @version        4.3
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -233,18 +233,26 @@ function getProductVersionId(version) {
  * once the download has completed.
  */
 
-function downloadAttachment(link, callback) {
+function downloadAttachment(checkbox, callback) {
+  var href = checkbox.getAttribute('data-href');
+  var link = document.querySelector('.lesa-ui-attachment-info a[href="' + href + '"]');
+
   link.classList.add('downloading');
 
   var xhr = new XMLHttpRequest();
   xhr.responseType = 'blob';
 
   xhr.onload = function() {
-    callback(link.download, this.response);
+    callback(checkbox.getAttribute('data-download'), this.response);
     link.classList.remove('downloading');
   };
 
-  xhr.open('GET', link.href);
+  xhr.onerror = function() {
+    callback(checkbox.getAttribute('data-download'), null);
+    link.classList.remove('downloading');
+  }
+
+  xhr.open('GET', href);
   xhr.send(null);
 }
 
@@ -378,13 +386,17 @@ function addAttachmentRow(container, attachment) {
 
   var attachmentCheckbox = document.createElement('input');
   attachmentCheckbox.setAttribute('type', 'checkbox');
-  attachmentCheckbox.setAttribute('disabled', 'true');
+
+  attachmentCheckbox.setAttribute('data-text', attachment.text);
+  attachmentCheckbox.setAttribute('data-download', attachment.download);
+  attachmentCheckbox.setAttribute('data-href', attachment.href);
 
   if (attachment.missingCorsHeader) {
+    attachmentCheckbox.disabled = true;
     attachmentCheckbox.setAttribute('title', 'The domain where this attachment is hosted does not send proper CORS headers, so it is not eligible for bulk download.')
   }
   else {
-    attachmentCheckbox.setAttribute('checked', true);
+    attachmentCheckbox.checked = true;
   }
 
   container.appendChild(attachmentCheckbox);
@@ -397,19 +409,39 @@ function addAttachmentRow(container, attachment) {
 function createAttachmentZip(ticketId, ticketInfo) {
   var instance = this;
 
+  var attachmentLinks = document.querySelectorAll('div[data-side-conversations-anchor-id="' + ticketId + '"] .lesa-ui-attachment-info input[type="checkbox"]');
+
+  var attachmentCount = 0;
+
+  for (var i = 0; i < attachmentLinks.length; i++) {
+    attachmentLinks[i].disabled = true;
+
+    if (attachmentLinks[i].checked) {
+      ++attachmentCount;
+    }
+  }
+
+  if (attachmentCount == 0) {
+    return;
+  }
+
   instance.classList.add('downloading');
 
   var downloadCount = 0;
 
   var zip = new JSZip();
 
-  var attachmentLinks = document.querySelectorAll('div[data-side-conversations-anchor-id="' + ticketId + '"] .lesa-ui-attachment-info a.attachment');
-
   for (var i = 0; i < attachmentLinks.length; i++) {
-    downloadAttachment(attachmentLinks[i], function(fileName, blob) {
-      zip.file(fileName, blob);
+    if (!attachmentLinks[i].checked) {
+      continue;
+    }
 
-      if (++downloadCount < attachmentLinks.length) {
+    downloadAttachment(attachmentLinks[i], function(fileName, blob) {
+      if (blob) {
+        zip.file(fileName, blob);
+      }
+
+      if (++downloadCount < attachmentCount) {
         return;
       }
 
