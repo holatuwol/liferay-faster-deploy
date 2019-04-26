@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        4.3
+// @version        4.4
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -41,6 +41,10 @@ a.generating::after {
 .lesa-ui-attachment-info {
   display: grid;
   grid-template-columns: repeat(3, auto);
+}
+
+.lesa-ui-attachment-info .lesa-ui-attachment-extra-info {
+  text-align: right;
 }
 
 .lesa-ui-attachment-info a {
@@ -374,6 +378,7 @@ function addAttachmentRow(container, attachment) {
   // other parts in this script provide us with that functionality.
 
   var attachmentExtraInfo = document.createElement('div');
+  attachmentExtraInfo.classList.add('lesa-ui-attachment-extra-info');
 
   attachmentExtraInfo.appendChild(document.createTextNode(attachment.author + ' on '));
 
