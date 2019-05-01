@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        4.6
+// @version        4.7
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -668,7 +668,7 @@ function updateSidebarBoxContainer(ticketId, ticketInfo) {
 
 function createAttachmentsContainer(ticketId, ticketInfo, conversation) {
   var attachmentLinks = conversation.querySelectorAll('.attachment');
-  var externalLinks = conversation.querySelectorAll('.zd-comment > a:not(.attachment)');
+  var externalLinks = conversation.querySelectorAll('.is-public .zd-comment > a:not(.attachment)');
 
   if (attachmentLinks.length + externalLinks.length == 0) {
     return null;
