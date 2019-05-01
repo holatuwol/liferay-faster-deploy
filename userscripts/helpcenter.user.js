@@ -1,6 +1,7 @@
 // ==UserScript==
 // @name           Liferay Help Center, LESAfied
 // @namespace      holatuwol
+// @license        0BSD
 // @version        2.0
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/helpcenter.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/helpcenter.user.js
