@@ -534,7 +534,24 @@ request.onreadystatechange = function() {
 
 		var fixPackIds = Object.keys(versionInfoList[0])
 			.filter(x => x.indexOf(prefix) == 0)
-			.map(x => x.substring(prefix.length));
+			.map(x => x.substring(prefix.length))
+			.sort(function(a, b) {
+				var x1 = parseInt(a.substring(0, a.indexOf('-')));
+				var x2 = parseInt(b.substring(0, b.indexOf('-')));
+
+				if (x1 != x2) {
+					return x1 - x2;
+				}
+
+				if ((a.indexOf('-') == a.lastIndexOf('-')) || (b.indexOf('-') == b.lastIndexOf('-'))) {
+					return a > b ? 1 : a < b ? -1 : 0;
+				}
+
+				x1 = parseInt(a.substring(a.lastIndexOf('-') + 1));
+				x2 = parseInt(b.substring(b.lastIndexOf('-') + 1));
+
+				return x1 - x2;
+			});
 
 		fixPackIds.reduce(addFixPack, select1);
 		fixPackIds.reduce(addFixPack, select2);
