@@ -14,20 +14,23 @@ var modifyState = history.pushState ? history.pushState.bind(history) : null;
 var select1 = document.getElementById('sourceVersion');
 var select1Value = getParameter('sourceVersion');
 var select2 = document.getElementById('targetVersion');
-var select2Value = getParameter('targetVersion');
+var select2Value = getParameter('targetVersion') || select1Value;
 var nameFilter = document.getElementById('nameFilter');
 nameFilter.value = getParameter('nameFilter');
 
-var changesOnly = document.getElementById('changesOnly');
+var changeFilter = document.getElementById('changeFilter');
 
-if (changesOnly) {
-	changesOnly.checked = getParameter('changesOnly') == 'true';
-}
+if (changeFilter) {
+	var selectedIndex = 0;
 
-var notableOnly = document.getElementById('notableOnly');
+	if (getParameter('notableOnly')) {
+		selectedIndex = 2;
+	}
+	else if (getParameter('changesOnly')) {
+		selectedIndex = 1;
+	}
 
-if (notableOnly) {
-	notableOnly.checked = getParameter('notableOnly') == 'true';
+	changeFilter.selectedIndex = selectedIndex;
 }
 
 function isPermaLink(element) {
@@ -48,18 +51,23 @@ function checkPackageInfo() {
 			}
 		}
 
-		var newURL = baseURL + '?sourceVersion=' + select1.options[select1.selectedIndex].value + '&targetVersion=' + select2.options[select2.selectedIndex].value;
+		var newURL = baseURL + '?sourceVersion=' + select1.options[select1.selectedIndex].value;
+
+		if (select1.options[select1.selectedIndex].value != select2.options[select2.selectedIndex].value) {
+			newURL += '&targetVersion=' + select2.options[select2.selectedIndex].value;
+		}
 
 		if (nameFilter.value) {
 			newURL += '&nameFilter=' + nameFilter.value;
 		}
 
-		if (changesOnly) {
-			newURL += '&changesOnly=' + changesOnly.checked;
-		}
-
-		if (notableOnly) {
-			newURL += '&notableOnly=' + notableOnly.checked;
+		if (changeFilter) {
+			if (changeFilter.selectedIndex == 2) {
+				newURL += '&notableOnly=true';
+			}
+			else if (changeFilter.selectedIndex == 1) {
+				newURL += '&changesOnly=true';
+			}
 		}
 
 		modifyState({path: newURL}, '', newURL);
@@ -72,9 +80,19 @@ function checkPackageInfo() {
 	var name2 = 'packageVersion_' + select2.options[select2.selectedIndex].value;
 	var header2 = select1.options[select2.selectedIndex].innerHTML;
 
+	if (changeFilter && (name1 == name2)) {
+		changeFilter.selectedIndex = 0;
+		changeFilter.disabled = true
+	}
+	else {
+		changeFilter.disabled = false;
+	}
+
 	var nameFilterValue = nameFilter.value;
-	var changesOnlyValue = changesOnly && changesOnly.checked;
-	var notableOnlyValue = notableOnly && notableOnly.checked;
+
+	var changeFilterValue = changeFilter ? changeFilter.selectedIndex : 0;
+	var changesOnlyValue = changeFilterValue == 1;
+	var notableOnlyValue = changeFilterValue == 2;
 
 	var isDEVersionIncrease = (name2 > name1);
 
@@ -114,7 +132,7 @@ function checkPackageInfo() {
 			return (majorVersion1 != '0') || !isDEVersionIncrease;
 		}
 
-		if (isDEVersionIncrease) {
+		if (!isDEVersionIncrease) {
 			return false;
 		}
 
@@ -127,8 +145,6 @@ function checkPackageInfo() {
 		return minorVersion1 != minorVersion2;
 	};
 
-	var summary = document.getElementById('summary');
-
 	var filteredPackageInfoList = packageInfoList.filter(isMatchingNameFilter).filter(isAvailableVersion);
 
 	if ((name1 != name2) && changesOnlyValue) {
@@ -139,14 +155,8 @@ function checkPackageInfo() {
 		filteredPackageInfoList = filteredPackageInfoList.filter(isNotableVersionChange);
 	}
 
-	summary.innerHTML = '';
-
-	var table = document.createElement('table');
-	table.className = 'table';
-	summary.appendChild(table);
-	var tableBody = document.createElement('tbody');
-	table.appendChild(tableBody);
-	table = tableBody;
+	var table = document.getElementById('summary');
+	table.innerHTML = '';
 
 	var getRowBackgroundAlpha = function(version1, version2) {
 		return (version1 != version2) ? 0.1 : 0.0;
@@ -156,29 +166,27 @@ function checkPackageInfo() {
 		return (version1 != version2) ? 0.9 : 0.4;
 	};
 
-	var addRow = function(isHeader, rowData) {
+	var addRow = function(rowData) {
 		var row = document.createElement('tr');
 
-		if (!isHeader && (rowData.length > 3)) {
+		if (rowData.length > 2) {
 			row.style.color = 'rgba(0,0,0,' + getRowForegroundAlpha(rowData[2], rowData[3]) + ')'
 			row.style.backgroundColor = 'rgba(0,0,0,' + getRowBackgroundAlpha(rowData[2], rowData[3]) + ')';
 		}
 
 		for (var i = 0; i < rowData.length; i++) {
-			var cell = document.createElement(isHeader ? 'th' : 'td');
+			var cell = document.createElement('td');
 			cell.innerHTML = rowData[i];
+
+			if ((rowData.length == 3) && (i == 2)) {
+				cell.setAttribute('colspan', 2);
+			}
+
 			row.appendChild(cell);
 		}
 
 		table.appendChild(row);
 	};
-
-	if (name1 == name2) {
-		addRow(true, ['Artifact Name', 'Package Name', header1]);
-	}
-	else {
-		addRow(true, ['Artifact Name', 'Package Name', header1, header2]);
-	}
 
 	var getRowData = function(packageInfo) {
 		if (name1 == name2) {
@@ -189,7 +197,7 @@ function checkPackageInfo() {
 		}
 	};
 
-	filteredPackageInfoList.map(getRowData).forEach(addRow.bind(null, false));
+	filteredPackageInfoList.map(getRowData).forEach(addRow);
 };
 
 checkPackageInfo = _.debounce(checkPackageInfo, 100);
@@ -262,12 +270,8 @@ request.onreadystatechange = function() {
 		nameFilter.oninput = checkPackageInfo;
 		nameFilter.onpropertychange = checkPackageInfo;
 
-		if (changesOnly) {
-			changesOnly.onchange = checkPackageInfo;
-		}
-
-		if (notableOnly) {
-			notableOnly.onchange = checkPackageInfo;
+		if (changeFilter) {
+			changeFilter.onchange = checkPackageInfo;
 		}
 
 		checkPackageInfo();

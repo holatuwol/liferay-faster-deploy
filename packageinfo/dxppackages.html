@@ -23,46 +23,32 @@
 
 <p><strong>Warning</strong>: This is NOT an official Liferay tool, nor is it supported by Liferay in any way. This does a source code analysis of the code that exists at the tag for the specified release. For Marketplace plugins (which are released on a separate schedule), these versions will not be accurate.</p>
 
-<h2>Choose Your Comparison</h2>
+<h2>Perform a Comparison</h2>
 
-<p><strong>Note</strong>: If the values in the select boxes are the same, this will list the versions of all packages at the specified baseline rather than a comparison. You can show only breaking changes using the checkboxes below.</p>
-
-<table class="table">
-<tbody>
-<tr><th>Starting Version</th><th>Check Against Version</th><th>Name Filter</th><th>Other Filters</th></tr>
-<tr>
-<td>
-<select id="sourceVersion" name="sourceVersion">
-	<option value="7000-ga1" selected>7000-ga1</option>
-</select>
-</td>
-<td>
-<select id="targetVersion" name="targetVersion">
-	<option value="7000-ga1" selected>7000-ga1</option>
-</select>
-</td>
-<td>
-<input id="nameFilter" name="nameFilter" type="text" />
-</td>
-<td>
-<div>
-	<input id="changesOnly" name="changesOnly" type="checkbox" />
-	<label for="changesOnly">Version Changes</label>
-</div>
-<div>
-	<input id="notableOnly" name="notableOnly" type="checkbox" />
-	<label for="notableOnly">Breaking Changes</label>
-</div>
-</td>
-</tr>
-</tbody>
-</table>
-
-<h2>Comparison Results</h2>
+<p>Compare all packages <select id="changeFilter" name="changeFilter"><option></option><option selected>with version changes</option><option>with breaking changes</option></select></p>
 
 <p><strong>Note</strong>: Entries with a gray background indicate a version change. Version 0.0.0 means that the package does not exist in that version of DXP. You can show only breaking changes using the checkboxes above.</p>
 
-<div id="summary">&nbsp;</div>
+<table class="table">
+<thead>
+<th colspan=2 style="width: 100%">
+<input id="nameFilter" name="nameFilter" type="text" placeholder="filter by artifact or package name" style="width: 100%" />
+</th>
+<th>
+<select id="sourceVersion" name="sourceVersion">
+	<option value="7000-ga1" selected>7000-ga1</option>
+</select>
+</th>
+<th>
+<select id="targetVersion" name="targetVersion">
+	<option value="7000-ga1" selected>7000-ga1</option>
+</select>
+</th>
+</tr>
+</thead>
+<tbody id="summary">
+</tbody>
+</table>
 
 <h2>About the Comparison</h2>
 

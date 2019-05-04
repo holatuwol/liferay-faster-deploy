@@ -11,35 +11,43 @@ function getParameter(name) {
 var versionInfoList = null;
 var modifyState = history.pushState ? history.pushState.bind(history) : null;
 
+var select0 = document.getElementById('bomVersion');
+
 var select1 = document.getElementById('sourceVersion');
 var select1Value = getParameter('sourceVersion');
 var select2 = document.getElementById('targetVersion');
-var select2Value = getParameter('targetVersion');
+var select2Value = getParameter('targetVersion') || select1Value;
 var nameFilter = document.getElementById('nameFilter');
 nameFilter.value = getParameter('nameFilter');
 
-var changesOnly = document.getElementById('changesOnly');
+var includeFilter = document.getElementById('includeFilter');
 
-if (changesOnly) {
-	changesOnly.checked = getParameter('changesOnly') == 'true';
+if (includeFilter) {
+	var selectedIndex = 1;
+
+	if (getParameter('includeLiferay') && getParameter('includeThirdParty')) {
+		selectedIndex = 0;
+	}
+	else if (getParameter('includeThirdParty')) {
+		selectedIndex = 2;
+	}
+
+	includeFilter.selectedIndex = selectedIndex;
 }
 
-var notableOnly = document.getElementById('notableOnly');
+var changeFilter = document.getElementById('changeFilter');
 
-if (notableOnly) {
-	notableOnly.checked = getParameter('notableOnly') == 'true';
-}
+if (changeFilter) {
+	var selectedIndex = 0;
 
-var includeLiferay = document.getElementById('includeLiferay');
+	if (getParameter('notableOnly')) {
+		selectedIndex = 2;
+	}
+	else if (getParameter('changesOnly')) {
+		selectedIndex = 1;
+	}
 
-if (includeLiferay) {
-	includeLiferay.checked = getParameter('includeLiferay') != 'false';
-}
-
-var includeThirdParty = document.getElementById('includeThirdParty');
-
-if (includeThirdParty) {
-	includeThirdParty.checked = getParameter('includeThirdParty') == 'true';
+	changeFilter.selectedIndex = selectedIndex;
 }
 
 var servicePacks = {
@@ -132,15 +140,6 @@ function getCommand(versionId, artifactId) {
 	].join('');
 }
 
-function addScripts(zip, baseArtifactId, versionId) {
-	var script = ['#!/bin/bash'];
-	var artifactIds = [baseArtifactId, baseArtifactId + '.private', baseArtifactId + '.third.party'];
-
-	Array.prototype.push.apply(script, artifactIds.map(getCommand.bind(null, versionId)));
-
-	zip.file(baseArtifactId + '-' + versionId + '.sh', script.join('\n'));
-}
-
 function asDependencyElement(key, accumulator, versionInfo) {
 	var dependencyVersion = versionInfo[key];
 
@@ -194,24 +193,65 @@ function asDependencyElement(key, accumulator, versionInfo) {
 };
 
 function generateBOM(selectId) {
-	selectId = selectId || 'sourceVersion';
+	selectId = selectId || 'bomVersion';
 
 	var select = document.getElementById(selectId);
 	var selectValue = select.options[select.selectedIndex].value;
 
+	var script = ['#!/bin/bash'];
+
+	var zip = new JSZip();
+	var zipFileName;
+
+	if (selectValue == 'all') {
+		zipFileName = 'release.portal.bom.zip';
+
+		for (var i = 1; i < select.options.length; i++) {
+			addBOMs(select.options[i].value, zip, script);
+		}
+	}
+	else {
+		zipFileName = addBOMs(selectValue, zip, script);
+	}
+
+	zip.file('install-bom.sh', script.join('\n'));
+
+	zip.generateAsync({
+		type: 'blob',
+		compression: 'DEFLATE'
+	}).then(function(bomBlob) {
+		var downloadBOMLink = document.createElement('a');
+		downloadBOMLink.style.display = 'none';
+
+		downloadBOMLink.href = URL.createObjectURL(bomBlob);
+		downloadBOMLink.download = zipFileName;
+
+		document.body.appendChild(downloadBOMLink);
+		downloadBOMLink.click();
+		document.body.removeChild(downloadBOMLink);
+	})
+}
+
+function addBOMs(selectValue, zip, script) {
 	var artifactId = selectValue.indexOf('-ga') != -1 ? 'release.portal.bom' : 'release.dxp.bom';
 
-	var versionId;
+	var versionIds = [];
 	var versionNumber = parseInt(selectValue.substring(0, 4));
 
 	if ((versionNumber % 100 == 10) && (selectValue.indexOf('-base') == -1)) {
 		var fixPackVersion = selectValue.substring(selectValue.indexOf('-', 5) + 1);
-		var versionSuffix = selectValue in servicePacks ? ('.' + servicePacks[selectValue]) : ('.fp' + fixPackVersion);
-		versionId = Math.floor(versionNumber / 1000) + '.' + Math.floor((versionNumber % 1000) / 100) + '.10' + versionSuffix;
+
+		var versionSuffix = '.fp' + fixPackVersion;
+		versionIds.push(Math.floor(versionNumber / 1000) + '.' + Math.floor((versionNumber % 1000) / 100) + '.10' + versionSuffix);
+
+		if (selectValue in servicePacks) {
+			versionSuffix = '.' + servicePacks[selectValue];
+			versionIds.push(Math.floor(versionNumber / 1000) + '.' + Math.floor((versionNumber % 1000) / 100) + '.10' + versionSuffix);
+		}
 	}
 	else {
 		var fixPackVersion = selectValue.substring(selectValue.indexOf('-', 5) + 1);
-		versionId = Math.floor(versionNumber / 1000) + '.' + Math.floor((versionNumber % 1000) / 100) + '.' + (versionNumber % 100);
+		versionIds.push(Math.floor(versionNumber / 1000) + '.' + Math.floor((versionNumber % 1000) / 100) + '.' + (versionNumber % 100));
 	}
 
 	var key ='version_' + selectValue;
@@ -224,28 +264,18 @@ function generateBOM(selectId) {
 	var privateDependencies = versionInfoList.filter(isAvailableVersion.bind(null, 'private'));
 	var thirdPartyDependencies = versionInfoList.filter(isAvailableVersion.bind(null, 'third-party'));
 
-	var zip = new JSZip();
+	for (var i = 0; i < versionIds.length; i++) {
+		var versionId = versionIds[i];
 
-	addScripts(zip, artifactId, versionId);
+		var fileNames = [artifactId, artifactId + '.private', artifactId + '.third.party'];
+		Array.prototype.push.apply(script, fileNames.map(getCommand.bind(null, versionId)));
 
-	addBOM(zip, key, artifactId, versionId, publicDependencies);
-	addBOM(zip, key, artifactId + '.private', versionId, privateDependencies);
-	addBOM(zip, key, artifactId + '.third.party', versionId, thirdPartyDependencies);
+		addBOM(zip, key, artifactId, versionId, publicDependencies);
+		addBOM(zip, key, artifactId + '.private', versionId, privateDependencies);
+		addBOM(zip, key, artifactId + '.third.party', versionId, thirdPartyDependencies);
+	}
 
-	zip.generateAsync({
-		type: 'blob',
-		compression: 'DEFLATE'
-	}).then(function(bomBlob) {
-		var downloadBOMLink = document.createElement('a');
-		downloadBOMLink.style.display = 'none';
-
-		downloadBOMLink.href = URL.createObjectURL(bomBlob);
-		downloadBOMLink.download = artifactId + '-' + versionId + '.zip';
-
-		document.body.appendChild(downloadBOMLink);
-		downloadBOMLink.click();
-		document.body.removeChild(downloadBOMLink);
-	})
+	return artifactId + '-' + versionIds[0] + '.zip';
 };
 
 function isPermaLink(element) {
@@ -266,26 +296,32 @@ function checkVersionInfo() {
 			}
 		}
 
-		var newURL = baseURL + '?sourceVersion=' + select1.options[select1.selectedIndex].value + '&targetVersion=' + select2.options[select2.selectedIndex].value;
+		var newURL = baseURL + '?sourceVersion=' + select1.options[select1.selectedIndex].value;
+
+		if (select1.options[select1.selectedIndex].value != select2.options[select2.selectedIndex].value) {
+			newURL += '&targetVersion=' + select2.options[select2.selectedIndex].value;
+		}
 
 		if (nameFilter.value) {
 			newURL += '&nameFilter=' + nameFilter.value;
 		}
 
-		if (changesOnly) {
-			newURL += '&changesOnly=' + (changesOnly.checked);
+		if (changeFilter) {
+			if (changeFilter.selectedIndex == 2) {
+				newURL += '&notableOnly=true';
+			}
+			else if (changeFilter.selectedIndex == 1) {
+				newURL += '&changesOnly=true';
+			}
 		}
 
-		if (notableOnly) {
-			newURL += '&notableOnly=' + (notableOnly.checked);
-		}
-
-		if (!includeLiferay) {
-			newURL += '&includeLiferay=' + (includeLiferay.checked);
-		}
-
-		if (includeThirdParty) {
-			newURL += '&includeThirdParty=' + (includeThirdParty.checked);
+		if (includeFilter) {
+			if (includeFilter.selectedIndex == 0) {
+				newURL += '&includeThirdParty=true';
+			}
+			else if (includeFilter.selectedIndex == 2) {
+				newURL += '&includeLiferay=false&includeThirdParty=true';
+			}
 		}
 
 		modifyState({path: newURL}, '', newURL);
@@ -319,14 +355,25 @@ function checkVersionInfo() {
 	var tagName2 = getTagName(select2.options[select2.selectedIndex].value);
 	var header2 = select1.options[select2.selectedIndex].innerHTML;
 
+	if (changeFilter && (name1 == name2)) {
+		changeFilter.selectedIndex = 0;
+		changeFilter.disabled = true
+	}
+	else {
+		changeFilter.disabled = false;
+	}
+
 	var nameFilterValue = nameFilter.value;
-	var changesOnlyValue = changesOnly && changesOnly.checked;
-	var notableOnlyValue = notableOnly && notableOnly.checked;
+
+	var changeFilterValue = changeFilter ? changeFilter.selectedIndex : 0;
+	var changesOnlyValue = changeFilterValue == 1;
+	var notableOnlyValue = changeFilterValue == 2;
 
 	var isDEVersionIncrease = (name2 > name1);
 
-	var includeLiferayValue = !includeLiferay || includeLiferay.checked;
-	var includeThirdPartyValue = !includeThirdParty || includeThirdParty.checked;
+	var includeFilterValue = includeFilter ? includeFilter.selectedIndex : 1;
+	var includeLiferayValue = includeFilterValue == 0 || includeFilterValue == 1;
+	var includeThirdPartyValue = includeFilterValue == 0 || includeFilterValue == 2;
 
 	var isMatchingRepositoryFilter = function(versionInfo) {
 		if (versionInfo['repository'] == 'third-party') {
@@ -390,15 +437,8 @@ function checkVersionInfo() {
 		filteredVersionInfoList = filteredVersionInfoList.filter(isVersionChange);
 	}
 
-	var summary = document.getElementById('summary');
-	summary.innerHTML = '';
-
-	var table = document.createElement('table');
-	table.className = 'table';
-	summary.appendChild(table);
-	var tableBody = document.createElement('tbody');
-	table.appendChild(tableBody);
-	table = tableBody;
+	var table = document.getElementById('summary');
+	table.innerHTML = '';
 
 	var getRowBackgroundAlpha = function(version1, version2) {
 		return (version1 != version2) ? 0.1 : 0.0;
@@ -408,29 +448,27 @@ function checkVersionInfo() {
 		return (version1 != version2) ? 0.9 : 0.4;
 	};
 
-	var addRow = function(isHeader, rowData) {
+	var addRow = function(rowData) {
 		var row = document.createElement('tr');
 
-		if (!isHeader && (rowData.length > 3)) {
+		if (rowData.length > 3) {
 			row.style.opacity = getRowForegroundAlpha(rowData[2], rowData[3]);
 			row.style.backgroundColor = 'rgba(0,0,0,' + getRowBackgroundAlpha(rowData[2], rowData[3]) + ')';
 		}
 
 		for (var i = 0; i < rowData.length; i++) {
-			var cell = document.createElement(isHeader ? 'th' : 'td');
+			var cell = document.createElement('td');
 			cell.innerHTML = rowData[i];
+
+			if ((rowData.length == 3) && (i == 2)) {
+				cell.setAttribute('colspan', 2);
+			}
+
 			row.appendChild(cell);
 		}
 
 		table.appendChild(row);
 	};
-
-	if (name1 == name2) {
-		addRow(true, ['group', 'name', header1]);
-	}
-	else {
-		addRow(true, ['group', 'name', header1, header2]);
-	}
 
 	var usePrivateTag = function(tagName, repository) {
 		if (repository != 'private') {
@@ -491,7 +529,7 @@ function checkVersionInfo() {
 		}
 	};
 
-	filteredVersionInfoList.map(getRowData).forEach(addRow.bind(null, false));
+	filteredVersionInfoList.map(getRowData).forEach(addRow);
 };
 
 checkVersionInfo = _.debounce(checkVersionInfo, 200);
@@ -557,6 +595,7 @@ request.onreadystatechange = function() {
 				return x1 - x2;
 			});
 
+		fixPackIds.reduce(addFixPack, select0);
 		fixPackIds.reduce(addFixPack, select1);
 		fixPackIds.reduce(addFixPack, select2);
 
@@ -568,20 +607,12 @@ request.onreadystatechange = function() {
 		nameFilter.oninput = checkVersionInfo;
 		nameFilter.onpropertychange = checkVersionInfo;
 
-		if (changesOnly) {
-			changesOnly.onchange = checkVersionInfo;
+		if (changeFilter) {
+			changeFilter.onchange = checkVersionInfo;
 		}
 
-		if (notableOnly) {
-			notableOnly.onchange = checkVersionInfo;
-		}
-
-		if (includeLiferay) {
-			includeLiferay.onchange = checkVersionInfo;
-		}
-
-		if (includeThirdParty) {
-			includeThirdParty.onchange = checkVersionInfo;
+		if (includeFilter) {
+			includeFilter.onchange = checkVersionInfo;
 		}
 
 		checkVersionInfo();

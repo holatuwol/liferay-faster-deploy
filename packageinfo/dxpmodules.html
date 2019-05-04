@@ -25,60 +25,49 @@
 
 <p><strong>Warning</strong>: This is NOT an official Liferay tool, nor is it supported by Liferay in any way. This does a source code analysis of the code that exists at the tag for the specified release. For Marketplace plugins (which are released on a separate schedule), these versions will not be accurate.</p>
 
-<h2>Choose Your Comparison</h2>
+<h2>Generate a BOM</h2>
 
-<p><strong>Note</strong>: If the values in the select boxes are the same, this will list the versions of all modules at the specified baseline rather than a comparison. Some artifacts (often from the <code>com.liferay.portal</code> group) are listed as snapshots, because there used to be a disconnect between releasing an artifact and generating a new Liferay fix pack.</p>
+<p>This tool stores a lot of metadata that can be used to generate a BOM for a specific version of Liferay. Please use the select options below if you need to do so.</p>
 
-<ul><li>If the version is listed as <code>.1-SNAPSHOT</code> or later, you can use .0 at build time.</li><li>If the version is listed as <code>.0-SNAPSHOT</code>, you might be able to use .0 at build time if your package doesn't change before the actual .0 release, but you may have to use one minor version before the listed version at build time.</li></ul>
+<select id="bomVersion">
+	<option value="all">all versions</option>
+</select>
+
+<button onclick="generateBOM('bomVersion');">
+	Generate BOMs
+</button>
+
+<h2>Perform a Comparison</h2>
+
+<p>Compare <select id="includeFilter" name="includeFilter"><option>all artifacts</option><option selected>Liferay artifacts</option><option>third-party artifacts</option></select><select id="changeFilter" name="changeFilter"><option></option><option selected>with version changes</option><option>with API changes</option></select></p>
+
+<p><strong>Note</strong>: Entries with a gray background indicate a version change. Version 0.0.0 means that the module does not exist in that version of DXP. Some artifacts (often from the <code>com.liferay.portal</code> group) are listed as snapshots, because there used to be a disconnect between releasing an artifact and generating a new Liferay fix pack.</p>
+
+<ul>
+<li>If the version is listed as <code>.1-SNAPSHOT</code> or later, you can use .0 at build time.</li>
+<li>If the version is listed as <code>.0-SNAPSHOT</code>, you might be able to use .0 at build time if your package doesn't change before the actual .0 release, but you may have to use one minor version before the listed version at build time.</li>
+</ul>
 
 <table class="table">
-<tbody>
-<tr><th>Starting Version</th><th>Check Against Version</th><th>Name Filter</th><th>Other Filters</th></tr>
-<tr>
-<td>
+<thead>
+<th colspan=2 style="width: 100%">
+<input id="nameFilter" name="nameFilter" type="text" placeholder="filter by group or artifact name" style="width: 100%" />
+</th>
+<th>
 <select id="sourceVersion" name="sourceVersion">
-    <option value="7000-ga1">7000-ga1</option>
+	<option value="7000-ga1">7000-ga1</option>
 </select>
-<button onClick="generateBOM('sourceVersion');">Generate BOM</button>
-</td>
-<td>
+</th>
+<th>
 <select id="targetVersion" name="targetVersion">
-    <option value="7000-ga1">7000-ga1</option>
+	<option value="7000-ga1">7000-ga1</option>
 </select>
-<button onClick="generateBOM('targetVersion');">Generate BOM</button>
-</td>
-<td>
-<input id="nameFilter" name="nameFilter" type="text" />
-</td>
-<td>
-<div>
-	<input id="changesOnly" name="changesOnly" type="checkbox" />
-	<label for="changesOnly">Version Changes</label>
-</div>
-<div>
-	<input id="notableOnly" name="notableOnly" type="checkbox" />
-	<label for="notableOnly">Possible API Changes</label>
-</div>
-<div>
-	<input id="includeLiferay" name="includeLiferay" type="checkbox" checked />
-	<label for="includeLiferay">Liferay Artifacts</label>
-</div>
-<div>
-	<input id="includeThirdParty" name="includeThirdParty" type="checkbox" />
-	<label for="includeThirdParty">Third Party Libraries</label>
-</div>
-</td>
-<td>
-</td>
-</tr>
+</th>
+</thead>
+
+<tbody id="summary">
 </tbody>
 </table>
-
-<h2>Comparison Results</h2>
-
-<p><strong>Note</strong>: Entries with a gray background indicate a version change. Version 0.0.0 means that the module does not exist in that version of DXP.</p>
-
-<div id="summary">&nbsp;</div>
 
 </div>
 
