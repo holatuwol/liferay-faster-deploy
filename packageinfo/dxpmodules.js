@@ -595,7 +595,10 @@ request.onreadystatechange = function() {
 				return x1 - x2;
 			});
 
-		fixPackIds.reduce(addFixPack, select0);
+		if (select0) {
+			fixPackIds.reduce(addFixPack, select0);
+		}
+
 		fixPackIds.reduce(addFixPack, select1);
 		fixPackIds.reduce(addFixPack, select2);
 
