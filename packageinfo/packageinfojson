@@ -29,23 +29,25 @@ python ${SCRIPT_FOLDER}/requireschemajson.py $(dirname $PORTAL_SOURCE_ROOT_70) $
 
 # Upload the files to the designated bucket
 
-for file in dxppackages dxpmodules dxpschemas; do
-	s3upload ${file}.json
+if [ "" != "${S3_BUCKET}" ]; then
+	for file in dxppackages dxpmodules dxpschemas; do
+		s3upload ${file}.json
 
-	pushd $(dirname ${BASH_SOURCE[0]}) > /dev/null
+		pushd $(dirname ${BASH_SOURCE[0]}) > /dev/null
 
-	s3upload ${file}.html
-	s3upload ${file}.js
+		s3upload ${file}.html
+		s3upload ${file}.js
 
-	popd > /dev/null
-done
+		popd > /dev/null
+	done
 
-cd /run/shm
+	cd /run/shm
 
-rm -f metadata-70x.zip
-zip -jqqr metadata-70x.zip $(dirname $PORTAL_SOURCE_ROOT_70)/metadata
-s3upload metadata-70x.zip
+	rm -f metadata-70x.zip
+	zip -jqqr metadata-70x.zip $(dirname $PORTAL_SOURCE_ROOT_70)/metadata
+	s3upload metadata-70x.zip
 
-rm -f metadata-71x.zip
-zip -jqqr metadata-71x.zip $(dirname $PORTAL_SOURCE_ROOT_71)/metadata
-s3upload metadata-71x.zip
+	rm -f metadata-71x.zip
+	zip -jqqr metadata-71x.zip $(dirname $PORTAL_SOURCE_ROOT_71)/metadata
+	s3upload metadata-71x.zip
+fi
