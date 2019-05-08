@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        4.9
+// @version        5.0
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -111,7 +111,7 @@ a.generating::after {
   padding: 4px;
   text-align: center;
   text-transform: uppercase;
-  width: 50px;
+  width: 6em;
 }
 
 .lesa-ui-priority-low {
