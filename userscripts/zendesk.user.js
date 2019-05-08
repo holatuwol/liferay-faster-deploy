@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        5.3
+// @version        5.4
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -107,24 +107,26 @@ a.generating::after {
   color: #fff;
   border-radius: 2px;
   float: left;
-  margin-top: 1em;
+  margin-top: 0.8em;
   padding: 4px;
   text-align: center;
   text-transform: uppercase;
   width: 6em;
 }
 
-.lesa-ui-priority-none,
-.lesa-ui-priority-low {
+.lesa-ui-priority .subpriority {
+  font-size: 0.8em;
+  text-transform: lowercase;
+}
+
+.lesa-ui-priority-minor {
   background-color: #0066cc;
 }
 
-.lesa-ui-priority-normal,
-.lesa-ui-priority-high {
+.lesa-ui-priority-major {
   background-color: #f2783b;
 }
 
-.lesa-ui-priority-urgent,
 .lesa-ui-priority-critical {
   background-color: #bf1e2d;
 }
@@ -794,11 +796,12 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
   var priorityElement = document.createElement('div');
   priorityElement.classList.add('lesa-ui-priority');
 
-  var priority = ticketInfo.ticket.priority || 'none';
+  var priority = 'major';
+  var subpriority = ticketInfo.ticket.priority || 'none';
 
   var criticalMarkerCount = 0;
 
-  if (priority == 'high') {
+  if (subpriority == 'high') {
     criticalMarkerCount = 1;
   }
 
@@ -813,6 +816,10 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
       criticalMarkerCount++;
     }
 
+    if (value.indexOf('fully_functional') != -1) {
+      criticalMarkerCount -= 1000;
+    }
+
     if (value.indexOf('completely_shutdown') != -1) {
       criticalMarkerCount++;
     }
@@ -825,9 +832,18 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
   if (criticalMarkerCount >= 3) {
     priority = 'critical';
   }
+  else if (criticalMarkerCount < 0) {
+    priority = 'minor';
+  }
 
   priorityElement.classList.add('lesa-ui-priority-' + priority);
   priorityElement.textContent = priority;
+
+  var subpriorityElement = document.createElement('div');
+  subpriorityElement.classList.add('subpriority');
+  subpriorityElement.textContent = '(' + subpriority + ')';
+
+  priorityElement.appendChild(subpriorityElement);
 
   var avatar = header.querySelector('.round-avatar');
 
