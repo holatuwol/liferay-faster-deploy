@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        4.8
+// @version        4.9
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -101,6 +101,29 @@ a.generating::after {
   height: 16px;
   width: 16px;
   padding: 4px;
+}
+
+.lesa-ui-priority {
+  color: #fff;
+  border-radius: 2px;
+  float: left;
+  margin-top: 1em;
+  padding: 4px;
+  text-align: center;
+  text-transform: uppercase;
+  width: 50px;
+}
+
+.lesa-ui-priority-low {
+  background-color: #0066cc;
+}
+
+.lesa-ui-priority-normal {
+  background-color: #f2783b;
+}
+
+.lesa-ui-priority-high {
+  background-color: #bf1e2d;
 }
 `;
 
@@ -762,6 +785,17 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
   if (hasNewDescription) {
     return;
   }
+
+  // Add a priority field in front of the description
+
+  var priority = document.createElement('div');
+  priority.classList.add('lesa-ui-priority');
+  priority.classList.add('lesa-ui-priority-' + ticketInfo.ticket.priority);
+  priority.textContent = ticketInfo.ticket.priority;
+
+  var avatar = header.querySelector('.round-avatar');
+
+  header.replaceChild(priority, avatar);
 
   // Since comments are listed in reverse order, the last comment is the first
   // comment (from a time perspective), and can be used as a description.
