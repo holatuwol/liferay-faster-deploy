@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        5.0
+// @version        5.1
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -1233,6 +1233,16 @@ function checkTicket(ticketId, callback) {
   var xhr = new XMLHttpRequest();
 
   xhr.onload = function() {
+    if (xhr.status != 200) {
+      console.log("URL: " + xhr.responseURL);
+      console.log("Error: " + xhr.status + " - " + xhr.statusText);
+      ticketInfoCache[ticketId]=null;
+
+      callback(ticketId, null);
+
+      return;
+    }
+
     var ticketInfo = null;
 
     try {
@@ -1325,6 +1335,11 @@ function setAccountInfo(callback) {
   var xhr = new XMLHttpRequest();
 
   xhr.onload = function() {
+    if (xhr.status != 200) {
+      console.log("URL: " + xhr.responseURL);
+      console.log("Error: " + xhr.status + " - " + xhr.statusText);
+    }
+
     try {
       accountInfo = JSON.parse(xhr.responseText);
     }
@@ -1508,5 +1523,16 @@ function checkForSubtitles() {
   }
 }
 
-setInterval(checkForConversations, 1000);
-setInterval(checkForSubtitles, 1000);
+function init(){
+  var editor = document.getElementById('editor0');
+  if (editor) {
+    setInterval(checkForConversations, 1000);
+    setInterval(checkForSubtitles, 1000);
+  }
+  else
+  {
+    setTimeout(init, 1000);
+  }
+}
+
+init();
