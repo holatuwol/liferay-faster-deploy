@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        5.4
+// @version        5.5
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -804,6 +804,9 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
   if (subpriority == 'high') {
     criticalMarkerCount = 1;
   }
+  else if (subpriority == 'low') {
+    criticalMarkerCount = -1;
+  }
 
   for (key in ticketInfo.ticket.custom_fields) {
     var value = ticketInfo.ticket.custom_fields[key].value;
@@ -817,7 +820,7 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
     }
 
     if (value.indexOf('fully_functional') != -1) {
-      criticalMarkerCount -= 1000;
+      criticalMarkerCount -= 3;
     }
 
     if (value.indexOf('completely_shutdown') != -1) {
