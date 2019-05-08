@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        5.1
+// @version        5.2
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -118,11 +118,12 @@ a.generating::after {
   background-color: #0066cc;
 }
 
-.lesa-ui-priority-normal {
+.lesa-ui-priority-normal,
+.lesa-ui-priority-high {
   background-color: #f2783b;
 }
 
-.lesa-ui-priority-high {
+.lesa-ui-priority-critical {
   background-color: #bf1e2d;
 }
 `;
@@ -788,14 +789,43 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
 
   // Add a priority field in front of the description
 
-  var priority = document.createElement('div');
-  priority.classList.add('lesa-ui-priority');
-  priority.classList.add('lesa-ui-priority-' + ticketInfo.ticket.priority);
-  priority.textContent = ticketInfo.ticket.priority;
+  var priorityElement = document.createElement('div');
+  priorityElement.classList.add('lesa-ui-priority');
+
+  var priority = ticketInfo.ticket.priority;
+
+  var criticalMarkerCount = 0;
+
+  if (ticketInfo.ticket.priority == 'high') {
+    criticalMarkerCount++;
+  }
+
+  for (key in ticketInfo.ticket.custom_fields) {
+    var value = ticketInfo.ticket.custom_fields[key].value;
+
+    if ((value == null) || typeof value !== 'string') {
+      continue;
+    }
+
+    if (value == 'production') {
+      criticalMarkerCount++;
+    }
+
+    if (value.indexOf('severely_impacted_inoperable') != -1) {
+      criticalMarkerCount++;
+    }
+  }
+
+  if (criticalMarkerCount >= 3) {
+    priority = 'critical';
+  }
+
+  priorityElement.classList.add('lesa-ui-priority-' + priority);
+  priorityElement.textContent = priority;
 
   var avatar = header.querySelector('.round-avatar');
 
-  header.replaceChild(priority, avatar);
+  header.replaceChild(priorityElement, avatar);
 
   // Since comments are listed in reverse order, the last comment is the first
   // comment (from a time perspective), and can be used as a description.
@@ -1234,9 +1264,9 @@ function checkTicket(ticketId, callback) {
 
   xhr.onload = function() {
     if (xhr.status != 200) {
-      console.log("URL: " + xhr.responseURL);
-      console.log("Error: " + xhr.status + " - " + xhr.statusText);
-      ticketInfoCache[ticketId]=null;
+      console.error("URL: " + xhr.responseURL);
+      console.error("Error: " + xhr.status + " - " + xhr.statusText);
+      ticketInfoCache[ticketId] = null;
 
       callback(ticketId, null);
 
@@ -1461,6 +1491,12 @@ function checkForConversations() {
       revokeObjectURLs();
     }
     else {
+      var editor = document.getElementById('editor0');
+
+      if (!editor) {
+        return;
+      }
+
       checkTicket(ticketId, checkTicketConversation);
     }
   }
@@ -1523,16 +1559,5 @@ function checkForSubtitles() {
   }
 }
 
-function init(){
-  var editor = document.getElementById('editor0');
-  if (editor) {
-    setInterval(checkForConversations, 1000);
-    setInterval(checkForSubtitles, 1000);
-  }
-  else
-  {
-    setTimeout(init, 1000);
-  }
-}
-
-init();
+setInterval(checkForConversations, 1000);
+setInterval(checkForSubtitles, 1000);
