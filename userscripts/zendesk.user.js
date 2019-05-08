@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        5.2
+// @version        5.3
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -114,6 +114,7 @@ a.generating::after {
   width: 6em;
 }
 
+.lesa-ui-priority-none,
 .lesa-ui-priority-low {
   background-color: #0066cc;
 }
@@ -123,6 +124,7 @@ a.generating::after {
   background-color: #f2783b;
 }
 
+.lesa-ui-priority-urgent,
 .lesa-ui-priority-critical {
   background-color: #bf1e2d;
 }
@@ -792,12 +794,12 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
   var priorityElement = document.createElement('div');
   priorityElement.classList.add('lesa-ui-priority');
 
-  var priority = ticketInfo.ticket.priority;
+  var priority = ticketInfo.ticket.priority || 'none';
 
   var criticalMarkerCount = 0;
 
-  if (ticketInfo.ticket.priority == 'high') {
-    criticalMarkerCount++;
+  if (priority == 'high') {
+    criticalMarkerCount = 1;
   }
 
   for (key in ticketInfo.ticket.custom_fields) {
@@ -808,6 +810,10 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
     }
 
     if (value == 'production') {
+      criticalMarkerCount++;
+    }
+
+    if (value.indexOf('completely_shutdown') != -1) {
       criticalMarkerCount++;
     }
 
