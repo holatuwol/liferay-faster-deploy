@@ -25,7 +25,7 @@ var includeFilter = document.getElementById('includeFilter');
 if (includeFilter) {
 	var selectedIndex = 1;
 
-	if (getParameter('includeLiferay') && getParameter('includeThirdParty')) {
+	if (getParameter('includeLiferay') != 'false' && getParameter('includeThirdParty')) {
 		selectedIndex = 0;
 	}
 	else if (getParameter('includeThirdParty')) {
