@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        5.5
+// @version        5.6
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -114,20 +114,24 @@ a.generating::after {
   width: 6em;
 }
 
-.lesa-ui-priority .subpriority {
+.lesa-ui-subpriority {
+  border: 1px #eee dashed;
   font-size: 0.8em;
-  text-transform: lowercase;
 }
 
-.lesa-ui-priority-minor {
+.lesa-ui-priority-minor,
+.lesa-ui-subpriority-none,
+.lesa-ui-subpriority-low {
   background-color: #0066cc;
 }
 
-.lesa-ui-priority-major {
+.lesa-ui-priority-major,
+.lesa-ui-subpriority-medium {
   background-color: #f2783b;
 }
 
-.lesa-ui-priority-critical {
+.lesa-ui-priority-critical,
+.lesa-ui-subpriority-high {
   background-color: #bf1e2d;
 }
 `;
@@ -843,8 +847,9 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
   priorityElement.textContent = priority;
 
   var subpriorityElement = document.createElement('div');
-  subpriorityElement.classList.add('subpriority');
-  subpriorityElement.textContent = '(' + subpriority + ')';
+  subpriorityElement.classList.add('lesa-ui-subpriority');
+  subpriorityElement.classList.add('lesa-ui-subpriority-' + subpriority);
+  subpriorityElement.textContent = subpriority;
 
   priorityElement.appendChild(subpriorityElement);
 
