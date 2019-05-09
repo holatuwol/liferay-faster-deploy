@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        5.6
+// @version        5.7
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -103,11 +103,22 @@ a.generating::after {
   padding: 4px;
 }
 
+.mast .editable .lesa-ui-subject {
+  background-color: #fff;
+  font-size: 20px;
+  font-weight: 600;
+  resize: vertical;
+  text-align: left;
+  width: 100%;
+}
+
+.round-avatar {
+  display: none;
+}
+
 .lesa-ui-priority {
   color: #fff;
   border-radius: 2px;
-  float: left;
-  margin-top: 0.8em;
   padding: 4px;
   text-align: center;
   text-transform: uppercase;
@@ -765,6 +776,91 @@ function createAttachmentsContainer(ticketId, ticketInfo, conversation) {
 }
 
 /**
+ * Add a marker to show the LESA priority on the ticket.
+ */
+
+function addPriorityMarker(header, ticketId, ticketInfo) {
+  var priorityElement = document.createElement('div');
+  priorityElement.classList.add('lesa-ui-priority');
+
+  // Check to see if the ticket matches the rules for a regular
+  // high priority ticket (production, severely impacted or worse)
+
+  var subpriority = ticketInfo.ticket.priority || 'none';
+
+  if ((subpriority != 'high') && (subpriority != 'urgent')) {
+    return;
+  }
+
+  var criticalMarkerCount = 1;
+
+  for (key in ticketInfo.ticket.custom_fields) {
+    var value = ticketInfo.ticket.custom_fields[key].value;
+
+    if ((value == null) || typeof value !== 'string') {
+      continue;
+    }
+
+    if (value == 'production') {
+      criticalMarkerCount++;
+    }
+
+    if (value.indexOf('completely_shutdown') != -1) {
+      criticalMarkerCount++;
+    }
+
+    if (value.indexOf('severely_impacted_inoperable') != -1) {
+      criticalMarkerCount++;
+    }
+  }
+
+  // If the ticket matches, add the critical flag.
+
+  if (criticalMarkerCount < 3) {
+    return;
+  }
+
+  priorityElement.classList.add('lesa-ui-priority-critical');
+  priorityElement.textContent = 'critical';
+
+  header.insertBefore(priorityElement, header.querySelector('.round-avatar'));
+}
+
+/**
+ * Replaces the input field for the 'subject' with something with line wrapping
+ * so that we can see the entire subject (untruncated).
+ */
+
+function addSubjectTextWrap(header) {
+  var oldSubjectField = header.querySelector('input[name="subject"]');
+
+  if (!oldSubjectField) {
+    return;
+  }
+
+  var newSubjectField;
+
+  if (oldSubjectField.readOnly) {
+    newSubjectField = document.createElement('div');
+    newSubjectField.textContent = oldSubjectField.value;
+  }
+  else {
+    newSubjectField = document.createElement('textarea');
+
+    newSubjectField.setAttribute('maxlength', oldSubjectField.getAttribute('maxlength'));
+    newSubjectField.setAttribute('name', oldSubjectField.getAttribute('name'));
+    newSubjectField.value = oldSubjectField.value;
+
+    newSubjectField.classList.add('ember-text-area');
+  }
+
+  newSubjectField.classList.add('lesa-ui-subject');
+  newSubjectField.classList.add('ember-view');
+
+  oldSubjectField.parentNode.replaceChild(newSubjectField, oldSubjectField);
+}
+
+/**
  * Add a ticket description and a complete list of attachments to the top of the page.
  */
 
@@ -795,67 +891,10 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
     return;
   }
 
-  // Add a priority field in front of the description
+  // Add a marker indicating the LESA priority based on critical workflow rules
 
-  var priorityElement = document.createElement('div');
-  priorityElement.classList.add('lesa-ui-priority');
-
-  var priority = 'major';
-  var subpriority = ticketInfo.ticket.priority || 'none';
-
-  var criticalMarkerCount = 0;
-
-  if (subpriority == 'high') {
-    criticalMarkerCount = 1;
-  }
-  else if (subpriority == 'low') {
-    criticalMarkerCount = -1;
-  }
-
-  for (key in ticketInfo.ticket.custom_fields) {
-    var value = ticketInfo.ticket.custom_fields[key].value;
-
-    if ((value == null) || typeof value !== 'string') {
-      continue;
-    }
-
-    if (value == 'production') {
-      criticalMarkerCount++;
-    }
-
-    if (value.indexOf('fully_functional') != -1) {
-      criticalMarkerCount -= 3;
-    }
-
-    if (value.indexOf('completely_shutdown') != -1) {
-      criticalMarkerCount++;
-    }
-
-    if (value.indexOf('severely_impacted_inoperable') != -1) {
-      criticalMarkerCount++;
-    }
-  }
-
-  if (criticalMarkerCount >= 3) {
-    priority = 'critical';
-  }
-  else if (criticalMarkerCount < 0) {
-    priority = 'minor';
-  }
-
-  priorityElement.classList.add('lesa-ui-priority-' + priority);
-  priorityElement.textContent = priority;
-
-  var subpriorityElement = document.createElement('div');
-  subpriorityElement.classList.add('lesa-ui-subpriority');
-  subpriorityElement.classList.add('lesa-ui-subpriority-' + subpriority);
-  subpriorityElement.textContent = subpriority;
-
-  priorityElement.appendChild(subpriorityElement);
-
-  var avatar = header.querySelector('.round-avatar');
-
-  header.replaceChild(priorityElement, avatar);
+  addPriorityMarker(header, ticketId, ticketInfo);
+  addSubjectTextWrap(header);
 
   // Since comments are listed in reverse order, the last comment is the first
   // comment (from a time perspective), and can be used as a description.
