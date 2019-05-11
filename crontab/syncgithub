@@ -7,6 +7,11 @@ echo "Syncing files for ${TIMESTAMP} from ${S3_BUCKET}"
 
 aws s3 cp s3://${S3_BUCKET}/github.sql.gz /var/www/html/data/github-${TIMESTAMP}.sql.gz
 aws s3 cp s3://${S3_BUCKET}/checkgh.tar.gz /var/www/html/data/github_rawdata-${TIMESTAMP}.tar.gz
+aws s3 cp s3://${S3_BUCKET}/google_analytics_zen.sql.gz /var/www/html/data/google_analytics_zen-${TIMESTAMP}.sql.gz
+
+if [[ 5 -lt $(ls -1 /var/www/html/data/google_analytics_zen-* | wc -l) ]]; then
+     ls -1 /var/www/html/data/google_analytics_zen-* | sort | head -n -5 | xargs rm
+fi
 
 if [[ 5 -lt $(ls -1 /var/www/html/data/github-* | wc -l) ]]; then
      ls -1 /var/www/html/data/github-* | sort | head -n -5 | xargs rm
