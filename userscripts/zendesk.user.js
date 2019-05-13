@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        5.8
+// @version        5.9
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -780,8 +780,19 @@ function createAttachmentsContainer(ticketId, ticketInfo, conversation) {
  */
 
 function addPriorityMarker(header, ticketId, ticketInfo) {
-  var priorityElement = document.createElement('div');
+  var priorityElement = header.querySelector('lesa-ui-priority');
+
+  if (priorityElement) {
+    if (priorityElement.getAttribute('data-ticket-id') == ticketId) {
+      return;
+    }
+
+    priorityElement.parentNode.removeChild(priorityElement);
+  }
+
+  priorityElement = document.createElement('div');
   priorityElement.classList.add('lesa-ui-priority');
+  priorityElement.setAttribute('data-ticket-id', ticketId);
 
   // Check to see if the ticket matches the rules for a regular
   // high priority ticket (production, severely impacted or worse)
@@ -831,14 +842,19 @@ function addPriorityMarker(header, ticketId, ticketInfo) {
  * so that we can see the entire subject (untruncated).
  */
 
-function addSubjectTextWrap(header) {
+function addSubjectTextWrap(header, ticketId, ticketInfo) {
   var oldSubjectField = header.querySelector('input[name="subject"]');
+  oldSubjectField.setAttribute('type', 'hidden');
 
-  if (!oldSubjectField) {
-    return;
+  var newSubjectField = header.querySelector('.lesa-ui-subject');
+
+  if (newSubjectField) {
+    if (newSubjectField.getAttribute('data-ticket-id') == ticketId) {
+      return;
+    }
+
+    newSubjectField.parentNode.removeChild(newSubjectField);
   }
-
-  var newSubjectField;
 
   if (oldSubjectField.readOnly) {
     newSubjectField = document.createElement('div');
@@ -856,8 +872,9 @@ function addSubjectTextWrap(header) {
 
   newSubjectField.classList.add('lesa-ui-subject');
   newSubjectField.classList.add('ember-view');
+  newSubjectField.setAttribute('data-ticket-id', ticketId);
 
-  oldSubjectField.parentNode.replaceChild(newSubjectField, oldSubjectField);
+  oldSubjectField.parentNode.insertBefore(newSubjectField, oldSubjectField);
 }
 
 /**
@@ -870,6 +887,11 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
   if (!header) {
     return;
   }
+
+  // Add a marker indicating the LESA priority based on critical workflow rules
+
+  addPriorityMarker(header, ticketId, ticketInfo);
+  addSubjectTextWrap(header);
 
   // Check to see if we have any descriptions that we need to remove.
 
@@ -890,11 +912,6 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
   if (hasNewDescription) {
     return;
   }
-
-  // Add a marker indicating the LESA priority based on critical workflow rules
-
-  addPriorityMarker(header, ticketId, ticketInfo);
-  addSubjectTextWrap(header);
 
   // Since comments are listed in reverse order, the last comment is the first
   // comment (from a time perspective), and can be used as a description.
@@ -1531,6 +1548,12 @@ function checkTicketConversation(ticketId, ticketInfo) {
   var conversation = document.querySelector('div[data-side-conversations-anchor-id="' + ticketId + '"]');
 
   if (conversation) {
+    var editor = conversation.querySelector('.editor');
+
+    if (!editor) {
+      return;
+    }
+
     enablePublicConversation(ticketId, ticketInfo, conversation);
     addStackeditButtons(ticketId, ticketInfo, conversation);
     addJiraLinks(ticketId, ticketInfo, conversation);
@@ -1560,12 +1583,6 @@ function checkForConversations() {
       revokeObjectURLs();
     }
     else {
-      var editor = document.getElementById('editor0');
-
-      if (!editor) {
-        return;
-      }
-
       checkTicket(ticketId, checkTicketConversation);
     }
   }
