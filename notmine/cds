@@ -1,0 +1,126 @@
+#!/bin/bash
+# Taken from https://gist.github.com/ericyanLr/7b8d223aca096e45bfd75785c6fed9e1
+
+# Helper Functions
+is_cwd_git() {
+  if ( git rev-parse --git-dir > /dev/null 2>&1 ); then
+    return 0
+  fi
+
+  return 1
+}
+
+is_cwd_git_liferay_app() {
+  if is_cwd_git; then
+    local gitFolderPath="$(git rev-parse --show-toplevel)"
+    local app_bnd_file_path="${gitFolderPath}/app.bnd"
+
+    if [ -f "${app_bnd_file_path}" ] && \
+        [ $(cat "${app_bnd_file_path}" | grep '^Liferay-Releng' | wc -l | xargs) -gt 0 ]; then
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
+is_cwd_git_liferayDXP() {
+  if is_cwd_git; then
+    local gitFolderPath="$(git rev-parse --show-toplevel)"
+
+    if [ -d $gitFolderPath/portal-kernel ] && [ -d $gitFolderPath/modules ]; then
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
+# cds - easily navigate to a Liferay module within a Liferay repo
+cds() {
+  local partial_module_name="$1"
+
+  if [ -n "${partial_module_name}" ]; then
+    local folder_path
+
+    # Search - tailored for Liferay repo
+    if is_cwd_git_liferayDXP || is_cwd_git_liferay_app; then
+      pushd $(git rev-parse --show-toplevel) > /dev/null
+
+      local filtered_file_paths=$(git ls-files | grep "${partial_module_name}")
+
+      # Search strictly - match search term exactly in module name
+      folder_path="$(echo "${filtered_file_paths}" \
+        | awk -v moduleRegex="(/|^)${partial_module_name}/((app|bnd).bnd|build(.gradle|.xml))" \
+          '$0 ~ moduleRegex && (moduleLength == "" || length < moduleLength) {moduleLength = length; module = $0} END{print module}' \
+        | xargs dirname 2>/dev/null)"
+
+      # Search not as strictly - contains search term in module name
+      if [ -z "${folder_path}" ]; then
+        folder_path="$(echo "${filtered_file_paths}" \
+          | awk -v moduleRegex="(/|^).*${partial_module_name}.*/((app|bnd).bnd|build(.gradle|.xml))" \
+            '$0 ~ moduleRegex && (moduleLength == "" || length < moduleLength) {moduleLength = length; module = $0} END{print module}' \
+          | xargs dirname 2>/dev/null)"
+      fi
+
+      if [ -n "${folder_path}" ]; then
+        folder_path="$(git rev-parse --show-toplevel)/${folder_path}"
+      fi
+
+      popd > /dev/null
+    fi
+
+    if [ -z "${folder_path}" ]; then
+      # Search - general git repo
+      if is_cwd_git; then
+        pushd $(git rev-parse --show-toplevel) > /dev/null
+
+        folder_path="$(git ls-files | grep -m 1 "${partial_module_name}/" | xargs -n1 dirname 2>/dev/null)"
+
+        if [ -n "${folder_path}" ]; then
+          folder_path="$(git rev-parse --show-toplevel)/${folder_path}"
+        fi
+
+        popd > /dev/null
+      fi
+
+      # Search - general search using find
+      if [ -z "${folder_path}" ]; then
+        folder_path="$(find . -type d -name "*${partial_module_name}*" -print0 -quit)"
+      fi
+    fi
+
+    if [ -n "${folder_path}" ]; then
+      builtin cd -- ${folder_path}
+      pwd
+    fi
+  else
+    echo "Usage: ${FUNCNAME[0]} module-name" >&2
+  fi
+}
+
+# Auto-complete functionality for cds
+# Reference: @spencerwoo
+# Reference: https://iridakos.com/tutorials/2018/03/01/bash-programmable-completion-tutorial.html
+_cds() {
+  if [ "${#COMP_WORDS[@]}" != "2" ] || (! is_cwd_git); then
+    return
+  fi
+
+  # keep the suggestions in a local variable
+  local suggestions=($(compgen -W "$(pushd $(git rev-parse --show-toplevel) > /dev/null; git ls-files | grep "/.lfrbuild-portal$" | awk -F"/" '{print $(NF-1)}')" -- "${COMP_WORDS[1]}"))
+
+  if [ "${#suggestions[@]}" == "1" ]; then
+    # if there's only one match, we remove the command literal
+    # to proceed with the automatic completion of the number
+    local number=$(echo ${suggestions[0]/%\ */})
+    COMPREPLY=("$number")
+  else
+    # more than one suggestions resolved,
+    # respond with the suggestions intact
+    COMPREPLY=("${suggestions[@]}")
+  fi
+}
+
+# Apply auto-complete functionality for cds
+complete -F _cds cds
