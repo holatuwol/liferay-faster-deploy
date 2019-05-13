@@ -1,5 +1,15 @@
 This is just a reference for wrapper scripts around scripts provided in other repositories, but I don't install into my path (for example, ``npm install -g``), and prefer instead to run directly from the repository.
 
+CDS
+===
+
+* Wrapper: ``cds``
+* Repository: `ericyanLr/gist <https://gist.github.com/ericyanLr/7b8d223aca096e45bfd75785c6fed9e1>`__
+
+.. code-block:: bash
+
+	. ${MCD_RD_CLONE_PATH}/notmine/cds
+
 CheckIt
 =======
 
