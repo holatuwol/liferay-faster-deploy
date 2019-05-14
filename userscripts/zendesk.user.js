@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        5.9
+// @version        6.0
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -780,7 +780,7 @@ function createAttachmentsContainer(ticketId, ticketInfo, conversation) {
  */
 
 function addPriorityMarker(header, ticketId, ticketInfo) {
-  var priorityElement = header.querySelector('lesa-ui-priority');
+  var priorityElement = header.querySelector('.lesa-ui-priority');
 
   if (priorityElement) {
     if (priorityElement.getAttribute('data-ticket-id') == ticketId) {
