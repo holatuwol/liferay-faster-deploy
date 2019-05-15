@@ -80,12 +80,6 @@ def getparent(check_tags):
 	if not check_tags:
 		return base_branch
 
-	if base_branch != 'ee-7.0.x':
-		exit_code = subprocess.call(['git', 'merge-base', '--is-ancestor', base_branch, 'HEAD'])
-
-		if exit_code == 0:
-			return base_branch
-
 	# Find the closest matching tag
 
 	base_tag = ''
