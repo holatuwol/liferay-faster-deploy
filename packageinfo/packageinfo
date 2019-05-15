@@ -325,23 +325,35 @@ packageinfo_release() {
 
 	OUTPUT_FOLDER=$(dirname $PWD)/metadata
 
-	mkdir -p $OUTPUT_FOLDER
+	if [ -d ${OUTPUT_FOLDER} ]; then
+		savetags
 
-	git ls-remote -t git@github.com:liferay/liferay-portal.git | \
-		awk '{ print $2 }' | grep ga | grep -vF sync | grep -vF 'private' | grep -F "/${2}" | \
-		sort | cut -d'/' -f 3 | tee $OUTPUT_FOLDER/tags.txt
+		for tag_id in $(cat $OUTPUT_FOLDER/tags.txt); do
+			bundleinfo $tag_id
+			packageinfo $tag_id
+			requireschema $tag_id
+			dependencies $tag_id
+			bootstrap $tag_id
+		done
+	else
+		OUTPUT_FOLDER=/tmp
 
-	git ls-remote -t git@github.com:liferay/liferay-portal-ee.git | \
-		awk '{ print $2 }' | grep "fix-pack-\(base\|de-.*\|dxp-.*\)-${3}" | grep -v '\(test\|demo\|build\)' | \
-		sort -t'-' -nk4,5 | cut -d'/' -f 3 | tee -a $OUTPUT_FOLDER/tags.txt
+		savetags
 
-	for tag_id in $(cat $OUTPUT_FOLDER/tags.txt); do
-		bundleinfo $tag_id
-		packageinfo $tag_id
-		requireschema $tag_id
-		dependencies $tag_id
-		bootstrap $tag_id
-	done
+		for tag_id in $(cat $OUTPUT_FOLDER/tags.txt); do
+			echo "Checking ${tag_id}"
+
+			if [ "" != "$(git tag | grep -F "${tag_id}")" ]; then
+				continue
+			fi
+
+			if [[ ${tag_id} == fix-pack-* ]]; then
+				git fetch --no-tags git@github.com:liferay/liferay-portal-ee.git tags/${tag_id}:refs/tags/${tag_id}
+			else
+				git fetch --no-tags git@github.com:liferay/liferay-portal.git tags/${tag_id}:refs/tags/${tag_id}
+			fi
+		done
+	fi
 
 	popd > /dev/null
 }
@@ -379,6 +391,16 @@ requireschema() {
 
 		echo ${BUNDLE_NAME},${SCHEMA_VERSION} >> $OUTPUT_FILE
 	done
+}
+
+savetags() {
+	git ls-remote -t git@github.com:liferay/liferay-portal.git | \
+		awk '{ print $2 }' | grep ga | grep -vF sync | grep -vF 'private' | grep -F "/${2}" | \
+		sort | cut -d'/' -f 3 | tee $OUTPUT_FOLDER/tags.txt
+
+	git ls-remote -t git@github.com:liferay/liferay-portal-ee.git | \
+		awk '{ print $2 }' | grep "fix-pack-\(base\|de-.*\|dxp-.*\)-${3}" | grep -v '\(test\|demo\|build\)' | \
+		sort -t'-' -nk4,5 | cut -d'/' -f 3 | tee -a $OUTPUT_FOLDER/tags.txt
 }
 
 if [ -z "${PORTAL_SOURCE_ROOT_70}" ]; then
