@@ -83,6 +83,9 @@ branches() {
 		if [ "master" == "$folder" ]; then
 			branch master-private master-private
 			branch master master 60
+		elif [ "72x" == "$folder" ]; then
+			branch 7.2.x 72x 72x
+			branch 7.2.x-private 72x-private 72
 		elif [ "71x" == "$folder" ]; then
 			branch 7.1.x 71x 71x
 			branch 7.1.x-private 71x-private 71
@@ -96,7 +99,7 @@ branches() {
 		fi
 	done
 
-	for branch in master-private master 71x-private 71x 70x-private 70x 62x 61x; do
+	for branch in master-private master 72x-private 72x 71x-private 71x 70x-private 70x 62x 61x; do
 		local ACTIVE_BUILD=
 
 		for LOG_ID in $(ls -1 "/var/www/html/builds/branches/" | grep "$branch-[0-9]*.log" | sort); do
@@ -245,7 +248,7 @@ fi
 REBUILD="$@"
 
 if [ "" == "$REBUILD" ]; then
-	REBUILD="master 71x 70x 62x 61x"
+	REBUILD="master 72x 71x 70x 62x 61x"
 fi
 
 if [ ! -e $(dirname $PORTAL_SOURCE_ROOT)/liferay-binaries-cache-2017 ]; then

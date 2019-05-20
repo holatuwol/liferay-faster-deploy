@@ -39,6 +39,7 @@ The script assumes that there is a file ``/home/tomcat/portal-ext.properties`` w
 	session.cookie.use.full.hostname=true
 	virtual.hosts.valid.hosts=\
 		master.lrsupport.com,master,\
+		72x.lrsupport.com,72x,\
 		71x.lrsupport.com,71x,\
 		70x.lrsupport.com,70x,\
 		62x.lrsupport.com,62x,\
