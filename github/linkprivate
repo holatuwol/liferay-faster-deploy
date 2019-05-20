@@ -1,5 +1,29 @@
 #!/bin/bash
 
+createfile() {
+	if [ -d $1 ]; then
+		mkdir -p ${PRIVATE_FOLDER}/$1
+
+		if [ -d $1/src ]; then
+			createmodule $1
+		else
+			for file in $1/*; do
+				createfile ${file}
+			done
+		fi
+	elif [ ! -e ${PRIVATE_FOLDER}/$1 ]; then
+		ln -s $PWD/$1 ${PRIVATE_FOLDER}/$1
+	fi
+}
+
+createmodule() {
+	for file in $1/*; do
+		if [ ! -e ${PRIVATE_FOLDER}/${file} ]; then
+			ln -s $PWD/${file} ${PRIVATE_FOLDER}/${file}
+		fi
+	done
+}
+
 linkprivate() {
 	if [ ! -d portal-impl ] || [ -h portal-impl ]; then
 		echo "This can only be run from portal source"
@@ -18,6 +42,8 @@ linkprivate() {
 		echo "You must have the private repository checked out at ${PRIVATE_FOLDER} or ${PWD}-private"
 		return 1
 	fi
+
+	git checkout portal-kernel/src/com/liferay/portal/kernel/util/ReleaseInfo.java sql/sql.properties
 
 	if [ "reset" == "$1" ]; then
 		CURRENT_HASH=$(git log -1 --pretty='%H')
@@ -70,13 +96,7 @@ linkprivate() {
 	fi
 
 	for file in modules/*; do
-		if [ -d $file ]; then
-			echo Updating $file using rsync
-			mkdir -p ${PRIVATE_FOLDER}/$file/
-			rsync -r $PWD/$file/ ${PRIVATE_FOLDER}/$file/
-		elif [ ! -e ${PRIVATE_FOLDER}/$file ]; then
-			ln -s $PWD/$file ${PRIVATE_FOLDER}/$file
-		fi
+		createfile ${file}
 	done
 
 	pushd ${PRIVATE_FOLDER} > /dev/null
