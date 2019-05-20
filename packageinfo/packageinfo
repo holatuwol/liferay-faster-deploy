@@ -326,7 +326,7 @@ packageinfo_release() {
 	OUTPUT_FOLDER=$(dirname $PWD)/metadata
 
 	if [ -d ${OUTPUT_FOLDER} ]; then
-		savetags
+		savetags ${2} ${3}
 
 		for tag_id in $(cat $OUTPUT_FOLDER/tags.txt); do
 			bundleinfo $tag_id
@@ -338,7 +338,7 @@ packageinfo_release() {
 	else
 		OUTPUT_FOLDER=/tmp
 
-		savetags
+		savetags ${2} ${3}
 
 		for tag_id in $(cat $OUTPUT_FOLDER/tags.txt); do
 			echo "Checking ${tag_id}"
@@ -395,11 +395,11 @@ requireschema() {
 
 savetags() {
 	git ls-remote -t git@github.com:liferay/liferay-portal.git | \
-		awk '{ print $2 }' | grep ga | grep -vF sync | grep -vF 'private' | grep -F "/${2}" | \
+		awk '{ print $2 }' | grep "/${1}.[0-9]*-ga[0-9]*$" | \
 		sort | cut -d'/' -f 3 | tee $OUTPUT_FOLDER/tags.txt
 
 	git ls-remote -t git@github.com:liferay/liferay-portal-ee.git | \
-		awk '{ print $2 }' | grep "fix-pack-\(base\|de-.*\|dxp-.*\)-${3}" | grep -v '\(test\|demo\|build\)' | \
+		awk '{ print $2 }' | grep "/fix-pack-.*-${2}10$" | \
 		sort -t'-' -nk4,5 | cut -d'/' -f 3 | tee -a $OUTPUT_FOLDER/tags.txt
 }
 
