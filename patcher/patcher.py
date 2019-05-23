@@ -88,12 +88,19 @@ def get_baseline_id():
 		return patcher_json[base_branch], patcher_json[base_tag]
 
 def get_fix_id(typeFilter='0'):
-	if len(sys.argv) == 3 and len(sys.argv[2]) > 0:
-		return sys.argv[2], None
-
 	base_url = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher'
+	candidate_fix_names = None
 
-	for fix_name in get_candidate_fix_names():
+	if len(sys.argv) == 3 and len(sys.argv[2]) > 0:
+		if str.isnumeric(sys.argv[2]):
+			return sys.argv[2], None
+		else:
+			candidate_fix_names = [sys.argv[2]]
+
+	if candidate_fix_names is None:
+		candidate_fix_names = get_candidate_fix_names()
+
+	for fix_name in candidate_fix_names:
 		print('Checking patcher portal for existing fix for %s...' % fix_name)
 
 		parameters = {
@@ -119,6 +126,9 @@ def get_fix_id(typeFilter='0'):
 
 		if len(fix_ids) == 1:
 			return fix_ids[0], fix_name
+
+	if len(sys.argv) == 3 and len(sys.argv[2]) > 0:
+		return None, sys.argv[2]
 
 	return None, None
 
