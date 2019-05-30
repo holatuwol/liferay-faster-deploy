@@ -36,7 +36,7 @@ getfixes() {
 		return 0
 	fi
 
-	local CHANGELOG=$(git log --pretty='%s' ${RELEASE_HASH}..$2 -- ${MODULE_FOLDER} | grep -Eo '[A-Z]+-[0-9]+' | grep -vF 'LRDOCS' | grep -vF LRQA | sort -u)
+	local CHANGELOG=$(git log --pretty='%s' ${RELEASE_HASH}..upstream/$2 -- ${MODULE_FOLDER} | grep -Eo '[A-Z]+-[0-9]+' | grep -vF 'LRDOCS' | grep -vF LRQA | sort -u)
 
 	if [ "" == "${CHANGELOG}" ]; then
 		echo "<li class='no-changes'><strong>${NAME}</strong>: "
