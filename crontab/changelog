@@ -1,0 +1,54 @@
+#!/bin/bash
+
+getchangelog() {
+	echo "<h2>$1</h2>"
+
+	echo "<ul>"
+
+	for file in $(git ls-tree -r --name-only $1 -- modules/.releng | grep -F app.properties); do
+		getfixes $(dirname ${file}) $1
+	done
+
+	for file in $(git ls-tree -r --name-only $1-private -- modules/.releng | grep -F app.properties); do
+		getfixes $(dirname ${file}) $1-private
+	done
+
+	echo "</ul>"
+}
+
+getfixes() {
+	local MODULE_FOLDER=$(echo $1 | sed 's@\.releng/@@g')
+
+	if [ "" != "$(git show $2:${MODULE_FOLDER}/app.bnd | grep -F 'Liferay-Releng-Bundle: true')" ]; then
+		return 0
+	fi
+
+	local NAME=$(git show $2:$1/app.properties | grep -F app.marketplace.title= | cut -d'=' -f 2)
+
+	if [ "" == "${NAME}" ]; then
+		return 0
+	fi
+
+	local VERSION=$(git show $2:$1/app.properties | grep -F app.marketplace.version= | cut -d'=' -f 2)
+	local RELEASE_HASH=$(git show $2:$1/app.changelog | grep -F app.git.id-${VERSION}= | cut -d'=' -f 2)
+
+	if [ "" == "${RELEASE_HASH}" ]; then
+		return 0
+	fi
+
+	local CHANGELOG=$(git log --pretty='%s' ${RELEASE_HASH}..$2 -- ${MODULE_FOLDER} | grep -Eo '[A-Z]+-[0-9]+' | grep -vF 'LRDOCS' | grep -vF LRQA | sort -u)
+
+	if [ "" == "${CHANGELOG}" ]; then
+		echo "<li class='no-changes'><strong>${NAME}</strong>: "
+		echo "No changes since ${VERSION} release."
+	else
+		echo "<li class='changes'><strong>${NAME}</strong>: "
+		echo "${CHANGELOG}" | awk '{ print "<a href=\"https://issues.liferay.com/browse/" $1 "\">" $1 "</a>" }' | tr '\n' ',' | sed 's/,$//g' | sed 's/,/, /g'
+	fi
+
+	echo "</li>"
+}
+
+for branch in 7.0.x 7.1.x 7.2.x; do
+	getchangelog ${branch}
+done
