@@ -5,11 +5,11 @@ getchangelog() {
 
 	echo "<ul>"
 
-	for file in $(git ls-tree -r --name-only $1 -- modules/.releng | grep -F app.properties); do
+	for file in $(git ls-tree -r --name-only upstream/$1 -- modules/.releng | grep -F app.properties); do
 		getfixes $(dirname ${file}) $1
 	done
 
-	for file in $(git ls-tree -r --name-only $1-private -- modules/.releng | grep -F app.properties); do
+	for file in $(git ls-tree -r --name-only upstream/$1-private -- modules/.releng | grep -F app.properties); do
 		getfixes $(dirname ${file}) $1-private
 	done
 
@@ -19,18 +19,18 @@ getchangelog() {
 getfixes() {
 	local MODULE_FOLDER=$(echo $1 | sed 's@\.releng/@@g')
 
-	if [ "" != "$(git show $2:${MODULE_FOLDER}/app.bnd | grep -F 'Liferay-Releng-Bundle: true')" ]; then
+	if [ "" != "$(git show upstream/$2:${MODULE_FOLDER}/app.bnd | grep -F 'Liferay-Releng-Bundle: true')" ]; then
 		return 0
 	fi
 
-	local NAME=$(git show $2:$1/app.properties | grep -F app.marketplace.title= | cut -d'=' -f 2)
+	local NAME=$(git show upstream/$2:$1/app.properties | grep -F app.marketplace.title= | cut -d'=' -f 2)
 
 	if [ "" == "${NAME}" ]; then
 		return 0
 	fi
 
-	local VERSION=$(git show $2:$1/app.properties | grep -F app.marketplace.version= | cut -d'=' -f 2)
-	local RELEASE_HASH=$(git show $2:$1/app.changelog | grep -F app.git.id-${VERSION}= | cut -d'=' -f 2)
+	local VERSION=$(git show upstream/$2:$1/app.properties | grep -F app.marketplace.version= | cut -d'=' -f 2)
+	local RELEASE_HASH=$(git show upstream/$2:$1/app.changelog | grep -F app.git.id-${VERSION}= | cut -d'=' -f 2)
 
 	if [ "" == "${RELEASE_HASH}" ]; then
 		return 0
