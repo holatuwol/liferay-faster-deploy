@@ -49,6 +49,8 @@ getfixes() {
 	echo "</li>"
 }
 
+cd ${HOME}/source
+
 for branch in 7.0.x 7.1.x 7.2.x; do
 	getchangelog ${branch}
 done
