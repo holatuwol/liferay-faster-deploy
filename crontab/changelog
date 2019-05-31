@@ -49,12 +49,21 @@ getfixes() {
 	echo "</li>"
 }
 
-cd ${HOME}/source
+if [ -f ${HOME}/source/release.properties ]; then
+	cd ${HOME}/source
+fi
 
-echo "<h1>"
-date
-echo "</h1>"
+if [ ! -f release.properties ]; then
+	echo 'Please navigate to a portal source folder first'
+	exit 1
+fi
 
-for branch in 7.0.x 7.1.x 7.2.x; do
-	getchangelog ${branch}
-done
+if git fetch upstream --no-tags; then
+	echo "<h1>"
+	date
+	echo "</h1>"
+
+	for branch in 7.0.x 7.1.x 7.2.x; do
+		getchangelog ${branch}
+	done
+fi
