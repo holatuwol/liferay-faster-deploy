@@ -113,7 +113,7 @@ deployant() {
 		git clean -xdf
 		popd > /dev/null
 
-		safeant compile
+		safeant compile install-portal-snapshots
 	fi
 
 	# Finally, iterate over the folders that are listed for deployment
@@ -150,13 +150,25 @@ deploymodules() {
 
 	for folder in $(cat ${GIT_ROOT}/.redeploy/changes_gradle_2.txt); do
 		if [ -f $folder/.lfrbuild-portal ]; then
-			if [[ $NEW_BASELINE == fix-pack-* ]] && [ "" == "$(grep -F hotfix $folder/bnd.bnd)" ]; then
-				export JENKINS_HOME=/tmp
-				local RELEASE_ID=$(echo $NEW_BASELINE | grep -o '[0-9]*$')
+			export JENKINS_HOME=/tmp
+			local RELEASE_ID=$(echo $NEW_BASELINE | grep -o '[0-9]*$')
 
-				sed -i.bak '/^Bundle-Version: /s@\(.*\)$@\1.hotfix-0-'${RELEASE_ID}'@g' $folder/bnd.bnd
-				test -f $folder/package.json && sed -i.bak '/^\t"version":/s@\(.*\)"$@\1.hotfix-0-'${RELEASE_ID}'"@g' $folder/package.json
-				test -f $folder/package-lock.json && sed -i.bak '/^\t"version":/s@\(.*\)",$@\1.hotfix-0-'${RELEASE_ID}'",@g' $folder/package-lock.json
+			if [[ $NEW_BASELINE == fix-pack-* ]]; then
+				if [ "" == "$(grep -F hotfix $folder/bnd.bnd)" ]; then
+					sed -i.bak '/^Bundle-Version: /s@\(.*\)$@\1.hotfix-0-'${RELEASE_ID}'@g' $folder/bnd.bnd
+				fi
+
+				if [ -f $folder/npm-shrinkwrap.json ] && [ "" == "$(grep -F hotfix $folder/npm-shrinkwrap.json)" ]; then
+					sed -i.bak '/^\t"version":/s@\(.*\)",$@\1.hotfix-0-'${RELEASE_ID}'",@g' $folder/npm-shrinkwrap.json
+				fi
+
+				if [ -f $folder/package.json ] && [ "" == "$(grep -F hotfix $folder/package.json)" ]; then
+					sed -i.bak '/^\t"version":/s@\(.*\)"$@\1.hotfix-0-'${RELEASE_ID}'"@g' $folder/package.json
+				fi
+
+				if [ -f $folder/package-lock.json ] && [ "" == "$(grep -F hotfix $folder/package-lock.json)" ]; then
+					sed -i.bak '/^\t"version":/s@\(.*\)",$@\1.hotfix-0-'${RELEASE_ID}'",@g' $folder/package-lock.json
+				fi
 			fi
 
 			echo $folder >> ${GIT_ROOT}/.redeploy/changes_gradle_3.txt
