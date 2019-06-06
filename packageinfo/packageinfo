@@ -403,15 +403,14 @@ savetags() {
 		sort -t'-' -nk4,5 | cut -d'/' -f 3 | tee -a $OUTPUT_FOLDER/tags.txt
 }
 
-if [ -z "${PORTAL_SOURCE_ROOT_70}" ]; then
-	echo "Please set a PORTAL_SOURCE_ROOT_70 for the build"
-	exit 1
-fi
+# if [ ! -z ${PORTAL_SOURCE_ROOT_70} ]; then
+# 	packageinfo_release ${PORTAL_SOURCE_ROOT_70} 7.0 70
+# fi
 
-if [ -z "${PORTAL_SOURCE_ROOT_71}" ]; then
-	echo "Please set a PORTAL_SOURCE_ROOT_71 for the build"
-	exit 1
-fi
+# if [ ! -z ${PORTAL_SOURCE_ROOT_71} ]; then
+# 	packageinfo_release ${PORTAL_SOURCE_ROOT_71} 7.1 71
+# fi
 
-packageinfo_release ${PORTAL_SOURCE_ROOT_70} 7.0 70
-packageinfo_release ${PORTAL_SOURCE_ROOT_71} 7.1 71
+if [ ! -z ${PORTAL_SOURCE_ROOT_72} ]; then
+	packageinfo_release ${PORTAL_SOURCE_ROOT_72} 7.2 72
+fi
