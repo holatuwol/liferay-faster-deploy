@@ -77,7 +77,7 @@ else
 	IP_ADDRESS='127.0.0.1'
 fi
 
-export CATALINA_OPTS="$CATALINA_OPTS -Xms2g -Xmx2g -Xmn500m -Xss2m"
+export CATALINA_OPTS="$CATALINA_OPTS -Xms4g -Xmx4g -Xmn1g -Xss2m"
 
 JAVA_MAJOR_VERSION=$(java -version 2>&1 | head -1 | cut -d'"' -f 2 | cut -d'.' -f 2)
 
