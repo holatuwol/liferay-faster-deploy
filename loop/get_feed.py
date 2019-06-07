@@ -53,7 +53,9 @@ params = {
 	'end': -1
 }
 
-feed_items = json.loads(get_liferay_content(api_url, params))['data']
+feed_json = json.loads(get_liferay_content(api_url, params))
+
+feed_items = feed_json['data'] if 'data' in feed_json else []
 
 created_feed_items = [
 	feed_item for feed_item in feed_items
@@ -62,3 +64,5 @@ created_feed_items = [
 
 with open(sys.argv[2], 'w') as f:
 	json.dump(created_feed_items, f)
+
+print(feed_json)
