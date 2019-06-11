@@ -1,7 +1,13 @@
 #!/bin/bash
 
 applychanges() {
-	# Compute all changes
+	# If we specify 0, then don't compute any changes
+
+	if [ "0" == "$1" ]; then
+		return 0
+	fi
+
+	# Otherwise, compute all changes
 
 	if [ "" == "$BASE_TAG" ]; then
 		$(dirname "${BASH_SOURCE[0]}")/gitchanges $NEW_BASELINE $BASE_BRANCH
@@ -204,11 +210,12 @@ gw() {
 }
 
 redeploy() {
-	find ${LIFERAY_HOME} -maxdepth 1 -type d -name 'tomcat-*' -exec rm -rf {} \;
+	test -d ${LIFERAY_HOME} && find ${LIFERAY_HOME} -maxdepth 1 -type d -name 'tomcat-*' -exec rm -rf {} \;
+
 	rm -rf ${LIFERAY_HOME}/osgi ${LIFERAY_HOME}/tools ${LIFERAY_HOME}/work
 	rm -f ${LIFERAY_HOME}/.liferay-home ${LIFERAY_HOME}/.githash ${LIFERAY_HOME}/git-commit
 
-	downloadbuild $1 && applychanges
+	downloadbuild $1 && applychanges $1
 
 	appserverprops
 

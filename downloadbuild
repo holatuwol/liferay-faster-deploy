@@ -425,7 +425,7 @@ gettargetfolder() {
 	elif [ "master" == "$BASE_BRANCH" ] || [ "master-private" == "$BASE_BRANCH" ]; then
 		BASE_TAG=
 		return 0
-	elif [ "7.0.x" != "$BASE_BRANCH" ] && [ "7.0.x-private" != "$BASE_BRANCH" ]; then
+	elif [ "0" == "$1" ] || [ "7.0.x" != "$BASE_BRANCH" ] && [ "7.0.x-private" != "$BASE_BRANCH" ]; then
 		return 0
 	fi
 
