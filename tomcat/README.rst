@@ -69,8 +69,13 @@ You can also specify an ``IMAGE_NAME`` environment variable if you'd like it to 
 
 .. code-block:: bash
 
+	# Start a bundle with DE-32
 	bundle de-32
-	IMAGE_NAME='holatuwol/liferay:ibmjdk8' bundle hotfix-1852
+
+	# Start a bundle with hotfix-1852-7010 using IBM JDK8
+	IMAGE_NAME='holatuwol/liferay:ibmjdk8' bundle hotfix-1852-7010
+
+	# Start an already downloaded and extracted bundle inside of a Docker container
 	cd ${LIFERAY_HOME} && bundle
 
 The script has some additional logic to check ``LIFERAY_HOME`` (when ``LIFERAY_HOME`` isn't specified as an environment variable, it checks in the current working directory for ``portal-ext.properties``), and the container will use ``rsync`` to copy everything in ``LIFERAY_HOME`` to itself on each restart. This means that if it has a bundle, it copies the bundle. If it does not have a bundle, the script allows you to spin up multiple versions simultaneously using the same ``portal-ext.properties``, and it allows you to evaluate OSGi bundles and OSGi configurations across multiple releases and branches of Liferay.
