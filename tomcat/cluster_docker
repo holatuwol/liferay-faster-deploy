@@ -44,6 +44,8 @@ elasticsearch() {
 		return 0
 	elif [ -f release.properties ] && [ "" != "$(grep -F 'lp.version=6.' release.properties)" ]; then
 		return 0
+	elif [[ (uname -s) == Darwin* ]]; then
+		return 0
 	fi
 
 	updatedocker 'holatuwol/liferay-elasticsearch'
