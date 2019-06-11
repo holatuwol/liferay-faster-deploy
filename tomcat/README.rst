@@ -21,7 +21,7 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 		LIFERAY_RELEASES_MIRROR=http://172.16.168.221/releases.liferay.com \
 		LIFERAY_FILES_MIRROR=http://172.16.168.221/files.liferay.com \
 		BRANCH_ARCHIVE_MIRROR=http://10.50.0.165/builds/branches/ \
-		LICENSE_MIRROR=http://10.50.0.165/license/ \
+		LICENSE_MIRROR=http://10.50.0.165/licenses \
 		LIFERAY_PASSWORD=test \
 		DRIVERS_FOLDER=/path/to/folder/with/jdbc/jars \
 			${MCD_RD_CLONE_PATH}/tomcat/bundle "$@"
@@ -31,7 +31,7 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 		LIFERAY_RELEASES_MIRROR=http://172.16.168.221/releases.liferay.com \
 		LIFERAY_FILES_MIRROR=http://172.16.168.221/files.liferay.com \
 		BRANCH_ARCHIVE_MIRROR=http://10.50.0.165/builds/branches/ \
-		LICENSE_MIRROR=http://10.50.0.165/license/ \
+		LICENSE_MIRROR=http://10.50.0.165/licenses \
 		LIFERAY_PASSWORD=test \
 		DRIVERS_FOLDER=/path/to/folder/with/jdbc/jars \
 			${MCD_RD_CLONE_PATH}/tomcat/cluster_docker "$@"
