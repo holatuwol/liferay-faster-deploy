@@ -1,0 +1,98 @@
+#!/bin/bash
+
+WEBSPHERE_TAG=8.5.5.14-profile
+#WEBSPHERE_TAG=9.0.0.9-profile
+
+SCRIPT_FOLDER=$(dirname ${BASH_SOURCE[0]})
+
+. ${SCRIPT_FOLDER}/../appserverprops
+
+wait_for_websphere() {
+	echo "Waiting for server startup"
+
+	while [ "" == "$(docker logs --since="${START_TIME}" ${CONTAINER_NAME} 2>&1 | grep -F 'Server server1 open for e-business')" ]; do
+		sleep 1
+	done
+
+	echo "Server restarted"
+}
+
+CONTAINER_NAME=$1
+
+if [ "" == "${CONTAINER_NAME}" ]; then
+	CONTAINER_NAME=test9443
+fi
+
+START_TIME=$(date '+%s')
+docker run -d --name ${CONTAINER_NAME} -p 8000:8000 -p 9043:9043 -p 9080:9080 -p 9443:9443 ibmcom/websphere-traditional:${WEBSPHERE_TAG}
+wait_for_websphere
+
+WS_PASSWORD=$(docker exec ${CONTAINER_NAME} cat /tmp/PASSWORD)
+
+docker cp ${SCRIPT_FOLDER}/websphere_setup.py ${CONTAINER_NAME}:/
+docker exec ${CONTAINER_NAME} sed -i 's/=.*$/=UTF-8/g' /opt/IBM/WebSphere/AppServer/properties/encoding.properties
+docker exec ${CONTAINER_NAME} wsadmin.sh -lang jython -user wsadmin -password ${WS_PASSWORD} -f /websphere_setup.py
+
+docker exec -u root ${CONTAINER_NAME} apt-get install -y unzip zip
+
+for file in ccpp.jar hsql.jar portal-kernel.jar portlet.jar; do
+	docker cp ${CATALINA_HOME}/lib/ext/${file} ${CONTAINER_NAME}:/opt/IBM/WebSphere/AppServer/lib/ext/
+done
+
+for file in ${CATALINA_HOME}/lib/ext/com.liferay.*; do
+	docker cp ${file} ${CONTAINER_NAME}:/opt/IBM/WebSphere/AppServer/lib/ext/
+done
+
+docker exec ${CONTAINER_NAME} bash -c "mkdir -p /opt/IBM/WebSphere/AppServer/profiles/AppSrv01/liferay/"
+
+if [ -d ${LIFERAY_HOME}/osgi ]; then
+	cd ${LIFERAY_HOME}
+	tar -cf osgi.tar osgi
+	docker cp osgi.tar ${CONTAINER_NAME}:/opt/IBM/WebSphere/AppServer/profiles/AppSrv01/liferay/
+	docker exec ${CONTAINER_NAME} bash -c "cd /opt/IBM/WebSphere/AppServer/profiles/AppSrv01/liferay/ && tar -xf osgi.tar && rm -f osgi.tar"
+	cd -
+fi
+
+cd ${CATALINA_HOME}/webapps/ROOT
+zip -qq -r liferay.war *
+docker cp liferay.war ${CONTAINER_NAME}:/opt/IBM/WebSphere/AppServer/profiles/AppSrv01/liferay/
+cd -
+
+docker exec -u root ${CONTAINER_NAME} chown was:was /opt/IBM/WebSphere/AppServer/profiles/AppSrv01/liferay/liferay.war
+
+if [ -f patching-tool-*.zip ]; then
+	docker cp patching-tool-*.zip ${CONTAINER_NAME}:/opt/IBM/WebSphere/AppServer/profiles/AppSrv01/liferay/
+	docker exec ${CONTAINER_NAME} bash -c "cd /opt/IBM/WebSphere/AppServer/profiles/AppSrv01/liferay/ && unzip -qq patching-tool-*.zip && rm -f patching-tool-*.zip"
+
+	docker cp ${SCRIPT_FOLDER}/default.properties ${CONTAINER_NAME}:/opt/IBM/WebSphere/AppServer/profiles/AppSrv01/liferay/patching-tool/
+	docker exec ${CONTAINER_NAME} bash -c "cd /opt/IBM/WebSphere/AppServer/profiles/AppSrv01/liferay/patching-tool/ && PATH=/opt/IBM/WebSphere/AppServer/java/bin:/usr/bin:/bin ./patching-tool.sh install"
+fi
+
+if [ -f ${LIFERAY_HOME}/portal-ext.properties ]; then
+	docker cp ${LIFERAY_HOME}/portal-ext.properties ${CONTAINER_NAME}:/opt/IBM/WebSphere/AppServer/profiles/AppSrv01/liferay/
+elif [ -f ${HOME}/portal-ext.properties ]; then
+	docker cp ${HOME}/portal-ext.properties ${CONTAINER_NAME}:/opt/IBM/WebSphere/AppServer/profiles/AppSrv01/liferay/
+fi
+
+docker exec ${CONTAINER_NAME} mkdir -p /opt/IBM/WebSphere/AppServer/profiles/AppSrv01/liferay/deploy/
+
+if [ -f license.xml ]; then
+	docker cp license.xml ${CONTAINER_NAME}:/opt/IBM/WebSphere/AppServer/profiles/AppSrv01/liferay/deploy/
+	docker exec -u root ${CONTAINER_NAME} chown was:was /opt/IBM/WebSphere/AppServer/profiles/AppSrv01/liferay/deploy/license.xml
+fi
+
+# START: If you need to modify the Liferay WAR, do it below here.
+
+docker cp ${SCRIPT_FOLDER}/ibm-web-ext.xml ${CONTAINER_NAME}:/opt/IBM/WebSphere/AppServer/profiles/AppSrv01/liferay/
+docker exec ${CONTAINER_NAME} bash -c "cd /opt/IBM/WebSphere/AppServer/profiles/AppSrv01/liferay/ && mkdir -p WEB-INF/lib && mv ibm-web-ext.xml WEB-INF/ && zip -g liferay.war WEB-INF/ibm-web-ext.xml"
+
+# END: If you need to modify the Liferay WAR, do it above here.
+
+START_TIME=$(date '+%s')
+docker restart ${CONTAINER_NAME}
+wait_for_websphere
+
+docker cp ${SCRIPT_FOLDER}/liferay_deploy.py ${CONTAINER_NAME}:/
+docker exec -it ${CONTAINER_NAME} wsadmin.sh -lang jython -user wsadmin -password ${WS_PASSWORD} -f /liferay_deploy.py
+
+docker logs -f ${CONTAINER_NAME}
