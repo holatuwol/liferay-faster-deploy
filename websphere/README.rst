@@ -36,16 +36,16 @@ Takes any Liferay Tomcat bundle (including one built from source) and uses it to
 
 In order to undo the changes from `LPS-89139 <https://issues.liferay.com/browse/LPS-89139>`__, you can use anonymous inner classes. Here are the changes you will need to apply:
 
-* portal-web/docroot/html/common/themes/bottom_portlet_resources_css.jspf
-* portal-web/docroot/html/common/themes/top_portlet_resources_css.jspf
+* `portal-web/docroot/html/common/themes/bottom_portlet_resources_css.jspf <https://github.com/liferay/liferay-portal/blob/7.2.0-ga1/portal-web/docroot/html/common/themes/bottom_portlet_resources_css.jspf#L21>`__
+* `portal-web/docroot/html/common/themes/top_portlet_resources_css.jspf <https://github.com/liferay/liferay-portal/blob/7.2.0-ga1/portal-web/docroot/html/common/themes/top_portlet_resources_css.jspf#L21>`__
 
 .. code-block:: java
 
 	// Predicate<String> predicate = s -> true;
 	Predicate<String> predicate = new Predicate<String>() { public boolean test(String s) { return true; } };
 
-* portal-web/docroot/html/common/themes/bottom_portlet_resources_js.jspf
-* portal-web/docroot/html/common/themes/top_portlet_resources_js.jspf
+* `portal-web/docroot/html/common/themes/bottom_portlet_resources_js.jspf <https://github.com/liferay/liferay-portal/blob/7.2.0-ga1/portal-web/docroot/html/common/themes/bottom_portlet_resources_js.jspf#L24>`__
+* `portal-web/docroot/html/common/themes/top_portlet_resources_js.jspf <https://github.com/liferay/liferay-portal/blob/7.2.0-ga1/portal-web/docroot/html/common/themes/top_portlet_resources_js.jspf#L24>`__
 
 .. code-block:: java
 
