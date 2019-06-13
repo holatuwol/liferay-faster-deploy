@@ -19,7 +19,6 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 
 	websphere() {
 		LICENSE_MIRROR=http://10.50.0.165/licenses \
-		LIFERAY_PASSWORD=test \
 		DRIVERS_FOLDER=/path/to/folder/with/jdbc/jars \
 			${MCD_RD_CLONE_PATH}/websphere/websphere "$@"
 	}
@@ -27,4 +26,9 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 Websphere Bundle
 ================
 
-Takes any Liferay Tomcat bundle (including one built from source) and uses it to start a Websphere container running Liferay. Currently only works with versions of Liferay compatible with Websphere 8.5.5.14 (6.2, 7.0, 7.1).
+Takes any Liferay Tomcat bundle (including one built from source) and uses it to start a Websphere container running Liferay. Currently only works with versions of Liferay compatible with a Websphere version that has at least one tag available on DockerHub (`reference <https://hub.docker.com/r/ibmcom/websphere-traditional/tags>`__).
+
+.. code-block:: bash
+
+	websphere 8.5.5
+	websphere 9.0.0
