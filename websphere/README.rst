@@ -33,3 +33,21 @@ Takes any Liferay Tomcat bundle (including one built from source) and uses it to
 	websphere 9.0.0
 
 **Limitations**: I haven't figured out how to get lambda expressions in ROOT.war .jsp files to work. Therefore, a side-effect of one of the commits for `LPS-89139 <https://issues.liferay.com/browse/LPS-89139>`__ (`reference <https://github.com/liferay/liferay-portal/commit/65f73ce970f4c95f6807d795bed06884ebf8493d>`__) is that it will result in a non-functioning Websphere 9.0.0.9 bundle, even though that release should contain a fix for `PI89577 <https://www-01.ibm.com/support/docview.wss?uid=swg1PI89577>`__. For now, the script aborts if it detects a lambda expression (``->``) somewhere in a .jsp.
+
+In order to undo the changes from `LPS-89139 <https://issues.liferay.com/browse/LPS-89139>`__, you can use anonymous inner classes. Here are the changes you will need to apply:
+
+* portal-web/docroot/html/common/themes/bottom_portlet_resources_css.jspf
+* portal-web/docroot/html/common/themes/top_portlet_resources_css.jspf
+
+.. code-block:: java
+
+	// Predicate<String> predicate = s -> true;
+	Predicate<String> predicate = new Predicate<String>() { public boolean test(String s) { return true; } };
+
+* portal-web/docroot/html/common/themes/bottom_portlet_resources_js.jspf
+* portal-web/docroot/html/common/themes/top_portlet_resources_js.jspf
+
+.. code-block:: java
+
+	// Predicate<String> predicate = resource -> !finalThemeDisplay.isIncludedJs(resource);
+	Predicate<String> predicate = new Predicate<String>() { public boolean test(String resource) { return !finalThemeDisplay.isIncludedJs(resource); } };
