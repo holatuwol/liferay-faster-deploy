@@ -18,7 +18,6 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 	MCD_RD_CLONE_PATH=/path/to/clone/location
 
 	websphere() {
-		LICENSE_MIRROR=http://10.50.0.165/licenses \
 		DRIVERS_FOLDER=/path/to/folder/with/jdbc/jars \
 			${MCD_RD_CLONE_PATH}/websphere/websphere "$@"
 	}

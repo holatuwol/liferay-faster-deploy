@@ -128,6 +128,12 @@ for file in ccpp.jar hsql.jar portal-kernel.jar; do
 	docker_cp ${CATALINA_HOME}/lib/ext/${file} ${CONTAINER_NAME}:/opt/IBM/WebSphere/AppServer/lib/ext/
 done
 
+if [ "" != "${DRIVERS_FOLDER}" ] && [ -d ${DRIVERS_FOLDER} ]; then
+	for file in ${DRIVERS_FOLDER}/*; do
+		docker_cp ${file} ${CONTAINER_NAME}:/opt/IBM/WebSphere/AppServer/lib/ext/
+	done
+fi
+
 for file in ${CATALINA_HOME}/lib/ext/com.liferay.*; do
 	docker_cp ${file} ${CONTAINER_NAME}:/opt/IBM/WebSphere/AppServer/lib/ext/
 done
