@@ -27,10 +27,17 @@ Websphere Bundle
 
 Takes any Liferay Tomcat bundle (including one built from source) and uses it to start a Websphere container running Liferay. Currently only works with versions of Liferay compatible with a Websphere version that has at least one tag available on DockerHub (`reference <https://hub.docker.com/r/ibmcom/websphere-traditional/tags>`__).
 
+First, make sure the following two files are available in ``LIFERAY_HOME``:
+
+* ``portal-ext.properties``
+* ``license.xml`` (only required if using an EE/DXP release bundle, file name is important!)
+
+Once both files are available, simply navigate to ``LIFERAY_HOME`` (or navigate to a portal source folder where ``app.server.USERNAME.properties`` has an ``app.server.parent.dir`` pointing to ``LIFERAY_HOME``) and then call the script, specifying which major.minor version of Websphere to use (8.5, 9.0) as the argument.
+
 .. code-block:: bash
 
-	websphere 8.5.5
-	websphere 9.0.0
+	websphere 8.5
+	websphere 9.0
 
 **Limitations**: I haven't figured out how to get lambda expressions in ROOT.war .jsp files to work. Therefore, a side-effect of one of the commits for `LPS-89139 <https://issues.liferay.com/browse/LPS-89139>`__ (`reference <https://github.com/liferay/liferay-portal/commit/65f73ce970f4c95f6807d795bed06884ebf8493d>`__) is that it will result in a non-functioning Websphere 9.0.0.9 bundle, even though that release should contain a fix for `PI89577 <https://www-01.ibm.com/support/docview.wss?uid=swg1PI89577>`__. For now, the script aborts if it detects a lambda expression (``->``) somewhere in a .jsp.
 
