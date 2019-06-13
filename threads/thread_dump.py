@@ -23,6 +23,8 @@ class ThreadDump:
 		stack_trace = None
 
 		for line in lines:
+			if not isinstance(line, six.string_types):
+				line = line.decode('utf-8')
 
 			# If we encounter an empty line, then we have finished
 			# reading in a single thread.
