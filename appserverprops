@@ -63,6 +63,22 @@ buildprops() {
 	repopass
 }
 
+checkliferayhome() {
+	local CATALINA_WEBAPPS=$(find ${PWD} -mindepth 2 -maxdepth 2 -type d -name 'webapps' | sort | tail -1)
+
+	if [ "" == "${CATALINA_WEBAPPS}" ]; then
+		return 1
+	fi
+
+	CATALINA_HOME=$(dirname "${CATALINA_WEBAPPS}")
+	TOMCAT_FOLDER=$(basename "${CATALINA_HOME}")
+	TOMCAT_VERSION=$(echo "${TOMCAT_FOLDER}" | cut -d'-' -f 2-)
+
+	LIFERAY_HOME=$(dirname "${CATALINA_HOME}")
+
+	echo "Using ${LIFERAY_HOME} as liferay.home"
+}
+
 cleanappserver() {
 	local TOMCAT_VERSION=
 
@@ -82,16 +98,14 @@ cleanappserver() {
 		CATALINA_HOME=${LIFERAY_HOME}/${TOMCAT_FOLDER}
 	fi
 
-	if [ ! -d "${CATALINA_HOME}" ] && [ -d "${LIFERAY_HOME}" ]; then
-		local POSSIBLE_CATALINA_HOME=$(find "${LIFERAY_HOME}" -maxdepth 1 -type d -name 'tomcat-*' | sort | tail -1)
+	if [ "" == "${CATALINA_HOME}" ] && [ "" != "${LIFERAY_HOME}" ] && [ -d "${LIFERAY_HOME}" ]; then
+		pushd ${LIFERAY_HOME} > /dev/null
+		checkliferayhome
+		popd > /dev/null
+	fi
 
-		if [ "" != "${POSSIBLE_CATALINA_HOME}" ]; then
-			echo "Expected to find ${CATALINA_HOME}, but found ${POSSIBLE_CATALINA_HOME} instead"
-
-			CATALINA_HOME="${POSSIBLE_CATALINA_HOME}"
-			TOMCAT_FOLDER=$(basename "${CATALINA_HOME}")
-			TOMCAT_VERSION=$(echo "${TOMCAT_FOLDER}" | cut -d'-' -f 2-)
-		fi
+	if [ "" == "${CATALINA_HOME}" ]; then
+		return 1
 	fi
 
 	if [ "" != "$CURRENT_HASH" ]; then
@@ -253,4 +267,6 @@ setopts
 
 if [[ 0 -eq $? ]]; then
 	appserveruserprops && buildprops && gradleprops && cleanappserver
+else
+	checkliferayhome
 fi
