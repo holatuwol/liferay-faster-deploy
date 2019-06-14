@@ -16,7 +16,7 @@ generate_patch_files() {
 	local error_state=0
 	local commit_index=0
 
-	for commit in $(git log --reverse master --pretty='%H' --grep=$1); do
+	for commit in $(git log --reverse $2 --pretty='%H' --grep=$1); do
 	  commit_index=$((commit_index+1))
 	  mv $(git format-patch ${commit}~1..${commit}) $(printf '%04d' ${commit_index})-${commit}.patch
 	done
@@ -48,4 +48,8 @@ apply_patch_files() {
 	ls *.patch | xargs git am
 }
 
-generate_patch_files $1 && apply_patch_files
+if [ "" == "$2" ]; then
+	generate_patch_files $1 master && apply_patch_files
+else
+	generate_patch_files $1 $2 && apply_patch_files
+fi
