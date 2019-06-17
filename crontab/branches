@@ -102,13 +102,13 @@ branches() {
 	for branch in master-private master 72x-private 72x 71x-private 71x 70x-private 70x 62x 61x; do
 		local ACTIVE_BUILD=
 
-		for LOG_ID in $(ls -1 "/var/www/html/builds/branches/" | grep "$branch-[0-9]*.log" | sort); do
-			BUILD_ARCHIVE=$(echo "$LOG_ID" | sed 's/\.log//g').tar.gz
+		for LOG_ID in $(ls -1 "/var/www/html/builds/branches/" | grep -e "$branch-[0-9]*.log" | sort); do
+			BUILD_ARCHIVE=$(echo "$LOG_ID" | sed 's/\.log$/.tar.gz/g')
 
 			if [ -f "/var/www/html/builds/branches/$BUILD_ARCHIVE" ]; then
-				ACTIVE_BUILD=$BUILD_ARCHIVE
+				ACTIVE_BUILD=${BUILD_ARCHIVE}
 			elif [ "" == "$ACTIVE_BUILD" ]; then
-				rm -f /var/www/html/builds/branches/$LOG_ID
+				echo rm -f /var/www/html/builds/branches/$LOG_ID
 			fi
 		done
 	done
