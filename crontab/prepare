@@ -50,9 +50,9 @@ compile() {
 	set -o pipefail
 
 	if [ "ee-6.1.x" == "${BASE_BRANCH}" ] || [ "ee-6.2.x" == "${BASE_BRANCH}" ]; then
-		ant start deploy | tee -a "${LIFERAY_HOME}.log"
+		ant start deploy |& tee -a "${LIFERAY_HOME}.log"
 	else
-		ant compile deploy | tee -a "${LIFERAY_HOME}.log"
+		ant compile deploy |& tee -a "${LIFERAY_HOME}.log"
 	fi
 
 	EXIT_CODE=$?
