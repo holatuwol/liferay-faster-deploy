@@ -217,6 +217,10 @@ redeploy() {
 
 	downloadbuild $1 && applychanges $1
 
+	if [[ 0 -ne $? ]]; then
+		return 1
+	fi
+
 	appserverprops
 
 	local DATABASE_SUPPORT_JAR="${CATALINA_HOME}/webapps/ROOT/WEB-INF/lib/com.liferay.portal.dao.db.jar"
