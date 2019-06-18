@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        1.3
+// @version        1.4
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/*
@@ -53,6 +53,22 @@ function replaceNode(oldNode, newHTML) {
 
   parentNode.replaceChild(newHiddenInputNode, oldNode);
   parentNode.insertBefore(newNode, newHiddenInputNode);
+}
+
+function replaceDate(target) {
+  var labelNode = document.querySelector('label[for="_1_WAR_osbpatcherportlet_' + target + '"]');
+
+  if (!labelNode) {
+    return;
+  }
+
+  var containerNode = labelNode.parentNode;
+
+  var dateNode = containerNode.childNodes[2];
+
+  var dateString = new Date(dateNode.textContent.trim() + ' GMT-0000').toString();
+
+  dateNode.textContent = dateString;
 }
 
 function replaceFixes(target) {
@@ -161,3 +177,5 @@ replaceAccountLink('accountEntryCode');
 replaceAccountLink('patcherBuildAccountEntryCode');
 replaceLesaLink('lesaTicket');
 replaceLesaLink('supportTicket');
+replaceDate('createDate');
+replaceDate('modifiedDate');
