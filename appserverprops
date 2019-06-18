@@ -48,11 +48,7 @@ buildprops() {
 
 	echo 'javac.compiler=modern' >> $GIT_ROOT/build.$USER.properties
 
-	# Make sure nodejs arguments are set
-
-	if [ -f $GIT_ROOT/build.properties ] && [ ! -f $GIT_ROOT/modules/.yarnrc ]; then
-		grep -F '#nodejs.npm.args' $GIT_ROOT/build.properties | sed 's/^\s*#//g' >> $GIT_ROOT/build.$USER.properties
-	fi
+	# Make sure baseline report is turned off
 
 	if [ "" == "$(grep -F baseline.jar.report.level build.${USER}.properties)" ]; then
 		echo -e '\nbaseline.jar.report.level=off' >> $GIT_ROOT/build.${USER}.properties
