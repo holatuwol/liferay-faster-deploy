@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        1.4
+// @version        1.5
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/*
@@ -31,6 +31,24 @@ function getQueryString(params) {
 
 function querySelector(target) {
   return document.querySelector('#' + ns + target);
+}
+
+function replaceJenkinsLinks() {
+  var links = document.querySelectorAll('a[href*="/job/fixpack-builder"]');
+
+  for (var i = 0; i < links.length; i++) {
+    var href = links[i].href;
+
+    if (href.indexOf('consoleText') != -1) {
+      continue;
+    }
+
+    if (href.charAt(href.length - 1) != '/') {
+      href += '/';
+    }
+
+    links[i].href = href + 'consoleText';
+  }
 }
 
 function replaceNode(oldNode, newHTML) {
@@ -170,6 +188,7 @@ for (var i = 0; i < buttons.length; i++) {
   onclickAttribute.value = onclickValue;
 }
 
+replaceJenkinsLinks()
 replaceFixes('patcherFixName');
 replaceFixes('patcherBuildName');
 replaceFixes('patcherBuildOriginalName');
