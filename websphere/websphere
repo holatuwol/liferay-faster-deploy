@@ -1,36 +1,8 @@
 #!/bin/bash
 
-if [ "" == "$1" ]; then
-	echo "Please specify a Websphere version"
-	exit 1
-fi
-
-WEBSPHERE_TAG=$(curl -s https://hub.docker.com/v2/repositories/ibmcom/websphere-traditional/tags/ | jq '.results | .[].name' | cut -d'"' -f 2 | grep "^${1}" | grep -F profile | cut -d '-' -f 1 | sort -t'.' -n -k1,4 | tail -1)-profile
-
-if [ "-profile" == "${WEBSPHERE_TAG}" ]; then
-	echo "Unable to find tag matching $1"
-	exit 1
-fi
-
-SCRIPT_FOLDER=$(dirname ${BASH_SOURCE[0]})
-. ${SCRIPT_FOLDER}/../appserverprops
-
-if [ "" == "${CATALINA_HOME}" ]; then
-	echo "Failed to find Tomcat folder"
-	exit 1
-fi
-
-LAMBDA_FILES=$(grep -rFl -- ' -> ' ${CATALINA_HOME}/webapps/ROOT/html)
-
-if [ "" != "${LAMBDA_FILES}" ]; then
-	echo ""
-	echo "The following issue is not actually fixed in Websphere:"
-	echo "https://www-01.ibm.com/support/docview.wss?uid=swg1PI89577"
-	echo ""
-	echo "Please remove lambda expressions from the following files:"
-	echo "${LAMBDA_FILES}" | awk '{ print "  " $1 }'
-	exit 1
-fi
+timeecho() {
+	echo '['$(date '+%H:%M:%S')']' $@
+}
 
 docker_cp() {
 	docker cp $1 $2
@@ -39,6 +11,43 @@ docker_cp() {
 		docker exec -u root ${CONTAINER_NAME} bash -c "chown was:was $(echo $2 | cut -d':' -f 2)$(basename $1)"
 	else
 		docker exec -u root ${CONTAINER_NAME} bash -c "chown was:was $(echo $2 | cut -d':' -f 2)"
+	fi
+}
+
+check_tomcat() {
+	if [ "" == "$1" ]; then
+		echo ""
+		timeecho "Please specify a Websphere version"
+		return 1
+	fi
+
+	WEBSPHERE_TAG=$(curl -s https://hub.docker.com/v2/repositories/ibmcom/websphere-traditional/tags/ | jq '.results | .[].name' | cut -d'"' -f 2 | grep "^${1}" | grep -F profile | cut -d '-' -f 1 | sort -t'.' -n -k1,4 | tail -1)-profile
+
+	if [ "-profile" == "${WEBSPHERE_TAG}" ]; then
+		echo ""
+		timeecho "Unable to find tag matching $1"
+		return 1
+	fi
+
+	SCRIPT_FOLDER=$(dirname ${BASH_SOURCE[0]})
+	. ${SCRIPT_FOLDER}/../appserverprops
+
+	if [ "" == "${CATALINA_HOME}" ]; then
+		echo ""
+		echo "Failed to find Tomcat folder"
+		return 1
+	fi
+
+	LAMBDA_FILES=$(grep -rFl -- ' -> ' ${CATALINA_HOME}/webapps/ROOT/html)
+
+	if [ "" != "${LAMBDA_FILES}" ]; then
+		echo ""
+		timeecho "The following issue is not actually fixed in Websphere:"
+		timeecho "https://www-01.ibm.com/support/docview.wss?uid=swg1PI89577"
+		echo ""
+		timeecho "Please remove lambda expressions from the following files:"
+		echo "${LAMBDA_FILES}" | awk '{ print "  " $1 }'
+		return 1
 	fi
 }
 
@@ -66,8 +75,9 @@ set_container_mounts() {
 	if [ "" != "${LIFERAY_HOME}" ]; then
 		LIFERAY_HOME_MOUNT="-v ${LIFERAY_HOME}:/build"
 	elif [ "$PWD" == "${HOME}" ]; then
-		echo "Unable to determine LIFERAY_HOME"
-		echo "Please run from a folder other than ${HOME} containing portal-ext.properties"
+		echo ""
+		timeecho "Unable to determine LIFERAY_HOME"
+		timeecho "Please run from a folder other than ${HOME} containing portal-ext.properties"
 		return 1
 	elif [ -f portal-ext.properties ] || [ -d drivers ] || [ -d patches ]; then
 		LIFERAY_HOME=${PWD}
@@ -78,117 +88,219 @@ set_container_mounts() {
 	elif . "$(dirname ${SCRIPT_FOLDER})/appserverprops"; then
 		LIFERAY_HOME_MOUNT="-v ${LIFERAY_HOME}:/build"
 	else
-		echo "Unable to determine LIFERAY_HOME"
-		echo "Please touch portal-ext.properties if you wish to use the current folder as LIFERAY_HOME"
+		echo ""
+		timeecho "Unable to determine LIFERAY_HOME"
+		timeecho "Please touch portal-ext.properties if you wish to use the current folder as LIFERAY_HOME"
 		return 1
 	fi
 }
 
+set_container_name() {
+	if [ "" != "${CONTAINER_NAME}" ]; then
+		return 0
+	fi
+
+	if [ "" != "$1" ] && [[ $1 =~ ^[0-9]*$ ]]; then
+		CONTAINER_NAME="test$1"
+	else
+		CONTAINER_NAME="$1"
+	fi
+}
+
+start_websphere() {
+	START_TIME=$(date '+%s')
+	WEBSPHERE_LIFERAY_HOME=/opt/IBM/WebSphere/AppServer/profiles/AppSrv01/liferay
+
+	if [ "" == "${WEBSPHERE_PORT}" ]; then
+		WEBSPHERE_PORT=$2
+	fi
+
+	if [ "" == "${WEBSPHERE_PORT}" ]; then
+		WEBSPHERE_PORT=$(python "${SCRIPT_FOLDER}/../tomcat/getport.py" 9080 7800 7801 8000 9443 11311)
+	fi
+
+	if [ "" == "${WEBSPHERE_PORT}" ]; then
+		WEBSPHERE_PORT=9080
+	fi
+
+	if [ "" != "$3" ]; then
+		set_container_name $3
+	else
+		set_container_name ${WEBSPHERE_PORT}
+	fi
+
+	local INCREMENT=$(expr ${WEBSPHERE_PORT} '-' 9080)
+
+	local GLOBAL_BIND="$(echo 9080 9443 | tr ' ' '\n' | awk '{ print  "--publish " $1+'${INCREMENT}' ":" $1 }' | xargs)"
+	local LOCAL_BIND="$(echo 8000 11311 | tr ' ' '\n' | awk '{ print  "--publish 127.0.0.1:" $1+'${INCREMENT}' ":" $1 }' | xargs)"
+	local EXPOSE_ONLY="$(echo 7800 7801 | tr ' ' '\n' | awk '{ print  "--expose " $1 }' | xargs)"
+
+	docker run -d ${GLOBAL_BIND} ${LOCAL_BIND} ${EXPOSE_ONLY} \
+		${LIFERAY_HOME_MOUNT} ${LIFERAY_RDBUILD_MOUNT} ${LIFERAY_RELEASE_MOUNT} ${DOCLIB_MOUNT} \
+		--name ${CONTAINER_NAME} \
+		ibmcom/websphere-traditional:${WEBSPHERE_TAG}
+
+	wait_for_websphere
+}
+
 wait_for_websphere() {
-	echo "Waiting for server startup"
+	echo ""
+	timeecho "Waiting for ${CONTAINER_NAME} startup"
 
 	while [ "" == "$(docker logs --since="${START_TIME}" ${CONTAINER_NAME} 2>&1 | grep -F 'Server server1 open for e-business')" ]; do
 		sleep 1
 	done
 
-	echo "Server restarted"
+	timeecho "Server ${CONTAINER_NAME} restarted"
 }
 
-if [ "" == "${CONTAINER_NAME}" ]; then
-	CONTAINER_NAME=test9443
-fi
+setup_global_lib() {
+	echo ""
+	timeecho "Setting up global lib"
 
-START_TIME=$(date '+%s')
-WEBSPHERE_LIFERAY_HOME=/opt/IBM/WebSphere/AppServer/profiles/AppSrv01/liferay
+	WS_PASSWORD=$(docker exec ${CONTAINER_NAME} cat /tmp/PASSWORD)
 
-set_container_mounts
+	docker_cp ${SCRIPT_FOLDER}/websphere_setup.py ${CONTAINER_NAME}:/
+	docker exec ${CONTAINER_NAME} sed -i 's/=.*$/=UTF-8/g' /opt/IBM/WebSphere/AppServer/properties/encoding.properties
+	docker exec ${CONTAINER_NAME} wsadmin.sh -lang jython -user wsadmin -password ${WS_PASSWORD} -f /websphere_setup.py
 
-docker run -d --name ${CONTAINER_NAME} \
-	${LIFERAY_HOME_MOUNT} ${LIFERAY_RDBUILD_MOUNT} ${LIFERAY_RELEASE_MOUNT} ${DOCLIB_MOUNT} \
-	-p 8000:8000 -p 9043:9043 -p 9080:9080 -p 9443:9443 ibmcom/websphere-traditional:${WEBSPHERE_TAG}
+	docker exec -u root ${CONTAINER_NAME} apt-get install -y unzip zip
 
-wait_for_websphere
+	docker exec ${CONTAINER_NAME} bash -c "mkdir -p /opt/IBM/WebSphere/AppServer/javaext/"
+	docker_cp ${CATALINA_HOME}/lib/ext/portlet.jar ${CONTAINER_NAME}:/opt/IBM/WebSphere/AppServer/javaext/
 
-WS_PASSWORD=$(docker exec ${CONTAINER_NAME} cat /tmp/PASSWORD)
+	docker exec ${CONTAINER_NAME} bash -c "test -f /opt/IBM/WebSphere/AppServer/configuration/config.ini && sed -i 's/org.osgi.framework.bootdelegation=/org.osgi.framework.bootdelegation=javax.portlet,javax.portlet.filter,javax.portlet.annotations,/g' /opt/IBM/WebSphere/AppServer/configuration/config.ini"
 
-docker_cp ${SCRIPT_FOLDER}/websphere_setup.py ${CONTAINER_NAME}:/
-docker exec ${CONTAINER_NAME} sed -i 's/=.*$/=UTF-8/g' /opt/IBM/WebSphere/AppServer/properties/encoding.properties
-docker exec ${CONTAINER_NAME} wsadmin.sh -lang jython -user wsadmin -password ${WS_PASSWORD} -f /websphere_setup.py
+	docker exec ${CONTAINER_NAME} bash -c "mkdir -p /opt/IBM/WebSphere/AppServer/lib/ext/"
 
-docker exec -u root ${CONTAINER_NAME} apt-get install -y unzip zip
+	for file in ccpp.jar hsql.jar portal-kernel.jar; do
+		docker_cp ${CATALINA_HOME}/lib/ext/${file} ${CONTAINER_NAME}:/opt/IBM/WebSphere/AppServer/lib/ext/
+	done
 
-docker exec ${CONTAINER_NAME} bash -c "mkdir -p /opt/IBM/WebSphere/AppServer/javaext/"
-docker_cp ${CATALINA_HOME}/lib/ext/portlet.jar ${CONTAINER_NAME}:/opt/IBM/WebSphere/AppServer/javaext/
+	if [ "" != "${DRIVERS_FOLDER}" ] && [ -d ${DRIVERS_FOLDER} ]; then
+		for file in ${DRIVERS_FOLDER}/*.jar; do
+			if [ ! -f ${file} ]; then
+				continue
+			fi
 
-docker exec ${CONTAINER_NAME} bash -c "test -f /opt/IBM/WebSphere/AppServer/configuration/config.ini && sed -i 's/org.osgi.framework.bootdelegation=/org.osgi.framework.bootdelegation=javax.portlet,javax.portlet.filter,javax.portlet.annotations,/g' /opt/IBM/WebSphere/AppServer/configuration/config.ini"
+			if [ -h ${file} ]; then
+				docker_cp $(readlink -m ${file}) ${CONTAINER_NAME}:/opt/IBM/WebSphere/AppServer/lib/ext/
+			else
+				docker_cp ${file} ${CONTAINER_NAME}:/opt/IBM/WebSphere/AppServer/lib/ext/
+			fi
+		done
+	fi
 
-docker exec ${CONTAINER_NAME} bash -c "mkdir -p /opt/IBM/WebSphere/AppServer/lib/ext/"
-
-for file in ccpp.jar hsql.jar portal-kernel.jar; do
-	docker_cp ${CATALINA_HOME}/lib/ext/${file} ${CONTAINER_NAME}:/opt/IBM/WebSphere/AppServer/lib/ext/
-done
-
-if [ "" != "${DRIVERS_FOLDER}" ] && [ -d ${DRIVERS_FOLDER} ]; then
-	for file in ${DRIVERS_FOLDER}/*; do
+	for file in ${CATALINA_HOME}/lib/ext/com.liferay.*; do
 		docker_cp ${file} ${CONTAINER_NAME}:/opt/IBM/WebSphere/AppServer/lib/ext/
 	done
-fi
+}
 
-for file in ${CATALINA_HOME}/lib/ext/com.liferay.*; do
-	docker_cp ${file} ${CONTAINER_NAME}:/opt/IBM/WebSphere/AppServer/lib/ext/
-done
+setup_osgi_folder() {
+	echo ""
+	timeecho "Setting up OSGi folders"
 
-docker exec -u root ${CONTAINER_NAME} bash -c "chown -R was:was /opt/IBM/WebSphere/AppServer"
+	docker exec -u root ${CONTAINER_NAME} bash -c "chown -R was:was /opt/IBM/WebSphere/AppServer"
 
-docker exec ${CONTAINER_NAME} bash -c "mkdir -p ${WEBSPHERE_LIFERAY_HOME}"
+	docker exec ${CONTAINER_NAME} bash -c "mkdir -p ${WEBSPHERE_LIFERAY_HOME}"
 
-if [ -d ${LIFERAY_HOME}/osgi ]; then
+	if [ ! -d ${LIFERAY_HOME}/osgi ]; then
+		return
+	fi
+
 	cd ${LIFERAY_HOME}
 	tar -cf osgi.tar osgi
 	docker_cp osgi.tar ${CONTAINER_NAME}:${WEBSPHERE_LIFERAY_HOME}/
 	docker exec ${CONTAINER_NAME} bash -c "cd ${WEBSPHERE_LIFERAY_HOME} && tar -xf osgi.tar && rm -f osgi.tar"
-	cd -
-fi
+	rm -f osgi.tar
+	cd - > /dev/null
+}
 
-cd ${CATALINA_HOME}/webapps/ROOT
-zip -qq -r liferay.war *
-docker_cp liferay.war ${CONTAINER_NAME}:${WEBSPHERE_LIFERAY_HOME}/
-cd -
+setup_liferay_war() {
+	echo ""
+	timeecho "Preparing Liferay .war"
 
-if [ -f patching-tool-*.zip ]; then
+	cd ${CATALINA_HOME}/webapps/ROOT
+	zip -qq -r liferay.war *
+	docker_cp liferay.war ${CONTAINER_NAME}:${WEBSPHERE_LIFERAY_HOME}/
+	rm -f liferay.war
+	cd - > /dev/null
+}
+
+setup_patching_tool() {
+	if [ ! -f patching-tool-*.zip ]; then
+		return 0
+	fi
+
+	echo ""
+	timeecho "Setting up patching tool"
+
 	docker_cp patching-tool-*.zip ${CONTAINER_NAME}:${WEBSPHERE_LIFERAY_HOME}/
 	docker exec ${CONTAINER_NAME} bash -c "cd ${WEBSPHERE_LIFERAY_HOME} && unzip -qq patching-tool-*.zip && rm -f patching-tool-*.zip"
 
 	docker_cp ${SCRIPT_FOLDER}/default.properties ${CONTAINER_NAME}:${WEBSPHERE_LIFERAY_HOME}patching-tool/
 	docker exec ${CONTAINER_NAME} bash -c "cd ${WEBSPHERE_LIFERAY_HOME}/patching-tool/ && PATH=/opt/IBM/WebSphere/AppServer/java/bin:/usr/bin:/bin ./patching-tool.sh install"
-fi
+}
 
-if [ -f ${LIFERAY_HOME}/portal-ext.properties ]; then
-	docker_cp ${LIFERAY_HOME}/portal-ext.properties ${CONTAINER_NAME}:${WEBSPHERE_LIFERAY_HOME}/
-elif [ -f ${HOME}/portal-ext.properties ]; then
-	docker_cp ${HOME}/portal-ext.properties ${CONTAINER_NAME}:${WEBSPHERE_LIFERAY_HOME}/
-fi
+setup_properties() {
+	echo ""
 
-docker exec ${CONTAINER_NAME} mkdir -p ${WEBSPHERE_LIFERAY_HOME}/deploy/
+	if [ -f ${LIFERAY_HOME}/portal-ext.properties ]; then
+		echo "Using ${LIFERAY_HOME}/portal-ext.properties"
+		docker_cp ${LIFERAY_HOME}/portal-ext.properties ${CONTAINER_NAME}:${WEBSPHERE_LIFERAY_HOME}/
+	elif [ -f ${HOME}/portal-ext.properties ]; then
+		echo "Using ${HOME}/portal-ext.properties"
+		docker_cp ${HOME}/portal-ext.properties ${CONTAINER_NAME}:${WEBSPHERE_LIFERAY_HOME}/
+	else
+		echo "No portal-ext.properties found"
+	fi
+}
 
-if [ -f license.xml ]; then
-	docker_cp license.xml ${CONTAINER_NAME}:${WEBSPHERE_LIFERAY_HOME}/deploy/
-fi
+setup_license() {
+	docker exec ${CONTAINER_NAME} mkdir -p ${WEBSPHERE_LIFERAY_HOME}/deploy/
 
-# START: If you need to modify the Liferay WAR, do it below here.
+	if [ -f license.xml ]; then
+		echo ""
+		timeecho "Copying license file"
+		docker_cp license.xml ${CONTAINER_NAME}:${WEBSPHERE_LIFERAY_HOME}/deploy/
+	fi
+}
 
-docker_cp ${SCRIPT_FOLDER}/ibm-web-ext.xml ${CONTAINER_NAME}:${WEBSPHERE_LIFERAY_HOME}/
-docker_cp ${SCRIPT_FOLDER}/ibm-web-ext.xml ${CONTAINER_NAME}:${WEBSPHERE_LIFERAY_HOME}/ibm-web-ext.xmi
+update_liferay_war() {
+	echo ""
+	timeecho "Updating Liferay .war"
 
-docker exec ${CONTAINER_NAME} bash -c "cd ${WEBSPHERE_LIFERAY_HOME} && mkdir -p WEB-INF/lib && mv ibm-web-ext.xmi WEB-INF/ && mv ibm-web-ext.xml WEB-INF/ && zip -g liferay.war WEB-INF/ibm-web-ext.xmi WEB-INF/ibm-web-ext.xml"
+	docker_cp ${SCRIPT_FOLDER}/ibm-web-ext.xml ${CONTAINER_NAME}:${WEBSPHERE_LIFERAY_HOME}/
+	docker_cp ${SCRIPT_FOLDER}/ibm-web-ext.xml ${CONTAINER_NAME}:${WEBSPHERE_LIFERAY_HOME}/ibm-web-ext.xmi
 
-# END: If you need to modify the Liferay WAR, do it above here.
+	docker exec ${CONTAINER_NAME} bash -c "cd ${WEBSPHERE_LIFERAY_HOME} && mkdir -p WEB-INF/lib && mv ibm-web-ext.xmi WEB-INF/ && mv ibm-web-ext.xml WEB-INF/ && zip -g liferay.war WEB-INF/ibm-web-ext.xmi WEB-INF/ibm-web-ext.xml"
 
-START_TIME=$(date '+%s')
-docker restart ${CONTAINER_NAME}
-wait_for_websphere
+	# START: If you need to modify the Liferay WAR, do it below here.
 
-docker_cp ${SCRIPT_FOLDER}/liferay_deploy.py ${CONTAINER_NAME}:/
-docker exec -it ${CONTAINER_NAME} wsadmin.sh -lang jython -user wsadmin -password ${WS_PASSWORD} -f /liferay_deploy.py
+	# END: If you need to modify the Liferay WAR, do it above here.
+}
 
-docker logs -f ${CONTAINER_NAME}
+install_liferay() {
+	setup_global_lib && setup_osgi_folder && setup_liferay_war && setup_patching_tool && setup_properties && setup_license && update_liferay_war
+}
+
+restart_websphere() {
+	START_TIME=$(date '+%s')
+	docker restart ${CONTAINER_NAME}
+	wait_for_websphere
+}
+
+deploy_liferay() {
+	echo ""
+	timeecho "Deploying Liferay .war"
+
+	sed -i 's/com.ibm.SOAP.requestTimeout=[0-9]*/com.ibm.SOAP.requestTimeout=0/g' /opt/IBM/WebSphere/AppServer/profiles/AppSrv01/properties/soap.client.props
+	docker_cp ${SCRIPT_FOLDER}/liferay_deploy.py ${CONTAINER_NAME}:/
+	docker exec -it ${CONTAINER_NAME} wsadmin.sh -lang jython -user wsadmin -password ${WS_PASSWORD} -f /liferay_deploy.py
+}
+
+check_tomcat $1 && \
+	set_container_mounts && \
+	start_websphere "$1" "$2" "$3" && \
+	install_liferay && restart_websphere && deploy_liferay && \
+	docker logs -f ${CONTAINER_NAME}
