@@ -1,8 +1,12 @@
 from __future__ import print_function
 from contextlib import closing
 from socket import socket, AF_INET, SOCK_STREAM
+import sys
 
-base_ports = [7800, 7801, 8000, 8009, 8080, 8443, 11311]
+base_ports = [int(x) for x in sys.argv[1:]]
+
+if len(base_ports) == 0:
+	base_ports = [8080, 7800, 7801, 8000, 8009, 8443, 11311]
 
 def test_port(port):
 	with closing(socket(AF_INET, SOCK_STREAM)) as s:
@@ -29,4 +33,4 @@ def get_increment():
 increment = get_increment()
 
 if increment is not None:
-	print(8080 + increment)
+	print(base_ports[0] + increment)
