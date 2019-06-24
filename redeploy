@@ -209,6 +209,45 @@ gw() {
 	$(dirname "${BASH_SOURCE[0]}")/gw $@
 }
 
+install_jar() {
+	local EXTRA_JAR="${1}/${2}.jar"
+
+	if [ -f ${EXTRA_JAR} ]; then
+		return 0
+	fi
+
+	if [ ! -e .git ] || [ "" == "${BASE_BRANCH}" ]; then
+		return 0
+	fi
+
+	local PRIVATE_TAG=${BASE_TAG}
+	local PRIVATE_BRANCH=${BASE_BRANCH}
+
+	if [ "" == "${PRIVATE_TAG}" ]; then
+		PRIVATE_TAG=${BASE_BRANCH}
+	fi
+
+	if [[ ${BASE_BRANCH} != ee-* ]] && [[ ${BASE_BRANCH} != *-private ]]; then
+		PRIVATE_BRANCH=${PRIVATE_BRANCH}-private
+		PRIVATE_TAG=${PRIVATE_TAG}-private
+	fi
+
+	local ARTIFACT_PROPERTIES=$(git ls-tree -r --name-only ${PRIVATE_TAG} modules/.releng | grep -F "/$3/" | grep -F artifact.properties)
+
+	if [ "" == "${ARTIFACT_PROPERTIES}" ]; then
+		return 0
+	fi
+
+	local PRIVATE_USERNAME=$(git show ${PRIVATE_BRANCH}:working.dir.properties | grep -F "build.repository.private.username[${PRIVATE_BRANCH}]=" | cut -d'=' -f 2)
+	local PRIVATE_PASSWORD=$(git show ${PRIVATE_BRANCH}:working.dir.properties | grep -F "build.repository.private.password[${PRIVATE_BRANCH}]=" | cut -d'=' -f 2)
+
+	local ARTIFACT_URL=$(git show ${PRIVATE_TAG}:${ARTIFACT_PROPERTIES} | grep -F artifact.url | cut -d'=' -f 2)
+
+	echo "Downloading ${ARTIFACT_URL}"
+
+	curl -u ${PRIVATE_USERNAME}:${PRIVATE_PASSWORD} -o ${EXTRA_JAR} ${ARTIFACT_URL}
+}
+
 redeploy() {
 	test -d ${LIFERAY_HOME} && find ${LIFERAY_HOME} -maxdepth 1 -type d -name 'tomcat-*' -exec rm -rf {} \;
 
@@ -223,31 +262,7 @@ redeploy() {
 
 	appserverprops
 
-	local DATABASE_SUPPORT_JAR="${CATALINA_HOME}/webapps/ROOT/WEB-INF/lib/com.liferay.portal.dao.db.jar"
-
-	if [ -f "${DATABASE_SUPPORT_JAR}" ]; then
-		return 0
-	fi
-
-	local PRIVATE_BRANCH=${BASE_BRANCH}
-
-	if [[ ${BASE_BRANCH} != ee-* ]] && [[ ${BASE_BRANCH} != *-private ]]; then
-		PRIVATE_BRANCH=${BASE_BRANCH}-private
-	fi
-
-	local ARTIFACT_PROPERTIES=$(git ls-tree -r --name-only ${PRIVATE_BRANCH} modules/.releng | grep -F portal-dao-db | grep -F artifact.properties)
-
-	if [ "" == "${ARTIFACT_PROPERTIES}" ]; then
-		return 0
-	fi
-
-	local PRIVATE_USERNAME=$(grep -F build.repository.private.username= build.${USER}.properties | cut -d'=' -f 2)
-	local PRIVATE_PASSWORD=$(grep -F build.repository.private.password= build.${USER}.properties | cut -d'=' -f 2)
-	local ARTIFACT_URL=$(git show ${PRIVATE_BRANCH}:${ARTIFACT_PROPERTIES} | grep -F artifact.url | cut -d'=' -f 2)
-
-	echo "Downloading ${ARTIFACT_URL}"
-
-	curl -u ${PRIVATE_USERNAME}:${PRIVATE_PASSWORD} -o ${DATABASE_SUPPORT_JAR} ${ARTIFACT_URL}
+	install_jar ${CATALINA_HOME}/webapps/ROOT/WEB-INF/lib com.liferay.portal.dao.db portal-dao-db
 }
 
 safeant() {
