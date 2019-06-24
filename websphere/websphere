@@ -38,7 +38,7 @@ check_tomcat() {
 		return 1
 	fi
 
-	LAMBDA_FILES=$(grep -rFl -- ' -> ' ${CATALINA_HOME}/webapps/ROOT/html)
+	LAMBDA_FILES=$(grep -rF -- ' -> ' ${CATALINA_HOME}/webapps/ROOT/html | grep -vF '//')
 
 	if [ "" != "${LAMBDA_FILES}" ]; then
 		echo ""
