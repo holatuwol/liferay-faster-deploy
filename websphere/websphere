@@ -51,6 +51,30 @@ check_tomcat() {
 	fi
 }
 
+create_network() {
+	NETWORK_METADATA=
+
+	if [ "" == "${NETWORK_NAME}" ]; then
+		if [ -f ${LIFERAY_HOME}/portal-ext.properties ]; then
+			local GATEWAY=$(docker network inspect bridge | jq '.[] | .IPAM.Config | .[].Gateway' | cut -d'"' -f 2)
+
+			sed -i.bak "s/127.0.0.1/${GATEWAY}/g" ${LIFERAY_HOME}/portal-ext.properties
+			sed -i.bak "s/localhost/${GATEWAY}/g" ${LIFERAY_HOME}/portal-ext.properties
+		fi
+
+		return 0
+	fi
+
+	if docker network inspect ${NETWORK_NAME} 1> /dev/null 2> /dev/null; then
+		echo ${CONTAINER_NAME} will join the existing ${NETWORK_NAME} network
+	else
+		echo ${CONTAINER_NAME} will join the newly-created ${NETWORK_NAME} network
+		docker network create ${NETWORK_NAME}
+	fi
+
+	NETWORK_METADATA="--network ${NETWORK_NAME} --network-alias ${CONTAINER_NAME} -e IS_CLUSTER=true"
+}
+
 set_container_mounts() {
 	mkdir -p ${HOME}/.liferay/builds
 
@@ -129,6 +153,10 @@ start_websphere() {
 		set_container_name ${WEBSPHERE_PORT}
 	fi
 
+	create_network
+
+	. ${SCRIPT_FOLDER}/cluster.sh
+
 	local INCREMENT=$(expr ${WEBSPHERE_PORT} '-' 9080)
 
 	local GLOBAL_BIND="$(echo 9080 9443 | tr ' ' '\n' | awk '{ print  "--publish " $1+'${INCREMENT}' ":" $1 }' | xargs)"
@@ -137,7 +165,7 @@ start_websphere() {
 
 	docker run -d ${GLOBAL_BIND} ${LOCAL_BIND} ${EXPOSE_ONLY} \
 		${LIFERAY_HOME_MOUNT} ${LIFERAY_RDBUILD_MOUNT} ${LIFERAY_RELEASE_MOUNT} ${DOCLIB_MOUNT} \
-		--name ${CONTAINER_NAME} \
+		${NETWORK_METADATA} --name ${CONTAINER_NAME} \
 		ibmcom/websphere-traditional:${WEBSPHERE_TAG}
 
 	wait_for_websphere
@@ -294,7 +322,7 @@ deploy_liferay() {
 	echo ""
 	timeecho "Deploying Liferay .war"
 
-	sed -i 's/com.ibm.SOAP.requestTimeout=[0-9]*/com.ibm.SOAP.requestTimeout=0/g' /opt/IBM/WebSphere/AppServer/profiles/AppSrv01/properties/soap.client.props
+	docker exec -it ${CONTAINER_NAME} sed -i 's/com.ibm.SOAP.requestTimeout=[0-9]*/com.ibm.SOAP.requestTimeout=0/g' /opt/IBM/WebSphere/AppServer/profiles/AppSrv01/properties/soap.client.props
 	docker_cp ${SCRIPT_FOLDER}/liferay_deploy.py ${CONTAINER_NAME}:/
 	docker exec -it ${CONTAINER_NAME} wsadmin.sh -lang jython -user wsadmin -password ${WS_PASSWORD} -f /liferay_deploy.py
 }
