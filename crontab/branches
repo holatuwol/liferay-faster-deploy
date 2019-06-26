@@ -108,7 +108,7 @@ branches() {
 			if [ -f "/var/www/html/builds/branches/$BUILD_ARCHIVE" ]; then
 				ACTIVE_BUILD=${BUILD_ARCHIVE}
 			elif [ "" == "$ACTIVE_BUILD" ]; then
-				echo rm -f /var/www/html/builds/branches/$LOG_ID
+				rm -f /var/www/html/builds/branches/$LOG_ID
 			fi
 		done
 	done
