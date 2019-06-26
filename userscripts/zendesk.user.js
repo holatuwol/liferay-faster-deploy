@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        6.0
+// @version        6.1
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -704,14 +704,18 @@ function updateSidebarBoxContainer(ticketId, ticketInfo) {
   }
 }
 
+function isLiferayLargeAttachment(anchor) {
+  return anchor.href.indexOf('ticketAttachmentId') != -1;
+}
+
 /**
  * Create a container to hold all of the attachments in the ticket, and a convenience
  * link which allows the user to download all of the selected attachments at once.
  */
 
 function createAttachmentsContainer(ticketId, ticketInfo, conversation) {
-  var attachmentLinks = conversation.querySelectorAll('.attachment');
-  var externalLinks = conversation.querySelectorAll('.is-public .zd-comment > a:not(.attachment)');
+  var attachmentLinks = Array.from(conversation.querySelectorAll('.attachment'));
+  var externalLinks = Array.from(conversation.querySelectorAll('.is-public .zd-comment > a:not(.attachment)')).filter(isLiferayLargeAttachment);
 
   if (attachmentLinks.length + externalLinks.length == 0) {
     return null;
@@ -737,9 +741,7 @@ function createAttachmentsContainer(ticketId, ticketInfo, conversation) {
   }
 
   for (var i = 0; i < externalLinks.length; i++) {
-    if (externalLinks[i].href.indexOf('ticketAttachmentId') != -1) {
-      attachments.push(extractExternalLinkMetadata(externalLinks[i]));
-    }
+    attachments.push(extractExternalLinkMetadata(externalLinks[i]));
   }
 
   attachments.sort(function(a, b) {
