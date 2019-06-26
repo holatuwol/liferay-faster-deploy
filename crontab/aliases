@@ -104,6 +104,10 @@ switchport() {
 	fi
 
 	sed -i "s/\"$1/\"$2/g" $CATALINA_HOME/conf/server.xml
+
+	sed -i '/AJP\//s@<!-- @@g' server.xml
+	sed -i '/AJP\//s@ -->@@g' server.xml
+
 	sed -i "s/JPDA_ADDRESS=${1}/JPDA_ADDRESS=${2}/g" $CATALINA_HOME/bin/setenv.sh
 	sed -i "s/JPDA_ADDRESS=${1}/JPDA_ADDRESS=${2}/g" $CATALINA_HOME/bin/setenv.bat
 }
