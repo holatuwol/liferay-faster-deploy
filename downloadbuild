@@ -191,7 +191,7 @@ downloadbranchmirror() {
 
 	REQUEST_URL="${REQUEST_URL}${BUILD_TIMESTAMP}"
 
-	local ARTIFACT_NAME=$(curl -s --connect-timeout 2 $FILES_CREDENTIALS $REQUEST_URL | grep -o '<a href="liferay-portal-tomcat-[^"]*\.\(7z\|zip\)">' | cut -d'"' -f 2)
+	local ARTIFACT_NAME=$(curl -s --connect-timeout 2 $FILES_CREDENTIALS $REQUEST_URL | grep -o '<a href="liferay-portal-tomcat-'${BASE_BRANCH}'\.\(7z\|zip\)">' | cut -d'"' -f 2 | sort | head -1)
 
 	REQUEST_URL="${REQUEST_URL}${ARTIFACT_NAME}"
 
