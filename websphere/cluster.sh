@@ -8,25 +8,32 @@ install_jar() {
 	fi
 
 	while read -r lpkg; do
-		if [ -f ${lpkg} ] && [ "" != "$(unzip -l "${lpkg}" | grep -F $2)" ]; then
+		if [ "" != "${lpkg}" ] && [ -f ${lpkg} ] && [ "" != "$(unzip -l "${lpkg}" | grep -F $2)" ]; then
 			return 0
 		fi
 	done <<< "$(find ${LIFERAY_HOME}/osgi/marketplace -name '*.lpkg')"
 
-	if [ ! -e .git ] || [ "" == "${BASE_BRANCH}" ]; then
+	if [ "" == "${GIT_ROOT}" ] || [ "" == "${BASE_BRANCH}" ]; then
 		return 0
 	fi
 
 	local PRIVATE_TAG=${BASE_TAG}
 	local PRIVATE_BRANCH=${BASE_BRANCH}
 
-	if [ "" == "${PRIVATE_TAG}" ]; then
-		PRIVATE_TAG=${BASE_BRANCH}
-	fi
+	if [ "master" == "${BASE_BRANCH}" ]; then
+		BASE_TAG=7.2.x
+		BASE_BRANCH=7.2.x
+		PRIVATE_TAG=7.2.x-private
+		PRIVATE_BRANCH=7.2.x-private
+	else
+		if [ "" == "${PRIVATE_TAG}" ]; then
+			PRIVATE_TAG=${BASE_BRANCH}
+		fi
 
-	if [[ ${BASE_BRANCH} != ee-* ]] && [[ ${BASE_BRANCH} != *-private ]]; then
-		PRIVATE_BRANCH=${PRIVATE_BRANCH}-private
-		PRIVATE_TAG=${PRIVATE_TAG}-private
+		if [[ ${BASE_BRANCH} != ee-* ]] && [[ ${BASE_BRANCH} != *-private ]]; then
+			PRIVATE_BRANCH=${PRIVATE_BRANCH}-private
+			PRIVATE_TAG=${PRIVATE_TAG}-private
+		fi
 	fi
 
 	local ARTIFACT_PROPERTIES=$(git ls-tree -r --name-only ${BASE_TAG} modules/.releng | grep -F "/$3/" | grep -F artifact.properties)
