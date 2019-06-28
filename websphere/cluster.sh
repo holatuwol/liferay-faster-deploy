@@ -45,6 +45,7 @@ tcp_extractxml() {
 		return 0
 	fi
 
+	install_jar ${LIFERAY_HOME}/osgi/portal com.liferay.portal.cache.multiple portal-cache-multiple
 	install_jar ${LIFERAY_HOME}/osgi/portal com.liferay.portal.cluster.multiple portal-cluster-multiple
 	install_jar ${LIFERAY_HOME}/osgi/portal com.liferay.portal.scheduler.multiple portal-scheduler-multiple
 
