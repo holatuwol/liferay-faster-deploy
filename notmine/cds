@@ -107,8 +107,13 @@ _cds() {
     return
   fi
 
+  local gitFolderPath="$(git rev-parse --show-toplevel)"
+
   # keep the suggestions in a local variable
-  local suggestions=($(compgen -W "$(git ls-files $(git rev-parse --show-toplevel)/modules | grep "/.lfrbuild-portal$" | awk -F"/" '{print $(NF-1)}')" -- "${COMP_WORDS[1]}"))
+  local suggestions=($(compgen -W "$(
+    git ls-files ${gitFolderPath}/modules | grep -F "/.lfrbuild-portal" | awk -F"/" '{print $(NF-1)}' | tr '\0' '\n'
+    test -f ${gitFolderPath}/git-commit-portal && git ls-tree -r --name-only $(cat ${gitFolderPath}/git-commit-portal) -- ${gitFolderPath}/modules | grep -F "/.lfrbuild-portal" | awk -F"/" '{print $(NF-1)}' | tr '\0' '\n'
+  )" -- "${COMP_WORDS[1]}"))
 
   if [ "${#suggestions[@]}" == "1" ]; then
     # if there's only one match, we remove the command literal
