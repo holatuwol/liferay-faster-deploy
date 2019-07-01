@@ -171,6 +171,9 @@ set_image_name_by_patch() {
 	elif [[ $1 == dxp-* ]] || [[ $1 == 7.1.* ]] || [[ $1 == *-7110 ]] || [[ $1 == *-7110.zip ]]; then
 		IMAGE_NAME="holatuwol/liferay:openjdk8"
 		return 0
+	elif [[ $1 == dxp-* ]] || [[ $1 == 7.2.* ]] || [[ $1 == *-7210 ]] || [[ $1 == *-7210.zip ]]; then
+		IMAGE_NAME="holatuwol/liferay:openjdk8"
+		return 0
 	elif [ "master" == "$1" ]; then
 		IMAGE_NAME="holatuwol/liferay:openjdk8"
 		return 0
