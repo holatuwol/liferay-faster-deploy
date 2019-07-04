@@ -1,0 +1,58 @@
+#!/bin/bash
+
+patch_public() {
+	cd ${HOME}/Work/liferay/7.1.x/portal
+	git clean -xdf
+	git reset --hard
+	git checkout -f marketplace-commerce-${1}
+
+	local PUBLIC_HASH=$(grep 'commit =' modules/apps/commerce/.gitrepo | awk '{ print $3 }')
+
+	cd ${HOME}/Work/liferay/subrepos/com-liferay-commerce
+
+	git fetch origin --no-tags
+	rm -f *.patch
+	git format-patch ${PUBLIC_HASH}..origin/${2}-next
+	sed -i.bak 's@ a/@ a/modules/apps/commerce/@g' *.patch
+	sed -i.bak 's@ b/@ b/modules/apps/commerce/@g' *.patch
+	sed -i.bak 's@^rename from @rename from modules/apps/commerce/@g' *.patch
+	sed -i.bak 's@^rename to @rename to modules/apps/commerce/@g' *.patch
+	sed -i.bak '/=>/s@^rename @rename modules/apps/commerce/@g' *.patch
+
+	mv *.patch ${HOME}/Work/liferay/7.1.x/portal
+	cd ${HOME}/Work/liferay/7.1.x/portal
+	git am *.patch
+}
+
+patch_private() {
+	cd ${HOME}/Work/liferay/7.1.x/private
+	git clean -xdf
+	git reset --hard
+	git checkout -f marketplace-commerce-${1}-private
+
+	local PRIVATE_HASH=$(grep 'commit =' modules/private/apps/commerce/.gitrepo | awk '{ print $3 }')
+
+	cd ${HOME}/Work/liferay/subrepos/com-liferay-commerce-private
+	git fetch origin --no-tags
+	rm -f *.patch
+	git format-patch ${PRIVATE_HASH}..origin/${2}-private-next
+	sed -i.bak 's@ a/@ a/modules/private/apps/commerce/@g' *.patch
+	sed -i.bak 's@ b/@ b/modules/private/apps/commerce/@g' *.patch
+	sed -i.bak 's@^rename from @rename from modules/private/apps/commerce/@g' *.patch
+	sed -i.bak 's@^rename to @rename to modules/private/apps/commerce/@g' *.patch
+	sed -i.bak '/=>/s@^rename @rename modules/private/apps/commerce/@g' *.patch
+
+	mv *.patch ${HOME}/Work/liferay/7.1.x/private
+	cd ${HOME}/Work/liferay/7.1.x/private
+	git am *.patch
+}
+
+generate_patch_files() {
+	patch_public $@ && patch_private $@
+}
+
+apply_patch_files() {
+	ls *.patch | xargs git am
+}
+
+generate_patch_files 1.1.6-7110 7.1.x
