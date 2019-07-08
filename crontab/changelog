@@ -7,9 +7,7 @@ getchangelog() {
 		git ls-tree -r --name-only upstream/$1 -- modules/ > .modules
 
 		for file in $(grep -F app.properties .modules); do
-			if [ "" != "$(grep -F $(dirname ${file})/app.changelog .modules)" ]; then
-				getfixes $(dirname ${file}) $1
-			fi
+			getfixes $(dirname ${file}) $1
 		done
 	) | sed '$s/,$//g'
 
@@ -21,9 +19,7 @@ getchangelog() {
 		git ls-tree -r --name-only upstream/$1-private -- modules/ > .modules
 
 		for file in $(grep -F app.properties .modules); do
-			if [ "" != "$(grep -F $(dirname ${file})/app.changelog .modules)" ]; then
-				getfixes $(dirname ${file}) $1-private
-			fi
+			getfixes $(dirname ${file}) $1-private
 		done
 
 		rm -f .modules
@@ -43,6 +39,10 @@ getfixes() {
 		return 0
 	fi
 
+	if [ "" != "$(git show upstream/$2:${MODULE_FOLDER}/app.bnd | grep -F 'Liferay-Releng-Deprecated: true')" ]; then
+		return 0
+	fi
+
 	local NAME=$(git show upstream/$2:$1/app.properties | grep -F app.marketplace.title= | cut -d'=' -f 2)
 
 	if [ "" == "${NAME}" ]; then
@@ -51,30 +51,38 @@ getfixes() {
 
 	local ID=$(git show upstream/$2:$1/app.properties | grep -F app.marketplace.id= | cut -d'=' -f 2)
 	local VERSION=$(git show upstream/$2:$1/app.properties | grep -F app.marketplace.version= | cut -d'=' -f 2)
-	local RELEASE_HASH=$(git show upstream/$2:$1/app.changelog | grep -F app.git.id-${VERSION}= | cut -d'=' -f 2)
-
-	if [ "" == "${RELEASE_HASH}" ] || [ "" == "$(git log -1 --pretty='%H' ${RELEASE_HASH} 2> /dev/null)" ]; then
-		RELEASE_HASH=$(git log -1 --pretty='%H' upstream/$2 -- $1/app.changelog)
-	fi
 
 	echo -n '      {'
 	echo -n '"marketplace": "'${ID}'",'
 	echo -n '"name": "'${NAME}'", '
 	echo -n '"version": "'${VERSION}'", '
-	echo -n '"releaseDate": "'$(git log -1 --pretty='%ci' ${RELEASE_HASH} | awk '{ print $1 }')'", '
 	echo -n '"path": "'${MODULE_FOLDER}'", '
-	echo -n '"fixes": '
 
-	local CHANGELOG=$(git log --pretty='%s' ${RELEASE_HASH}..upstream/$2 -- ${MODULE_FOLDER} | grep -Eo '[A-Z]+-[0-9]+' | grep -vF 'LRDOCS' | grep -vF LRQA | grep -vF -- '-0' | sort -u)
+	local RELEASE_HASH=
 
-	echo -n '['
+	if [ "" != "$(grep -F $1/app.changelog .modules)" ]; then
+		RELEASE_HASH=$(git show upstream/$2:$1/app.changelog | grep -F app.git.id-${VERSION}= | cut -d'=' -f 2)
 
-	if [ "" != "${CHANGELOG}" ]; then
-		echo -n "${CHANGELOG}" | awk '{ print "\"" $1 "\"" }' | tr '\n' ',' | sed 's/,$//g' | sed 's/,/, /g'
+		if [ "" == "${RELEASE_HASH}" ] || [ "" == "$(git log -1 --pretty='%H' ${RELEASE_HASH} 2> /dev/null)" ]; then
+			RELEASE_HASH=$(git log -1 --pretty='%H' upstream/$2 -- $1/app.changelog)
+		fi
+
+		echo -n '"releaseDate": "'$(git log -1 --pretty='%ci' ${RELEASE_HASH} | awk '{ print $1 }')'", '
+		echo -n '"fixes": '
+
+		local CHANGELOG=$(git log --pretty='%s' ${RELEASE_HASH}..upstream/$2 -- ${MODULE_FOLDER} | grep -Eo '[A-Z]+-[0-9]+' | grep -vF 'LRDOCS' | grep -vF LRQA | grep -vF -- '-0' | sort -u)
+
+		echo -n '['
+
+		if [ "" != "${CHANGELOG}" ]; then
+			echo -n "${CHANGELOG}" | awk '{ print "\"" $1 "\"" }' | tr '\n' ',' | sed 's/,$//g' | sed 's/,/, /g'
+		fi
+	else
+		echo -n '"releaseDate": null, '
+		echo -n '"fixes": ['
 	fi
 
 	echo -n ']'
-
 	echo '},'
 }
 

@@ -83,18 +83,18 @@ function generateChangelogEntry(releaseId, update) {
 	row.appendChild(cell);
 
 	cell = document.createElement('td');
-	cell.textContent = update.releaseDate;
+	cell.textContent = update.releaseDate || 'no changelog';
 	cell.classList.add('app-release-date');
 	row.appendChild(cell);
 
 	cell = document.createElement('td');
 	cell.classList.add('app-fix-count');
-	cell.textContent = update.fixes == null ? '???' : update.fixes.length;
+	cell.textContent = update.fixes.length;
 	row.appendChild(cell);
 
 	cell = document.createElement('td');
 	cell.classList.add('app-fixes');
-	cell.innerHTML = update.fixes == null ? 'bad hash in changelog' : update.fixes.length == 0 ? 'none' : update.fixes.map(createJiraLink).join(', ');
+	cell.innerHTML = update.fixes.length == 0 ? 'none' : update.fixes.map(createJiraLink).join(', ');
 	row.appendChild(cell);
 
 	return row;
