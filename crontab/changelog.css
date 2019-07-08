@@ -1,0 +1,13 @@
+table[data-sortable] th {
+	vertical-align: top;
+}
+
+th,
+td.app-release-date,
+td.app-fix-count {
+	white-space: nowrap;
+}
+
+.app-fixes a {
+	white-space: nowrap;
+}

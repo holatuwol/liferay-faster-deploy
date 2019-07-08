@@ -1,23 +1,43 @@
 #!/bin/bash
 
 getchangelog() {
-	echo "<h2>$1</h2>"
+	echo '    "'$1'": ['
 
-	echo "<ul>"
+	(
+		git ls-tree -r --name-only upstream/$1 -- modules/ > .modules
 
-	for file in $(git ls-tree -r --name-only upstream/$1 -- modules/.releng | grep -F app.properties); do
-		getfixes $(dirname ${file}) $1
-	done
+		for file in $(grep -F app.properties .modules); do
+			if [ "" != "$(grep -F $(dirname ${file})/app.changelog .modules)" ]; then
+				getfixes $(dirname ${file}) $1
+			fi
+		done
+	) | sed '$s/,$//g'
 
-	for file in $(git ls-tree -r --name-only upstream/$1-private -- modules/.releng | grep -F app.properties); do
-		getfixes $(dirname ${file}) $1-private
-	done
+	echo '    ],'
 
-	echo "</ul>"
+	echo '    "'$1'-private": ['
+
+	(
+		git ls-tree -r --name-only upstream/$1-private -- modules/ > .modules
+
+		for file in $(grep -F app.properties .modules); do
+			if [ "" != "$(grep -F $(dirname ${file})/app.changelog .modules)" ]; then
+				getfixes $(dirname ${file}) $1-private
+			fi
+		done
+
+		rm -f .modules
+	) | sed '$s/,$//g'
+
+	echo -n '    ]'
 }
 
 getfixes() {
 	local MODULE_FOLDER=$(echo $1 | sed 's@\.releng/@@g')
+
+	if [ "" == "$(grep -F ${MODULE_FOLDER}/app.bnd .modules)" ]; then
+		return 0
+	fi
 
 	if [ "" != "$(git show upstream/$2:${MODULE_FOLDER}/app.bnd | grep -F 'Liferay-Releng-Bundle: true')" ]; then
 		return 0
@@ -29,24 +49,33 @@ getfixes() {
 		return 0
 	fi
 
+	local ID=$(git show upstream/$2:$1/app.properties | grep -F app.marketplace.id= | cut -d'=' -f 2)
 	local VERSION=$(git show upstream/$2:$1/app.properties | grep -F app.marketplace.version= | cut -d'=' -f 2)
 	local RELEASE_HASH=$(git show upstream/$2:$1/app.changelog | grep -F app.git.id-${VERSION}= | cut -d'=' -f 2)
 
-	if [ "" == "${RELEASE_HASH}" ]; then
-		return 0
+	if [ "" == "${RELEASE_HASH}" ] || [ "" == "$(git log -1 --pretty='%H' ${RELEASE_HASH} 2> /dev/null)" ]; then
+		RELEASE_HASH=$(git log -1 --pretty='%H' upstream/$2 -- $1/app.changelog)
 	fi
+
+	echo -n '      {'
+	echo -n '"marketplace": "'${ID}'",'
+	echo -n '"name": "'${NAME}'", '
+	echo -n '"version": "'${VERSION}'", '
+	echo -n '"releaseDate": "'$(git log -1 --pretty='%ci' ${RELEASE_HASH} | awk '{ print $1 }')'", '
+	echo -n '"path": "'${MODULE_FOLDER}'", '
+	echo -n '"fixes": '
 
 	local CHANGELOG=$(git log --pretty='%s' ${RELEASE_HASH}..upstream/$2 -- ${MODULE_FOLDER} | grep -Eo '[A-Z]+-[0-9]+' | grep -vF 'LRDOCS' | grep -vF LRQA | grep -vF -- '-0' | sort -u)
 
-	if [ "" == "${CHANGELOG}" ]; then
-		echo "<li class='no-changes'><strong>${NAME}</strong>: "
-		echo "No changes since ${VERSION} release."
-	else
-		echo "<li class='changes'><strong>${NAME}</strong>: "
-		echo "${CHANGELOG}" | awk '{ print "<a href=\"https://issues.liferay.com/browse/" $1 "\">" $1 "</a>" }' | tr '\n' ',' | sed 's/,$//g' | sed 's/,/, /g'
+	echo -n '['
+
+	if [ "" != "${CHANGELOG}" ]; then
+		echo -n "${CHANGELOG}" | awk '{ print "\"" $1 "\"" }' | tr '\n' ',' | sed 's/,$//g' | sed 's/,/, /g'
 	fi
 
-	echo "</li>"
+	echo -n ']'
+
+	echo '},'
 }
 
 if [ -f ${HOME}/source/release.properties ]; then
@@ -59,11 +88,19 @@ if [ ! -f release.properties ]; then
 fi
 
 if git fetch upstream --no-tags; then
-	echo "<h1>"
-	date
-	echo "</h1>"
+	echo '{'
+	echo '  "timestamp": "'$(date)'",'
+	echo '  "changelog": {'
 
 	for branch in 7.0.x 7.1.x 7.2.x; do
+		if [ "7.0.x" != "${branch}" ]; then
+			echo ","
+		fi
+
 		getchangelog ${branch}
 	done
+
+	echo ''
+	echo '  }'
+	echo '}'
 fi
