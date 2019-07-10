@@ -17,7 +17,9 @@ if [[ $1 == http://files.liferay.com/* ]] || [[ $1 == https://files.liferay.com/
 fi
 
 if [ "" == "$(git config files.username)" ] || [ "" == "$(git config files.password)" ]; then
-	echo "Cannot connect to patcher portal and testray API unless files.username and files.password are set with git config --global"
+	echo "Cannot connect to patcher portal and testray API without username and password"
+	echo "Set your liferay.com username with git config --global files.username USERNAME"
+	echo "Set your liferay.com password with git config --global files.password PASSWORD"
 	exit 1
 fi
 
