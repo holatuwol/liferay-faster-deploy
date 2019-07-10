@@ -17,9 +17,18 @@ import webbrowser_patch
 
 # Utility methods for bridging Liferay systems
 
+service_packs = {
+	'7.0': [0, 7, 12, 14, 22, 30, 32, 40, 50, 60, 70, 80],
+	'7.1': [5, 10]
+};
+
 master_version = '7.2'
 
 def get_liferay_version(url):
+	if url.find('fix-pack-de-') == 0 or url.find('fix-pack-dxp-') == 0:
+		version_number = url[url.rfind('-') + 1:]
+		return '%s.%s' % (version_number[0], version_number[1])
+
 	if url.find('https://files.liferay.com/') == 0 or url.find('http://files.liferay.com/') == 0:
 		url_parts = url.split('/')
 		version_id = url_parts[6]
@@ -264,6 +273,8 @@ def get_routine_id(url):
 
 	if url.find('https://github.com') == 0:
 		matching_name = 'CE Pull Request' if url.find('-ee') == -1 else 'EE Pull Request'
+	elif url.find('fix-pack-de-') == 0 or url.find('fix-pack-dxp-') == 0:
+		matching_name = 'Fix Pack Tester'
 	elif url.find('https://files.liferay.com') == 0:
 		matching_name = 'Hotfix Tester'
 	elif url.find('http://files.liferay.com') == 0:
@@ -333,6 +344,23 @@ def get_github_build_id(github_url):
 
 	return get_build_id(routine_id, search_name, matching_name)
 
+def get_fixpack_build_id(version_name):
+	if version_name is None:
+		return None
+
+	liferay_version = get_liferay_version(version_name)
+	routine_id = get_routine_id(version_name)
+
+	if routine_id is None:
+		return None
+
+	fix_id = int(version_name.split('-')[3])
+	service_pack = max([x for x, y in enumerate(service_packs[liferay_version]) if y <= fix_id])
+	search_name = '%s.10.%d' % (liferay_version, service_pack) if service_pack > 0 else '%s.10' % liferay_version
+	matching_name = ' - liferay-%s - ' % version_name
+
+	return get_build_id(routine_id, search_name, matching_name)
+
 def get_hotfix_build_id(hotfix_url):
 	if hotfix_url is None:
 		return None
@@ -341,8 +369,6 @@ def get_hotfix_build_id(hotfix_url):
 
 	if routine_id is None:
 		return None
-
-	base_url = 'https://testray.liferay.com/api/jsonws/osb-testray-web.builds/index'
 
 	hotfix_id = hotfix_url[hotfix_url.rfind('/') + 1 : hotfix_url.rfind('.')]
 
@@ -434,9 +460,12 @@ def open_testray(url):
 
 		previous_patcher_build = get_previous_patcher_build(patcher_build)
 
-		if previous_patcher_build is not None:
+		if previous_patcher_build is None:
+			previous_build_id = get_fixpack_build_id(patcher_build['patcherProjectVersionName'])
+		else:
 			previous_build_id = get_hotfix_build_id(previous_patcher_build['downloadURL'])
-			testray_url = get_testray_url(build_id, previous_build_id)
+
+		testray_url = get_testray_url(build_id, previous_build_id)
 
 	if testray_url is None:
 		testray_url = get_testray_url(build_id, None)
