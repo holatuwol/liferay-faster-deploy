@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import inspect
 import os
 from os.path import abspath, dirname, isdir, isfile, join, relpath

@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from __future__ import print_function
 from pandas import DataFrame
 from matplotlib import pyplot

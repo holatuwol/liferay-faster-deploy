@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from matplotlib import pyplot
 import six
 import sys

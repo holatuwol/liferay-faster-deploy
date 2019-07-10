@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 war_name = 'liferay.war'
 app_name = 'liferay_war'
 

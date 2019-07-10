@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import networkx as nx
 from os.path import isfile
 import sys

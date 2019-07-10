@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import json
 from scrape_liferay import get_liferay_content, get_namespaced_parameters
 import sys

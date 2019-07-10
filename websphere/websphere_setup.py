@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 heap_size = 4096
 jpda_port = 8000
 

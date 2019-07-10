@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from bs4 import BeautifulSoup
 from findhotfix import get_patcher_build
 import inspect

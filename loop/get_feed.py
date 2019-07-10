@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import inspect
 import json
 import os

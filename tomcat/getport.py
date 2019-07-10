@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from __future__ import print_function
 from contextlib import closing
 from socket import socket, AF_INET, SOCK_STREAM
