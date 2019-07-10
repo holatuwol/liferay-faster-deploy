@@ -94,7 +94,7 @@ def get_fix_id(typeFilter='0'):
 	candidate_fix_names = None
 
 	if len(sys.argv) == 3 and len(sys.argv[2]) > 0:
-		if str.isnumeric(sys.argv[2]):
+		if re.search('^[0-9]*$', sys.argv[2]) is None:
 			return sys.argv[2], None
 		else:
 			candidate_fix_names = [sys.argv[2]]

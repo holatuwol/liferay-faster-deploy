@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import json
+import re
 from scrape_liferay import get_liferay_content, get_namespaced_parameters
 import sys
 
@@ -8,7 +9,7 @@ def get_patcher_build(url):
 	build_url_parts = url.split('/')
 	build_id = build_url_parts[-1]
 
-	if not build_id.isnumeric():
+	if re.search('^[0-9]*$', build_id) is None:
 		return None
 
 	print('Looking up metadata for patcher build %s' % build_id)
