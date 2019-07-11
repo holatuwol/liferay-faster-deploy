@@ -138,7 +138,7 @@ def get_previous_patcher_build(patcher_build):
 
 	matching_builds = [
 		build for build in json_response['data']
-			if build['statusLabel'] == 'complete' and
+			if (build['statusLabel'] == 'complete' or build['statusLabel'] == 'released') and
 				build['downloadURL'][-8:] == patcher_build['downloadURL'][-8:] and
 				build['patcherBuildId'] != patcher_build['patcherBuildId']
 	]
@@ -197,10 +197,15 @@ def get_previous_patcher_build(patcher_build):
 	if len(new_fixes) > 0 and len(new_fixes) <= 2:
 		for new_fix in new_fixes:
 			webbrowser.open_new_tab(new_fix)
-	else:
+	elif len(same_baseline_builds) > 0:
 		webbrowser.open_new_tab(
 			'https://github.com/liferay/liferay-portal-ee/compare/%s...fix-pack-fix-%s' %
 				(best_matching_build_name, patcher_build['patcherFixId'])
+		)
+	else:
+		webbrowser.open_new_tab(
+			'https://github.com/liferay/liferay-portal-ee/compare/%s...fix-pack-fix-%s' %
+				(patcher_build['patcherProjectVersionName'], patcher_build['patcherFixId'])
 		)
 
 	return best_matching_build
