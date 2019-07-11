@@ -426,58 +426,64 @@ def get_testray_url(a, b, run_number='1'):
 
 # Main logic for deciding which URL to use
 
-def open_testray(url):
-	if url.find('?') != -1:
-		url = url[0:url.find('?')]
+def open_testray(urls):
+	builds = []
 
-	patcher_url = None
-	hotfix_url = None
+	for url in urls:
+		if url.find('?') != -1:
+			url = url[0:url.find('?')]
 
-	if url.find('https://github.com/') == 0:
-		build_id = get_github_build_id(url)
-	elif url.find('https://patcher.liferay.com/') == 0:
-		patcher_url = url
-	elif url.find('https://files.liferay.com/') == 0:
-		build_id = get_hotfix_build_id(url)
-	elif url.find('http://files.liferay.com/') == 0:
-		build_id = get_hotfix_build_id(url)
-	else:
-		print('Unable to determine testray build ID from %s' % url)
-		return
+		build_id = None
+		patcher_build = None
 
-	testray_url = None
+		if url.find('https://github.com/') == 0:
+			build_id = get_github_build_id(url)
+		elif url.find('fix-pack-de-') == 0 or url.find('fix-pack-dxp-') == 0:
+			build_id = get_fixpack_build_id(url)
+		elif url.find('https://patcher.liferay.com/') == 0:
+			patcher_build = get_patcher_build(url)
+			build_id = get_hotfix_build_id(patcher_build['downloadURL'] if patcher_build is not None else None)
+		elif url.find('https://files.liferay.com/') == 0:
+			build_id = get_hotfix_build_id(url)
+		elif url.find('http://files.liferay.com/') == 0:
+			build_id = get_hotfix_build_id(url)
+		else:
+			print('Unable to determine testray build ID from %s' % url)
+			continue
 
-	if patcher_url is not None:
-		patcher_build = get_patcher_build(patcher_url)
+		if build_id is not None:
+			builds.append((build_id, patcher_build))
 
-		if patcher_build is None:
-			return
+	if len(builds) == 1:
+		build_id, patcher_build = builds[0]
 
-		build_id = get_hotfix_build_id(patcher_build['downloadURL'])
-
-		if build_id is None:
-			return
-
+		previous_build_id = None
 		previous_patcher_build = get_previous_patcher_build(patcher_build)
 
-		if previous_patcher_build is None:
-			previous_build_id = get_fixpack_build_id(patcher_build['patcherProjectVersionName'])
-		else:
+		if patcher_build is not None:
 			previous_build_id = get_hotfix_build_id(previous_patcher_build['downloadURL'])
+
+			if previous_patcher_build is None:
+				previous_build_id = get_fixpack_build_id(patcher_build['patcherProjectVersionName'])
 
 		testray_url = get_testray_url(build_id, previous_build_id)
 
-	if testray_url is None:
-		testray_url = get_testray_url(build_id, None)
+		if testray_url is not None:
+			webbrowser.open_new_tab(testray_url)
+	else:
+		build_id, patcher_build = builds[0]
 
-	if testray_url is not None:
-		webbrowser.open_new_tab(testray_url)
+		for previous_build in builds[1:]:
+			testray_url = get_testray_url(build_id, previous_build[0])
+
+			if testray_url is not None:
+				webbrowser.open_new_tab(testray_url)
 
 # Main method
 
 if __name__ == '__main__':
 	if len(sys.argv) > 1:
-		open_testray(sys.argv[1])
+		open_testray(sys.argv[1:])
 	else:
 		qa_build_urls = get_qa_build_urls()
 
@@ -485,4 +491,4 @@ if __name__ == '__main__':
 			webbrowser.open_new_tab('https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds?_1_WAR_osbpatcherportlet_tabs1=fixes')
 
 			for qa_build_url in get_qa_build_urls():
-				open_testray(qa_build_url)
+				open_testray([qa_build_url])

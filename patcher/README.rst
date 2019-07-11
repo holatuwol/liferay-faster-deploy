@@ -128,9 +128,14 @@ While doing Support QA work, I realized that I really disliked how I had to trav
 
 It's not very secure, but in order to use this script, you'll want to set your Liferay username and password as ``git config`` values. Your liferay.com username should be set against ``files.username`` and your liferay.com password should be set against ``files.password``.
 
-Once you've done that, just give it either a Patcher Portal build URL or a hotfix URL.
+Once you've done that, just give it the name of a fix pack, a Patcher Portal build URL, or a hotfix URL.
 
 .. code-block:: bash
 
+	testray fix-pack-de-1-7010
 	testray https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/0
 	testray http://files.liferay.com/private/ee/fix-packs/7.0.10/hotfix/liferay-hotfix-0-7010.zip
+
+You can also specify multiple values as arguments, where the first argument will be chosen as a reference build, and all other builds will be compared to that build.
+
+You can also specify no arguments at all, and it will query patcher portal to find all builds that require QA analysis, and then run the script as though you were asking for each build one at a time (this means it uses the standard approach for comparisons).

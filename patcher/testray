@@ -7,14 +7,26 @@ findbuildurl() {
 	rm -f ${FIX_NAME}.zip
 }
 
-if [[ $1 == http://files.liferay.com/* ]] || [[ $1 == https://files.liferay.com/* ]]; then
-	if [ "" != "${FILES_MIRROR}" ]; then
-		findbuildurl $1
-	else
-		echo 'Unable to convert hotfix URL to build URL unless FILES_MIRROR environment variable is set'
-		exit 1
-	fi
-fi
+convertargs() {
+	CONVERTED_ARGS=
+
+	for arg in $@; do
+		if [[ ${arg} == http://files.liferay.com/* ]] || [[ ${arg} == https://files.liferay.com/* ]]; then
+			if [ "" != "${FILES_MIRROR}" ]; then
+				findbuildurl ${arg}
+			else
+				echo 'Unable to convert hotfix URL to build URL unless FILES_MIRROR environment variable is set'
+				exit 1
+			fi
+		fi
+
+		if [ "" != "${BUILD_URL}" ]; then
+			CONVERTED_ARGS="${CONVERTED_ARGS} ${BUILD_URL}"
+		else
+			CONVERTED_ARGS="${CONVERTED_ARGS} ${arg}"
+		fi
+	done
+}
 
 if [ "" == "$(git config files.username)" ] || [ "" == "$(git config files.password)" ]; then
 	echo "Cannot connect to patcher portal and testray API without username and password"
@@ -23,8 +35,6 @@ if [ "" == "$(git config files.username)" ] || [ "" == "$(git config files.passw
 	exit 1
 fi
 
-if [ "" != "${BUILD_URL}" ]; then
-	python "${SCRIPT_FOLDER}/testray.py" ${BUILD_URL}
-else
-	python "${SCRIPT_FOLDER}/testray.py" $1
-fi
+convertargs $@
+
+python "${SCRIPT_FOLDER}/testray.py" ${CONVERTED_ARGS}
