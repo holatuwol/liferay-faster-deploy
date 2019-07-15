@@ -33,6 +33,7 @@ function generateChangelog(releaseId, updates) {
 	document.getElementById('changelogs').appendChild(container);
 
 	Sortable.initTable(changelog);
+	changelog.querySelector('.app-path').click();
 }
 
 function generateChangelogHeaderRow() {
