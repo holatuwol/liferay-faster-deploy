@@ -69,7 +69,7 @@ compile() {
 }
 
 disable_javascript_fast_load() {
-	git ls-files | grep -F .jsp | xargs grep -Fl -- '-min.js' | xargs sed -i 's/-min\.js/.js/'
+	git ls-files | grep -F .jsp | xargs grep -Fl -- '-min.js' | xargs sed -i.bak 's/-min\.js/.js/'
 }
 
 disable_marketplace_app_deployment() {
@@ -125,16 +125,16 @@ finish() {
 	cp tools/servers/tomcat/bin/setenv.* $TOMCAT_FOLDER/bin
 
 	for file in setenv.sh setenv.bat; do
-		sed -i 's/@.*@ //g' $TOMCAT_FOLDER/bin/${file}
+		sed -i.bak 's/@.*@ //g' $TOMCAT_FOLDER/bin/${file}
 
-		sed -i 's/ -Xm[sx][0-9]*[gm]//g' $TOMCAT_FOLDER/bin/${file}
-		sed -i 's/ -XX:NewSize=[0-9]*[gm]//g' $TOMCAT_FOLDER/bin/${file}
-		sed -i 's/ -XX:MaxNewSize=[0-9]*[gm]//g' $TOMCAT_FOLDER/bin/${file}
-		sed -i 's/ -XX:PermSize=[0-9]*[gm]//g' $TOMCAT_FOLDER/bin/${file}
-		sed -i 's/ -XX:MaxPermSize=[0-9]*[gm]//g' $TOMCAT_FOLDER/bin/${file}
-		sed -i 's/ -XX:MetaspaceSize=[0-9]*[gm]//g' $TOMCAT_FOLDER/bin/${file}
-		sed -i 's/ -XX:MaxMetaspaceSize=[0-9]*[gm]//g' $TOMCAT_FOLDER/bin/${file}
-		sed -i 's/ -XX:SurvivorRatio=7//g' $TOMCAT_FOLDER/bin/${file}
+		sed -i.bak 's/ -Xm[sx][0-9]*[gm]//g' $TOMCAT_FOLDER/bin/${file}
+		sed -i.bak 's/ -XX:NewSize=[0-9]*[gm]//g' $TOMCAT_FOLDER/bin/${file}
+		sed -i.bak 's/ -XX:MaxNewSize=[0-9]*[gm]//g' $TOMCAT_FOLDER/bin/${file}
+		sed -i.bak 's/ -XX:PermSize=[0-9]*[gm]//g' $TOMCAT_FOLDER/bin/${file}
+		sed -i.bak 's/ -XX:MaxPermSize=[0-9]*[gm]//g' $TOMCAT_FOLDER/bin/${file}
+		sed -i.bak 's/ -XX:MetaspaceSize=[0-9]*[gm]//g' $TOMCAT_FOLDER/bin/${file}
+		sed -i.bak 's/ -XX:MaxMetaspaceSize=[0-9]*[gm]//g' $TOMCAT_FOLDER/bin/${file}
+		sed -i.bak 's/ -XX:SurvivorRatio=7//g' $TOMCAT_FOLDER/bin/${file}
 
 		local SETVAR=
 		local UNSETVAR='#'
@@ -184,8 +184,8 @@ finish() {
 		sed -i.bak "s/GIT_HASH_PRIVATE/(not applicable)/g" ${BOTTOM_EXT_JSP}
 	fi
 
-	sed -i 's/ start / jpda start /g' $TOMCAT_FOLDER/bin/startup.sh
-	sed -i 's/ start / jpda start /g' $TOMCAT_FOLDER/bin/startup.bat
+	sed -i.bak 's/ start / jpda start /g' $TOMCAT_FOLDER/bin/startup.sh
+	sed -i.bak 's/ start / jpda start /g' $TOMCAT_FOLDER/bin/startup.bat
 
 	chmod u+x $TOMCAT_FOLDER/bin/*.sh
 
@@ -215,7 +215,7 @@ finish() {
 
 	popd
 
-	sed -i "s@#JAVA_HOME=@JAVA_HOME=$JAVA_HOME@g" $TOMCAT_FOLDER/bin/setenv.sh
+	sed -i.bak "s@#JAVA_HOME=@JAVA_HOME=$JAVA_HOME@g" $TOMCAT_FOLDER/bin/setenv.sh
 
 	if [ "" != "$2" ]; then
 		switchport 80 $2
@@ -252,7 +252,7 @@ fixdefaults() {
 	fi
 
 	if [[ $(expr ${PUBLIC_PACKAGE_JSON} '+' ${PRIVATE_PACKAGE_JSON}) -ne $(expr ${PUBLIC_PACKAGE_LOCK_JSON} '+' ${PRIVATE_PACKAGE_LOCK_JSON}) ]]; then
-		sed -i '/com.liferay.gradle.plugins.defaults/s/version: "[^"]*"/version: "5.3.29"/' modules/build-buildscript.gradle
+		sed -i.bak '/com.liferay.gradle.plugins.defaults/s/version: "[^"]*"/version: "5.3.29"/' modules/build-buildscript.gradle
 	fi
 }
 
@@ -296,9 +296,9 @@ switchport() {
 		echo -e "\r\nset JPDA_ADDRESS=${1}00" >> $TOMCAT_FOLDER/bin/setenv.bat
 	fi
 
-	sed -i "s/\"$1/\"$2/g" $TOMCAT_FOLDER/conf/server.xml
-	sed -i "s/JPDA_ADDRESS=${1}/JPDA_ADDRESS=${2}/g" $TOMCAT_FOLDER/bin/setenv.sh
-	sed -i "s/JPDA_ADDRESS=${1}/JPDA_ADDRESS=${2}/g" $TOMCAT_FOLDER/bin/setenv.bat
+	sed -i.bak "s/\"$1/\"$2/g" $TOMCAT_FOLDER/conf/server.xml
+	sed -i.bak "s/JPDA_ADDRESS=${1}/JPDA_ADDRESS=${2}/g" $TOMCAT_FOLDER/bin/setenv.sh
+	sed -i.bak "s/JPDA_ADDRESS=${1}/JPDA_ADDRESS=${2}/g" $TOMCAT_FOLDER/bin/setenv.bat
 }
 
 if [ -z "${BUILD_FOLDER_PREFIX}" ]; then
