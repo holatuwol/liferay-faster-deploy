@@ -109,4 +109,6 @@ fi
 
 # Make sure other builds know we are finished
 
+rm -rf /tmp/yarn*
+
 rm $BUILD_FOLDER_PREFIX/.build
