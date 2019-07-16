@@ -91,7 +91,7 @@ patcher() {
 		git push -f $ORIGIN $BRANCH
 	fi
 
-	python "$(dirname ${BASH_SOURCE[0]})/patcher.py" "${ORIGIN}" "$1"
+	python "$(dirname ${BASH_SOURCE[0]})/patcher.py" "${ORIGIN}" $@
 }
 
 if [ "" == "$(git config files.username)" ] || [ "" == "$(git config files.password)" ]; then

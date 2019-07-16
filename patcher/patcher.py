@@ -93,17 +93,17 @@ def get_fix_id(typeFilter='0'):
 	base_url = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher'
 	candidate_fix_names = None
 
-	if len(sys.argv) == 3 and len(sys.argv[2]) > 0:
+	if len(sys.argv) >= 3 and len(sys.argv[2]) > 0:
 		if re.search('^[0-9]*$', sys.argv[2]) is not None:
 			return sys.argv[2], None
 		else:
-			candidate_fix_names = [sys.argv[2]]
+			candidate_fix_names = [''.join(sys.argv[2:])]
 
 	if candidate_fix_names is None:
 		candidate_fix_names = get_candidate_fix_names()
 
 	for fix_name in candidate_fix_names:
-		print('Checking patcher portal for existing fix for %s...' % fix_name)
+		print('Checking patcher portal for existing fix for %s (typeFilter=%s)...' % (fix_name, typeFilter))
 
 		parameters = {
 			'advancedSearch': 'true',
@@ -129,8 +129,8 @@ def get_fix_id(typeFilter='0'):
 		if len(fix_ids) == 1:
 			return fix_ids[0], fix_name
 
-	if len(sys.argv) == 3 and len(sys.argv[2]) > 0:
-		return None, sys.argv[2]
+	if len(sys.argv) >= 3 and len(sys.argv[2]) > 0:
+		return None, ''.join(sys.argv[2:])
 
 	return None, None
 
@@ -164,20 +164,17 @@ def get_fix_name_from_id(fix_id):
 	return textarea.text.strip()
 
 def open_patcher_portal():
+	fix_id = None
 	fix_name = None
 
 	if current_branch.find('patcher-') == 0:
 		fix_id = current_branch[len('patcher-'):]
 	elif current_branch.find('fix-pack-fix-') == 0:
 		fix_id = current_branch[len('fix-pack-fix-'):]
-	else:
-		fix_id, fix_name = get_fix_id()
 
-	if fix_id is None:
-		fix_id, fix_name = get_fix_id('1')
-
-	if fix_id is None:
-		fix_id, fix_name = get_fix_id('6')
+	for typeFilter in ['0', '1', '6', '2']:
+		if fix_id is None:
+			fix_id, fix_name = get_fix_id(typeFilter)
 
 	if fix_id is None:
 		print('No existing fix to update, opening window for a new fix...')
