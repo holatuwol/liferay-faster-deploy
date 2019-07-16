@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        6.1
+// @version        6.2
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -116,7 +116,7 @@ a.generating::after {
   display: none;
 }
 
-.lesa-ui-priority {
+.lesa-ui-priority span {
   color: #fff;
   border-radius: 2px;
   padding: 4px;
@@ -144,6 +144,15 @@ a.generating::after {
 .lesa-ui-priority-critical,
 .lesa-ui-subpriority-high {
   background-color: #bf1e2d;
+}
+
+.lesa-ui-priority .lesa-ui-subject-emojis {
+  background-color: #f8f9f9;
+}
+
+.lesa-ui-subject-emojis a {
+  margin-left: 2px;
+  margin-right: 2px;
 }
 `;
 
@@ -778,6 +787,62 @@ function createAttachmentsContainer(ticketId, ticketInfo, conversation) {
 }
 
 /**
+ * Generates a text string representing the emojis corresponding to the provided list of tags.
+ */
+
+var emojiMap = {
+  'cas_hot': '⚠️',
+  'cas_priority': '⚠️'
+};
+
+var isEmoji = Set.prototype.has.bind(new Set(Object.keys(emojiMap)));
+
+function getEmojiText(tags) {
+  return tags.filter(isEmoji).map(function(x) { return emojiMap[x] }).join('');
+}
+
+/**
+ * Generates an emoji for the given tag.
+ */
+
+function getEmojiAnchorTag(tag) {
+  if (!isEmoji(tag)) {
+    return null;
+  }
+
+  var anchor = document.createElement('a');
+  anchor.title = 'tags:' + tag;
+  anchor.textContent = emojiMap[tag];
+  anchor.href = 'https://' + document.location.host + '/agent/search/1?q=' + encodeURIComponent('tags:' + tag);
+  anchor.target = '_blank';
+  return anchor;
+}
+
+/**
+ * Converts a list of tags into a span holding a bunch of
+ * emojis with 'title' attributes.
+ */
+
+function getEmojiAnchorTags(tags) {
+  var matchingTags = tags.filter(isEmoji);
+
+  if (matchingTags.length == 0) {
+    return null;
+  }
+
+  var emojiContainer = document.createElement('span');
+  emojiContainer.classList.add('lesa-ui-subject-emojis');
+
+  var emojis = matchingTags.map(getEmojiAnchorTag);
+
+  for (var i = 0; i < emojis.length; i++) {
+    emojiContainer.appendChild(emojis[i]);
+  }
+
+  return emojiContainer;
+}
+
+/**
  * Add a marker to show the LESA priority on the ticket.
  */
 
@@ -801,42 +866,30 @@ function addPriorityMarker(header, ticketId, ticketInfo) {
 
   var subpriority = ticketInfo.ticket.priority || 'none';
 
-  if ((subpriority != 'high') && (subpriority != 'urgent')) {
-    return;
-  }
+  if ((subpriority == 'high') || (subpriority == 'urgent')) {
+    var tagSet = new Set(ticketInfo.ticket.tags);
 
-  var criticalMarkerCount = 1;
+    var criticalMarkers = ['production', 'production_completely_shutdown', 'production_severely_impacted_inoperable'].filter(Set.prototype.has.bind(tagSet));
 
-  for (key in ticketInfo.ticket.custom_fields) {
-    var value = ticketInfo.ticket.custom_fields[key].value;
-
-    if ((value == null) || typeof value !== 'string') {
-      continue;
-    }
-
-    if (value == 'production') {
-      criticalMarkerCount++;
-    }
-
-    if (value.indexOf('completely_shutdown') != -1) {
-      criticalMarkerCount++;
-    }
-
-    if (value.indexOf('severely_impacted_inoperable') != -1) {
-      criticalMarkerCount++;
+    if (criticalMarkers.length >= 2) {
+      var criticalElement = document.createElement('span');
+      criticalElement.classList.add('lesa-ui-priority-critical');
+      criticalElement.textContent = 'critical';
+      priorityElement.appendChild(criticalElement);
     }
   }
 
-  // If the ticket matches, add the critical flag.
+  if (ticketInfo && ticketInfo.ticket && ticketInfo.ticket.tags) {
+    var emojiContainer = getEmojiAnchorTags(ticketInfo.ticket.tags);
 
-  if (criticalMarkerCount < 3) {
-    return;
+    if (emojiContainer != null) {
+      priorityElement.appendChild(emojiContainer);
+    }
   }
 
-  priorityElement.classList.add('lesa-ui-priority-critical');
-  priorityElement.textContent = 'critical';
-
-  header.insertBefore(priorityElement, header.querySelector('.round-avatar'));
+  if (priorityElement.childNodes.length > 0) {
+    header.insertBefore(priorityElement, header.querySelector('.round-avatar'));
+  }
 }
 
 /**
@@ -893,7 +946,7 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
   // Add a marker indicating the LESA priority based on critical workflow rules
 
   addPriorityMarker(header, ticketId, ticketInfo);
-  addSubjectTextWrap(header);
+  addSubjectTextWrap(header, ticketId, ticketInfo);
 
   // Check to see if we have any descriptions that we need to remove.
 
@@ -1502,13 +1555,23 @@ function updateWindowTitle(ticketId, ticketInfo) {
   }
 
   if (ticketId && ticketInfo) {
+    var emojis = '';
+
+    if (ticketInfo.ticket && ticketInfo.ticket.tags) {
+      emojis = getEmojiText(ticketInfo.ticket.tags);
+
+      if (emojis.length > 0) {
+        emojis += ' - ';
+      }
+    }
+
     var accountCode = getAccountCode(ticketId, ticketInfo, null);
 
     if (accountCode) {
-      document.title = accountName + ' - Agent Ticket - ' + accountCode + ' - ' + ticketInfo.ticket.raw_subject;
+      document.title = accountName + ' - ' + emojis + 'Agent Ticket - ' + accountCode + ' - ' + ticketInfo.ticket.raw_subject;
     }
     else {
-      document.title = accountName + ' - Agent Ticket - ' + ticketInfo.ticket.raw_subject;
+      document.title = accountName + ' - ' + emojis + 'Agent Ticket - ' + ticketInfo.ticket.raw_subject;
     }
 
     return;
@@ -1613,7 +1676,18 @@ function updateSubtitle(tab, ticketId, ticketInfo) {
 
   var newSpan = document.createElement('span');
   newSpan.classList.add('lesa-ui-subtitle');
-  newSpan.textContent = accountCode;
+
+  var emojis = getEmojiText(ticketInfo.ticket.tags);
+
+  if (emojis.length > 0) {
+    newSpan.appendChild(document.createTextNode(emojis + ' '));
+  }
+
+  var accountCodeSpan = document.createElement('span');
+  accountCodeSpan.classList.add('lesa-ui-account-code');
+  accountCodeSpan.textContent = accountCode;
+
+  newSpan.appendChild(accountCodeSpan);
 
   if (oldSpan) {
     oldSpan.replaceWith(newSpan);
