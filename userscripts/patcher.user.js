@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        1.5
+// @version        1.6
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/*
@@ -49,6 +49,26 @@ function replaceJenkinsLinks() {
 
     links[i].href = href + 'consoleText';
   }
+}
+
+function addBaselineToBuildTemplate() {
+  var baselineLinks = Array.from(document.querySelectorAll('.taglib-text-icon')).filter(function(x) { return x.textContent.toLowerCase() == 'use as build template'; });
+
+  if (baselineLinks.length != 1) {
+    return;
+  }
+
+  var buildTemplateAnchor = baselineLinks[0].parentNode;
+
+
+  var patcherProjectVersionSelect = querySelector('patcherProjectVersionId');
+
+  if (patcherProjectVersionSelect.selectedIndex == -1) {
+    return;
+  }
+
+  var patcherProjectVersionId = patcherProjectVersionSelect.options[patcherProjectVersionSelect.selectedIndex].value;
+  buildTemplateAnchor.href += '&' + getQueryString({'patcherProjectVersionId': patcherProjectVersionId});
 }
 
 function replaceNode(oldNode, newHTML) {
@@ -188,7 +208,8 @@ for (var i = 0; i < buttons.length; i++) {
   onclickAttribute.value = onclickValue;
 }
 
-replaceJenkinsLinks()
+replaceJenkinsLinks();
+addBaselineToBuildTemplate();
 replaceFixes('patcherFixName');
 replaceFixes('patcherBuildName');
 replaceFixes('patcherBuildOriginalName');
