@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        2.0
+// @version        2.1
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/*
@@ -334,6 +334,10 @@ function updateProductVersionSelect() {
     var selectedOption = productVersionSelect.options[productVersionSelect.selectedIndex];
 
     if (selectedOption.getAttribute('data-liferay-version') == liferayVersion) {
+      if (selectedOption.textContent.trim() == 'DXP ' + liferayVersion) {
+        setTimeout(updateProjectVersionOrder, 500);
+      }
+
       return;
     }
   }
@@ -343,7 +347,7 @@ function updateProductVersionSelect() {
   if (option) {
     option.selected = true;
     unsafeWindow[ns + 'productVersionOnChange'](option.value);
-    updateProjectVersionOrder();
+    setTimeout(updateProjectVersionOrder, 500);
   }
 }
 
@@ -427,6 +431,7 @@ function compareLiferayVersions(a, b) {
 
 function updateProjectVersionOrder() {
   var projectVersionSelect = querySelector('patcherProjectVersionId');
+
   var sortedOptions =  Array.from(projectVersionSelect.options).sort(compareLiferayVersions);
 
   for (var i = 0; i < sortedOptions.length; i++) {
@@ -496,4 +501,5 @@ replaceLesaLink('supportTicket');
 replaceDate('createDate');
 replaceDate('modifiedDate');
 addProductVersionFilter();
-updateFromQueryString();
+
+setTimeout(updateFromQueryString, 500);
