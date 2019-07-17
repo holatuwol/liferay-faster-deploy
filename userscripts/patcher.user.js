@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        1.9
+// @version        2.0
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/*
@@ -16,6 +16,11 @@ a.included-in-baseline,
 a.included-in-baseline:hover {
   color: #ddd;
   text-decoration: line-through;
+}
+
+#_1_WAR_osbpatcherportlet_patcherProductVersionId,
+#_1_WAR_osbpatcherportlet_patcherProjectVersionId {
+  width: auto;
 }
 
 #_1_WAR_osbpatcherportlet_patcherProductVersionId option {
@@ -324,6 +329,14 @@ function updateProductVersionSelect() {
 
   var liferayVersion = getSelectedValue('liferayVersion');
   productVersionSelect.setAttribute('data-liferay-version', liferayVersion);
+
+  if (productVersionSelect.selectedIndex != -1) {
+    var selectedOption = productVersionSelect.options[productVersionSelect.selectedIndex];
+
+    if (selectedOption.getAttribute('data-liferay-version') == liferayVersion) {
+      return;
+    }
+  }
 
   var option = productVersionSelect.querySelector('option[data-liferay-version="' + liferayVersion + '"]');
 
