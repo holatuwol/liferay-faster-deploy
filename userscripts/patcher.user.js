@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        1.6
+// @version        1.7
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/*
@@ -17,10 +17,20 @@ a.included-in-baseline:hover {
   color: #ddd;
   text-decoration: line-through;
 }
+
+#_1_WAR_osbpatcherportlet_patcherProductVersionId option {
+  display: none;
+}
+
+#_1_WAR_osbpatcherportlet_patcherProductVersionId.liferay-6x option.liferay-6x,
+#_1_WAR_osbpatcherportlet_patcherProductVersionId.liferay-70 option.liferay-70,
+#_1_WAR_osbpatcherportlet_patcherProductVersionId.liferay-71 option.liferay-71,
+#_1_WAR_osbpatcherportlet_patcherProductVersionId.liferay-72 option.liferay-72 {
+  display: block;
+}
 `;
 
-document.querySelector('head').appendChild(styleElement);
-
+document.head.appendChild(styleElement);
 
 var portletId = '1_WAR_osbpatcherportlet';
 var ns = '_' + portletId + '_';
@@ -48,6 +58,25 @@ function replaceJenkinsLinks() {
     }
 
     links[i].href = href + 'consoleText';
+  }
+}
+
+function replacePopupWindowLinks() {
+  var buttons = document.querySelectorAll('button[onclick]');
+
+  for (var i = 0; i < buttons.length; i++) {
+    var onclickAttribute = buttons[i].attributes['onclick'];
+    var onclickValue = onclickAttribute.value;
+
+    if (onclickValue.indexOf('javascript:') == 0) {
+      onclickValue = onclickValue.substring('javascript:'.length);
+    }
+
+    onclickValue = onclickValue.replace(/Liferay.Patcher.openWindow\('([^']*)',[^\)]*/g, "window.open('$1','_blank'");
+    onclickValue = onclickValue.replace('?p_p_state=pop_up', '');
+    onclickValue = onclickValue.replace('&p_p_state=pop_up', '');
+
+    onclickAttribute.value = onclickValue;
   }
 }
 
@@ -191,24 +220,129 @@ function replaceLesaLink(target) {
   }
 }
 
-var buttons = document.querySelectorAll('button[onclick]');
+function addProductVersionFilter() {
+  var productVersionSelect = querySelector('patcherProductVersionId');
 
-for (var i = 0; i < buttons.length; i++) {
-  var onclickAttribute = buttons[i].attributes['onclick'];
-  var onclickValue = onclickAttribute.value;
-
-  if (onclickValue.indexOf('javascript:') == 0) {
-    onclickValue = onclickValue.substring('javascript:'.length);
+  if (!productVersionSelect) {
+    return;
   }
 
-  onclickValue = onclickValue.replace(/Liferay.Patcher.openWindow\('([^']*)',[^\)]*/g, "window.open('$1','_blank'");
-  onclickValue = onclickValue.replace('?p_p_state=pop_up', '');
-  onclickValue = onclickValue.replace('&p_p_state=pop_up', '');
+  var versions = ['', '6.x', '7.0', '7.1', '7.2'];
+  var classNames = versions.map(function(x) { return 'liferay-' + x.replace('.', ''); });
 
-  onclickAttribute.value = onclickValue;
+  for (var i = 0; i < productVersionSelect.options.length; i++) {
+    var option = productVersionSelect.options[i];
+
+    for (var j = 1; j < versions.length; j++) {
+      if ((option.textContent.indexOf('DXP ' + versions[j]) != -1) || (option.textContent.indexOf('Portal ' + versions[j]) != -1)) {
+        option.classList.add(classNames[j])
+      }
+    }
+  }
+
+  var liferayVersionSelect = document.createElement('select');
+
+  for (var i = 0; i < versions.length; i++) {
+    var option = document.createElement('option');
+    option.value = versions[i];
+    option.textContent = versions[i];
+    liferayVersionSelect.appendChild(option);
+  };
+
+  liferayVersionSelect.onchange = function() {
+    for (var i = 1; i < classNames.length; i++) {
+      productVersionSelect.classList.remove(classNames[i]);
+    };
+
+    if (liferayVersionSelect.selectedIndex == 0) {
+      return;
+    }
+
+    var className = classNames[liferayVersionSelect.selectedIndex];
+
+    productVersionSelect.classList.add(className);
+    var option = productVersionSelect.querySelectorAll('.' + className)[0];
+    option.selected = true;
+
+    unsafeWindow._1_WAR_osbpatcherportlet_productVersionOnChange(option.value);
+    updateProjectVersionOrder();
+  }
+
+  productVersionSelect.parentNode.insertBefore(liferayVersionSelect, productVersionSelect);
+}
+
+function getLiferayVersion(version) {
+  if (version.indexOf('fix-pack-de-') != -1) {
+    var pos = version.indexOf('-', 12);
+    var deVersion = version.substring(12, pos);
+    var shortVersion = version.substring(pos + 1);
+
+    pos = shortVersion.indexOf('-private');
+
+    if (pos != -1) {
+      shortVersion = shortVersion.substring(0, pos);
+    }
+
+    return parseInt(shortVersion) * 1000 + parseInt(deVersion);
+  }
+  else if (version.indexOf('fix-pack-dxp-') != -1) {
+    var pos = version.indexOf('-', 13);
+    var deVersion = version.substring(13, pos);
+    var shortVersion = version.substring(pos + 1);
+
+    pos = shortVersion.indexOf('-private');
+
+    if (pos != -1) {
+      shortVersion = shortVersion.substring(0, pos);
+    }
+
+    return parseInt(shortVersion) * 1000 + parseInt(deVersion);
+  }
+  else if (version.indexOf('fix-pack-base-') != -1) {
+    var shortVersion = version.substring('fix-pack-base-'.length);
+    var pos = shortVersion.indexOf('-private');
+
+    if (pos != -1) {
+      shortVersion = shortVersion.substring(0, pos);
+    }
+
+    pos = shortVersion.indexOf('-');
+
+    if (pos == -1) {
+      return parseInt(shortVersion) * 1000;
+    }
+
+    return parseInt(shortVersion.substring(0, pos)) * 1000 + parseInt(shortVersion.substring(pos + 3));
+  }
+  else {
+    var shortVersion = /[0-9]*\.[0-9]/.exec(version)[0].replace('.', '');
+
+    return parseInt(shortVersion) * 100 * 1000;
+  }
+}
+
+function compareLiferayVersions(a, b) {
+  var aValue = getLiferayVersion(a.textContent);
+  var bValue = getLiferayVersion(b.textContent);
+
+  if (aValue != bValue) {
+    return aValue - bValue;
+  }
+
+  return a > b ? 1 : a < b ? -1 : 0;
+};
+
+function updateProjectVersionOrder() {
+  var projectVersionSelect = querySelector('patcherProjectVersionId');
+  var sortedOptions =  Array.from(projectVersionSelect.options).sort(compareLiferayVersions);
+
+  for (var i = 0; i < sortedOptions.length; i++) {
+    projectVersionSelect.appendChild(sortedOptions[i]);
+  }
 }
 
 replaceJenkinsLinks();
+replacePopupWindowLinks();
 addBaselineToBuildTemplate();
 replaceFixes('patcherFixName');
 replaceFixes('patcherBuildName');
@@ -219,3 +353,5 @@ replaceLesaLink('lesaTicket');
 replaceLesaLink('supportTicket');
 replaceDate('createDate');
 replaceDate('modifiedDate');
+addProductVersionFilter();
+updateProjectVersionOrder();
