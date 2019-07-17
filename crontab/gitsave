@@ -21,7 +21,7 @@ if [ ! -d source/.git ]; then
 	(git tag | xargs git tag -d) > /dev/null
 fi
 
-if [ -d liferay-binaries-cache-2017/.git ]; then
+if [ ! -d liferay-binaries-cache-2017/.git ]; then
 
 	# Download from mirrors
 
