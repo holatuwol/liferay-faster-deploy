@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        1.8
+// @version        1.9
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/*
@@ -446,6 +446,7 @@ function updateFromQueryString() {
 
       option = liferayVersionSelect.querySelector('option[value="' + liferayVersion + '"]');
       option.selected = true;
+      updateProductVersionSelect();
     }
   }
 
