@@ -183,6 +183,8 @@
 	"fix-pack-dxp-11-7110-private": 127712071,
 	"fix-pack-dxp-12-7110": 131349780,
 	"fix-pack-dxp-12-7110-private": 131349779,
+	"7.2.x": 130051253,
+	"7.2.x-private": 130051253,
 	"fix-pack-base-7210": 130051310,
 	"fix-pack-base-7210-private": 130051359
 }
