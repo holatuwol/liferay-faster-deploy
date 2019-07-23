@@ -7,8 +7,8 @@ COMMERCE_SOURCE_PUBLIC=${HOME}/Work/liferay/subrepos/com-liferay-commerce
 COMMERCE_SOURCE_PRIVATE=${HOME}/Work/liferay/subrepos/com-liferay-commerce-private
 
 COMMERCE_BASE_VERSION=1.1.6-7110
-COMMERCE_PUBLIC_CHANGES=origin/7.1.x-next
-COMMERCE_PRIVATE_CHANGES=origin/7.1.x-private-next
+COMMERCE_PUBLIC_CHANGES=2.0.1
+COMMERCE_PRIVATE_CHANGES=2.0.1
 
 patch_public() {
 	if [ "" == "${COMMERCE_PUBLIC_CHANGES}" ]; then
@@ -20,6 +20,20 @@ patch_public() {
 	git reset --hard
 	git checkout -f marketplace-commerce-${COMMERCE_BASE_VERSION}
 
+	if [[ ${COMMERCE_PUBLIC_CHANGES} == origin/* ]]; then
+		patch_public_subrepo
+	else
+		patch_public_branch
+	fi
+}
+
+patch_public_branch() {
+	local PUBLIC_HASH=$(git show 7.1.x:modules/.releng/apps/commerce/app.changelog | grep -F app.git.id-${COMMERCE_PUBLIC_CHANGES}= | cut -d'=' -f 2)
+	git format-patch HEAD..${PUBLIC_HASH} -- modules/apps/commerce
+	apply_patch_files
+}
+
+patch_public_subrepo() {
 	local PUBLIC_HASH=$(grep 'commit =' modules/apps/commerce/.gitrepo | awk '{ print $3 }')
 
 	cd ${COMMERCE_SOURCE_PUBLIC}
@@ -48,6 +62,20 @@ patch_private() {
 	git reset --hard
 	git checkout -f marketplace-commerce-${COMMERCE_BASE_VERSION}-private
 
+	if [[ ${COMMERCE_PUBLIC_CHANGES} == origin/* ]]; then
+		patch_private_subrepo
+	else
+		patch_private_branch
+	fi
+}
+
+patch_private_branch() {
+	local PRIVATE_HASH=$(git show 7.1.x-private:modules/.releng/apps/commerce/app.changelog | grep -F app.git.id-${COMMERCE_PRIVATE_CHANGES}= | cut -d'=' -f 2)
+	git format-patch HEAD..${PRIVATE_HASH} -- modules/private/apps/commerce
+	apply_patch_files
+}
+
+patch_private_subrepo() {
 	local PRIVATE_HASH=$(grep 'commit =' modules/private/apps/commerce/.gitrepo | awk '{ print $3 }')
 
 	cd ${COMMERCE_SOURCE_PRIVATE}
