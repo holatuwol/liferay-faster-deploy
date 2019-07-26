@@ -31,6 +31,8 @@ patch_public_branch() {
 	local PUBLIC_HASH=$(git show 7.1.x:modules/.releng/apps/commerce/app.changelog | grep -F app.git.id-${COMMERCE_PUBLIC_CHANGES}= | cut -d'=' -f 2)
 	git format-patch HEAD..${PUBLIC_HASH} -- modules/apps/commerce
 	apply_patch_files
+
+	git checkout -b marketplace-commerce-${COMMERCE_PUBLIC_CHANGES}-7110-tmp
 }
 
 patch_public_subrepo() {
@@ -91,6 +93,8 @@ patch_private_subrepo() {
 	mv *.patch ${PORTAL_SOURCE_PRIVATE}/
 	cd ${PORTAL_SOURCE_PRIVATE}
 	apply_patch_files
+
+	git checkout -b marketplace-commerce-${COMMERCE_PUBLIC_CHANGES}-7110-private-tmp
 }
 
 apply_patch_files() {
