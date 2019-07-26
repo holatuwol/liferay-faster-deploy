@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Add JIRA Order By Dividers
 // @namespace      holatuwol
-// @version        1.2
+// @version        1.3
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_divider.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_divider.user.js
 // @match          https://issues.liferay.com/issues/*
@@ -29,11 +29,11 @@ function extractOrderBy(orderByCols, x) {
     var orderBy = orderByCols[i];
 
     if ((orderBy == 'project') || (orderBy == 'issuekey')) {
-      var issue = jQuery(x).find('td.issuekey').text().trim();
+      var issue = x.querySelector('td.issuekey').textContent.trim();
       keys.push(issue.substring(0, issue.indexOf('-')));
     }
     else {
-      keys.push(jQuery(x).find('td.' + orderBy).text().trim());
+      keys.push(x.querySelector('td.' + orderBy).textContent.trim());
     }
   }
 
@@ -41,15 +41,15 @@ function extractOrderBy(orderByCols, x) {
 }
 
 function addBreakpoints() {
-  var navigatorContent = jQuery('.navigator-content');
+  var navigatorContent = document.querySelector('.navigator-content');
 
-  var modelState = JSON.parse(jQuery('.navigator-content').attr('data-issue-table-model-state'));
+  var modelState = JSON.parse(navigatorContent.getAttribute('data-issue-table-model-state'));
   var orderByCols = [modelState.issueTable.sortBy.fieldId];
 
-  var search = jQuery('#advanced-search');
+  var search = document.querySelector('#advanced-search');
 
   if (search) {
-    var jql = search.val();
+    var jql = search.value;
     var pos = jql.toLowerCase().lastIndexOf('order by ');
 
     if (pos > -1) {
@@ -61,16 +61,18 @@ function addBreakpoints() {
     }
   }
 
-  var table = jQuery('table#issuetable');
+  var table = document.querySelector('table#issuetable');
 
-  if (table.attr('breakpoints')) {
+  if (table.getAttribute('breakpoints')) {
     return;
   }
 
-  table.attr('breakpoints', true);
+  table.setAttribute('breakpoints', true);
 
-  var rows = table.find('tbody tr').toArray();
+  var rows = Array.from(table.querySelectorAll('tbody tr'));
   var breakpoints = rows.map(extractOrderBy.bind(null, orderByCols));
+
+  console.log(breakpoints);
 
   var indices = breakpoints.map((x, i) => [i, x]).filter((x, i) => (i == 0) || !(arrayEquals(breakpoints[i-1], breakpoints[i]))).reverse();
 
@@ -93,6 +95,11 @@ function addBreakpoints() {
   }
 };
 
-var span = jQuery('<button class="aui-button aui-button-subtle">Divide</button>');
-span.on('click', addBreakpoints);
-jQuery('.saved-search-operations').prepend(span);
+var span = document.createElement('button');
+span.classList.add('aui-button');
+span.classList.add('aui-button-subtle');
+span.textContent = 'Divide';
+span.onclick = addBreakpoints;
+
+var savedSearchOperations = document.querySelector('.saved-search-operations');
+savedSearchOperations.insertBefore(span, savedSearchOperations.childNodes[0]);
