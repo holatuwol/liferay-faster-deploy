@@ -1,0 +1,127 @@
+#!/bin/bash
+
+print_version_gradle() {
+	local VERSION=$(git show ${1}:${3}/build.gradle | grep -F 'String '${4} | cut -d'"' -f 2)
+	echo '    "'${2}'": "'${VERSION}'",'
+}
+
+print_version_packagelock() {
+	local VERSION=$(git show ${1}:${3}/package-lock.json | jq '.dependencies["'${4}'"].version' | cut -d'"' -f 2)
+	echo '    "'${2}'": "'${VERSION}'",'
+}
+
+print_version_shrinkwrap() {
+	local VERSION=$(git show ${1}:${3}/npm-shrinkwrap.json | jq '.dependencies["'${4}'"].version' | cut -d'"' -f 2)
+	echo '    "'${2}'": "'${VERSION}'",'
+}
+
+print_version_yarnlock() {
+	local VERSION=$(git show ${1}:modules/yarn.lock | grep -o '^'${3}'@[^ :]*' | cut -d'@' -f 2)
+	echo '    "'${2}'": "'${VERSION}'",'
+}
+
+pushd ${PORTAL_SOURCE_ROOT} > /dev/null
+
+MAX_70=$(git tag | grep -o '^fix-pack-de-[0-9]*-7010$' | wc -l)
+MAX_71=$(git tag | grep -o '^fix-pack-dxp-[0-9]*-7110$' | wc -l)
+MAX_72=$(git tag | grep -o '^fix-pack-dxp-[0-9]*-7210$' | wc -l)
+
+echo '['
+
+(
+	echo '  {'
+	echo '    "name": "alloy-ui", '
+
+	print_version_gradle fix-pack-base-7010 7010-base modules/apps/foundation/frontend-js/frontend-js-web alloyUIVersion
+
+	for i in $(seq 1 27); do
+		print_version_gradle fix-pack-de-${i}-7010 7010-de-$(printf "%02d\n" ${i}) modules/apps/foundation/frontend-js/frontend-js-web alloyUIVersion
+	done
+
+	for i in $(seq 28 ${MAX_70}); do
+		print_version_gradle fix-pack-de-${i}-7010 7010-de-$(printf "%02d\n" ${i}) modules/apps/foundation/frontend-js/frontend-js-aui-web alloyUIVersion
+	done
+
+	print_version_gradle fix-pack-base-7110 7110-base modules/apps/frontend-js/frontend-js-aui-web alloyUIVersion
+
+	for i in $(seq 1 ${MAX_71}); do
+		print_version_gradle fix-pack-dxp-${i}-7110 7110-dxp-$(printf "%02d\n" ${i}) modules/apps/frontend-js/frontend-js-aui-web alloyUIVersion
+	done
+
+	print_version_gradle fix-pack-base-7210 7210-base modules/apps/frontend-js/frontend-js-aui-web alloyUIVersion
+
+	for i in $(seq 1 ${MAX_72}); do
+		print_version_gradle fix-pack-dxp-${i}-7210 7210-dxp-$(printf "%02d\n" ${i}) modules/apps/frontend-js/frontend-js-aui-web alloyUIVersion
+	done
+) | sed '$s/,//g'
+
+echo '  },'
+
+(
+	echo '  {'
+	echo '    "name": "alloyeditor", '
+
+	print_version_gradle fix-pack-base-7010 7010-base modules/apps/foundation/frontend-editor/frontend-editor-alloyeditor-web alloyEditorVersion
+
+	for i in $(seq 1 8); do
+		print_version_gradle fix-pack-de-${i}-7010 7010-de-$(printf "%02d\n" ${i}) modules/apps/foundation/frontend-editor/frontend-editor-alloyeditor-web alloyEditorVersion
+	done
+
+	for i in $(seq 9 45); do
+		print_version_shrinkwrap fix-pack-de-${i}-7010 7010-de-$(printf "%02d\n" ${i}) modules/apps/foundation/frontend-editor/frontend-editor-alloyeditor-web alloyeditor
+	done
+
+	for i in $(seq 46 ${MAX_70}); do
+		print_version_packagelock fix-pack-de-${i}-7010 7010-de-$(printf "%02d\n" ${i}) modules/apps/foundation/frontend-editor/frontend-editor-alloyeditor-web alloyeditor
+	done
+
+	print_version_packagelock fix-pack-base-7110 7110-base modules/apps/frontend-editor/frontend-editor-alloyeditor-web alloyeditor
+
+	for i in $(seq 1 ${MAX_71}); do
+		print_version_packagelock fix-pack-dxp-${i}-7110 7110-dxp-$(printf "%02d\n" ${i}) modules/apps/frontend-editor/frontend-editor-alloyeditor-web alloyeditor
+	done
+
+	print_version_yarnlock fix-pack-base-7210 7210-base alloyeditor
+
+	for i in $(seq 1 ${MAX_72}); do
+		print_version_yarnlock fix-pack-dxp-${i}-7210 7210-dxp-$(printf "%02d\n" ${i}) alloyeditor
+	done
+) | sed '$s/,//g'
+
+echo '  },'
+
+(
+	echo '  {'
+	echo '    "name": "lexicon-ux", '
+
+	print_version_gradle fix-pack-base-7010 7010-base modules/apps/foundation/frontend-js/frontend-js-web lexiconVersion
+
+	for i in $(seq 1 ${MAX_70}); do
+		print_version_gradle fix-pack-de-${i}-7010 7010-de-$(printf "%02d\n" ${i}) modules/apps/foundation/frontend-js/frontend-js-web lexiconVersion
+	done
+) | sed '$s/,//g'
+
+echo '  },'
+
+(
+	echo '  {'
+	echo '    "name": "clay-css", '
+
+	print_version_packagelock fix-pack-base-7110 7110-base modules/apps/frontend-taglib/frontend-taglib-clay clay-component
+
+	for i in $(seq 1 ${MAX_71}); do
+		print_version_packagelock fix-pack-dxp-${i}-7110 7110-dxp-$(printf "%02d\n" ${i}) modules/apps/frontend-taglib/frontend-taglib-clay clay-component
+	done
+
+	print_version_yarnlock fix-pack-base-7210 7210-base clay-css
+
+	for i in $(seq 1 ${MAX_72}); do
+		print_version_yarnlock fix-pack-dxp-${i}-7210 7210-dxp-$(printf "%02d\n" ${i}) clay-css
+	done
+) | sed '$s/,//g'
+
+echo '  }'
+
+echo ']'
+
+popd > /dev/null

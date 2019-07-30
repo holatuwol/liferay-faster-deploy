@@ -17,10 +17,12 @@ fi
 python ${SCRIPT_FOLDER}/packageinfojson.py $(dirname $PORTAL_SOURCE_ROOT_70) $(dirname $PORTAL_SOURCE_ROOT_71) $(dirname $PORTAL_SOURCE_ROOT_72)
 python ${SCRIPT_FOLDER}/requireschemajson.py $(dirname $PORTAL_SOURCE_ROOT_70) $(dirname $PORTAL_SOURCE_ROOT_71) $(dirname $PORTAL_SOURCE_ROOT_72)
 
+PORTAL_SOURCE_ROOT=${PORTAL_SOURCE_ROOT_70} ${SCRIPT_FOLDER}/jsversions > dxpjslibrary.json
+
 # Upload the files to the designated bucket
 
 if [ "" != "${S3_BUCKET}" ]; then
-	for file in dxppackages dxpmodules dxpschemas; do
+	for file in dxppackages dxpmodules dxpschemas dxpjslibrary; do
 		s3upload ${file}.json
 
 		pushd $(dirname ${BASH_SOURCE[0]}) > /dev/null
