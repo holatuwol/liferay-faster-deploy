@@ -16,7 +16,7 @@ print_version_shrinkwrap() {
 }
 
 print_version_yarnlock() {
-	local VERSION=$(git show ${1}:modules/yarn.lock | grep -o '^'${3}'@[^ :]*' | cut -d'@' -f 2)
+	local VERSION=$(git show ${1}:modules/yarn.lock | grep -o '^'${3}'@[^ :,]*' | cut -d'@' -f 2)
 	echo '    "'${2}'": "'${VERSION}'",'
 }
 
