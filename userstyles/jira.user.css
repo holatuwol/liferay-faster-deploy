@@ -40,6 +40,13 @@
     flex-basis: 0;
   }
 
+  #documentation-web-panel,
+  #greenhopper-agile-issue-web-panel,
+  #packages-issue-panel,
+  #slack-viewissue-panel {
+    display: none;
+  }
+
   .module:first-child,
   .issue-body-content .module+.module {
     margin-top: 15px;
