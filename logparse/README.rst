@@ -39,14 +39,16 @@ The file generates numbered files so that you can repeatedly call it with new ex
 Extract Upgrade Times
 =====================
 
-Sometimes it's hard to know what you should prioritize when attempting to create an upgrade performance enhancement. This converts an upgrade log into a ``times_old.csv`` file that shows the time that elapsed for each upgrade step, which allows you to sort the upgrade times in descending order.
+Sometimes it's hard to know what you should prioritize when attempting to create an upgrade performance enhancement. This converts an upgrade log into a ``times_old.csv`` file that shows the time that elapsed for each upgrade step, which allows you to sort the upgrade times in descending order using spreadsheet software.
 
 .. code-block:: bash
 
 	upgradetimes FILE_NAME
 
-After you've completed your upgrade performance enhancements, you can confirm whether your code change has improved the performance of a previous upgrade, this script can also be used to compare upgrade times by providing two file names. The resulting output is a ``times_old.csv`` which shows the times of the first log, a ``times_new.csv`` which shows the times of the second log, and a ``times_compare.csv`` that allows you to compare the upgrade times for each step, and a ``times_compare_totals.csv`` that allows you to only compare the total time for each upgrade process.
+After you've completed your upgrade performance enhancements, you can confirm whether your code change has improved the performance of a previous upgrade, this script can also be used to compare upgrade times by providing two file names.
 
 .. code-block:: bash
 
 	upgradetimes FILE_NAME_1 FILE_NAME_2
+
+The resulting output is a ``times_old.csv`` which shows the times of the first log, a ``times_new.csv`` which shows the times of the second log, and a ``times_compare.csv`` that allows you to compare the upgrade times for each step, and a ``times_compare_totals.csv`` that allows you to only compare the total time for each upgrade process.
