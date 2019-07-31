@@ -138,7 +138,10 @@ function checkLibraryInfo() {
 			return releaseLink;
 		}
 
-		var compareLink = '<a target="_blank" href="' + schemaInfo.github + '/compare/' + schemaInfo.tag.replace('${1}', tag1) + '...' + schemaInfo.tag.replace('${1}', tag2) + '">diff</a>';
+		var oldTag = (tag1 < tag2) ? tag1 : tag2;
+		var newTag = (tag2 > tag1) ? tag2 : tag1;
+
+		var compareLink = '<a target="_blank" href="' + schemaInfo.github + '/compare/' + schemaInfo.tag.replace('${1}', oldTag) + '...' + schemaInfo.tag.replace('${1}', newTag) + '">diff</a>';
 
 		return releaseLink + ' (' + compareLink + ')';
 	}
