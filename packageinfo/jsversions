@@ -33,7 +33,9 @@ echo '['
 
 (
 	echo '  {'
-	echo '    "name": "alloy-ui", '
+	echo '    "name": "alloy-ui",'
+	echo '    "github": "https://github.com/liferay/alloy-ui",'
+	echo '    "tag": "${1}",'
 
 	# Liferay 7.0
 
@@ -84,7 +86,9 @@ echo '  },'
 
 (
 	echo '  {'
-	echo '    "name": "alloyeditor", '
+	echo '    "name": "alloyeditor",'
+	echo '    "github": "https://github.com/liferay/alloy-editor",'
+	echo '    "tag": "v${1}",'
 
 	# Liferay 7.0
 
@@ -143,7 +147,9 @@ echo '  },'
 
 (
 	echo '  {'
-	echo '    "name": "lexicon-ux", '
+	echo '    "name": "lexicon-ux",'
+	echo '    "github": "https://github.com/liferay/clay",'
+	echo '    "tag": "v${1}",'
 
 	# Liferay 7.0
 
@@ -162,7 +168,9 @@ echo '  },'
 
 (
 	echo '  {'
-	echo '    "name": "clay-css", '
+	echo '    "name": "clay-css",'
+	echo '    "github": "https://github.com/liferay/clay",'
+	echo '    "tag": "v${1}",'
 
 	# Liferay 7.1
 

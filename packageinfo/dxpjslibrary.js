@@ -102,7 +102,7 @@ function checkLibraryInfo() {
 
 		for (var i = 0; i < rowData.length; i++) {
 			var cell = document.createElement('td');
-			cell.innerHTML = rowData[i] || '0.0.0';
+			cell.innerHTML = rowData[i];
 
 			if ((rowData.length == 2) && (i == 1)) {
 				cell.setAttribute('colspan', 2);
@@ -114,12 +114,41 @@ function checkLibraryInfo() {
 		table.appendChild(row);
 	};
 
+	var getReleaseLink = function(schemaInfo, name) {
+		var tag = schemaInfo[name]
+
+		if (!tag) {
+			return '0.0.0';
+		}
+
+		return '<a target="_blank" href="' + schemaInfo.github + '/releases/tag/' + schemaInfo.tag.replace('${1}', tag) + '">' + tag + '</a>';
+	};
+
+	var getCompareLink = function(schemaInfo, name1, name2) {
+		var tag1 = schemaInfo[name1];
+		var tag2 = schemaInfo[name2];
+
+		if (!tag2) {
+			return '0.0.0';
+		}
+
+		var releaseLink = getReleaseLink(schemaInfo, name2);
+
+		if (!tag1 || (tag1 == tag2)) {
+			return releaseLink;
+		}
+
+		var compareLink = '<a target="_blank" href="' + schemaInfo.github + '/compare/' + schemaInfo.tag.replace('${1}', tag1) + '...' + schemaInfo.tag.replace('${1}', tag2) + '">diff</a>';
+
+		return releaseLink + ' (' + compareLink + ')';
+	}
+
 	var getRowData = function(schemaInfo) {
 		if (name1 == name2) {
-			return [schemaInfo['name'], schemaInfo[name1]];
+			return [schemaInfo['name'], getReleaseLink(schemaInfo, name1)];
 		}
 		else {
-			return [schemaInfo['name'], schemaInfo[name1], schemaInfo[name2]];
+			return [schemaInfo['name'], getReleaseLink(schemaInfo, name1), getCompareLink(schemaInfo, name1, name2)];
 		}
 	};
 
@@ -163,7 +192,7 @@ request.onreadystatechange = function() {
 		};
 
 		var fixPackIds = Object.keys(schemaInfoList[0])
-			.filter(function(x) { return x != 'name' })
+			.filter(function(x) { return x != 'name' && x != 'github' && x != 'tag'; })
 			.sort(function(a, b) {
 				var x1 = parseInt(a.substring(0, a.indexOf('-')));
 				var x2 = parseInt(b.substring(0, b.indexOf('-')));
