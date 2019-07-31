@@ -1,56 +1,75 @@
 #!/bin/bash
 
 getchangelog() {
-	echo '    "'$1'": ['
+	echo '    "'${1}'": ['
+
+	git ls-tree -r --name-only upstream/${1} -- modules/ > .modules
+	git ls-tree -r --name-only upstream/${1}-private -- modules/ > .modules-private
 
 	(
-		git ls-tree -r --name-only upstream/$1 -- modules/ > .modules
-
-		for file in $(grep -F app.properties .modules); do
-			getfixes $(dirname ${file}) $1
+		for file in $(grep -Fh app.properties .modules); do
+			getfixes $(dirname ${file}) ${1}
 		done
 	) | sed '$s/,$//g'
 
 	echo '    ],'
 
-	echo '    "'$1'-private": ['
+	echo '    "'${1}'-private": ['
 
 	(
-		git ls-tree -r --name-only upstream/$1-private -- modules/ > .modules
-
-		for file in $(grep -F app.properties .modules); do
-			getfixes $(dirname ${file}) $1-private
+		for file in $(grep -Fh app.properties .modules .modules-private); do
+			getfixes $(dirname ${file}) ${1}-private
 		done
-
-		rm -f .modules
 	) | sed '$s/,$//g'
+
+	rm -f .modules
+	rm -f .modules-private
 
 	echo -n '    ]'
 }
 
 getfixes() {
-	local MODULE_FOLDER=$(echo $1 | sed 's@\.releng/@@g')
+	local APPBND_FOLDER=$(echo ${1} | sed 's@\.releng/@@g')
+	local APPBND_BRANCH=
+	local MODULE_FOLDER=
+	local MODULE_BRANCH=${2}
 
-	if [ "" == "$(grep -F ${MODULE_FOLDER}/app.bnd .modules)" ]; then
+	if [[ ${MODULE_BRANCH} == *-private ]] && [[ ${APPBND_FOLDER} != modules/private/apps/* ]]; then
+		APPBND_BRANCH=$(echo ${MODULE_BRANCH} | sed 's/-private$//g')
+		MODULE_FOLDER=$(echo ${APPBND_FOLDER} | sed 's@^modules/apps@modules/private/apps@g')
+	else
+		APPBND_BRANCH=${MODULE_BRANCH}
+		MODULE_FOLDER=${APPBND_FOLDER}
+	fi
+
+	if [ "" == "$(grep -F ${APPBND_FOLDER}/app.bnd .modules)" ] && [ "" == "$(grep -F ${APPBND_FOLDER}/app.bnd .modules-private)" ]; then
 		return 0
 	fi
 
-	if [ "" != "$(git show upstream/$2:${MODULE_FOLDER}/app.bnd | grep -F 'Liferay-Releng-Bundle: true')" ]; then
+	if [ "${APPBND_FOLDER}" != "${MODULE_FOLDER}" ] && [ "" == "$(grep -F ${MODULES_FOLDER}/ .modules-private)" ]; then
 		return 0
 	fi
 
-	if [ "" != "$(git show upstream/$2:${MODULE_FOLDER}/app.bnd | grep -F 'Liferay-Releng-Deprecated: true')" ]; then
+	if [ "" != "$(git show upstream/${APPBND_BRANCH}:${APPBND_FOLDER}/app.bnd | grep -F 'Liferay-Releng-Bundle: true')" ]; then
 		return 0
 	fi
 
-	local NAME=$(git show upstream/$2:$1/app.properties | grep -F app.marketplace.title= | cut -d'=' -f 2)
+	if [ "" != "$(git show upstream/${APPBND_BRANCH}:${APPBND_FOLDER}/app.bnd | grep -F 'Liferay-Releng-Deprecated: true')" ]; then
+		return 0
+	fi
+
+	local NAME=$(git show upstream/${APPBND_BRANCH}:$1/app.properties | grep -F app.marketplace.title= | cut -d'=' -f 2)
 
 	if [ "" == "${NAME}" ]; then
 		return 0
 	fi
 
-	local ID=$(git show upstream/$2:$1/app.properties | grep -F app.marketplace.id= | cut -d'=' -f 2)
-	local VERSION=$(git show upstream/$2:$1/app.properties | grep -F app.marketplace.version= | cut -d'=' -f 2)
+	if [ "${APPBND_FOLDER}" != "${MODULE_FOLDER}" ]; then
+		NAME="${NAME} (private)"
+	fi
+
+	local ID=$(git show upstream/${APPBND_BRANCH}:$1/app.properties | grep -F app.marketplace.id= | cut -d'=' -f 2)
+	local VERSION=$(git show upstream/${APPBND_BRANCH}:$1/app.properties | grep -F app.marketplace.version= | cut -d'=' -f 2)
 
 	echo -n '      {'
 	echo -n '"marketplace": "'${ID}'",'
@@ -60,26 +79,31 @@ getfixes() {
 
 	local RELEASE_HASH=
 
-	if [ "" != "$(grep -F $1/app.changelog .modules)" ]; then
-		RELEASE_HASH=$(git show upstream/$2:$1/app.changelog | grep -F app.git.id-${VERSION}= | cut -d'=' -f 2)
+	if [ "" != "$(grep -F ${1}/app.changelog .modules)" ] || [ "" != "$(grep -F ${1}/app.changelog .modules-private)" ]; then
+		RELEASE_HASH=$(git show upstream/${APPBND_BRANCH}:$1/app.changelog | grep -F app.git.id-${VERSION}= | cut -d'=' -f 2)
 
 		if [ "" == "${RELEASE_HASH}" ] || [ "" == "$(git log -1 --pretty='%H' ${RELEASE_HASH} 2> /dev/null)" ]; then
-			RELEASE_HASH=$(git log -1 --pretty='%H' upstream/$2 -- $1/app.changelog)
+			RELEASE_HASH=$(git log -1 --pretty='%H' upstream/${APPBND_BRANCH} -- ${1}/app.changelog)
 		fi
 
+		if [ "${APPBND_FOLDER}" != "${MODULE_FOLDER}" ]; then
+			RELEASE_HASH=$(git show ${RELEASE_HASH}:git-commit-portal-private 2> /dev/null)
+		fi
+	fi
+
+	local CHANGELOG=
+
+	if [ "" != "${RELEASE_HASH}" ] && [ "" != "$(git log -1 --pretty='%H' ${RELEASE_HASH} 2> /dev/null)" ]; then
 		echo -n '"releaseDate": "'$(git log -1 --pretty='%ci' ${RELEASE_HASH} | awk '{ print $1 }')'", '
-		echo -n '"fixes": '
-
-		local CHANGELOG=$(git log --pretty='%s' ${RELEASE_HASH}..upstream/$2 -- ${MODULE_FOLDER} | grep -Eo '[A-Z]+-[0-9]+' | grep -vF 'LRDOCS' | grep -vF LRQA | grep -vF -- '-0' | sort -u)
-
-		echo -n '['
-
-		if [ "" != "${CHANGELOG}" ]; then
-			echo -n "${CHANGELOG}" | awk '{ print "\"" $1 "\"" }' | tr '\n' ',' | sed 's/,$//g' | sed 's/,/, /g'
-		fi
+		CHANGELOG=$(git log --pretty='%s' ${RELEASE_HASH}..upstream/${MODULE_BRANCH} -- ${MODULE_FOLDER} | grep -Eo '[A-Z]+-[0-9]+' | grep -vF 'LRDOCS' | grep -vF LRQA | grep -vF -- '-0' | sort -u)
 	else
 		echo -n '"releaseDate": null, '
-		echo -n '"fixes": ['
+	fi
+
+	echo -n '"fixes": ['
+
+	if [ "" != "${CHANGELOG}" ]; then
+		echo -n "${CHANGELOG}" | awk '{ print "\"" $1 "\"" }' | tr '\n' ',' | sed 's/,$//g' | sed 's/,/, /g'
 	fi
 
 	echo -n ']'
