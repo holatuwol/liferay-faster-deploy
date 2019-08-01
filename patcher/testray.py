@@ -6,8 +6,10 @@ import inspect
 import json
 from os.path import abspath, dirname
 from patcher import process_patcher_search_container
+import requests
 from scrape_liferay import get_liferay_content, get_namespaced_parameters
 import sys
+from xml.etree import ElementTree
 
 script_git_root = dirname(dirname(abspath(inspect.getfile(inspect.currentframe()))))
 sys.path.insert(0, script_git_root)
@@ -429,6 +431,21 @@ def get_testray_url(a, b, run_number='1'):
 
 	return 'https://testray.liferay.com/home/-/testray/runs/compare?testrayRunIdA=%s&testrayRunIdB=%s&view=details' % (a_run_id, b_run_id)
 
+# Retrieve a Jenkins URL for a patcher build
+
+def get_jenkins_url(patcher_build_id):
+	url = 'https://test-1-1.liferay.com/job/test-portal-hotfix-release/api/xml?tree=builds[number,actions[parameters[name,value]]]&xpath=//parameter[name="PATCHER_BUILD_ID"][value="%s"]/../../number&wrapper=builds&pretty=true' % patcher_build_id
+
+	response = requests.get(url)
+	tree = ElementTree.fromstring(response.content)
+
+	jenkins_build_numbers = [child.text for child in tree.iter('number')]
+
+	if len(jenkins_build_numbers) == 0:
+		return None
+
+	return 'https://test-1-1.liferay.com/job/test-portal-hotfix-release/%s/' % jenkins_build_numbers[0]
+
 # Main logic for deciding which URL to use
 
 def open_testray(urls):
@@ -475,7 +492,7 @@ def open_testray(urls):
 
 		if testray_url is not None:
 			webbrowser.open_new_tab(testray_url)
-	elif len(builds) > 0:
+	elif len(builds) > 1:
 		build_id, patcher_build = builds[0]
 
 		for previous_build in builds[1:]:
@@ -483,6 +500,14 @@ def open_testray(urls):
 
 			if testray_url is not None:
 				webbrowser.open_new_tab(testray_url)
+	elif patcher_build is not None:
+		patcher_build_id = patcher_build['patcherBuildId']
+		jenkins_url = get_jenkins_url(patcher_build_id)
+
+		if jenkins_url is not None:
+			webbrowser.open_new_tab(jenkins_url)
+		else:
+			print('Unable to find Jenkins build for patcher build %s' % patcher_build_id)
 
 # Main method
 
