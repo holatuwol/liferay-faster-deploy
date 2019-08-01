@@ -475,7 +475,7 @@ def open_testray(urls):
 
 		if testray_url is not None:
 			webbrowser.open_new_tab(testray_url)
-	else:
+	elif len(builds) > 0:
 		build_id, patcher_build = builds[0]
 
 		for previous_build in builds[1:]:
