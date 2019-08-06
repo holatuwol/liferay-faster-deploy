@@ -93,7 +93,13 @@ def getparent(check_tags):
 	base_tag = ''
 
 	if base_branch in dxp_branches:
-		base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=fix-pack-dxp-*10')
+		base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=fix-pack-dxp-*10-private')
+
+		if base_tag is None or len(base_tag) == 0:
+			base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=fix-pack-dxp-*10')
+
+		if base_tag is None or len(base_tag) == 0:
+			base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=fix-pack-base-*10-private')
 
 		if base_tag is None or len(base_tag) == 0:
 			base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=fix-pack-base-*10')
@@ -102,10 +108,16 @@ def getparent(check_tags):
 			base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=*-ga*')
 
 	elif base_branch in de_branches:
-		base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=fix-pack-de-*10')
+		base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=fix-pack-de-*10-private')
 
 		if base_tag is None or len(base_tag) == 0:
-			base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=fix-pack-base-70*')
+			base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=fix-pack-de-*10')
+
+		if base_tag is None or len(base_tag) == 0:
+			base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=fix-pack-base-7010-private')
+
+		if base_tag is None or len(base_tag) == 0:
+			base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=fix-pack-base-7010')
 
 		if base_tag is None or len(base_tag) == 0:
 			base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=7.0.*-ga*')
