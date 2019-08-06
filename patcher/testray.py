@@ -434,7 +434,7 @@ def get_testray_url(a, b, run_number='1'):
 # Retrieve a Jenkins URL for a patcher build
 
 def open_jenkins_build_urls(patcher_build_id):
-	jenkins_build_urls = []
+	jenkins_queue_urls = []
 
 	for i in range(1, 24):
 		url = 'https://test-1-%s.liferay.com/queue/api/xml' % i
@@ -444,22 +444,30 @@ def open_jenkins_build_urls(patcher_build_id):
 		items = tree.findall('./item/action/parameter[name="patcher.build.id"][value="%s"]/../..' % patcher_build_id)
 
 		if len(items) > 0:
-			jenkins_build_urls.append('https://test-1-%d.liferay.com/job/fixpack-builder-hotfix-7x(production)/' % i)
+			jenkins_queue_urls.append('https://test-1-%d.liferay.com/job/fixpack-builder-hotfix-7x(production)/' % i)
+
+	jenkins_build_urls = []
 
 	for i in range(1, 24):
-		url = 'https://test-1-%d.liferay.com/job/fixpack-builder-hotfix-7x(production)/api/xml?tree=builds[number,actions[parameters[name,value]]]&xpath=//parameter[name="patcher.build.id"][value="%s"]/../../number&wrapper=builds&pretty=true' % (i, patcher_build_id)
+		url = 'https://test-1-%d.liferay.com/job/fixpack-builder-hotfix-7x(production)/api/xml?tree=builds[number,timestamp,actions[parameters[name,value]]]&xpath=//build[action[parameter[name="patcher.build.id"][value="%s"]]]/*[self::number or self::timestamp]&wrapper=builds&pretty=true' % (i, patcher_build_id)
 
 		response = requests.get(url, auth=(username, password))
 		tree = ElementTree.fromstring(response.content)
 
 		jenkins_build_numbers = [child.text for child in tree.iter('number')]
+		jenkins_build_timestamps = [int(child.text) for child in tree.iter('timestamp')]
 
 		jenkins_build_urls += [
-			'https://test-1-%d.liferay.com/job/fixpack-builder-hotfix-7x(production)/%s/' % (i, build_number)
-				for build_number in jenkins_build_numbers
+			(timestamp, 'https://test-1-%d.liferay.com/job/fixpack-builder-hotfix-7x(production)/%s/' % (i, number))
+				for number, timestamp in zip(jenkins_build_numbers, jenkins_build_timestamps)
 		]
 
-	for build_url in jenkins_build_urls:
+	jenkins_build_urls.sort()
+
+	for timestamp, build_url in jenkins_build_urls:
+		webbrowser.open_new_tab(build_url)
+
+	for build_url in jenkins_queue_urls:
 		webbrowser.open_new_tab(build_url)
 
 # Retrieve a Jenkins URL for a patcher build's tests
