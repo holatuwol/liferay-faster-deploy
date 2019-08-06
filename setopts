@@ -7,7 +7,7 @@ buildopts() {
 		JAVA_VERSION=$(java -version 2>&1 | head -1 | cut -d'"' -f 2 | cut -d'.' -f 2)
 	fi
 
-	ANT_OPTS='-Xms4g -Xmx4g'
+	ANT_OPTS='-Xms4g -Xmx4g -Drepository.url="https://repository-cdn.liferay.com/nexus/content/groups/public"'
 
 	if [[ 8 -gt $JAVA_VERSION ]]; then
 		ANT_OPTS="${ANT_OPTS} -XX:MaxPermSize=512m"
