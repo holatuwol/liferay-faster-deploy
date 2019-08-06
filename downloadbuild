@@ -6,8 +6,12 @@ appserverprops() {
 
 buildworkingdir() {
 	if [[ ${BASE_BRANCH} == *-private ]] && [ -f build-working-dir.xml ]; then
-		echo "Build downloaded, ensuring non-private modules are up to date"
-		ant -f build-working-dir.xml
+		if [ -h modules/build.gradle ]; then
+			echo "Assuming linkprivate script is being used to keep modules up to date"
+		else
+			echo "Build downloaded, ensuring non-private modules are up to date"
+			ant -f build-working-dir.xml
+		fi
 	elif [ -d modules/private ]; then
 		pushd modules/private > /dev/null
 		git clean -xdf
