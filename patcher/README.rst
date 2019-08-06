@@ -141,3 +141,5 @@ Once you've done that, just give it the name of a fix pack, a Patcher Portal bui
 You can also specify multiple values as arguments, where the first argument will be chosen as a reference build, and all other builds will be compared to that build.
 
 You can also specify no arguments at all, and it will query patcher portal to find all builds that require QA analysis, and then run the script as though you were asking for each build one at a time (this means it uses the standard approach for comparisons).
+
+If no information is found on Testray, this script will attempt to open a browser window (or multiple browser windows) to Jenkins. If automated testing has started, the browser window will point to the currently running job on Jenkins corresponding to those tests. If automated testing has not started (for example, the build is still compiling), this will instead open all build URLs for the build so you can check past build statuses.
