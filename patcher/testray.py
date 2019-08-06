@@ -7,7 +7,7 @@ import json
 from os.path import abspath, dirname
 from patcher import process_patcher_search_container
 import requests
-from scrape_liferay import get_liferay_content, get_namespaced_parameters
+from scrape_liferay import get_liferay_content, get_namespaced_parameters, username, password
 import sys
 from xml.etree import ElementTree
 
@@ -433,15 +433,50 @@ def get_testray_url(a, b, run_number='1'):
 
 # Retrieve a Jenkins URL for a patcher build
 
-def get_jenkins_url(patcher_build_id):
+def open_jenkins_build_urls(patcher_build_id):
+	jenkins_build_urls = []
+
+	for i in range(1, 24):
+		url = 'https://test-1-%s.liferay.com/queue/api/xml' % i
+
+		response = requests.get(url, auth=(username, password))
+		tree = ElementTree.fromstring(response.content)
+		items = tree.findall('./item/action/parameter[name="patcher.build.id"][value="%s"]/../..' % patcher_build_id)
+
+		if len(items) > 0:
+			jenkins_build_urls.append('https://test-1-%d.liferay.com/job/fixpack-builder-hotfix-7x(production)/' % i)
+
+	for i in range(1, 24):
+		url = 'https://test-1-%d.liferay.com/job/fixpack-builder-hotfix-7x(production)/api/xml?tree=builds[number,actions[parameters[name,value]]]&xpath=//parameter[name="patcher.build.id"][value="%s"]/../../number&wrapper=builds&pretty=true' % (i, patcher_build_id)
+
+		response = requests.get(url, auth=(username, password))
+		tree = ElementTree.fromstring(response.content)
+
+		jenkins_build_numbers = [child.text for child in tree.iter('number')]
+
+		jenkins_build_urls += [
+			'https://test-1-%d.liferay.com/job/fixpack-builder-hotfix-7x(production)/%s/' % (i, build_number)
+				for build_number in jenkins_build_numbers
+		]
+
+	for build_url in jenkins_build_urls:
+		webbrowser.open_new_tab(build_url)
+
+# Retrieve a Jenkins URL for a patcher build's tests
+
+def get_jenkins_test_url(patcher_build):
+	patcher_build_id = patcher_build['patcherBuildId']
 	url = 'https://test-1-1.liferay.com/job/test-portal-hotfix-release/api/xml?tree=builds[number,actions[parameters[name,value]]]&xpath=//parameter[name="PATCHER_BUILD_ID"][value="%s"]/../../number&wrapper=builds&pretty=true' % patcher_build_id
 
-	response = requests.get(url)
+	response = requests.get(url, auth=(username, password))
 	tree = ElementTree.fromstring(response.content)
 
 	jenkins_build_numbers = [child.text for child in tree.iter('number')]
 
 	if len(jenkins_build_numbers) == 0:
+		if patcher_build['statusLabel'] != 'complete' and patcher_build['statusLabel'] != 'released':
+			open_jenkins_build_urls(patcher_build_id)
+
 		return None
 
 	return 'https://test-1-1.liferay.com/job/test-portal-hotfix-release/%s/' % jenkins_build_numbers[0]
@@ -501,13 +536,12 @@ def open_testray(urls):
 			if testray_url is not None:
 				webbrowser.open_new_tab(testray_url)
 	elif patcher_build is not None:
-		patcher_build_id = patcher_build['patcherBuildId']
-		jenkins_url = get_jenkins_url(patcher_build_id)
+		jenkins_url = get_jenkins_test_url(patcher_build)
 
 		if jenkins_url is not None:
 			webbrowser.open_new_tab(jenkins_url)
 		else:
-			print('Unable to find Jenkins build for patcher build %s' % patcher_build_id)
+			print('Unable to find Jenkins build for patcher build %s' % patcher_build['patcherBuildId'])
 
 # Main method
 
