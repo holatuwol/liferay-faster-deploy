@@ -189,7 +189,7 @@ sendpull() {
 
 		if [[ 0 -eq $EXIT_CODE ]]; then
 			if [ "" != "$(grep setup-libs build.xml)" ]; then
-				ant setup-libs
+				ant setup-sdk setup-libs
 			fi
 
 			fixdeps && baseline && formatsource && pmdreport
