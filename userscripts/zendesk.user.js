@@ -1038,7 +1038,7 @@ function highlightComment(commentId, event) {
   }
 
   if (!commentId && document.location.search && document.location.search.indexOf('?comment=') == 0) {
-    commentId = document.location.search.substring(9);
+    commentId = document.location.search.substring('?comment='.length);
 
     var pos = commentId.indexOf('&');
 
@@ -1158,8 +1158,8 @@ function fixZenDeskLink(anchor, ticketId) {
 
   anchor.removeAttribute('href');
 
-  if (href.substring(x + 9, y) == ticketId) {
-    var commentId = href.substring(y + 9);
+  if (href.substring(x + '?comment='.length, y) == ticketId) {
+    var commentId = href.substring(y + '?comment='.length);
 
     anchor.onclick = highlightComment.bind(null, commentId);
   }
@@ -1194,13 +1194,13 @@ function fixHelpCenterLink(anchor, ticketId) {
   var commentId = null;
 
   if (z != -1) {
-    commentId = href.substring(z + 9);
+    commentId = href.substring(z + '?comment='.length);
   }
   else {
     z = href.indexOf('#request_comment_');
 
     if (z != -1) {
-      commentId = href.substring(z + 17);
+      commentId = href.substring(z + '#request_comment_'.length);
     }
   }
 
@@ -1212,7 +1212,7 @@ function fixHelpCenterLink(anchor, ticketId) {
 
   anchor.removeAttribute('href');
 
-  var linkTicketId = href.substring(y + 10, Math.min(href.indexOf('?'), z));
+  var linkTicketId = href.substring(y + '/requests/'.length, Math.min(href.indexOf('?'), z));
 
   if (linkTicketId == ticketId) {
     anchor.onclick = highlightComment.bind(null, commentId);
