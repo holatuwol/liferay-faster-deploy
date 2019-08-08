@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        6.4
+// @version        6.5
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -1870,7 +1870,6 @@ function addReactLabelValues(testId, values, callback) {
 
 function initJiraTicketValues(data) {
   var ticket = data['ticket'];
-  console.log(ticket);
   var productVersion = data['ticket.customField:custom_field_360006076471'];
 
   function setProjectId(callback) {
