@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        6.2
+// @version        6.3
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
+// @include        /https:\/\/24475.apps.zdusercontent.com\/24475\/assets\/.*\/issue_creator.html/
 // @grant          none
 // @require        https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.5/jszip.min.js
 // @require        https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js
@@ -156,7 +157,11 @@ a.generating::after {
 }
 `;
 
-document.querySelector('head').appendChild(styleElement);
+if (window.location.hostname == '24475.apps.zdusercontent.com') {
+}
+else {
+  document.querySelector('head').appendChild(styleElement);
+}
 
 /**
  * Generate a Blob URL, and remember it so that we can unload it if we
@@ -1698,8 +1703,7 @@ function updateSubtitle(tab, ticketId, ticketInfo) {
 }
 
 /**
- * Since there's an SPA framework in place that I don't fully understand, attempt to
- * update the tab subtitles once per second.
+ * Attempt to update the tab subtitles.
  */
 
 function checkForSubtitles() {
@@ -1721,5 +1725,230 @@ function checkForSubtitles() {
   }
 }
 
-setInterval(checkForConversations, 1000);
-setInterval(checkForSubtitles, 1000);
+/**
+ * Workaround for interacting with input fields built by react.js
+ * https://github.com/facebook/react/issues/10135#issuecomment-314441175
+ */
+
+function setReactInputValue(selector, value, callback) {
+
+  var element = document.querySelector(selector);
+
+  if (!element) {
+    setTimeout(setReactInputValue.bind(null, selector, value, callback), 100);
+
+    return;
+  }
+
+  // Format dates like React datepickers expect.
+
+  if (value instanceof Date) {
+    var mm = value.getMonth() + 1;
+    mm = (mm < 10) ? '0' + mm : mm;
+    var dd = value.getDate();
+    dd = (dd < 10) ? '0' + dd : dd;
+    var yyyy = value.getFullYear();
+
+    value = mm + '/' + dd + '/' + yyyy;
+  }
+
+  // Make sure to call the right setter function so the underlying state is updated.
+
+  var elementDescriptor = Object.getOwnPropertyDescriptor(element, 'value');
+  var valueSetter = elementDescriptor && elementDescriptor.set;
+
+  var prototype = Object.getPrototypeOf(element);
+  var prototypeDescriptor = Object.getOwnPropertyDescriptor(prototype, 'value');
+  var prototypeValueSetter = prototypeDescriptor && Object.getOwnPropertyDescriptor(prototype, 'value').set;
+
+  if (prototypeValueSetter) {
+    prototypeValueSetter.call(element, value);
+  }
+  else if (valueSetter) {
+    valueSetter.call(element, value);
+  }
+
+  element.dispatchEvent(new Event('input', { bubbles: true }));
+
+  if (callback) {
+    callback();
+  }
+}
+
+/**
+ * Utility method to simulate clicking on a drop-down select, entering
+ * text into a search field, waiting for the results to populate, and
+ * then selecting everything that matches.
+ */
+
+function setReactSearchSelectValue(testId, value, callback) {
+  var buttonField = document.querySelector('div[data-test-id=' + testId + ']');
+
+  if (!buttonField.querySelector('div[aria-haspopup=true]')) {
+    buttonField.querySelector('div[role=button]').click();
+  }
+
+  function clickSearchMenuOptions() {
+    var searchMenu = document.querySelector('div[class*="ssc-scrollable"]');
+
+    if (!searchMenu) {
+      setTimeout(clickSearchMenuOptions, 100);
+      return;
+    }
+
+    var options = searchMenu.querySelectorAll('div[class*="optionText"]');
+
+    if (options.length == 0) {
+      setTimeout(clickSearchMenuOptions, 100);
+      return;
+    }
+
+    for (var i = 0; i < options.length; i++) {
+      options[i].click();
+    }
+
+    if (callback) {
+      callback();
+    }
+  };
+
+  setReactInputValue('input[data-test-id=' + testId + '-search]', value, clickSearchMenuOptions);
+}
+
+/**
+ * Utility method to add a new value to a list of tag-like values. Similar to the
+ * search select value, except the search fields are less elaborate.
+ */
+
+function addReactLabelValue(testId, value, callback) {
+  var buttonField = document.querySelector('div[data-test-id=' + testId + ']');
+  var button = buttonField.querySelector('input');
+
+  button.focus();
+
+  function clickSearchMenuOptions() {
+    var searchMenu = document.querySelector('div[class*="ssc-scrollable"]');
+
+    if (!searchMenu) {
+      setTimeout(clickSearchMenuOptions, 100);
+      return;
+    }
+
+    var options = searchMenu.querySelectorAll('div[role=menuitem]');
+
+    if (options.length == 0) {
+      setTimeout(clickSearchMenuOptions, 100);
+      return;
+    }
+
+    for (var i = 0; i < options.length; i++) {
+      options[i].click();
+    }
+
+    if (callback) {
+      callback();
+    }
+  }
+
+  setReactInputValue('div[data-test-id=' + testId + '] input', value, clickSearchMenuOptions);
+}
+
+/**
+ * Set the initial values for the "Create Issue" modal dialog window
+ * after the fields have initialized.
+ */
+
+function initJiraTicketValues(data) {
+
+  var ticket = data['ticket'];
+  var productVersion = data['ticket.customField:custom_field_360006076471'];
+
+  function setProjectId(callback) {
+    setReactSearchSelectValue('projectId', 'LPP', callback);
+  }
+
+  function setSummary(callback) {
+    setReactInputValue('input[data-test-id=summary]', ticket.subject, callback);
+  }
+
+  function setCustomerTicketCreationDate(callback) {
+    setReactInputValue('span[data-test-id=customfield_11126] input', new Date(ticket.createdAt), callback);
+  }
+
+  function setAffectsVersion(callback) {
+    var value = (productVersion.indexOf('7_0') != -1) ? '7.0.10' :
+      (productVersion.indexOf('7_1') != -1) ? '7.1.10' :
+      (productVersion.indexOf('7_2') != -1) ? '7.2.10' : null;
+
+    if (value) {
+      addReactLabelValue('versions', value, callback);
+    }
+    else if (callback) {
+      callback();
+    }
+  }
+
+  function focusSummary() {
+    document.querySelector('input[data-test-id=summary]').focus();
+  }
+
+  var callOrder = [setProjectId, setSummary, setCustomerTicketCreationDate, setAffectsVersion, focusSummary];
+  var nestedFunction = callOrder.reverse().reduce(function(accumulator, x) { return x.bind(null, accumulator); });
+  nestedFunction();
+}
+
+/**
+ * Attach a click listener to the copyFieldsLink element to populate
+ * the JIRA ticket fields.
+ */
+
+function attachCopyFieldsLinkListener(client, parentClient) {
+  var copyFieldsLink = document.querySelector('div[class*="copyFieldsLink"]');
+
+  if (copyFieldsLink) {
+    parentClient.get(['currentUser', 'ticket', 'ticket.customField:custom_field_360006076471']).then(initJiraTicketValues);
+  }
+  else {
+    setTimeout(attachCopyFieldsLinkListener.bind(null, client, parentClient), 1000);
+  }
+}
+
+/**
+ * Attempt to initialize the ZAF parent client instance using a
+ * registered ZAF client instance.
+ */
+
+function initZafParentClient(client, callback) {
+  var parentGuid = document.location.hash.substring('#parentGuid='.length);
+  var parentClient = client.instance(parentGuid);
+
+  callback(client, parentClient);
+}
+
+/**
+ * Attempt to initialize the ZAF client instance, then initialize the
+ * ZAF parent client instance so we can retrieve ticket metadata.
+ */
+
+function initZafClient(callback) {
+  if (!unsafeWindow.ZAFClient) {
+    setTimeout(initZafClient, 1000);
+
+    return;
+  }
+
+  var client = unsafeWindow.ZAFClient.init();
+  client.on('app.registered', initZafParentClient.bind(null, client, callback));
+}
+
+
+// Since there's an SPA framework in place that I don't fully understand,
+// attempt to do everything once per second.
+
+if (window.location.hostname == '24475.apps.zdusercontent.com') {
+  setTimeout(initZafClient.bind(null, attachCopyFieldsLinkListener), 1000);
+}
+else {
+  setInterval(checkForConversations, 1000);
+  setInterval(checkForSubtitles, 1000);
+}
