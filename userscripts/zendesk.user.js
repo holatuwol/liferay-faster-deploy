@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        6.3
+// @version        6.4
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -1854,13 +1854,23 @@ function addReactLabelValue(testId, value, callback) {
 }
 
 /**
+ * Utility function which adds all the listed labels, and then invokes
+ * the listed callback.
+ */
+
+function addReactLabelValues(testId, values, callback) {
+  var nestedFunction = values.reverse().reduce(function(accumulator, x) { return addReactLabelValue.bind(null, testId, x, accumulator); }, callback);
+  nestedFunction();
+}
+
+/**
  * Set the initial values for the "Create Issue" modal dialog window
  * after the fields have initialized.
  */
 
 function initJiraTicketValues(data) {
-
   var ticket = data['ticket'];
+  console.log(ticket);
   var productVersion = data['ticket.customField:custom_field_360006076471'];
 
   function setProjectId(callback) {
@@ -1873,6 +1883,45 @@ function initJiraTicketValues(data) {
 
   function setCustomerTicketCreationDate(callback) {
     setReactInputValue('span[data-test-id=customfield_11126] input', new Date(ticket.createdAt), callback);
+  }
+
+  function setSupportOffice(callback) {
+    var assigneeGroup = ticket.assignee.group.name;
+    var supportOffices = [];
+
+    if ((assigneeGroup.indexOf('- AU') != -1) || (assigneeGroup.indexOf('- CN') != -1) || (assigneeGroup.indexOf('- JP') != -1)) {
+      supportOffices.push('APAC');
+    }
+
+    if (assigneeGroup.indexOf('- AU') != -1) {
+      supportOffices.push('AU/NZ');
+    }
+
+    if (assigneeGroup.indexOf('- BR') != -1) {
+      supportOffices.push('Brazil');
+    }
+
+    if (assigneeGroup.indexOf('- HU') != -1) {
+      supportOffices.push('EU');
+    }
+
+    if (assigneeGroup.indexOf('- IN') != -1) {
+      supportOffices.push('India');
+    }
+
+    if (assigneeGroup.indexOf('- JP') != -1) {
+      supportOffices.push('Japan');
+    }
+
+    if ((assigneeGroup.indexOf('Spain Pod') == 0) || (assigneeGroup.indexOf(' - ES') != -1)) {
+      supportOffices.push('Spain');
+    }
+
+    if (assigneeGroup.indexOf(' - US') != -1) {
+      supportOffices.push('US');
+    }
+
+    addReactLabelValues('customfield_11523', supportOffices, callback);
   }
 
   function setAffectsVersion(callback) {
@@ -1892,7 +1941,7 @@ function initJiraTicketValues(data) {
     document.querySelector('input[data-test-id=summary]').focus();
   }
 
-  var callOrder = [setProjectId, setSummary, setCustomerTicketCreationDate, setAffectsVersion, focusSummary];
+  var callOrder = [setProjectId, setSummary, setCustomerTicketCreationDate, setSupportOffice, setAffectsVersion, focusSummary];
   var nestedFunction = callOrder.reverse().reduce(function(accumulator, x) { return x.bind(null, accumulator); });
   nestedFunction();
 }
