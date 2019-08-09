@@ -36,16 +36,25 @@ getcontenttargeting() {
 	fi
 
 	local LATEST_TAG=
+	local LATEST_HASH=
+	local LATEST_BRANCH=
 
 	pushd ${HOME}/liferay-apps-content-targeting-ee > /dev/null
 	git fetch upstream --no-tags
 
 	if [ "7.0.x" == "${1}" ]; then
 		LATEST_TAG=$(git tag | grep '^v2\.[0-9]*\.[0-9]*$' | sed 's/^v//g' | sort -n -t '.' -k1 | tail -1)
-		LATEST_BRANCH='upstream/7.0.x/2.x'
+		LATEST_HASH=v${LATEST_TAG}
+		LATEST_BRANCH='7.0.x/2.x'
+
+		if [ "2.1.2" == "${LATEST_TAG}" ]; then
+			LATEST_TAG=2.2.0
+			LATEST_HASH=737f4e7bf4f1b4f9a36d510e17f84800f44a36a5
+		fi
 	elif [ "7.1.x" == "${1}" ]; then
 		LATEST_TAG=$(git tag | grep '^v3\.[0-9]*\.[0-9]*$' | sed 's/^v//g' | sort -n -t '.' -k1 | tail -1)
-		LATEST_BRANCH='upstream/develop'
+		LATEST_HASH=v${LATEST_TAG}
+		LATEST_BRANCH='develop'
 	else
 		popd > /dev/null
 		return 0
@@ -57,10 +66,12 @@ getcontenttargeting() {
 	echo -n '"version": "'${LATEST_TAG}'", '
 	echo -n '"path": "liferay/liferay-apps-content-targeting-ee", '
 	echo -n '"branch": "'${LATEST_BRANCH}'", '
-	echo -n '"releaseDate": "'$(git log -1 --pretty='%ci' v${LATEST_TAG} | awk '{ print $1 }')'", '
+
+	echo -n '"releaseDate": "'$(git log -1 --pretty='%ci' ${LATEST_HASH} | awk '{ print $1 }')'", '
+
 	echo -n '"fixes": ['
 
-	local CHANGELOG=$(git log --pretty='%s' v${LATEST_TAG}..${LATEST_BRANCH} | grep -Eo '[A-Z]+-[0-9]+' | grep -vF 'LRDOCS' | grep -vF LRQA | grep -vF -- '-0' | sort -u)
+	local CHANGELOG=$(git log --pretty='%s' ${LATEST_HASH}..upstream/${LATEST_BRANCH} | grep -Eo '[A-Z]+-[0-9]+' | grep -vF 'LRDOCS' | grep -vF LRQA | grep -vF -- '-0' | sort -u)
 
 	if [ "" != "${CHANGELOG}" ]; then
 		echo -n "${CHANGELOG}" | awk '{ print "\"" $1 "\"" }' | tr '\n' ',' | sed 's/,$//g' | sed 's/,/, /g'

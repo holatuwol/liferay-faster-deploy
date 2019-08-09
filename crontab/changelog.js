@@ -82,7 +82,7 @@ function generateChangelogEntry(releaseId, update) {
 	cell.classList.add('app-path');
 
 	var githubURL = (update.path.indexOf('liferay/') != -1) ?
-		update.path + '/tree/' + update.branch :
+		'https://github.com/' + update.path + '/tree/' + update.branch :
 			'liferay/liferay-portal-ee/tree/' + releaseId + '/' + update.path;
 
 	cell.innerHTML = '<a href="' + githubURL + '">' + update.path + '</a>';
