@@ -5,6 +5,7 @@ from git import current_branch, git_root
 import os
 from os.path import abspath, dirname, isdir, isfile, join, relpath
 import subprocess
+import sys
 
 def get_file_property(file_name, property):
 	needle = '%s=' % property
@@ -31,10 +32,10 @@ def getparent(check_tags):
 
 	de_branches = ['7.0.x', '7.0.x-private', 'ee-7.0.x']
 
-	dxp_branches = ['master', '7.2.x', '7.1.x']
+	dxp_branches = ['7.2.x', '7.1.x']
 	dxp_branches = dxp_branches + ['%s-private' % branch for branch in dxp_branches]
 
-	if current_branch in ee_branches + de_branches + dxp_branches:
+	if current_branch == 'master' or current_branch in ee_branches + de_branches + dxp_branches:
 		return current_branch
 
 	# Extract the full version
@@ -90,40 +91,14 @@ def getparent(check_tags):
 
 	# Find the closest matching tag
 
-	base_tag = ''
-
-	if base_branch in dxp_branches:
-		base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=fix-pack-dxp-*10-private')
+	if base_branch in dxp_branches or base_branch in de_branches:
+		base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=fix-pack-*-%s%s10*' % (base_branch[0], base_branch[2]))
 
 		if base_tag is None or len(base_tag) == 0:
-			base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=fix-pack-dxp-*10')
-
-		if base_tag is None or len(base_tag) == 0:
-			base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=fix-pack-base-*10-private')
-
-		if base_tag is None or len(base_tag) == 0:
-			base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=fix-pack-base-*10')
-
-		if base_tag is None or len(base_tag) == 0:
-			base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=*-ga*')
-
-	elif base_branch in de_branches:
-		base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=fix-pack-de-*10-private')
-
-		if base_tag is None or len(base_tag) == 0:
-			base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=fix-pack-de-*10')
-
-		if base_tag is None or len(base_tag) == 0:
-			base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=fix-pack-base-7010-private')
-
-		if base_tag is None or len(base_tag) == 0:
-			base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=fix-pack-base-7010')
-
-		if base_tag is None or len(base_tag) == 0:
-			base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=7.0.*-ga*')
+			base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=%s.%s.*-ga*' % (base_branch[0], base_branch[2]))
 
 	elif base_branch in ee_branches:
-		base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=fix-pack-base-6*')
+		base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=fix-pack-base-6%s*' % base_branch[5])
 
 	if base_tag.find('fix-pack-base-') == 0 or base_tag.find('fix-pack-de-') == 0 or base_tag.find('fix-pack-dxp-') == 0 or base_tag.find('-ga') > -1:
 		return base_tag
@@ -158,5 +133,8 @@ def getparent_origin():
 	return current_branch
 
 if __name__ == '__main__':
-	print(getparent(True))
-	print(getparent(False))
+	if len(sys.argv) == 1 or sys.argv[1] == 'tag':
+		print(getparent(True))
+
+	if len(sys.argv) == 1 or sys.argv[1] == 'branch':
+		print(getparent(False))
