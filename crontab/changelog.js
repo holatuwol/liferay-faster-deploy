@@ -80,7 +80,12 @@ function generateChangelogEntry(releaseId, update) {
 
 	cell = document.createElement('td');
 	cell.classList.add('app-path');
-	cell.innerHTML = '<a href="https://github.com/liferay/liferay-portal-ee/tree/' + releaseId + '/' + update.path + '">' + update.path + '</a>';
+
+	var githubURL = (update.path.indexOf('liferay/') != -1) ?
+		update.path + '/tree/' + update.branch :
+			'liferay/liferay-portal-ee/tree/' + releaseId + '/' + update.path;
+
+	cell.innerHTML = '<a href="' + githubURL + '">' + update.path + '</a>';
 	row.appendChild(cell);
 
 	cell = document.createElement('td');

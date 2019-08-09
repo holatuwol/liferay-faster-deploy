@@ -20,12 +20,56 @@ getchangelog() {
 		for file in $(grep -Fh app.properties .modules .modules-private); do
 			getfixes $(dirname ${file}) ${1}-private
 		done
+
+		getcontenttargeting ${1}
 	) | sed '$s/,$//g'
 
 	rm -f .modules
 	rm -f .modules-private
 
 	echo -n '    ]'
+}
+
+getcontenttargeting() {
+	if [ ! -d ${HOME}/liferay-apps-content-targeting-ee ]; then
+		return 0
+	fi
+
+	local LATEST_TAG=
+
+	pushd ${HOME}/liferay-apps-content-targeting-ee > /dev/null
+	git fetch upstream --no-tags
+
+	if [ "7.0.x" == "${1}" ]; then
+		LATEST_TAG=$(git tag | grep '^v2\.[0-9]*\.[0-9]*$' | sed 's/^v//g' | sort -n -t '.' -k1 | tail -1)
+		LATEST_BRANCH='upstream/7.0.x/2.x'
+	elif [ "7.1.x" == "${1}" ]; then
+		LATEST_TAG=$(git tag | grep '^v3\.[0-9]*\.[0-9]*$' | sed 's/^v//g' | sort -n -t '.' -k1 | tail -1)
+		LATEST_BRANCH='upstream/develop'
+	else
+		popd > /dev/null
+		return 0
+	fi
+
+	echo -n '      {'
+	echo -n '"marketplace": "43707691",'
+	echo -n '"name": "Liferay Audience Targeting", '
+	echo -n '"version": "'${LATEST_TAG}'", '
+	echo -n '"path": "liferay/liferay-apps-content-targeting-ee", '
+	echo -n '"branch": "'${LATEST_BRANCH}'", '
+	echo -n '"releaseDate": "'$(git log -1 --pretty='%ci' v${LATEST_TAG} | awk '{ print $1 }')'", '
+	echo -n '"fixes": ['
+
+	local CHANGELOG=$(git log --pretty='%s' v${LATEST_TAG}..${LATEST_BRANCH} | grep -Eo '[A-Z]+-[0-9]+' | grep -vF 'LRDOCS' | grep -vF LRQA | grep -vF -- '-0' | sort -u)
+
+	if [ "" != "${CHANGELOG}" ]; then
+		echo -n "${CHANGELOG}" | awk '{ print "\"" $1 "\"" }' | tr '\n' ',' | sed 's/,$//g' | sed 's/,/, /g'
+	fi
+
+	echo -n ']'
+	echo '},'
+
+	popd > /dev/null
 }
 
 getfixes() {
