@@ -51,7 +51,7 @@ function generateChangelogHeaderRow() {
 
 	cell = document.createElement('th');
 	cell.classList.add('app-release-date');
-	cell.textContent = 'Release Date';
+	cell.textContent = 'Release Commit Date';
 	headerRow.appendChild(cell);
 
 	cell = document.createElement('th');
