@@ -50,8 +50,19 @@ javahome() {
 
 	# If we couldn't find one, maybe they installed it through a package manager
 
-	if [ "" == "$JAVA_HOME" ]; then
+	if [ "" == "$ALT_ID" ]; then
 		for folder in $(ls -1 ${BASE_JAVA} | grep -F java-${JAVA_VERSION}-oracle); do
+			if [ ! -f $BASE_JAVA/$folder/bin/java ]; then
+				continue
+			fi
+
+			ALT_ID=$BASE_JAVA/$folder
+			break
+		done
+	fi
+
+	if [ "" == "$ALT_ID" ]; then
+		for folder in $(ls -1 ${BASE_JAVA} | grep -F java-${JAVA_VERSION}-openjdk); do
 			if [ ! -f $BASE_JAVA/$folder/bin/java ]; then
 				continue
 			fi
