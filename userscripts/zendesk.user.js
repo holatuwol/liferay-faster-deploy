@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        6.5
+// @version        6.6
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -15,7 +15,15 @@
 
 var styleElement = document.createElement('style');
 
-styleElement.textContent = `
+if (window.location.hostname == '24475.apps.zdusercontent.com') {
+  styleElement.textContent = `
+body {
+  overflow-y: hidden;
+}
+`;
+}
+else {
+  styleElement.textContent = `
 a.downloading {
   color: #999;
 }
@@ -156,12 +164,9 @@ a.generating::after {
   margin-right: 2px;
 }
 `;
+}
 
-if (window.location.hostname == '24475.apps.zdusercontent.com') {
-}
-else {
-  document.querySelector('head').appendChild(styleElement);
-}
+document.querySelector('head').appendChild(styleElement);
 
 /**
  * Generate a Blob URL, and remember it so that we can unload it if we
@@ -1936,11 +1941,34 @@ function initJiraTicketValues(data) {
     }
   }
 
-  function focusSummary() {
-    document.querySelector('input[data-test-id=summary]').focus();
+  function setDeliveryBaseFixPack(callback) {
+    var conversations = ticket.conversations;
+    var baselines = new Set();
+
+    for (var i = 0; i < conversations.length; i++) {
+      var conversationText = conversations[i].value;
+      var baselineRegExp = /(de|dxp)-[0-9][0-9]*/gi;
+
+      var matcher = null;
+
+      while (matcher = baselineRegExp.exec(conversationText)) {
+        baselines.add(matcher[0].toUpperCase());
+      }
+    }
+
+    var versionNumber = (productVersion.indexOf('7_0') != -1) ? '7010' :
+      (productVersion.indexOf('7_1') != -1) ? '7110' :
+      (productVersion.indexOf('7_2') != -1) ? '7210' : null;
+
+    setReactInputValue('input[data-test-id=customfield_22551]', Array.from(baselines).join(' '), callback)
   }
 
-  var callOrder = [setProjectId, setSummary, setCustomerTicketCreationDate, setSupportOffice, setAffectsVersion, focusSummary];
+  function focusSummary() {
+    document.querySelector('input[data-test-id=summary]').focus();
+    document.getElementById('app').scrollIntoView();
+  }
+
+  var callOrder = [setProjectId, setSummary, setCustomerTicketCreationDate, setSupportOffice, setAffectsVersion, setDeliveryBaseFixPack, focusSummary];
   var nestedFunction = callOrder.reverse().reduce(function(accumulator, x) { return x.bind(null, accumulator); });
   nestedFunction();
 }
