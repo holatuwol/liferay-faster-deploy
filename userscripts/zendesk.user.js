@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        6.6
+// @version        6.7
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -160,6 +160,8 @@ a.generating::after {
 }
 
 .lesa-ui-subject-emojis a {
+  font-size: 1.5em;
+  font-weight: normal;
   margin-left: 2px;
   margin-right: 2px;
 }
@@ -801,6 +803,7 @@ function createAttachmentsContainer(ticketId, ticketInfo, conversation) {
  */
 
 var emojiMap = {
+  'cas_fire': '⚠️',
   'cas_hot': '⚠️',
   'cas_priority': '⚠️'
 };
@@ -1731,6 +1734,27 @@ function checkForSubtitles() {
 }
 
 /**
+ * Make tags in the sidebar clickable, so we can easily find tickets
+ * with similar tags.
+ */
+
+function checkSidebarTags() {
+  var tags = document.querySelectorAll('.zd-tag-item a');
+
+  for (var i = 0; i < tags.length; i++) {
+    var anchor = tags[i];
+
+    if (anchor.href) {
+      continue;
+    }
+
+    anchor.title = 'tags:' + anchor.textContent;
+    anchor.href = 'https://' + document.location.host + '/agent/search/1?q=' + encodeURIComponent('tags:' + anchor.textContent);
+    anchor.target = '_blank';
+  }
+}
+
+/**
  * Workaround for interacting with input fields built by react.js
  * https://github.com/facebook/react/issues/10135#issuecomment-314441175
  */
@@ -2027,4 +2051,5 @@ if (window.location.hostname == '24475.apps.zdusercontent.com') {
 else {
   setInterval(checkForConversations, 1000);
   setInterval(checkForSubtitles, 1000);
+  setInterval(checkSidebarTags, 1000);
 }
