@@ -6,9 +6,20 @@ function generateChangelog(releaseId, updates) {
 
 	var header = document.createElement('h1');
 	header.textContent = releaseId;
+	header.setAttribute('id', releaseId);
 	header.classList.add('header');
 
 	container.appendChild(header);
+
+	var toc = document.getElementById('toc');
+
+	var tocEntry = document.createElement('a');
+	tocEntry.textContent = releaseId;
+	tocEntry.setAttribute('href', '#' + releaseId);
+
+	var tocEntryItem = document.createElement('li');
+	tocEntryItem.appendChild(tocEntry);
+	toc.appendChild(tocEntryItem);
 
 	var changelog = document.createElement('table');
 	changelog.classList.add('changelog');
