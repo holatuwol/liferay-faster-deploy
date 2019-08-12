@@ -105,7 +105,7 @@ getfixes() {
 		return 0
 	fi
 
-	if [ "" != "$(git show upstream/${APPBND_BRANCH}:${APPBND_FOLDER}/app.bnd | grep -F 'Liferay-Releng-Bundle: true')" ]; then
+	if [ "" != "$(git show upstream/${APPBND_BRANCH}:${APPBND_FOLDER}/app.bnd | grep -F 'Liferay-Releng-Portal-Required: true')" ]; then
 		return 0
 	fi
 
