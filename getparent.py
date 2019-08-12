@@ -91,6 +91,8 @@ def getparent(check_tags):
 
 	# Find the closest matching tag
 
+	base_tag = None
+
 	if base_branch in dxp_branches or base_branch in de_branches:
 		base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=fix-pack-*-%s%s10*' % (base_branch[0], base_branch[2]))
 
@@ -99,6 +101,9 @@ def getparent(check_tags):
 
 	elif base_branch in ee_branches:
 		base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=fix-pack-base-6%s*' % base_branch[5])
+
+	if base_tag is None:
+		return base_branch
 
 	if base_tag.find('fix-pack-base-') == 0 or base_tag.find('fix-pack-de-') == 0 or base_tag.find('fix-pack-dxp-') == 0 or base_tag.find('-ga') > -1:
 		return base_tag
