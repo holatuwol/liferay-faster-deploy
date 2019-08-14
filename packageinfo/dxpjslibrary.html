@@ -15,6 +15,29 @@
 	#summary td {
 		white-space: nowrap;
 	}
+
+	.table.dxp .ce,
+	.table.ce .dxp {
+		display: none;
+	}
+
+	.table.ce-70 tbody tr,
+	.table.ce-71 tbody tr,
+	.table.ce-72 tbody tr,
+	.table.dxp-70 tbody tr,
+	.table.dxp-71 tbody tr,
+	.table.dxp-72 tbody tr {
+		display: none;
+	}
+
+	.table.ce-70 tbody tr.ce-70,
+	.table.ce-71 tbody tr.ce-71,
+	.table.ce-72 tbody tr.ce-72,
+	.table.dxp-70 tbody tr.dxp-70,
+	.table.dxp-71 tbody tr.dxp-71,
+	.table.dxp-72 tbody tr.dxp-72 {
+		display: table-row;
+	}
 </style>
 
 </head>
@@ -86,6 +109,30 @@
 </tr>
 </thead>
 <tbody id="summary">
+</tbody>
+</table>
+
+<h2>Complete Version History</h2>
+
+<table class="table">
+<thead>
+	<tr id="libraryNames">
+		<td>
+			<select id="versionFilter" name="versionFilter">
+				<option value="" selected>All</option>
+				<option value="ce">CE Only</option>
+				<option value="ce-70">7.0 CE Only</option>
+				<option value="ce-71">7.1 CE Only</option>
+				<option value="ce-72">7.2 CE Only</option>
+				<option value="dxp">DXP Only</option>
+				<option value="dxp-70">7.0 DXP Only</option>
+				<option value="dxp-71">7.1 DXP Only</option>
+				<option value="dxp-72">7.2 DXP Only</option>
+			</select>
+		</td>
+	</tr>
+</thead>
+<tbody id="libraryVersions">
 </tbody>
 </table>
 

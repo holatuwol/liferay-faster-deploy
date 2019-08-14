@@ -17,9 +17,20 @@ var select2 = document.getElementById('targetVersion');
 var select2Value = getParameter('targetVersion') || select1Value;
 var nameFilter = document.getElementById('nameFilter');
 nameFilter.value = getParameter('nameFilter');
+var versionFilter = document.getElementById('versionFilter');
 
 function isPermaLink(element) {
 	return element.getAttribute('data-original-title') == 'Permalink'
+};
+
+var getReleaseLink = function(schemaInfo, name) {
+	var tag = schemaInfo[name]
+
+	if (!tag) {
+		return '0.0.0';
+	}
+
+	return '<a target="_blank" href="' + schemaInfo.github + '/releases/tag/' + schemaInfo.tag.replace('${1}', tag) + '">' + tag + '</a>';
 };
 
 function checkLibraryInfo() {
@@ -114,16 +125,6 @@ function checkLibraryInfo() {
 		table.appendChild(row);
 	};
 
-	var getReleaseLink = function(schemaInfo, name) {
-		var tag = schemaInfo[name]
-
-		if (!tag) {
-			return '0.0.0';
-		}
-
-		return '<a target="_blank" href="' + schemaInfo.github + '/releases/tag/' + schemaInfo.tag.replace('${1}', tag) + '">' + tag + '</a>';
-	};
-
 	var getCompareLink = function(schemaInfo, name1, name2) {
 		var tag1 = schemaInfo[name1];
 		var tag2 = schemaInfo[name2];
@@ -158,6 +159,74 @@ function checkLibraryInfo() {
 	filteredSchemaInfoList.map(getRowData).forEach(addRow);
 };
 
+function toggleVisibleVersions() {
+	var table = versionFilter.closest('table');
+
+	var suffixes = ['', '-70', '-71', '-72'];
+
+	for (var i = 0; i < suffixes.length; i++) {
+		table.classList.remove('ce' + suffixes[i]);
+		table.classList.remove('dxp' + suffixes[i]);
+	}
+
+	var value = versionFilter.options[versionFilter.selectedIndex].value;
+
+	if (value) {
+		table.classList.add(value);
+	}
+}
+
+function updateCompleteVersionHistory(fixPackIds) {
+	var libraryNames = document.getElementById('libraryNames');
+
+	if (!libraryNames) {
+		return;
+	}
+
+	var rows = fixPackIds.map(function(x) {
+		var row = document.createElement('tr');
+		var baseVersion = x.substring(0, 2);
+
+		if (x.indexOf('10-') == 2) {
+			row.classList.add('dxp');
+			row.classList.add('dxp-' + baseVersion);
+		}
+		else {
+			row.classList.add('ce')
+			row.classList.add('ce-' + baseVersion);
+		}
+
+		var cell = document.createElement('th');
+		cell.textContent = x;
+		row.appendChild(cell);
+
+		return row;
+	})
+
+	for (var i = 0; i < schemaInfoList.length; i++) {
+		var schemaInfo = schemaInfoList[i];
+
+		var headerCell = document.createElement('th');
+		headerCell.textContent = schemaInfo.name;
+		libraryNames.appendChild(headerCell);
+
+		for (var j = 0; j < fixPackIds.length; j++) {
+			var version = fixPackIds[j];
+
+			var row = rows[j];
+			var cell = document.createElement('td');
+			cell.innerHTML = getReleaseLink(schemaInfo, version);
+			row.appendChild(cell);
+		}
+	}
+
+	var libraryVersions = document.getElementById('libraryVersions');
+
+	for (var i = 0; i < rows.length; i++) {
+		libraryVersions.appendChild(rows[i]);
+	}
+};
+
 checkLibraryInfo = _.debounce(checkLibraryInfo, 100);
 
 var request = new XMLHttpRequest();
@@ -175,6 +244,16 @@ request.onreadystatechange = function() {
 			}
 
 			var option = document.createElement('option');
+			var baseVersion = x.substring(0, 2);
+
+			if (x.indexOf('10-') == 2) {
+				option.classList.add('dxp');
+				option.classList.add('dxp-' + baseVersion);
+			}
+			else {
+				option.classList.add('ce');
+				option.classList.add('ce-' + baseVersion);
+			}
 
 			option.value = x;
 			option.innerHTML = x;
@@ -226,6 +305,11 @@ request.onreadystatechange = function() {
 		nameFilter.onpropertychange = checkLibraryInfo;
 
 		checkLibraryInfo();
+
+		if (versionFilter) {
+			updateCompleteVersionHistory(fixPackIds);
+			versionFilter.onchange = toggleVisibleVersions;
+		}
 	};
 };
 
