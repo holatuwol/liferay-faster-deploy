@@ -155,6 +155,8 @@ gw() {
 
 	# avoid using the CDN, because it's not reliable
 
+	git ls-files | grep '\.gradle$' | xargs grep -Fl cdn.lfrs.sl | xargs sed -i.bak 's@cdn.lfrs.sl/repository@repository-cdn@g'
+
 	local GRADLE_ARGS="--stacktrace --no-daemon -Drepository.url=https://repository-cdn.liferay.com/nexus/content/groups/public"
 
 	# run the gradlew binary, making sure to set GRADLE_OPTS if
