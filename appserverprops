@@ -76,6 +76,10 @@ checkliferayhome() {
 }
 
 cleanappserver() {
+	if [ ! -f $GIT_ROOT/app.server.properties ]; then
+		return 0
+	fi
+
 	local TOMCAT_VERSION=
 
 	TOMCAT_FOLDER=
@@ -85,7 +89,7 @@ cleanappserver() {
 		TOMCAT_VERSION=$(grep -F app.server.tomcat.version= $GIT_ROOT/app.server.$USER.properties | cut -d'=' -f 2)
 	fi
 
-	if [ "" == "$TOMCAT_VERSION" ] && [ -f $GIT_ROOT/app.server.properties ]; then
+	if [ "" == "$TOMCAT_VERSION" ]; then
 		TOMCAT_VERSION=$(grep -F app.server.tomcat.version= $GIT_ROOT/app.server.properties | cut -d'=' -f 2)
 	fi
 
