@@ -49,7 +49,7 @@ getcontenttargeting() {
 
 		if [ "2.1.2" == "${LATEST_TAG}" ]; then
 			LATEST_TAG=2.2.0
-			LATEST_HASH=737f4e7bf4f1b4f9a36d510e17f84800f44a36a5
+			LATEST_HASH=v2.2.0-rc2
 		fi
 	elif [ "7.1.x" == "${1}" ]; then
 		LATEST_TAG=$(git tag | grep '^v3\.[0-9]*\.[0-9]*$' | sed 's/^v//g' | sort -n -t '.' -k1 | tail -1)
