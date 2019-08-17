@@ -5,20 +5,15 @@ TIMESTAMP=$(date +%F)
 
 echo "Syncing files for ${TIMESTAMP} from ${S3_BUCKET}"
 
-aws s3 cp s3://${S3_BUCKET}/github.sql.gz /var/www/html/data/github/github-${TIMESTAMP}.sql.gz
+sync_backup() {
+	aws s3 cp s3://${S3_BUCKET}/${3}.${2}.gz /var/www/html/data/${1}/${4}-${TIMESTAMP}.${2}.gz
 
-if [[ 5 -lt $(ls -1 /var/www/html/data/github/github-* | wc -l) ]]; then
-     ls -1 /var/www/html/data/github/github-* | sort | head -n -5 | xargs rm
-fi
+	if [[ 5 -lt $(ls -1 /var/www/html/data/${1}/${4}-* | wc -l) ]]; then
+	     ls -1 /var/www/html/data/${1}/${4}-* | sort | head -n -5 | xargs rm
+	fi
+}
 
-aws s3 cp s3://${S3_BUCKET}/checkgh.tar.gz /var/www/html/data/github/github_rawdata-${TIMESTAMP}.tar.gz
-
-if [[ 5 -lt $(ls -1 /var/www/html/data/github/github_rawdata-* | wc -l) ]]; then
-     ls -1 /var/www/html/data/github/github_rawdata-* | sort | head -n -5 | xargs rm
-fi
-
-aws s3 cp s3://${S3_BUCKET}/google_analytics_zen.sql.gz /var/www/html/data/google_analytics/google_analytics_zen-${TIMESTAMP}.sql.gz
-
-if [[ 5 -lt $(ls -1 /var/www/html/data/google_analytics/google_analytics_zen-* | wc -l) ]]; then
-     ls -1 /var/www/html/data/google_analytics/google_analytics_zen-* | sort | head -n -5 | xargs rm
-fi
+sync_backup github tar checkgh github_rawdata
+sync_backup github sql github github
+sync_backup google_analytics sql google_analytics_zen google_analytics_zen
+sync_backup zendesk sql zendesk_gooddata zendesk_gooddata
