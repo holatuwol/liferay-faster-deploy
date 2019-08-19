@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Liferay Ultipro Timesheet Link
 // @namespace      holatuwol
-// @version        1.1
+// @version        1.2
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/ultipro.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/ultipro.user.js
 // @match          https://wfm-time-web2.ultipro.com/
@@ -197,7 +197,7 @@ function checkEmptyProjects() {
  * The "resolve" function is the callback, and it will be given the list of those projects.
  */
 
-async function getSelectedProjects(resolve) {
+function getSelectedProjects(resolve, waited) {
   var angular = unsafeWindow.angular;
 
   var selectedProjects = [];
@@ -220,41 +220,11 @@ async function getSelectedProjects(resolve) {
     }
   }
 
-  if (selectedProjects.length > 0) {
-    resolve(selectedProjects);
-  }
-
-  var selectedProjectsJSON = await getValue('selectedProjects', '[]');
-
-  try {
-    selectedProjects = JSON.parse(selectedProjectsJSON);
-  }
-  catch (e) {
-    console.log(selectedProjectsJSON);
-  }
-
   if (typeof cloneInto !== 'undefined') {
     selectedProjects = cloneInto(selectedProjects, unsafeWindow);
   }
 
   resolve(selectedProjects);
-}
-
-/**
- * Utility function which saves the currently selected projects, and then restarts the
- * auto-populating of drop-downs in two seconds.
- */
-
-function setSelectedProjects() {
-  getSelectedProjects(function(selectedProjects) {
-    if (selectedProjects.length == 0) {
-      return;
-    }
-
-    setValue('selectedProjects', JSON.stringify(selectedProjects));
-  });
-
-  setTimeout(checkEmptyProjects, 2000);
 }
 
 /**
@@ -267,7 +237,7 @@ function addBlurListener(inputs) {
       continue;
     }
 
-    inputs[i].onblur = checkEmptyProjects;
+    inputs[i].onblur = setTimeout.bind(null, getSelectedProjects.bind(null, doCheckEmptyProjects), 1000);
     inputs[i].addedBlur = true;
   }
 }
@@ -283,7 +253,7 @@ function addClickListener(buttons) {
       continue;
     }
 
-    buttons[i].onclick = setSelectedProjects;
+    buttons[i].onclick = checkEmptyProjects;
     buttons[i].addedClick = true;
   }
 }
@@ -434,9 +404,9 @@ if (document.location.hostname == 'nw12.ultipro.com') {
   appendQuickLinks();
 }
 else if (document.location.hostname == 'wfm-time-web2.ultipro.com') {
-//  window.onhashchange = checkEmptyProjects;
+  window.onhashchange = checkEmptyProjects;
   setTimeout(navigateToTimesheet, 2000);
-//  checkEmptyProjects();
+  checkEmptyProjects();
 }
 else if (document.location.hostname == 'wfm-toa-web2.ultipro.com') {
   window.onhashchange = fixSelectedPolicy;
