@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Liferay Ultipro Timesheet Link
 // @namespace      holatuwol
-// @version        1.0
+// @version        1.1
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/ultipro.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/ultipro.user.js
 // @match          https://wfm-time-web2.ultipro.com/
@@ -434,9 +434,9 @@ if (document.location.hostname == 'nw12.ultipro.com') {
   appendQuickLinks();
 }
 else if (document.location.hostname == 'wfm-time-web2.ultipro.com') {
-  window.onhashchange = checkEmptyProjects;
+//  window.onhashchange = checkEmptyProjects;
   setTimeout(navigateToTimesheet, 2000);
-  checkEmptyProjects();
+//  checkEmptyProjects();
 }
 else if (document.location.hostname == 'wfm-toa-web2.ultipro.com') {
   window.onhashchange = fixSelectedPolicy;
