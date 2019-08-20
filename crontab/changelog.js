@@ -84,6 +84,54 @@ function generateChangelogHeaderRow() {
 	return headerRow;
 }
 
+function isSameVersion(a, b) {
+	var partA = a.split('.').map(function(x) { return parseInt(x); });
+	var partB = b.split('.').map(function(x) { return parseInt(x); });
+
+	var maxI = Math.min(partA.length, partB.length);
+
+	for (var i = 0; i < 3; i++) {
+		if (partA[i] != partB[i]) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
+function compareVersion(a, b) {
+	var partA = a.split('.').map(function(x) { return parseInt(x); });
+	var partB = b.split('.').map(function(x) { return parseInt(x); });
+
+	var maxI = Math.min(partA.length, partB.length);
+
+	for (var i = 0; i < maxI; i++) {
+		if (partA[i] != partB[i]) {
+			return partA[i] - partB[i];
+		}
+	}
+
+	return partA.length - partB.length;
+}
+
+function getMarketplaceVersion(tag) {
+	var suffix = '';
+	var y = tag.lastIndexOf('-');
+
+	if (tag.substring(y + 1) == 'private') {
+		suffix = '.private';
+		y = tag.lastIndexOf('-', y - 1);
+	}
+
+	var x = tag.lastIndexOf('-', y - 1);
+
+	return tag.substring(x + 1, y) + suffix;
+}
+
+function compareMarketplaceVersion(a, b) {
+	return compareVersion(getMarketplaceVersion(a), getMarketplaceVersion(b));
+}
+
 function generateChangelogEntry(releaseId, update) {
 	var row = document.createElement('tr');
 
@@ -106,10 +154,12 @@ function generateChangelogEntry(releaseId, update) {
 
 	cell = document.createElement('td');
 
-	if (update.tag && (update.tag.length > 0)) {
-		var tags = update.tag.map(function(tag) {
+	if (update.currentTags && (update.currentTags.length > 0)) {
+		update.currentTags.sort(compareMarketplaceVersion);
+
+		var tags = update.currentTags.map(function(tag) {
 			return '<a href="https://github.com/liferay/liferay-portal-ee/tree/' + tag + '">' + tag + '</a>';
-		}).join(', ');
+		}).join('<br/>');
 
 		cell.innerHTML = tags;
 	}
@@ -117,7 +167,24 @@ function generateChangelogEntry(releaseId, update) {
 		cell.textContent = 'not patchable';
 	}
 	else {
-		cell.textContent = 'missing tag';
+		cell.classList.add('missing');
+
+		var pastTags = update.pastTags || [];
+
+		pastTags.sort(compareMarketplaceVersion);
+
+		if (pastTags.length > 0) {
+			var maxVersion = getMarketplaceVersion(pastTags[pastTags.length - 1]);
+			pastTags = pastTags.filter(function(x) {
+				return isSameVersion(maxVersion, getMarketplaceVersion(x));
+			});
+		}
+
+		var tags = pastTags.map(function(tag) {
+			return '<a href="https://github.com/liferay/liferay-portal-ee/tree/' + tag + '">' + tag + '</a>';
+		}).join('<br/>');
+
+		cell.innerHTML = 'missing current release tag, ' + (tags == '' ? 'no past release tags' : 'latest past release tag:' + '<br/>' + tags);
 	}
 
 	cell.classList.add('app-tag-name');

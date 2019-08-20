@@ -88,6 +88,7 @@ getfixes() {
 	local APPBND_BRANCH=
 	local MODULE_FOLDER=
 	local MODULE_BRANCH=${2}
+	local LIFERAY_VERSION_NUMBER="$(echo ${MODULE_BRANCH} | grep -o '[0-9]' | perl -ne 'chomp and print')10"
 
 	if [[ ${MODULE_BRANCH} == *-private ]] && [[ ${APPBND_FOLDER} != modules/private/apps/* ]]; then
 		APPBND_BRANCH=$(echo ${MODULE_BRANCH} | sed 's/-private$//g')
@@ -129,11 +130,21 @@ getfixes() {
 	echo -n '      {'
 	echo -n '"marketplace": "'${ID}'",'
 	echo -n '"name": "'${NAME}'", '
-	echo -n '"tag": ['
+	echo -n '"currentTags": ['
 
-	grep -F marketplace-$(basename ${MODULE_FOLDER})-${VERSION} marketplace-tags.txt | awk '{ print "\"" $1 "\"" }' | tr '\n' ',' | sed 's/,$//g'
+	grep -F "marketplace-$(basename ${MODULE_FOLDER})-${VERSION}-${LIFERAY_VERSION_NUMBER}" marketplace-tags.txt | \
+		awk '{ print "\"" $1 "\"" }' | tr '\n' ',' | sed 's/,$//g'
 
 	echo -n '], '
+
+	echo -n '"pastTags": ['
+
+	grep "marketplace-$(basename ${MODULE_FOLDER})-.*-${LIFERAY_VERSION_NUMBER}" marketplace-tags.txt | \
+		grep -vF "marketplace-$(basename ${MODULE_FOLDER})-${VERSION}-${LIFERAY_VERSION_NUMBER}" | \
+		awk '{ print "\"" $1 "\"" }' | tr '\n' ',' | sed 's/,$//g'
+
+	echo -n '], '
+
 	echo -n '"version": "'${VERSION}'", '
 	echo -n '"path": "'${MODULE_FOLDER}'", '
 

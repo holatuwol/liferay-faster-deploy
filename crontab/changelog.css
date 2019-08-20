@@ -4,7 +4,8 @@ table[data-sortable] th {
 
 th,
 td.app-release-date,
-td.app-fix-count {
+td.app-fix-count,
+td.app-tag-name a {
 	white-space: nowrap;
 }
 
