@@ -1,0 +1,86 @@
+#!/bin/bash
+
+check_rerelease() {
+  if [[ 0 -eq $(git log --pretty=oneline ${2}..HEAD -- ${1} | wc -l) ]]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+check_rerelease_candidate() {
+  local LAST_VERSION=
+  local LAST_VERSION_FILE=
+
+  if [ -f ${1}/bnd.bnd ]; then
+    LAST_VERSION_FILE=${1}/bnd.bnd
+    LAST_VERSION=$(grep -F Bundle-Version ${LAST_VERSION_FILE})
+  elif [ -f ${1}/package.json ]; then
+    LAST_VERSION_FILE=${1}/package.json
+    LAST_VERSION='"version": "'$(jq '.version' ${LAST_VERSION_FILE})'"'
+  fi
+
+  if [ "" == "${LAST_VERSION}" ]; then
+    return 0
+  fi
+
+  local LAST_COMMIT=$(git log -1 --pretty='%H' -G"${LAST_VERSION}" -- ${LAST_VERSION_FILE})
+
+  if [[ 0 -ne $(git log -1 --pretty=oneline ${LAST_COMMIT}..HEAD -- ${1} | wc -l) ]]; then
+    return 0
+  fi
+
+  for modify_path in $((
+    for path in $(test -f ${1}/bnd.bnd && grep -o '=../.*/[^\\,]*' ${1}/bnd.bnd | cut -d'=' -f 2 | sort -u); do
+      readlink -m ${1}/${path} | sed 's@'${PWD}'/@@g'
+    done
+
+    for path in $(test -f ${1}/build.gradle && grep -F sourceDirs ${1}/build.gradle | grep -o '"[^"]*"' | cut -d'"' -f 2); do
+      readlink -m ${1}/${path} | sed 's@'${PWD}'/@@g'
+    done
+
+    for path in $(test -f ${1}/build.gradle && grep -F 'from "..' ${1}/build.gradle | cut -d'"' -f 2); do
+      absolute_path=$(readlink -m ${1}/${path} | sed 's@'${PWD}'/@@g')
+
+      if [ ! -f ${absolute_path} ]; then
+        while [ ! -f ${absolute_path}/build.gradle ]; do
+          absolute_path=$(dirname ${absolute_path})
+        done
+      fi
+
+      echo ${absolute_path}
+    done
+
+    if [ -f ${1}/package.json ] && [ "" != "$(grep -F liferayTheme ${1}/package.json)" ]; then
+      git ls-files modules | grep -F frontend-theme-unstyled/bnd.bnd | xargs dirname
+      git ls-files modules | grep -F frontend-theme-styled/bnd.bnd | xargs dirname
+
+      local BASE_THEME=$(jq '.liferayTheme.baseTheme' ${1}/package.json | cut -d'"' -f 2)
+
+      if [ "unstyled" != "${BASE_THEME}" ] && [ "styled" != "${BASE_THEME}" ]; then
+        git ls-files modules | grep -F package.json | xargs grep -Fl '"distName": "'${BASE_THEME}'-theme"' | xargs dirname
+      fi
+    fi
+  ) | sort -u); do
+
+    if ! check_rerelease ${modify_path} ${LAST_COMMIT}; then
+      touch ${1}/src/.rebuild
+      git add ${1}/src/.rebuild
+      return 0
+    fi
+  done
+}
+
+for folder in $((
+  git ls-files modules | grep -F bnd.bnd | grep -vF '/src/' | grep -vF -- '-test' | xargs grep -l '=../.*/src' | xargs dirname
+  git ls-files modules | grep -F build.gradle | xargs grep -Fl mergeLang | xargs dirname
+  git ls-files modules | grep -F build.gradle | xargs grep -Fl 'from "..' | xargs dirname
+  git ls-files modules | grep -F package.json | xargs grep -Fl liferayTheme | xargs dirname
+) | sort -u); do
+
+  check_rerelease_candidate ${folder}
+done
+
+if [ "" != "$(git status -s | grep '^A ')" ]; then
+  git commit -m 'LRP-284 Forcing rebuild of unreleased updates'
+fi
