@@ -78,7 +78,7 @@ function generateChangelogHeaderRow() {
 	cell = document.createElement('th');
 	cell.classList.add('app-fixes');
 	cell.setAttribute('data-sortable', 'false');
-	cell.textContent = 'Fix IDs';
+	cell.textContent = 'Unreleased Fix IDs';
 	headerRow.appendChild(cell);
 
 	return headerRow;
