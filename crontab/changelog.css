@@ -9,6 +9,10 @@ td.app-tag-name a {
 	white-space: nowrap;
 }
 
+td.missing {
+	background-color: #fcc;
+}
+
 .app-fixes a {
 	white-space: nowrap;
 }
