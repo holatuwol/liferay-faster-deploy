@@ -139,7 +139,7 @@ getfixes() {
 
 	echo -n '"pastTags": ['
 
-	grep "marketplace-$(basename ${MODULE_FOLDER})-.*-${LIFERAY_VERSION_NUMBER}" marketplace-tags.txt | \
+	grep "marketplace-$(basename ${MODULE_FOLDER})-[0-9]*.[0-9]*.[0-9]*-${LIFERAY_VERSION_NUMBER}" marketplace-tags.txt | \
 		grep -vF "marketplace-$(basename ${MODULE_FOLDER})-${VERSION}-${LIFERAY_VERSION_NUMBER}" | \
 		awk '{ print "\"" $1 "\"" }' | tr '\n' ',' | sed 's/,$//g'
 
