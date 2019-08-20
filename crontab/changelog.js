@@ -61,6 +61,11 @@ function generateChangelogHeaderRow() {
 	headerRow.appendChild(cell);
 
 	cell = document.createElement('th');
+	cell.classList.add('app-tag-name');
+	cell.textContent = 'Patcher Tag';
+	headerRow.appendChild(cell);
+
+	cell = document.createElement('th');
 	cell.classList.add('app-release-date');
 	cell.textContent = 'Release Commit Date';
 	headerRow.appendChild(cell);
@@ -97,6 +102,25 @@ function generateChangelogEntry(releaseId, update) {
 			'liferay/liferay-portal-ee/tree/' + releaseId + '/' + update.path;
 
 	cell.innerHTML = '<a href="' + githubURL + '">' + update.path + '</a>';
+	row.appendChild(cell);
+
+	cell = document.createElement('td');
+
+	if (update.tag && (update.tag.length > 0)) {
+		var tags = update.tag.map(function(tag) {
+			return '<a href="https://github.com/liferay/liferay-portal-ee/tree/' + tag + '">' + tag + '</a>';
+		}).join(', ');
+
+		cell.innerHTML = tags;
+	}
+	else if (update.path.indexOf('liferay/') != -1) {
+		cell.textContent = 'not patchable';
+	}
+	else {
+		cell.textContent = 'missing tag';
+	}
+
+	cell.classList.add('app-tag-name');
 	row.appendChild(cell);
 
 	cell = document.createElement('td');

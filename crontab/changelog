@@ -129,6 +129,11 @@ getfixes() {
 	echo -n '      {'
 	echo -n '"marketplace": "'${ID}'",'
 	echo -n '"name": "'${NAME}'", '
+	echo -n '"tag": ['
+
+	grep -F marketplace-$(basename ${MODULE_FOLDER})-${VERSION} marketplace-tags.txt | awk '{ print "\"" $1 "\"" }' | tr '\n' ',' | sed 's/,$//g'
+
+	echo -n '], '
 	echo -n '"version": "'${VERSION}'", '
 	echo -n '"path": "'${MODULE_FOLDER}'", '
 
@@ -175,6 +180,9 @@ if [ ! -f release.properties ]; then
 fi
 
 if git fetch upstream --no-tags; then
+	git ls-remote -t git@github.com:liferay/liferay-portal-ee.git | awk '{ print $2 }' |
+		grep '^refs/tags/marketplace-.*-[0-9]*10' | cut -d'/' -f 3 > marketplace-tags.txt
+
 	echo '{'
 	echo '  "timestamp": "'$(date)'",'
 	echo '  "changelog": {'
@@ -190,4 +198,6 @@ if git fetch upstream --no-tags; then
 	echo ''
 	echo '  }'
 	echo '}'
+
+	rm -f marketplace-tags.txt
 fi
