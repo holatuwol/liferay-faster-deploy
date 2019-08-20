@@ -223,6 +223,10 @@ request.onreadystatechange = function() {
 		for (var i = 0; i < releaseIds.length; i++) {
 			generateChangelog(releaseIds[i], metadata.changelog[releaseIds[i]]);
 		}
+
+		if (document.location.hash) {
+			document.getElementById(document.location.hash.substring(1)).scrollIntoView();
+		}
 	}
 };
 
