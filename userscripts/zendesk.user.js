@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        6.9
+// @version        7.0
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -46,6 +46,7 @@ a.generating::after {
 .lesa-ui-knowledge-capture {
   display: flex;
   flex-direction: row;
+  margin-bottom: 0.5em;
 }
 
 .lesa-ui-attachment-info {
