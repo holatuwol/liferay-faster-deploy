@@ -36,6 +36,18 @@ Jack
 			${MCD_RD_CLONE_PATH}/notmine/jack $@
 	}
 
+Liferay Bisect
+==============
+
+* Wrapper: ``liferay-bisect.py``
+* Repository: `SpencerWoo/gist <https://grow.liferay.com/people/Liferay+Bisect+script>`__
+
+.. code-block:: bash
+
+	lb() {
+		${MCD_RD_CLONE_PATH}/notmine/liferay-bisect.py $@
+	}
+
 Liferay Watch
 =============
 
