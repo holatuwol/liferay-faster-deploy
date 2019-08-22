@@ -11,11 +11,14 @@ import builtins
 
 sys.path.insert(0, dirname(dirname(abspath(inspect.getfile(inspect.currentframe())))))
 import git
+import webbrowser
+import webbrowser_patch
 
 # Debug printing is enabled by default.
 quiet = False
 
 dir_path = os.getcwd()
+filename = 'bisect_log.html'
 
 def print_flush(*objects, sep='', end='\n', flush=False):
     return builtins.print(objects, sep, end, flush=True)
@@ -27,8 +30,6 @@ def print_help():
 
 # Write or Append
 def generate_html(notable_hashes, write=True):
-    filename = 'bisect_log.html'
-
     if not quiet:
         print('Updating ' + filename)
 
@@ -129,6 +130,8 @@ def main():
         bad = sys.argv[1]
         good = sys.argv[2]
         list_generate(bad, good)
+
+        webbrowser.open_new_tab('file://%s/%s' % (dir_path, filename))
 
     else:
         sys.exit('Improper argument. \'-help\' for guide.')
