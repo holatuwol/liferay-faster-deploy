@@ -39,7 +39,7 @@ Jack
 Liferay Bisect
 ==============
 
-* Wrapper: ``liferay-bisect.py``
+* Wrapper: ``lb``
 * Repository: `SpencerWoo/gist <https://grow.liferay.com/people/Liferay+Bisect+script>`__
 
 .. code-block:: bash
