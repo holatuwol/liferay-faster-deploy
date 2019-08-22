@@ -45,7 +45,7 @@ Liferay Bisect
 .. code-block:: bash
 
 	lb() {
-		${MCD_RD_CLONE_PATH}/notmine/liferay-bisect.py $@
+		python ${MCD_RD_CLONE_PATH}/notmine/liferay-bisect.py $@
 	}
 
 Liferay Watch
