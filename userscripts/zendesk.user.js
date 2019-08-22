@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        6.8
+// @version        6.9
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -836,7 +836,7 @@ function createKnowledgeCaptureContainer(ticketId, ticketInfo, conversation) {
 
   var knowledgeCaptureLabel = document.createElement('div');
   knowledgeCaptureLabel.classList.add('lesa-ui-knowledge-capture-label');
-  knowledgeCaptureLabel.innerHTML = (knowledgeCaptureList.length == 1) ? 'Fast Track Article:' : 'Fast Track Articles:';
+  knowledgeCaptureLabel.innerHTML = (knowledgeCaptureEvents.length == 1) ? 'Fast Track Article:' : 'Fast Track Articles:';
 
   knowledgeCaptureContainer.appendChild(knowledgeCaptureLabel);
   knowledgeCaptureContainer.appendChild(knowledgeCaptureList);
