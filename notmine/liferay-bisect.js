@@ -1,3 +1,7 @@
+function highlightTextField() {
+	this.setSelectionRange(0, this.value.length);
+}
+
 function getTableHeaderRow() {
 	var thead = document.createElement('thead');
 	var row = document.createElement('tr');
@@ -106,9 +110,7 @@ function generateRow(notableHash, arrayIndex) {
 	var input = document.createElement('input');
 	input.setAttribute('type', 'text');
 	input.setAttribute('value', notableHash.hash);
-	input.onclick = function() {
-		this.setSelectionRange(0, this.value.length);
-	};
+	input.onclick = highlightTextField;
 
 	cell.appendChild(input);
 	row.appendChild(cell);
@@ -160,7 +162,6 @@ function checkStatuses(checked) {
 		}
 
 		endIndex1 = parseInt(checked[i].getAttribute('data-index'));
-		console.log('updating endIndex1', endIndex1);
 	}
 
 	for (var i = 1; i <= endIndex1; i++) {
@@ -178,7 +179,6 @@ function checkStatuses(checked) {
 		}
 
 		endIndex2 = parseInt(checked[i].getAttribute('data-index'));
-		console.log('updating endIndex2', endIndex1);
 	}
 
 	for (var i = endIndex2; i < notableHashes.length - 1; i++) {
@@ -196,8 +196,6 @@ function checkStatuses(checked) {
 	if (midpoint == endIndex2) {
 		midpoint--;
 	}
-
-	console.log(endIndex1, endIndex2);
 
 	return midpoint;
 }
@@ -224,6 +222,38 @@ function updateCheckboxes() {
 		}
 	}
 
+	var badIndex, goodIndex;
+
+	if (notableHashes[0].status == 'bad') {
+		console.log('branch 1');
+		for (var i = 1; i < checked.length; i++) {
+			if (checked[i].getAttribute('data-value') == 'bad') {
+				continue;
+			}
+
+			badIndex = checked[i - 1].getAttribute('data-index');
+			goodIndex = checked[i].getAttribute('data-index');
+			break;
+		}
+	}
+	else {
+		console.log('branch 2');
+		for (var i = 1; i < checked.length; i++) {
+			if (checked[i].getAttribute('data-value') == 'good') {
+				continue;
+			}
+
+			goodIndex = checked[i - 1].getAttribute('data-index');
+			badIndex = checked[i].getAttribute('data-index');
+			break;
+		}
+	}
+
+	var badHash = notableHashes[badIndex].hash;
+	var goodHash = notableHashes[goodIndex].hash;
+
+	document.getElementById('newCommand').value = 'lb ' + badHash + ' ' + goodHash;
+
 	for (var i = 0; i < checked.length; i++) {
 		checked[i].parentNode.parentNode.classList.add('marked');
 	}
@@ -241,3 +271,16 @@ function hideUnmarked(event) {
 }
 
 document.getElementById('hideUnmarked').onchange = hideUnmarked;
+
+function hideMarked(event) {
+	if (event.target.checked) {
+		table.classList.add('hide-marked');
+	}
+	else {
+		table.classList.remove('hide-marked');
+	}
+}
+
+document.getElementById('hideMarked').onchange = hideMarked;
+
+document.getElementById('newCommand').onclick = highlightTextField;

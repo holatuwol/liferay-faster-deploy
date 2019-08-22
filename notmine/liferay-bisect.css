@@ -1,0 +1,40 @@
+tr.bad-hash {
+	background-color: #daa;
+}
+
+tr.good-hash {
+	background-color: #add;
+}
+
+tr.next-hash {
+	background-color: #dda;
+}
+
+td.commit-hash {
+	font-family: monospace;
+}
+
+#newCommand,
+td.commit-hash input {
+	background-color: transparent;
+	border: 0px;
+	font-family: monospace;
+	font-size: 1em;
+	margin: 0px;
+	padding: 0px;
+	width: 100%;
+}
+
+table.hide-unmarked tbody tr {
+	display: none;
+}
+
+table.hide-unmarked tbody tr.next-hash,
+table.hide-unmarked tbody tr.marked {
+	display: table-row;
+}
+
+table.hide-marked tbody tr.bad-hash,
+table.hide-marked tbody tr.good-hash {
+	display: none;
+}

@@ -33,7 +33,8 @@ def generate_html(notable_hashes, write=True):
     if not quiet:
         print('Updating ' + filename)
 
-    with open('%s/liferay-bisect.js' % dirname(sys.argv[0]), 'r') as js_content_file:
+    with open('%s/liferay-bisect.js' % dirname(sys.argv[0]), 'r') as js_content_file, open('%s/liferay-bisect.css' % dirname(sys.argv[0]), 'r') as css_content_file:
+        css_content = ''.join(css_content_file.readlines())
         js_content = ''.join(js_content_file.readlines())
         json_content = json.dumps(notable_hashes)
 
@@ -50,21 +51,20 @@ def generate_html(notable_hashes, write=True):
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
 
 <style>
-tr.bad-hash { background-color: #daa; }
-tr.good-hash { background-color: #add; }
-tr.next-hash { background-color: #dda; }
-td.commit-hash { font-family: monospace; }
-td.commit-hash input { background-color: transparent; border: 0px; font-family: monospace; font-size: 1em; margin: 0px; padding: 0px; width: 100%%; }
-table.hide-unmarked tbody tr { display: none; }
-table.hide-unmarked tbody tr.next-hash, table.hide-unmarked tbody tr.marked { display: table-row; }
+%s
 </style>
 </head>
 <body>
 <div class="container" role="main">
 
-<div>
+<div id="settings">
 <input type="checkbox" id="hideUnmarked" name="hideUnmarked">
 <label for="hideUnmarked">Hide Unmarked</label>
+
+<input type="checkbox" id="hideMarked" name="hideMarked">
+<label for="hideMarked">Hide Marked</label>
+
+<input type="text" id="newCommand" name="newCommand">
 </div>
 
 </div>
@@ -73,7 +73,7 @@ var notableHashes = %s;
 %s
 </script>
 </body></html>
-        ''' % (json_content, js_content)
+        ''' % (css_content, json_content, js_content)
 
     with open(os.path.join(dir_path, filename),'w' if write else 'a', encoding='UTF-8') as file:
         file.write(html_content)
