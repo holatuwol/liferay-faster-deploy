@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        6.7
+// @version        6.8
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -42,7 +42,8 @@ a.generating::after {
   color: #999;
 }
 
-.lesa-ui-attachments {
+.lesa-ui-attachments,
+.lesa-ui-knowledge-capture {
   display: flex;
   flex-direction: row;
 }
@@ -69,7 +70,8 @@ a.generating::after {
   text-decoration: underline;
 }
 
-.lesa-ui-attachments-label {
+.lesa-ui-attachments-label,
+.lesa-ui-knowledge-capture-label {
   font-weight: 600;
   margin-right: 1em;
 }
@@ -90,6 +92,7 @@ a.generating::after {
 .lesa-ui-form-field {
   display: flex;
   flex-direction: column;
+  margin-bottom: 0.5em;
 }
 
 .lesa-ui-permalink {
@@ -725,6 +728,11 @@ function updateSidebarBoxContainer(ticketId, ticketInfo) {
   }
 }
 
+/**
+ * Function to check if this is a large attachment, since those cannot be automatically
+ * included in attachment .zip files due to CORS policies.
+ */
+
 function isLiferayLargeAttachment(anchor) {
   return anchor.href.indexOf('ticketAttachmentId') != -1;
 }
@@ -797,6 +805,45 @@ function createAttachmentsContainer(ticketId, ticketInfo, conversation) {
 
   return attachmentsContainer;
 }
+
+
+/**
+ * Generate a knowledge capture container.
+ */
+
+function createKnowledgeCaptureContainer(ticketId, ticketInfo, conversation) {
+  if (!ticketInfo.audit || !ticketInfo.audit.events) {
+    return null;
+  }
+
+  var knowledgeCaptureEvents = ticketInfo.audit.events.filter(function(x) {
+    return x.type == 'KnowledgeCaptured';
+  });
+
+  if (knowledgeCaptureEvents.length == 0) {
+    return null;
+  }
+
+  var knowledgeCaptureList = knowledgeCaptureEvents.reduce(function(list, x) {
+    var item = document.createElement('li');
+    item.appendChild(createAnchorTag(x.body.article.title, x.body.article.html_url));
+    list.appendChild(item);
+    return list;
+  }, document.createElement('ul'));
+
+  var knowledgeCaptureContainer = document.createElement('div');
+  knowledgeCaptureContainer.classList.add('lesa-ui-knowledge-capture');
+
+  var knowledgeCaptureLabel = document.createElement('div');
+  knowledgeCaptureLabel.classList.add('lesa-ui-knowledge-capture-label');
+  knowledgeCaptureLabel.innerHTML = (knowledgeCaptureList.length == 1) ? 'Fast Track Article:' : 'Fast Track Articles:';
+
+  knowledgeCaptureContainer.appendChild(knowledgeCaptureLabel);
+  knowledgeCaptureContainer.appendChild(knowledgeCaptureList);
+
+  return knowledgeCaptureContainer;
+}
+
 
 /**
  * Generates a text string representing the emojis corresponding to the provided list of tags.
@@ -1014,6 +1061,12 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
   descriptionAncestor1.appendChild(descriptionAncestor0);
 
   // Generate something to hold all of our attachments.
+
+  var knowledgeCaptureContainer = createKnowledgeCaptureContainer(ticketId, ticketInfo, conversation);
+
+  if (knowledgeCaptureContainer) {
+    descriptionAncestor1.appendChild(knowledgeCaptureContainer);
+  }
 
   var attachmentsContainer = createAttachmentsContainer(ticketId, ticketInfo, conversation);
 
@@ -1443,7 +1496,7 @@ function checkTicket(ticketId, callback) {
 
       cacheOrganizations(ticketInfo.organizations);
 
-      callback(ticketId, ticketInfo)
+      callback(ticketId, ticketInfo);
     }
   };
 
@@ -1459,7 +1512,7 @@ function checkTicket(ticketId, callback) {
     document.location.host,
     '/api/v2/tickets/',
     ticketId,
-    '?include=organizations'
+    '?include=organizations,audit'
   ].join('');
 
   xhr.open('GET', ticketDetailsURL);
