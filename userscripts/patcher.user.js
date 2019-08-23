@@ -1,11 +1,12 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        2.1
+// @version        2.3
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/*
 // @match          https://patcher.liferay.com/group/guest/patching/-/osb_patcher/fixes/*
+// @match          https://patcher.liferay.com/group/guest/patching/-/osb_patcher/accounts/*
 // @grant          none
 // ==/UserScript==
 
@@ -112,7 +113,7 @@ function replacePopupWindowLinks() {
 function getSelectedValue(target) {
   var select = querySelector(target);
 
-  if (select.selectedIndex == -1) {
+  if (!select || select.selectedIndex == -1) {
     return '';
   }
 
@@ -463,8 +464,11 @@ function updateFromQueryString() {
       var liferayVersion = option.getAttribute('data-liferay-version');
 
       option = liferayVersionSelect.querySelector('option[value="' + liferayVersion + '"]');
-      option.selected = true;
-      updateProductVersionSelect();
+
+      if (option) {
+        option.selected = true;
+        updateProductVersionSelect();
+      }
     }
   }
 
