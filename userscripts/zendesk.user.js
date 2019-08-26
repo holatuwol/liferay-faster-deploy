@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        7.4
+// @version        7.5
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -1477,7 +1477,7 @@ function checkTicket(ticketId, callback) {
 
   var ticketInfo = {};
 
-  var forkFunctions = [checkTicket, checkEvents];
+  var forkFunctions = [checkTicketMetadata, checkEvents];
   var returnedFunctions = 0;
 
   var joinCallback = function(ticketId, newTicketInfo) {
