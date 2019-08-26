@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        7.2
+// @version        7.3
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -1569,7 +1569,9 @@ function checkUser(ticketId, ticketInfo, callback) {
  * request it, so do that here.
  */
 
-function checkEvents(ticketId, ticketInfo, callback) {
+function checkEvents(ticketId, ticketInfo, callback, pageId) {
+  pageId = pageId || 1;
+
   var xhr = new XMLHttpRequest();
 
   xhr.onload = function() {
@@ -1581,11 +1583,20 @@ function checkEvents(ticketId, ticketInfo, callback) {
     catch (e) {
     }
 
-    ticketInfo.audits = auditInfo.audits;
+    if (!ticketInfo.audits) {
+      ticketInfo.audits = [];
+    }
 
-    ticketInfoCache[ticketId] = ticketInfo;
+    Array.prototype.push.apply(ticketInfo.audits, auditInfo.audits);
 
-    callback(ticketId, ticketInfo);
+    if (auditInfo.next_page) {
+      checkEvents(ticketId, ticketInfo, callback, pageId + 1);
+    }
+    else {
+      ticketInfoCache[ticketId] = ticketInfo;
+
+      callback(ticketId, ticketInfo);
+    }
   };
 
   var auditEventsURL = [
@@ -1594,7 +1605,8 @@ function checkEvents(ticketId, ticketInfo, callback) {
     document.location.host,
     '/api/v2/tickets/',
     ticketId,
-    '/audits.json'
+    '/audits.json?page=',
+    pageId
   ].join('');
 
   xhr.open('GET', auditEventsURL);
