@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        7.0
+// @version        7.1
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -813,13 +813,17 @@ function createAttachmentsContainer(ticketId, ticketInfo, conversation) {
  */
 
 function createKnowledgeCaptureContainer(ticketId, ticketInfo, conversation) {
-  if (!ticketInfo.audit || !ticketInfo.audit.events) {
+  if (!ticketInfo.audits) {
     return null;
   }
 
-  var knowledgeCaptureEvents = ticketInfo.audit.events.filter(function(x) {
-    return x.type == 'KnowledgeCaptured';
-  });
+  var knowledgeCaptureEvents = ticketInfo.audits.map(function(x) {
+    return x.events.filter(function(x) {
+      return x.type == 'KnowledgeCaptured';
+    });
+  }).reduce(function(array, x) {
+    return array.concat(x);
+  }, []);
 
   if (knowledgeCaptureEvents.length == 0) {
     return null;
@@ -844,7 +848,6 @@ function createKnowledgeCaptureContainer(ticketId, ticketInfo, conversation) {
 
   return knowledgeCaptureContainer;
 }
-
 
 /**
  * Generates a text string representing the emojis corresponding to the provided list of tags.
@@ -1489,16 +1492,7 @@ function checkTicket(ticketId, callback) {
     catch (e) {
     }
 
-    if (ticketInfo.organizations.length == 0) {
-      checkUser(ticketId, ticketInfo, callback);
-    }
-    else {
-      ticketInfoCache[ticketId] = ticketInfo;
-
-      cacheOrganizations(ticketInfo.organizations);
-
-      callback(ticketId, ticketInfo);
-    }
+    checkUser(ticketId, ticketInfo, callback);
   };
 
   xhr.onerror = function() {
@@ -1513,7 +1507,7 @@ function checkTicket(ticketId, callback) {
     document.location.host,
     '/api/v2/tickets/',
     ticketId,
-    '?include=organizations,audit'
+    '?include=organizations'
   ].join('');
 
   xhr.open('GET', ticketDetailsURL);
@@ -1526,6 +1520,14 @@ function checkTicket(ticketId, callback) {
  */
 
 function checkUser(ticketId, ticketInfo, callback) {
+  if (ticketInfo.organizations.length != 0) {
+    cacheOrganizations(ticketInfo.organizations);
+
+    checkEvents(ticketId, ticketInfo, callback);
+
+    return;
+  }
+
   var userId = ticketInfo.ticket.requester_id;
 
   var xhr = new XMLHttpRequest();
@@ -1541,9 +1543,7 @@ function checkUser(ticketId, ticketInfo, callback) {
 
     cacheOrganizations(userInfo.organizations);
 
-    ticketInfoCache[ticketId] = ticketInfo;
-
-    callback(ticketId, ticketInfo);
+    checkEvents(ticketId, ticketInfo, callback);
   };
 
   var userDetailsURL = [
@@ -1557,6 +1557,44 @@ function checkUser(ticketId, ticketInfo, callback) {
 
   xhr.open('GET', userDetailsURL);
   xhr.send();
+}
+
+/**
+ * Audit event information is incomplete unless we specifically
+ * request it, so do that here.
+ */
+
+function checkEvents(ticketId, ticketInfo, callback) {
+  var xhr = new XMLHttpRequest();
+
+  xhr.onload = function() {
+    var auditInfo = null;
+
+    try {
+      auditInfo = JSON.parse(xhr.responseText);
+    }
+    catch (e) {
+    }
+
+    ticketInfo.audits = auditInfo.audits;
+
+    ticketInfoCache[ticketId] = ticketInfo;
+
+    callback(ticketId, ticketInfo);
+  };
+
+  var auditEventsURL = [
+    document.location.protocol,
+    '//',
+    document.location.host,
+    '/api/v2/tickets/',
+    ticketId,
+    '/audits.json'
+  ].join('');
+
+  xhr.open('GET', auditEventsURL);
+  xhr.send();
+
 }
 
 /**
