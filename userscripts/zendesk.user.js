@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        7.3
+// @version        7.4
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -1459,8 +1459,7 @@ function cacheOrganizations(organizations) {
 var ticketInfoCache = {};
 
 /**
- * Retrieve information about a ticket, and then call a function
- * once that information is retrieved.
+ * Check ticket information.
  */
 
 function checkTicket(ticketId, callback) {
@@ -1476,13 +1475,45 @@ function checkTicket(ticketId, callback) {
 
   ticketInfoCache[ticketId] = 'PENDING';
 
+  var ticketInfo = {};
+
+  var forkFunctions = [checkTicket, checkEvents];
+  var returnedFunctions = 0;
+
+  var joinCallback = function(ticketId, newTicketInfo) {
+    if (ticketInfo != null) {
+      Object.assign(ticketInfo, newTicketInfo);
+    }
+
+    if (++returnedFunctions != forkFunctions.length) {
+      return;
+    }
+
+    if (Object.keys(ticketInfo).length == 0) {
+      ticketInfoCache[ticketId] = null;
+    }
+    else {
+      ticketInfoCache[ticketId] = ticketInfo;
+    }
+  }
+
+  for (var i = 0; i < forkFunctions.length; i++) {
+    forkFunctions[i](ticketId, joinCallback);
+  }
+}
+
+/**
+ * Retrieve information about a ticket, and then call a function
+ * once that information is retrieved.
+ */
+
+function checkTicketMetadata(ticketId, callback) {
   var xhr = new XMLHttpRequest();
 
   xhr.onload = function() {
     if (xhr.status != 200) {
       console.error("URL: " + xhr.responseURL);
       console.error("Error: " + xhr.status + " - " + xhr.statusText);
-      ticketInfoCache[ticketId] = null;
 
       callback(ticketId, null);
 
@@ -1501,10 +1532,8 @@ function checkTicket(ticketId, callback) {
   };
 
   xhr.onerror = function() {
-    ticketInfoCache[ticketId] = null;
-
     callback(ticketId, null);
-  }
+  };
 
   var ticketDetailsURL = [
     document.location.protocol,
@@ -1528,7 +1557,7 @@ function checkUser(ticketId, ticketInfo, callback) {
   if (ticketInfo.organizations.length != 0) {
     cacheOrganizations(ticketInfo.organizations);
 
-    checkEvents(ticketId, ticketInfo, callback);
+    callback(ticketId, ticketInfo);
 
     return;
   }
@@ -1548,7 +1577,13 @@ function checkUser(ticketId, ticketInfo, callback) {
 
     cacheOrganizations(userInfo.organizations);
 
-    checkEvents(ticketId, ticketInfo, callback);
+    ticketInfo.organizations = userInfo.organizations;
+
+    callback(ticketId, ticketInfo);
+  };
+
+  xhr.onerror = function() {
+    callback(ticketId, null);
   };
 
   var userDetailsURL = [
@@ -1569,7 +1604,8 @@ function checkUser(ticketId, ticketInfo, callback) {
  * request it, so do that here.
  */
 
-function checkEvents(ticketId, ticketInfo, callback, pageId) {
+function checkEvents(ticketId, callback, ticketInfo, pageId) {
+  ticketInfo = ticketInfo || { audits: [] };
   pageId = pageId || 1;
 
   var xhr = new XMLHttpRequest();
@@ -1583,20 +1619,18 @@ function checkEvents(ticketId, ticketInfo, callback, pageId) {
     catch (e) {
     }
 
-    if (!ticketInfo.audits) {
-      ticketInfo.audits = [];
-    }
-
     Array.prototype.push.apply(ticketInfo.audits, auditInfo.audits);
 
     if (auditInfo.next_page) {
-      checkEvents(ticketId, ticketInfo, callback, pageId + 1);
+      checkEvents(ticketId, callback, ticketInfo, pageId + 1);
     }
     else {
-      ticketInfoCache[ticketId] = ticketInfo;
-
       callback(ticketId, ticketInfo);
     }
+  };
+
+  xhr.onerror = function() {
+    callback(ticketId, null);
   };
 
   var auditEventsURL = [
@@ -1611,7 +1645,6 @@ function checkEvents(ticketId, ticketInfo, callback, pageId) {
 
   xhr.open('GET', auditEventsURL);
   xhr.send();
-
 }
 
 /**
