@@ -21,7 +21,7 @@ import webbrowser_patch
 
 service_packs = {
 	'7.0': [0, 7, 12, 14, 22, 30, 32, 40, 50, 60, 70, 80],
-	'7.1': [5, 10]
+	'7.1': [0, 5, 10]
 };
 
 master_version = '7.2'
@@ -525,11 +525,12 @@ def open_testray(urls):
 		previous_build_id = None
 		previous_patcher_build = get_previous_patcher_build(patcher_build)
 
-		if patcher_build is not None:
+		if previous_patcher_build is not None:
 			previous_build_id = get_hotfix_build_id(previous_patcher_build['downloadURL'])
 
-			if previous_patcher_build is None:
-				previous_build_id = get_fixpack_build_id(patcher_build['patcherProjectVersionName'])
+		if previous_build_id is None:
+			print('First build for customer, comparing against fix pack tests')
+			previous_build_id = get_fixpack_build_id(patcher_build['patcherProjectVersionName'])
 
 		testray_url = get_testray_url(build_id, previous_build_id)
 
