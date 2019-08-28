@@ -16,7 +16,7 @@ print_version_shrinkwrap() {
 }
 
 print_version_yarnlock() {
-	local VERSION=$(git show ${1}:modules/yarn.lock | grep -o '^'${3}'@[^ :,]*' | cut -d'@' -f 2)
+	local VERSION=$(git show ${1}:modules/yarn.lock | grep -F '/'${3}'/' | grep resolved | grep -o '/'${3}'-[0-9]*\.[0-9]*\.[^\.]*\.tgz' | grep -o '[0-9]*\.[0-9]*\.[^\.]*')
 	echo '    "'${2}'": "'${VERSION}'",'
 }
 
@@ -126,8 +126,12 @@ echo '  },'
 
 	print_version_packagelock fix-pack-base-7110 7110-base modules/apps/frontend-editor/frontend-editor-alloyeditor-web alloyeditor
 
-	for i in $(seq 1 ${MAX_71_EE}); do
+	for i in $(seq 1 12); do
 		print_version_packagelock fix-pack-dxp-${i}-7110 7110-dxp-$(printf "%02d\n" ${i}) modules/apps/frontend-editor/frontend-editor-alloyeditor-web alloyeditor
+	done
+
+	for i in $(seq 13 ${MAX_71_EE}); do
+		print_version_yarnlock fix-pack-dxp-${i}-7110 7110-dxp-$(printf "%02d\n" ${i}) alloyeditor
 	done
 
 	# Liferay 7.2
@@ -180,8 +184,12 @@ echo '  },'
 
 	print_version_packagelock fix-pack-base-7110 7110-base modules/apps/frontend-taglib/frontend-taglib-clay clay-component
 
-	for i in $(seq 1 ${MAX_71_EE}); do
+	for i in $(seq 1 12); do
 		print_version_packagelock fix-pack-dxp-${i}-7110 7110-dxp-$(printf "%02d\n" ${i}) modules/apps/frontend-taglib/frontend-taglib-clay clay-component
+	done
+
+	for i in $(seq 13 ${MAX_71_EE}); do
+		print_version_yarnlock fix-pack-dxp-${i}-7110 7110-dxp-$(printf "%02d\n" ${i}) clay-css
 	done
 
 	# Liferay 7.2
