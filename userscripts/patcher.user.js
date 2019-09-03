@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        2.3
+// @version        2.4
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/*
@@ -33,6 +33,12 @@ a.included-in-baseline:hover {
 #_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version="7.1"] option[data-liferay-version="7.1"],
 #_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version="7.2"] option[data-liferay-version="7.2"] {
   display: block;
+}
+
+th.branch-type,
+th.branch-type a {
+  font-weight: bold;
+  width: 8em;
 }
 `;
 
@@ -189,6 +195,127 @@ function replaceDate(target) {
 }
 
 /**
+ * Processes a single child build and generates the HTML for its git hash compare link.
+ */
+
+function getChildBuildHash(mergeCompareLink, build) {
+  var compareLink = 'https://github.com/liferay/liferay-portal-ee/compare/' + build.branchName + '...fix-pack-fix-' + build.patcherFixId;
+
+  var mergeTag = '<a href="' + compareLink + '">' + build.branchType + '</a>';
+
+  if (mergeCompareLink == compareLink) {
+    mergeTag += ' (build)';
+  }
+
+  return '<tr><th class="branch-type">' + mergeTag + '</th><td><a href="' + compareLink + '" target="_blank">fix-pack-fix-' + build.patcherFixId + '</a></td></tr>';
+}
+
+/**
+ * Processes a single child build and generates the HTML for its fixes.
+ */
+
+function replaceGitHashes(childBuildsMetadata) {
+  var oldNode = document.querySelector('label[for="' + ns + 'git-hash"]').parentNode.querySelector('a');
+  var mergeCompareLink = oldNode.href;
+
+  var patcherFixIds = {};
+  var patcherFixIdCount = 0;
+
+  var joinFunction = function(build, obj) {
+    build.patcherFixId = obj.data.patcherFixId;
+
+    if (++patcherFixIdCount != childBuildsMetadata.length) {
+      return;
+    }
+
+    var tableRows = childBuildsMetadata.map(getChildBuildHash.bind(null, mergeCompareLink));
+
+    replaceNode(oldNode, '<table class="table table-bordered table-hover"><tbody class="table-data">' + tableRows.join('') + '</tbody></table>');
+  }
+
+  for (var i = 0; i < childBuildsMetadata.length; i++) {
+    Liferay.Service(
+      '/osb-patcher-portlet.builds/view',
+      { id: childBuildsMetadata[i].buildId },
+      joinFunction.bind(null, childBuildsMetadata[i])
+    );
+  }
+}
+
+/**
+ * Parses the row for any build metadata
+ */
+
+function getBuildMetadata(row) {
+  var buildId = row.cells[0].textContent.trim();
+  var buildLink = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/' + buildId;
+  var branchName = row.cells[3].textContent.trim();
+  var branchType = branchName.indexOf('-private') != -1 ? 'private' : 'public';
+
+  return {
+    buildId: buildId,
+    buildLink: buildLink,
+    branchName: branchName,
+    branchType: branchType,
+    fixes: row.cells[2].innerHTML
+  }
+}
+
+/**
+ * Processes the child build text.
+ */
+
+function processChildBuilds(xhr, oldFixesNode) {
+  // https://stackoverflow.com/questions/20583396/queryselectorall-to-html-from-another-page
+  var container = document.implementation.createHTMLDocument().documentElement;
+  container.innerHTML = xhr.responseText;
+
+  var rows = Array.from(container.querySelectorAll('table tbody tr')).filter(row => !row.classList.contains('lfr-template'));
+
+  var childBuildsMetadata = rows.map(getBuildMetadata);
+  var childBuildFixesHTML = childBuildsMetadata.map(build => '<tr><th class="branch-type"><a href="' + build.buildLink + '" target="_blank">' + build.branchType + '</a></th><td>' + build.fixes + '</td></tr>');
+
+  replaceNode(oldFixesNode, '<table class="table table-bordered table-hover"><tbody class="table-data">' + childBuildFixesHTML.join('') + '</tbody></table>');
+  replaceGitHashes(childBuildsMetadata);
+}
+
+/**
+ * Returns a link to the ticket.
+ */
+
+function getTicketLink(target, isConflict, ticket) {
+  if (ticket.toUpperCase() != ticket) {
+    return ticket;
+  }
+
+  var ticketURL = 'https://issues.liferay.com/browse/' + ticket;
+
+  if (isConflict) {
+    var productVersionId = querySelector('patcherProductVersionId').value;
+    var projectVersionId = querySelector('patcherProjectVersionId').value;
+
+    var params = {
+      advancedSearch: true,
+      andOperator: true,
+      hideOldFixVersions: true,
+      patcherFixName: ticket,
+      patcherProductVersionId: productVersionId,
+      patcherProjectVersionIdFilter: projectVersionId
+    };
+
+    ticketURL = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher?' + getQueryString(params);
+  }
+
+  var className = '';
+
+  if (target == 'patcherBuildOriginalName' && !document.querySelector('a[href="' + ticketURL + '"]')) {
+    className = 'included-in-baseline'
+  }
+
+  return '<a class="' + className + '" href="' + ticketURL + '" target="_blank">' + ticket + '</a>';
+}
+
+/**
  * Replaces the list of fixes with a list of JIRA links.
  */
 
@@ -203,40 +330,21 @@ function replaceFixes(target) {
     isConflict = statusNode.parentNode.textContent.indexOf('Conflict') != -1;
   }
 
-  if (oldNode && oldNode.readOnly) {
-    replaceNode(oldNode, oldNode.innerHTML.split(',').map(
-      ticket => {
-        if (ticket.toUpperCase() != ticket) {
-          return ticket;
-        }
+  if (!oldNode || !oldNode.readOnly) {
+    return;
+  }
 
-        var ticketURL = 'https://issues.liferay.com/browse/' + ticket;
+  var childBuildsButton = Array.from(document.querySelectorAll('button')).filter(x => x.textContent.trim() == 'View Child Builds');
 
-        if (isConflict) {
-          var productVersionId = querySelector('patcherProductVersionId').value;
-          var projectVersionId = querySelector('patcherProjectVersionId').value;
+  if (childBuildsButton.length == 0) {
+    replaceNode(oldNode, oldNode.innerHTML.split(',').map(getTicketLink.bind(null, target, isConflict)).join(', '));
+  }
+  else {
+    var xhr = new XMLHttpRequest();
 
-          var params = {
-            advancedSearch: true,
-            andOperator: true,
-            hideOldFixVersions: true,
-            patcherFixName: ticket,
-            patcherProductVersionId: productVersionId,
-            patcherProjectVersionIdFilter: projectVersionId
-          };
-
-          ticketURL = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher?' + getQueryString(params);
-        }
-
-        var className = '';
-
-        if (target == 'patcherBuildOriginalName' && !document.querySelector('a[href="' + ticketURL + '"]')) {
-          className = 'included-in-baseline'
-        }
-
-        return '<a class="' + className + '" href="' + ticketURL + '" target="_blank">' + ticket + '</a>';
-      }
-    ).join(', '));
+    xhr.open('GET', document.location.pathname + '/childBuilds');
+    xhr.onload = processChildBuilds.bind(null, xhr, oldNode);
+    xhr.send(null);
   }
 }
 
