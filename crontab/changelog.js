@@ -164,7 +164,13 @@ function generateChangelogEntry(releaseId, update) {
 		cell.innerHTML = tags;
 	}
 	else if (update.path.indexOf('liferay/') != -1) {
-		cell.textContent = 'not patchable';
+		cell.textContent = 'not patchable (subrepository)';
+	}
+	else if (update.category && (update.category == 'Themes')) {
+		cell.textContent = 'not patchable (theme)';
+	}
+	else if (update.labs) {
+		cell.textContent = 'not patchable (labs)';
 	}
 	else {
 		cell.classList.add('missing');

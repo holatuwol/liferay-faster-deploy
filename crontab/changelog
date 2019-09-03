@@ -106,11 +106,15 @@ getfixes() {
 		return 0
 	fi
 
-	if [ "" != "$(git show upstream/${APPBND_BRANCH}:${APPBND_FOLDER}/app.bnd | grep -F 'Liferay-Releng-Portal-Required: true')" ]; then
+	if [ "" != "$(git show upstream/${APPBND_BRANCH}:${APPBND_FOLDER}/app.bnd | grep -F 'Liferay-Releng-Deprecated: true')" ]; then
 		return 0
 	fi
 
-	if [ "" != "$(git show upstream/${APPBND_BRANCH}:${APPBND_FOLDER}/app.bnd | grep -F 'Liferay-Releng-Deprecated: true')" ]; then
+	if [ "" != "$(git show upstream/${APPBND_BRANCH}:${APPBND_FOLDER}/app.bnd | grep -F 'Liferay-Releng-Marketplace: false')" ]; then
+		return 0
+	fi
+
+	if [ "" != "$(git show upstream/${APPBND_BRANCH}:${APPBND_FOLDER}/app.bnd | grep -F 'Liferay-Releng-Portal-Required: true')" ]; then
 		return 0
 	fi
 
@@ -130,6 +134,21 @@ getfixes() {
 	echo -n '      {'
 	echo -n '"marketplace": "'${ID}'",'
 	echo -n '"name": "'${NAME}'", '
+
+	echo -n '"category": "'
+	git show upstream/${APPBND_BRANCH}:${APPBND_FOLDER}/app.bnd | grep -F Liferay-Releng-Category | cut -d' ' -f 2- | tr -d '\n'
+	echo -n '", '
+
+	echo -n '"labs": '
+
+	if [ "" == "$()" ]; then
+		echo -n false
+	else
+		git show upstream/${APPBND_BRANCH}:${APPBND_FOLDER}/app.bnd | grep -F Liferay-Releng-Labs | cut -d' ' -f 2-
+	fi
+
+	echo -n ', '
+
 	echo -n '"currentTags": ['
 
 	grep -F "marketplace-$(basename ${MODULE_FOLDER})-${VERSION}-${LIFERAY_VERSION_NUMBER}" marketplace-tags.txt | \
