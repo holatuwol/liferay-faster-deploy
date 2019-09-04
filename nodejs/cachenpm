@@ -5,6 +5,10 @@ appserverprops() {
 }
 
 cachenpm() {
+	if [ -f ${GIT_ROOT}/modules/yarn.lock ]; then
+		return 0
+	fi
+
 	echo "node $(node --version 2> /dev/null), npm $(npm -version 2> /dev/null), yarn $(yarn --version 2> /dev/null)"
 
 	cache_home="$HOME/.liferay/node/cache"
