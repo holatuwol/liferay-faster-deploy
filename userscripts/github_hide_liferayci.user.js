@@ -1,21 +1,12 @@
 // ==UserScript==
 // @name           Hide Older Liferay Continuous Integration Test Results
 // @namespace      holatuwol
-// @version        0.1
+// @version        0.2
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/github_hide_liferayci.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/github_hide_liferayci.user.js
-// @include        /https:\/\/github.com\/[^\/]*/liferay-portal(-ee)?\/.*$/
+// @match          https://github.com/*
 // @grant          none
 // ==/UserScript==
-
-var styleElement = document.createElement('style');
-styleElement.textContent = `
-.hidden {
-  display: none;
-}
-`;
-
-document.querySelector('head').appendChild(styleElement);
 
 /**
  * Checks if the author of the specified item is the
@@ -60,12 +51,10 @@ function hideAuthorLiferayContinuousIntegration() {
   var keys = Object.keys(commandItems);
 
   for (var i = 0; i < keys.length; i++) {
-    console.log(keys[i]);
-
     var values = commandItems[keys[i]];
 
     for (var j = 0; j < values.length - 1; j++) {
-      values[j].classList.add('hidden');
+      values[j].style.display = 'none';
     }
   }
 }
@@ -74,7 +63,7 @@ function hideLabelLiferayContinuousIntegration() {
   var items = Array.from(document.querySelectorAll('.discussion-item')).filter(isAuthorLiferayContinuousIntegration);
 
   for (var i = 0; i < items.length; i++) {
-    items[i].classList.add('hidden');
+    items[i].style.display = 'none';
   }
 }
 
@@ -100,10 +89,53 @@ function hideCommentLiferayContinuousIntegrationCommand() {
   var items = Array.from(document.querySelectorAll('.js-timeline-item')).filter(isCommentLiferayContinuousIntegrationCommand);
 
   for (var i = 0; i < items.length; i++) {
-    items[i].classList.add('hidden');
+    items[i].style.display = 'none';
   }
 }
 
-hideAuthorLiferayContinuousIntegration();
-hideLabelLiferayContinuousIntegration();
-hideCommentLiferayContinuousIntegrationCommand();
+/**
+ * Since GitHub uses an SPA framework, we have to poll
+ * for updates, and the current URL will be set even if
+ * the page has not yet loaded.
+ */
+
+function checkCurrentURL() {
+  var lastPath = document.body.getAttribute('data-lastpath');
+
+  if (lastPath == document.location.pathname) {
+    return;
+  }
+
+  lastPath = document.location.pathname;
+
+  if (lastPath.indexOf('/pull/') == -1) {
+    document.body.setAttribute('data-lastpath', lastPath);
+    return;
+  }
+
+  if ((lastPath.indexOf('/com-liferay-') == -1) && (lastPath.indexOf('/liferay-portal') == -1)) {
+    document.body.setAttribute('data-lastpath', lastPath);
+    return;
+  }
+
+  var pullNumberElement = document.querySelector('.gh-header-title .gh-header-number');
+
+  if (!pullNumberElement) {
+    return;
+  }
+
+  var pagePullNumber = pullNumberElement.textContent.trim().substring(1);
+  var urlPullNumber = lastPath.substring(lastPath.lastIndexOf('/') + 1);
+
+  if (pagePullNumber != urlPullNumber) {
+    return;
+  }
+
+  document.body.setAttribute('data-lastpath', lastPath);
+
+  hideAuthorLiferayContinuousIntegration();
+  hideLabelLiferayContinuousIntegration();
+  hideCommentLiferayContinuousIntegrationCommand();
+}
+
+setInterval(checkCurrentURL, 1000);
