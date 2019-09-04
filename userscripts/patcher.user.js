@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        2.4
+// @version        2.5
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/*
@@ -38,7 +38,7 @@ a.included-in-baseline:hover {
 th.branch-type,
 th.branch-type a {
   font-weight: bold;
-  width: 8em;
+  width: 5em;
 }
 `;
 
@@ -61,7 +61,7 @@ function getQueryString(params) {
  */
 
 function querySelector(target) {
-  return document.querySelector('#' + ns + target);
+  return document.getElementById(ns + target);
 }
 
 /**
@@ -195,19 +195,26 @@ function replaceDate(target) {
 }
 
 /**
+ * Returns the HTML for a build link. If it links to the current page, then just return
+ * regular text.
+ */
+
+function getBuildLinkHTML(build) {
+  var currentURL = document.location.protocol + '//' + document.location.host + document.location.pathname;
+
+  return (currentURL == build.buildLink) ? build.branchType : '<a href="' + build.buildLink + '">' + build.branchType + '</a>';
+}
+
+/**
  * Processes a single child build and generates the HTML for its git hash compare link.
  */
 
 function getChildBuildHash(mergeCompareLink, build) {
   var compareLink = 'https://github.com/liferay/liferay-portal-ee/compare/' + build.branchName + '...fix-pack-fix-' + build.patcherFixId;
 
-  var mergeTag = '<a href="' + compareLink + '">' + build.branchType + '</a>';
+  var extraHTML = (compareLink == mergeCompareLink) ? ' (build tag)' : '';
 
-  if (mergeCompareLink == compareLink) {
-    mergeTag += ' (build)';
-  }
-
-  return '<tr><th class="branch-type">' + mergeTag + '</th><td><a href="' + compareLink + '" target="_blank">fix-pack-fix-' + build.patcherFixId + '</a></td></tr>';
+  return '<tr><th class="branch-type">' + getBuildLinkHTML(build) + '</th><td><a href="' + compareLink + '" target="_blank">fix-pack-fix-' + build.patcherFixId + '</a>' + extraHTML + '</td></tr>';
 }
 
 /**
@@ -273,7 +280,7 @@ function processChildBuilds(xhr, oldFixesNode) {
   var rows = Array.from(container.querySelectorAll('table tbody tr')).filter(row => !row.classList.contains('lfr-template'));
 
   var childBuildsMetadata = rows.map(getBuildMetadata);
-  var childBuildFixesHTML = childBuildsMetadata.map(build => '<tr><th class="branch-type"><a href="' + build.buildLink + '" target="_blank">' + build.branchType + '</a></th><td>' + build.fixes + '</td></tr>');
+  var childBuildFixesHTML = childBuildsMetadata.map(build => '<tr><th class="branch-type">' + getBuildLinkHTML(build) + '</th><td>' + build.fixes + '</td></tr>');
 
   replaceNode(oldFixesNode, '<table class="table table-bordered table-hover"><tbody class="table-data">' + childBuildFixesHTML.join('') + '</tbody></table>');
   replaceGitHashes(childBuildsMetadata);
@@ -334,17 +341,39 @@ function replaceFixes(target) {
     return;
   }
 
-  var childBuildsButton = Array.from(document.querySelectorAll('button')).filter(x => x.textContent.trim() == 'View Child Builds');
+  if (document.location.pathname.indexOf('/builds/') != -1) {
+    var childBuildsButton = Array.from(document.querySelectorAll('button')).filter(x => x.textContent.trim() == 'View Child Builds');
 
-  if (childBuildsButton.length == 0) {
-    replaceNode(oldNode, oldNode.innerHTML.split(',').map(getTicketLink.bind(null, target, isConflict)).join(', '));
+    if (childBuildsButton.length == 0) {
+      var buildId = document.location.pathname.substring(document.location.pathname.lastIndexOf('/') + 1);
+      var buildLink = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/' + buildId;
+      var projectVersionSelect = querySelector('patcherProjectVersionId');
+      var branchName = projectVersionSelect.options[projectVersionSelect.selectedIndex].textContent.trim();
+      var branchType = branchName.indexOf('-private') != -1 ? 'private' : 'public';
+
+      var build = {
+          buildId: buildId,
+          buildLink: buildLink,
+          branchName: branchName,
+          branchType: branchType,
+          fixes: oldNode.innerHTML.split(',').map(getTicketLink.bind(null, target, isConflict)).join(', ')
+      };
+
+      var childBuildFixesHTML = '<tr><th class="branch-type">' + getBuildLinkHTML(build) + '</th><td>' + build.fixes + '</td></tr>';
+
+      replaceNode(oldNode, '<table class="table table-bordered table-hover"><tbody class="table-data">' + childBuildFixesHTML + '</tbody></table>');
+      replaceGitHashes([build]);
+    }
+    else {
+      var xhr = new XMLHttpRequest();
+
+      xhr.open('GET', document.location.pathname + '/childBuilds');
+      xhr.onload = processChildBuilds.bind(null, xhr, oldNode);
+      xhr.send(null);
+    }
   }
   else {
-    var xhr = new XMLHttpRequest();
-
-    xhr.open('GET', document.location.pathname + '/childBuilds');
-    xhr.onload = processChildBuilds.bind(null, xhr, oldNode);
-    xhr.send(null);
+    replaceNode(oldNode, oldNode.innerHTML.split(',').map(getTicketLink.bind(null, target, isConflict)).join(', '));
   }
 }
 
@@ -600,18 +629,20 @@ function updateFromQueryString() {
 
 // Run all the changes we need to the page.
 
-replaceJenkinsLinks();
-replacePopupWindowLinks();
-addBaselineToBuildTemplate();
-replaceFixes('patcherFixName');
-replaceFixes('patcherBuildName');
-replaceFixes('patcherBuildOriginalName');
-replaceAccountLink('accountEntryCode');
-replaceAccountLink('patcherBuildAccountEntryCode');
-replaceLesaLink('lesaTicket');
-replaceLesaLink('supportTicket');
-replaceDate('createDate');
-replaceDate('modifiedDate');
-addProductVersionFilter();
+AUI().ready(function() {
+  replaceJenkinsLinks();
+  replacePopupWindowLinks();
+  addBaselineToBuildTemplate();
+  replaceFixes('patcherFixName');
+  replaceFixes('patcherBuildName');
+  replaceFixes('patcherBuildOriginalName');
+  replaceAccountLink('accountEntryCode');
+  replaceAccountLink('patcherBuildAccountEntryCode');
+  replaceLesaLink('lesaTicket');
+  replaceLesaLink('supportTicket');
+  replaceDate('createDate');
+  replaceDate('modifiedDate');
+  addProductVersionFilter();
 
-setTimeout(updateFromQueryString, 500);
+  setTimeout(updateFromQueryString, 500);
+});
