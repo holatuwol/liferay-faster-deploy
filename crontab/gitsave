@@ -4,39 +4,49 @@ cd $HOME
 
 S3_BUCKET=$(cat bucket.txt)
 
-if [ ! -d source/.git ]; then
+# Download from mirrors
 
-	# Download from mirrors
+clone_repo() {
+	local target_folder=${2}
 
-	wget http://mirrors/github.com/liferay/liferay-portal-ee.tar.gz
-	tar -zxf liferay-portal-ee.tar.gz
-	rm liferay-portal-ee.tar.gz
+	if [ "" == "${2}" ]; then
+		target_folder=${1}
+	fi
 
-	# Remove origin and tags to make the build smaller
+	if [ -d ${target_folder}/.git ]; then
+		cd ${target_folder}
+		git clean -xdf
+		git gc
+		cd -
+		return 0
+	fi
 
-	mv liferay-portal-ee source
-	cd source
+	wget http://mirrors/github.com/liferay/${1}.tar.gz
+	tar -zxf ${1}.tar.gz
+	rm ${1}.tar.gz
 
-	git remote rm origin
-	(git tag | xargs git tag -d) > /dev/null
-fi
+	if [ "${1}" == "${target_folder}" ]; then
+		return 0
+	fi
 
-if [ ! -d liferay-binaries-cache-2017/.git ]; then
+	mv ${1} ${target_folder}
+}
 
-	# Download from mirrors
+clone_repo liferay-portal-ee source
 
-	wget http://mirrors/github.com/liferay/liferay-binaries-cache-2017.tar.gz
-	tar -zxf liferay-binaries-cache-2017.tar.gz
-	rm liferay-binaries-cache-2017.tar.gz
-fi
+# Remove origin and tags to make the build smaller
+
+cd source
+git remote rm origin
+(git tag | xargs git tag -d) > /dev/null
+cd -
+
+for cache in liferay-binaries-cache-2017 liferay-binaries-cache-2020; do
+	clone_repo ${cache}
+done
 
 # Create a new archive
 
-cd source
-git clean -xdf
-git gc
-cd ..
-
-tar -cf source.tar source/.git liferay-binaries-cache-2017/.git
+tar -cf source.tar source/.git liferay-binaries-cache-2017/.git liferay-binaries-cache-2020/.git
 aws s3 cp source.tar s3://$S3_BUCKET/gh/
 rm source.tar

@@ -26,15 +26,20 @@ fixclasspath() {
 			local name=$(echo $dependency | cut -d'=' -f 2 | cut -d':' -f 2)
 			local version=$(echo $dependency | cut -d'=' -f 2 | cut -d':' -f 3)
 
-			local gradle_path=../liferay-binaries-cache-2017/.gradle/caches/modules-2/files-2.1/${group_gradle}/${name}/${version}
+			local gradle_path=
 
-			if [ -d $gradle_path ]; then
-				local gradle_jar=$(find $gradle_path -name ${name}-${version}.jar | head -1)
+			for cache in liferay-binaries-cache-2020 liferay-binaries-cache-2017; do
+				gradle_path=../${cache}/.gradle/caches/modules-2/files-2.1/${group_gradle}/${name}/${version}
 
-				if [ "" != "$gradle_jar" ]; then
-					cp $gradle_jar $lib_jar
+				if [ -d ${gradle_path} ]; then
+					local gradle_jar=$(find $gradle_path -name ${name}-${version}.jar | head -1)
+
+					if [ "" != "$gradle_jar" ]; then
+						cp $gradle_jar $lib_jar
+						break
+					fi
 				fi
-			fi
+			done
 		done
 	done
 
@@ -128,18 +133,20 @@ safeant() {
 
 	. $(dirname ${BASH_SOURCE[0]})/../appserverprops
 
-	if [ -d "$GIT_ROOT/../liferay-binaries-cache-2017/.git" ]; then
-		pushd "$GIT_ROOT/../liferay-binaries-cache-2017" > /dev/null
-		git clean -xdf
-		git reset --hard
-		popd > /dev/null
-	elif [ -d "$GIT_ROOT/../liferay-binaries-cache-2017" ]; then
-		echo 'Re-cloning liferay-binaries-cache-2017 because it is not a valid git repository'
-		pushd "$GIT_ROOT/.." > /dev/null
-		rm -rf liferay-binaries-cache-2017
-		git clone git@github.com:liferay/liferay-binaries-cache-2017.git
-		popd > /dev/null
-	fi
+	for cache in liferay-binaries-cache-2017 liferay-binaries-cache-2020; do
+		if [ -d "$GIT_ROOT/../${cache}/.git" ]; then
+			pushd "$GIT_ROOT/../${cache}" > /dev/null
+			git clean -xdf
+			git reset --hard
+			popd > /dev/null
+		elif [ -d "$GIT_ROOT/../${cache}" ]; then
+			echo 'Re-cloning ${cache} because it is not a valid git repository'
+			pushd "$GIT_ROOT/.." > /dev/null
+			rm -rf ${cache}
+			git clone git@github.com:liferay/${cache}.git
+			popd > /dev/null
+		fi
+	done
 
 	pushd $GIT_ROOT > /dev/null
 
