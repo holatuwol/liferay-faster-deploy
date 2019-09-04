@@ -58,9 +58,9 @@ def git_find(haystack, needle, commit=None):
 	haystack = relpath(haystack, git_root)
 
 	if commit is None:
-		file_list = [relpath(x, haystack).replace('\\', '/') for x in git.ls_files(haystack).split('\n') if is_project_file(needle, x)]
+		file_list = set([relpath(x, haystack).replace('\\', '/') for x in git.ls_files(haystack).split('\n') if is_project_file(needle, x)])
 	else:
-		file_list = [relpath(x, haystack).replace('\\', '/') for x in git.ls_files('--with-tree=%s' % commit, haystack).split('\n') if is_project_file(needle, x)]
+		file_list = set([relpath(x, haystack).replace('\\', '/') for x in git.ls_files('--with-tree=%s' % commit, haystack).split('\n') if is_project_file(needle, x)])
 
 	# First, assume that we're looking for a module root, so check for
 	# bnd.bnd, ivy.xml, and package.json
