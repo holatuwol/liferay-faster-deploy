@@ -163,18 +163,6 @@ deploymodules() {
 				if [ "" == "$(grep -F hotfix $folder/bnd.bnd)" ]; then
 					sed -i.bak '/^Bundle-Version: /s@\(.*\)$@\1.hotfix-0-'${RELEASE_ID}'@g' $folder/bnd.bnd
 				fi
-
-				if [ -f $folder/npm-shrinkwrap.json ] && [ "" == "$(grep -F hotfix $folder/npm-shrinkwrap.json)" ]; then
-					sed -i.bak '/^\t"version":/s@\(.*\)",$@\1.hotfix-0-'${RELEASE_ID}'",@g' $folder/npm-shrinkwrap.json
-				fi
-
-				if [ -f $folder/package.json ] && [ "" == "$(grep -F hotfix $folder/package.json)" ]; then
-					sed -i.bak '/^\t"version":/s@\(.*\)"$@\1.hotfix-0-'${RELEASE_ID}'"@g' $folder/package.json
-				fi
-
-				if [ -f $folder/package-lock.json ] && [ "" == "$(grep -F hotfix $folder/package-lock.json)" ]; then
-					sed -i.bak '/^\t"version":/s@\(.*\)",$@\1.hotfix-0-'${RELEASE_ID}'",@g' $folder/package-lock.json
-				fi
 			fi
 
 			echo $folder >> ${GIT_ROOT}/.redeploy/changes_gradle_3.txt
