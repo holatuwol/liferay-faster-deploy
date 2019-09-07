@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        2.5
+// @version        2.6
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/*
@@ -62,6 +62,46 @@ function getQueryString(params) {
 
 function querySelector(target) {
   return document.getElementById(ns + target);
+}
+
+/**
+ * Replaces the "Download" link with the name of the hotfix you're downloading
+ */
+
+function replaceHotfixLink() {
+  var labelNode = document.querySelector('label[for="' + ns + 'official"]');
+
+  if (!labelNode) {
+    return;
+  }
+
+  var containerNode = labelNode.parentNode;
+
+  var anchor = containerNode.querySelector('a');
+  var href = anchor.getAttribute('href');
+  anchor.textContent = href.substring(href.lastIndexOf('/') + 1, href.lastIndexOf('.'));
+}
+
+/**
+ * Replaces the plain text branch name with a link to GitHub.
+ */
+
+function replaceBranchName() {
+  var branchNode = querySelector('committish');
+  var gitRemoteNode = querySelector('gitRemoteURL');
+
+  if (!branchNode || !gitRemoteNode) {
+    return;
+  }
+
+  var branchName = branchNode.value;
+  var gitRemoteURL = gitRemoteNode.value;
+  var gitRemotePath = gitRemoteURL.substring(gitRemoteURL.indexOf(':') + 1, gitRemoteURL.lastIndexOf('.git'));
+
+  var gitHubPath = 'https://github.com/' + gitRemotePath;
+
+  replaceNode(branchNode, '<a href="' + gitHubPath + '/tree/' + branchName + '">' + branchName + '</a>');
+  replaceNode(gitRemoteNode, '<a href="' + gitHubPath + '">' + gitRemoteURL + '</a>');
 }
 
 /**
@@ -633,6 +673,8 @@ AUI().ready(function() {
   replaceJenkinsLinks();
   replacePopupWindowLinks();
   addBaselineToBuildTemplate();
+  replaceHotfixLink();
+  replaceBranchName();
   replaceFixes('patcherFixName');
   replaceFixes('patcherBuildName');
   replaceFixes('patcherBuildOriginalName');
