@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        2.6
+// @version        2.7
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/*
@@ -68,8 +68,8 @@ function querySelector(target) {
  * Replaces the "Download" link with the name of the hotfix you're downloading
  */
 
-function replaceHotfixLink() {
-  var labelNode = document.querySelector('label[for="' + ns + 'official"]');
+function replaceHotfixLink(target) {
+  var labelNode = document.querySelector('label[for="' + ns + target + '"]');
 
   if (!labelNode) {
     return;
@@ -78,8 +78,13 @@ function replaceHotfixLink() {
   var containerNode = labelNode.parentNode;
 
   var anchor = containerNode.querySelector('a');
+
+  if (!anchor || !anchor.textContent) {
+    return;
+  }
+
   var href = anchor.getAttribute('href');
-  anchor.textContent = href.substring(href.lastIndexOf('/') + 1, href.lastIndexOf('.'));
+  anchor.textContent = href.substring(href.lastIndexOf('/') + 1);
 }
 
 /**
@@ -673,7 +678,8 @@ AUI().ready(function() {
   replaceJenkinsLinks();
   replacePopupWindowLinks();
   addBaselineToBuildTemplate();
-  replaceHotfixLink();
+  replaceHotfixLink('official');
+  replaceHotfixLink('sourceZip');
   replaceBranchName();
   replaceFixes('patcherFixName');
   replaceFixes('patcherBuildName');
