@@ -155,6 +155,8 @@
 	"fix-pack-de-83-7010-private": 131443970,
 	"fix-pack-de-84-7010": 133183965,
 	"fix-pack-de-84-7010-private": 133183948,
+	"fix-pack-de-85-7010": 136917755,
+	"fix-pack-de-85-7010-private": 136917754,
 	"7.1.x": 102311424,
 	"7.1.x-private": 102311424,
 	"fix-pack-base-7110": 102857159,
@@ -183,8 +185,12 @@
 	"fix-pack-dxp-11-7110-private": 127712071,
 	"fix-pack-dxp-12-7110": 131349780,
 	"fix-pack-dxp-12-7110-private": 131349779,
+	"fix-pack-dxp-13-7110": 137421941,
+	"fix-pack-dxp-13-7110-private": 137421940,
 	"7.2.x": 130051253,
 	"7.2.x-private": 130051253,
 	"fix-pack-base-7210": 130051310,
-	"fix-pack-base-7210-private": 130051359
+	"fix-pack-base-7210-private": 130051359,
+	"fix-pack-dxp-1-7210": 136377581,
+	"fix-pack-dxp-1-7210-private": 136377576
 }
