@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        2.7
+// @version        2.8
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/*
@@ -309,7 +309,7 @@ function getBuildMetadata(row) {
     buildLink: buildLink,
     branchName: branchName,
     branchType: branchType,
-    fixes: row.cells[2].innerHTML
+    fixes: getTicketLinks(row.cells[2].textContent, '', false)
   }
 }
 
@@ -368,6 +368,33 @@ function getTicketLink(target, isConflict, ticket) {
 }
 
 /**
+ * Compares two tickets.
+ */
+
+function compareTicket(a, b) {
+  var aParts = a.split('-');
+  var bParts = b.split('-');
+
+  if (aParts[0] != bParts[0]) {
+    return aParts[0] > bParts[0] ? 1 : -1;
+  }
+
+  if ((aParts.length == 1) || (bParts.length == 1)) {
+    return bParts.length - aParts.length;
+  }
+
+  return parseInt(aParts[1]) - parseInt(bParts[1]);
+}
+
+/**
+ * Converts the provided list of tickets into a nice HTML version.
+ */
+
+function getTicketLinks(text, target, isConflict) {
+  return text.split(',').map(x => x.trim()).sort(compareTicket).map(getTicketLink.bind(null, target, isConflict)).join(', ');
+}
+
+/**
  * Replaces the list of fixes with a list of JIRA links.
  */
 
@@ -401,7 +428,7 @@ function replaceFixes(target) {
           buildLink: buildLink,
           branchName: branchName,
           branchType: branchType,
-          fixes: oldNode.innerHTML.split(',').map(getTicketLink.bind(null, target, isConflict)).join(', ')
+          fixes: getTicketLinks(oldNode.innerHTML, target, isConflict)
       };
 
       var childBuildFixesHTML = '<tr><th class="branch-type">' + getBuildLinkHTML(build) + '</th><td>' + build.fixes + '</td></tr>';
