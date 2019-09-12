@@ -40,7 +40,7 @@ buildprops() {
 
 	# If we're on an older CentOS server, we can't use the node.js SASS compiler
 
-	if [ "" != "$(which rpm 2> /dev/null)" ]; then
+	if [ "" != "$(which rpm 2> /dev/null)" ] && [ ! -f modules/yarn.lock ]; then
 		echo 'sass.compiler.class.name=ruby' >> $GIT_ROOT/build.$USER.properties
 	fi
 
