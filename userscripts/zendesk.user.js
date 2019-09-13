@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        7.5
+// @version        7.6
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -2173,13 +2173,13 @@ function initZafParentClient(client, callback) {
  */
 
 function initZafClient(callback) {
-  if (!unsafeWindow.ZAFClient) {
+  if (!window.ZAFClient) {
     setTimeout(initZafClient, 1000);
 
     return;
   }
 
-  var client = unsafeWindow.ZAFClient.init();
+  var client = window.ZAFClient.init();
   client.on('app.registered', initZafParentClient.bind(null, client, callback));
 }
 
