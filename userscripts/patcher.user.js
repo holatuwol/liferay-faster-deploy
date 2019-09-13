@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        3.0
+// @version        3.1
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/*
@@ -93,13 +93,9 @@ function replaceHotfixLink(target) {
 
 function replaceBranchName() {
   var branchNode = querySelector('committish');
-  if (!branchNode.readOnly) {
-    return;
-  }
-
   var gitRemoteNode = querySelector('gitRemoteURL');
 
-  if (!branchNode || !gitRemoteNode) {
+  if (!branchNode || !gitRemoteNode || !branchNode.readOnly) {
     return;
   }
 
