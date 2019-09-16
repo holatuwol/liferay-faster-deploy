@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        7.6
+// @version        7.7
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -1361,6 +1361,51 @@ function addStackeditButton(element, callback) {
 }
 
 /**
+ * Adds an underline button to the regular formatter.
+ */
+
+function addUnderlineButton(element) {
+  var underlineSVGPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  underlineSVGPath.setAttribute('fill', 'currentColor');
+  underlineSVGPath.setAttribute('d', 'M11 7.5c0 2.5-1.4 3.8-3.9 3.8-2.6 0-4.1-1.2-4.1-3.8V1.2h1.3v6.3c0 1.8 1 2.7 2.7 2.7 1.7 0 2.6-.9 2.6-2.7V1.2H11v6.3zm-9 5.3v-.7h10v.7H2z');
+
+  var underlineButtonIconContainer = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  underlineButtonIconContainer.setAttribute('viewBox', '0 0 14 14');
+  underlineButtonIconContainer.appendChild(underlineSVGPath);
+
+  var underlineButton = document.createElement('button');
+  underlineButton.setAttribute('type', 'button');
+  underlineButton.classList.add('zendesk-editor--item', 'underline');
+  underlineButton.setAttribute('data-command-name', 'underline');
+  underlineButton.setAttribute('aria-label', 'Underline');
+  underlineButton.setAttribute('data-editor-tooltip', 'Underline (ctrl u)');
+  underlineButton.setAttribute('aria-pressed', false);
+  underlineButton.setAttribute('aria-disabled', false);
+
+  underlineButton.appendChild(underlineButtonIconContainer);
+
+  var underlineButtonText = document.createElement('span');
+  underlineButtonText.textContent = ('Underline')
+  underlineButtonText.classList.add('zendesk-editor--accessible-hidden-text');
+  underlineButton.appendChild(underlineButtonText);
+
+  underlineButton.addEventListener('click', function(e) {
+    document.execCommand('underline', false, null);
+  });
+
+  underlineButton.onmousedown = function(e) {
+    e.stopPropagation();
+    return false;
+  };
+
+  var underlineButtonListItem = document.createElement('li');
+  underlineButtonListItem.appendChild(underlineButton);
+
+  var formattingButtons = element.parentNode.parentNode.querySelector('.zendesk-editor--text-commands .zendesk-editor--group')
+  formattingButtons.appendChild(underlineButtonListItem);
+}
+
+/**
  * Add buttons which load windows that allow you to compose a post
  * with Markdown.
  */
@@ -1375,6 +1420,7 @@ function addStackeditButtons(ticketId, ticketInfo, conversation) {
   var newComments = conversation.querySelectorAll('.zendesk-editor--rich-text-container .zendesk-editor--rich-text-comment');
 
   for (var i = 0; i < newComments.length; i++) {
+    addUnderlineButton(newComments[i]);
     addStackeditButton(newComments[i], addJiraLinksToElement);
   }
 }
