@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        3.2
+// @version        3.3
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/*
@@ -510,6 +510,7 @@ function addProductVersionFilter() {
     var patcherTagName = projectVersionSelect.options[projectVersionSelect.selectedIndex].textContent.trim();
 
     replaceNode(projectVersionSelect, '<a href="https://github.com/liferay/liferay-portal-ee/tree/' + patcherTagName + '">' + patcherTagName + '</a>');
+    return;
   }
 
   var versions = ['', '6.x', '7.0', '7.1', '7.2'];
