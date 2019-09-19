@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        3.1
+// @version        3.2
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/*
@@ -205,7 +205,10 @@ function replaceNode(oldNode, newHTML) {
   newHiddenInputNode.name = oldNode.name;
   newHiddenInputNode.id = oldNode.id;
 
-  if (oldNode.innerHTML) {
+  if (oldNode.tagName.toLowerCase() == 'select') {
+    newHiddenInputNode.value = oldNode.options[oldNode.selectedIndex].value;
+  }
+  else if (oldNode.innerHTML) {
     newHiddenInputNode.value = oldNode.innerHTML
   }
   else {
@@ -499,8 +502,14 @@ function replaceLesaLink(target) {
 function addProductVersionFilter() {
   var productVersionSelect = querySelector('patcherProductVersionId');
 
-  if (!productVersionSelect || productVersionSelect.disabled) {
+  if (!productVersionSelect) {
     return;
+  }
+  else if (productVersionSelect.disabled) {
+    var projectVersionSelect = querySelector('patcherProjectVersionId');
+    var patcherTagName = projectVersionSelect.options[projectVersionSelect.selectedIndex].textContent.trim();
+
+    replaceNode(projectVersionSelect, '<a href="https://github.com/liferay/liferay-portal-ee/tree/' + patcherTagName + '">' + patcherTagName + '</a>');
   }
 
   var versions = ['', '6.x', '7.0', '7.1', '7.2'];
