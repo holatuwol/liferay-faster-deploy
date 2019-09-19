@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        3.3
+// @version        3.4
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/*
@@ -312,7 +312,7 @@ function getBuildMetadata(row) {
     buildLink: buildLink,
     branchName: branchName,
     branchType: branchType,
-    fixes: getTicketLinks(row.cells[2].textContent, '', false)
+    fixes: getTicketLinks(row.cells[2].textContent, '')
   }
 }
 
@@ -338,14 +338,14 @@ function processChildBuilds(xhr, oldFixesNode) {
  * Returns a link to the ticket.
  */
 
-function getTicketLink(target, isConflict, ticket) {
+function getTicketLink(className, ticket) {
   if (ticket.toUpperCase() != ticket) {
     return ticket;
   }
 
   var ticketURL = 'https://issues.liferay.com/browse/' + ticket;
 
-  if (isConflict) {
+  if (className) {
     var productVersionId = querySelector('patcherProductVersionId').value;
     var projectVersionId = querySelector('patcherProjectVersionId').value;
 
@@ -359,12 +359,6 @@ function getTicketLink(target, isConflict, ticket) {
     };
 
     ticketURL = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher?' + getQueryString(params);
-  }
-
-  var className = '';
-
-  if (target == 'patcherBuildOriginalName' && !document.querySelector('a[href="' + ticketURL + '"]')) {
-    className = 'included-in-baseline'
   }
 
   return '<a class="' + className + '" href="' + ticketURL + '" target="_blank">' + ticket + '</a>';
@@ -393,63 +387,75 @@ function compareTicket(a, b) {
  * Converts the provided list of tickets into a nice HTML version.
  */
 
-function getTicketLinks(text, target, isConflict) {
-  return text.split(',').map(x => x.trim()).sort(compareTicket).map(getTicketLink.bind(null, target, isConflict)).join(', ');
+function getTicketLinks(text, className) {
+  return text.split(',').map(x => x.trim()).sort(compareTicket).map(getTicketLink.bind(null, className)).join(', ');
+}
+
+function replaceBuild() {
+  if (document.location.pathname.indexOf('/builds/') == -1) {
+    return;
+  }
+
+  var buildNode = querySelector('patcherBuildName');
+
+  if (!buildNode || !buildNode.readOnly) {
+    return;
+  }
+
+  var fixes = buildNode.innerHTML.split(',').map(x => x.trim());
+  var childBuildsButton = Array.from(document.querySelectorAll('button')).filter(x => x.textContent.trim() == 'View Child Builds');
+
+  var buildId = document.location.pathname.substring(document.location.pathname.lastIndexOf('/') + 1);
+  var buildLink = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/' + buildId;
+  var projectVersionSelect = querySelector('patcherProjectVersionId');
+  var branchName = projectVersionSelect.options[projectVersionSelect.selectedIndex].textContent.trim();
+  var branchType = branchName.indexOf('-private') != -1 ? 'private' : 'public';
+
+  var build = {
+    buildId: buildId,
+    buildLink: buildLink,
+    branchName: branchName,
+    branchType: branchType,
+    fixes: getTicketLinks(buildNode.innerHTML, '')
+  };
+
+  var childBuildFixesHTML = '<tr><th class="branch-type">' + getBuildLinkHTML(build) + '</th><td>' + build.fixes;
+
+  if (childBuildsButton.length == 0) {
+    replaceNode(buildNode, '<table class="table table-bordered table-hover"><tbody class="table-data">' + childBuildFixesHTML + '</tbody></table>');
+    replaceGitHashes([build]);
+  }
+  else {
+    var xhr = new XMLHttpRequest();
+
+    xhr.open('GET', document.location.pathname + '/childBuilds');
+    xhr.onload = processChildBuilds.bind(null, xhr, buildNode);
+    xhr.send(null);
+  }
+
+  var originalBuildNode = querySelector('patcherBuildOriginalName');
+
+  if (originalBuildNode) {
+    var excludedFixes = originalBuildNode.innerHTML.split(',').map(x => x.trim()).filter(x => !fixes.includes(x));
+    var excludedHTML = excludedFixes.sort(compareTicket).map(getTicketLink.bind(null, 'included-in-baseline')).join(', ');
+
+    var excludedFixesHTML = '<tr><th class="branch-type">excluded</th><td>' + excludedHTML + '</td></tr>';
+    replaceNode(originalBuildNode, '<table class="table table-bordered table-hover"><tbody class="table-data">' + childBuildFixesHTML + excludedFixesHTML + '</tbody></table>');
+  }
 }
 
 /**
  * Replaces the list of fixes with a list of JIRA links.
  */
 
-function replaceFixes(target) {
-  var oldNode = querySelector(target);
-
-  var isConflict = false;
-
-  var statusNode = document.querySelector('label[for="' + ns + 'patcher-status"]');
-
-  if (statusNode) {
-    isConflict = statusNode.parentNode.textContent.indexOf('Conflict') != -1;
-  }
+function replaceFixes() {
+  var oldNode = querySelector('patcherFixName');
 
   if (!oldNode || !oldNode.readOnly) {
     return;
   }
 
-  if (document.location.pathname.indexOf('/builds/') != -1) {
-    var childBuildsButton = Array.from(document.querySelectorAll('button')).filter(x => x.textContent.trim() == 'View Child Builds');
-
-    if (childBuildsButton.length == 0) {
-      var buildId = document.location.pathname.substring(document.location.pathname.lastIndexOf('/') + 1);
-      var buildLink = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/' + buildId;
-      var projectVersionSelect = querySelector('patcherProjectVersionId');
-      var branchName = projectVersionSelect.options[projectVersionSelect.selectedIndex].textContent.trim();
-      var branchType = branchName.indexOf('-private') != -1 ? 'private' : 'public';
-
-      var build = {
-          buildId: buildId,
-          buildLink: buildLink,
-          branchName: branchName,
-          branchType: branchType,
-          fixes: getTicketLinks(oldNode.innerHTML, target, isConflict)
-      };
-
-      var childBuildFixesHTML = '<tr><th class="branch-type">' + getBuildLinkHTML(build) + '</th><td>' + build.fixes + '</td></tr>';
-
-      replaceNode(oldNode, '<table class="table table-bordered table-hover"><tbody class="table-data">' + childBuildFixesHTML + '</tbody></table>');
-      replaceGitHashes([build]);
-    }
-    else {
-      var xhr = new XMLHttpRequest();
-
-      xhr.open('GET', document.location.pathname + '/childBuilds');
-      xhr.onload = processChildBuilds.bind(null, xhr, oldNode);
-      xhr.send(null);
-    }
-  }
-  else {
-    replaceNode(oldNode, oldNode.innerHTML.split(',').map(getTicketLink.bind(null, target, isConflict)).join(', '));
-  }
+  replaceNode(oldNode, oldNode.innerHTML.split(',').map(getTicketLink.bind(null, target, false)).join(', '));
 }
 
 /**
@@ -718,9 +724,8 @@ AUI().ready(function() {
   replaceHotfixLink('official');
   replaceHotfixLink('sourceZip');
   replaceBranchName();
-  replaceFixes('patcherFixName');
-  replaceFixes('patcherBuildName');
-  replaceFixes('patcherBuildOriginalName');
+  replaceFixes();
+  replaceBuild();
   replaceAccountLink('accountEntryCode');
   replaceAccountLink('patcherBuildAccountEntryCode');
   replaceLesaLink('lesaTicket');
