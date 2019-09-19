@@ -91,13 +91,6 @@ sendpull() {
 		return 1
 	fi
 
-	local HAS_CHANGES=$(git status -s | grep -vF '??' | grep -vF gradle.properties)
-
-	if [ "" != "$HAS_CHANGES" ]; then
-		echo "Please commit local modifications before sending a pull request"
-		return 1
-	fi
-
 	# Figure out where we are pushing our branch
 
 	local CURRENT_BRANCH=$(git symbolic-ref --short HEAD)
@@ -176,7 +169,7 @@ sendpull() {
 	if [ -d "$GIT_ROOT/portal-impl" ]; then
 		pushd $GIT_ROOT > /dev/null
 
-		. $(dirname "${BASH_SOURCE[0]}")/../gitchanges ${upstream_remote}/$BASE_BRANCH
+		. $(dirname "${BASH_SOURCE[0]}")/../gitchanges $(git log -1 --pretty='%H') ${upstream_remote}/$BASE_BRANCH
 
 		if [[ 0 -eq $(cat ${GIT_ROOT}/.redeploy/changes.txt | grep -c '^') ]]; then
 			echo No changes detected.

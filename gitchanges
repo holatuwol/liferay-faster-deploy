@@ -9,22 +9,26 @@ gitchanges() {
 
 	# Identify the changes
 
-	if [ "" == "$2" ]; then
-		echo "Computing changes between HEAD and $1..."
-	else
-		echo "Computing changes between HEAD and $2..."
-	fi
-
 	cat /dev/null > ${GIT_ROOT}/.redeploy/changes.txt
 
 	if [ "" != "$1" ] && [ "local" != "$1" ]; then
-		local COMPARE_HASH=$(git log -1 --pretty='%H' $1)
-		git diff ${COMPARE_HASH}..HEAD --name-only | grep -vF .iml | grep -vF rebel.xml | grep -vF yarn.lock >> ${GIT_ROOT}/.redeploy/changes.txt
+		local COMPARE=
+
+		if [ "" == "$2" ]; then
+			COMPARE="$(git log -1 --pretty='%H' $1)..HEAD"
+			echo "Computing changes between HEAD and $1..."
+		else
+			COMPARE="$1..$2"
+			echo "Computing changes between $1 and $2..."
+		fi
+
+		git diff ${COMPARE} --name-only | grep -vF .iml | grep -vF rebel.xml | grep -vF yarn.lock >> ${GIT_ROOT}/.redeploy/changes.txt
 	fi
 
-	echo "Computing local changes..."
-
-	git status -s | grep -vF '??' | grep -vF '.redeploy' | grep -vF .iml | grep -vF rebel.xml | grep -vF 'yarn.lock' | awk '{print $2}' >> ${GIT_ROOT}/.redeploy/changes.txt
+	if [ "" == "$2" ]; then
+		echo "Computing local changes..."
+		git status -s | grep -vF '??' | grep -vF '.redeploy' | grep -vF .iml | grep -vF rebel.xml | grep -vF 'yarn.lock' | awk '{print $2}' >> ${GIT_ROOT}/.redeploy/changes.txt
+	fi
 
 	if [[ 0 -eq $(cat ${GIT_ROOT}/.redeploy/changes.txt | grep -c '^') ]]; then
 		echo 'No changes detected.'
