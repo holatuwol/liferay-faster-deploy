@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        3.4
+// @version        3.5
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/*
@@ -99,13 +99,17 @@ function replaceBranchName() {
     return;
   }
 
+  var projectNode = querySelector('patcherProjectVersionId');
+  var baseTag = projectNode.options[projectNode.selectedIndex].textContent.trim();
+
   var branchName = branchNode.value;
   var gitRemoteURL = gitRemoteNode.value;
   var gitRemotePath = gitRemoteURL.substring(gitRemoteURL.indexOf(':') + 1, gitRemoteURL.lastIndexOf('.git'));
+  var gitRemoteUser = gitRemotePath.substring(0, gitRemotePath.indexOf('/'));
 
   var gitHubPath = 'https://github.com/' + gitRemotePath;
 
-  replaceNode(branchNode, '<a href="' + gitHubPath + '/tree/' + branchName + '">' + branchName + '</a>');
+  replaceNode(branchNode, '<a href="https://github.com/liferay/liferay-portal-ee/compare/' + baseTag + '...' + gitRemoteUser + ':' + branchName + '">' + branchName + '</a>');
   replaceNode(gitRemoteNode, '<a href="' + gitHubPath + '">' + gitRemoteURL + '</a>');
 }
 
@@ -455,7 +459,7 @@ function replaceFixes() {
     return;
   }
 
-  replaceNode(oldNode, oldNode.innerHTML.split(',').map(getTicketLink.bind(null, target, false)).join(', '));
+  replaceNode(oldNode, oldNode.innerHTML.split(',').map(getTicketLink.bind(null, '')).join(', '));
 }
 
 /**
