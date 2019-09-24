@@ -10,9 +10,9 @@ applychanges() {
 	# Otherwise, compute all changes
 
 	if [ "" == "$BASE_TAG" ]; then
-		$(dirname "${BASH_SOURCE[0]}")/gitchanges $NEW_BASELINE $BASE_BRANCH
+		$(dirname "${BASH_SOURCE[0]}")/gitchanges $BASE_BRANCH
 	else
-		$(dirname "${BASH_SOURCE[0]}")/gitchanges $NEW_BASELINE $BASE_TAG
+		$(dirname "${BASH_SOURCE[0]}")/gitchanges $BASE_TAG
 	fi
 
 	# If any of the folders that are affected is one that has
