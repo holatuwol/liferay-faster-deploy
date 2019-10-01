@@ -66,7 +66,7 @@ fixdefaults() {
 		local PLUGINS_DEFAULTS_PATCH_VERSION=$(grep com.liferay.gradle.plugins.defaults modules/build-buildscript.gradle | grep -o 'version: "[^"]*"' | cut -d'"' -f 3 | cut -d '.' -f 2)
 
 		if [[ ${PLUGINS_DEFAULTS_MAJOR_VERSION} -eq 5 ]] && [[ ${PLUGINS_DEFAULTS_MINOR_VERSION} -eq 3 ]] && [[ ${PLUGINS_DEFAULTS_PATCH_VERSION} -lt 29 ]]; then
-			sed -i.bak '/com.liferay.gradle.plugins.defaults/s/version: "[^"]*"/version: "5.3.29"/' modules/build-buildscript.gradle
+			sed -i.bak '/com.liferay.gradle.plugins.defaults/s/version: "[^"]*"/version: "5.3.29"/' ${GIT_ROOT}/modules/build-buildscript.gradle
 		fi
 	fi
 
@@ -164,7 +164,7 @@ gw() {
 
 	# avoid using the CDN, because it's not reliable
 
-	git ls-files | grep '\.gradle$' | xargs grep -Fl cdn.lfrs.sl | xargs sed -i.bak 's@cdn.lfrs.sl/repository@repository-cdn@g'
+	git ls-files | grep '\.gradle$' | xargs grep -Fl cdn.lfrs.sl | xargs -r sed -i.bak 's@cdn.lfrs.sl/repository@repository-cdn@g'
 
 	local GRADLE_ARGS="--stacktrace --no-daemon -Drepository.url=https://repository-cdn.liferay.com/nexus/content/groups/public"
 

@@ -74,9 +74,7 @@ formatbranch() {
 
 	local compare_branch=
 
-	if [ "" != "$BASE_TAG" ]; then
-		compare_branch=$BASE_TAG
-	elif [ "" == "$BASE_BRANCH" ]; then
+	if [ "" == "$BASE_BRANCH" ]; then
 		echo Unable to identify base branch
 		return 1
 	else
@@ -124,12 +122,12 @@ formatbranch() {
 		if [ -d ${GIT_ROOT}/modules ]; then
 			cd ${GIT_ROOT}/modules
 
-			cat $GIT_ROOT/.redeploy/format.txt | xargs $(dirname "${BASH_SOURCE[0]}")/../gw | tee $GIT_ROOT/.redeploy/formatsource.txt
+			cat $GIT_ROOT/.redeploy/format.txt | xargs -r $(dirname "${BASH_SOURCE[0]}")/../gw | tee $GIT_ROOT/.redeploy/formatsource.txt
 			EXIT_CODE=$?
 
 			cd -
 		else
-			cat $GIT_ROOT/.redeploy/format.txt | xargs $(dirname "${BASH_SOURCE[0]}")/../gw | tee $GIT_ROOT/.redeploy/formatsource.txt
+			cat $GIT_ROOT/.redeploy/format.txt | xargs -r $(dirname "${BASH_SOURCE[0]}")/../gw | tee $GIT_ROOT/.redeploy/formatsource.txt
 			EXIT_CODE=$?
 		fi
 
@@ -139,6 +137,8 @@ formatbranch() {
 
 		python $(dirname ${BASH_SOURCE[0]})/formatsource.py "$GIT_ROOT/.redeploy/formatsource.txt"
 	fi
+
+	echo hi
 
 	if [[ 0 -ne $(cat "$GIT_ROOT/.redeploy/changes_ant.txt" | grep -c '^') ]]; then
 		antformatsource ${compare_branch} $(git log --pretty='%H' ${compare_branch}..HEAD | grep -c '^')
@@ -178,7 +178,7 @@ if [ -d "$GIT_ROOT/modules" ]; then
 	checksnapshots
 
 	pushd $GIT_ROOT/modules > /dev/null
-	ls -1 util/ | grep 'formatter$' | awk '{ print ":util:" $1 ":deploy" }' | xargs $(dirname "${BASH_SOURCE[0]}")/../gw
+	ls -1 util/ | grep 'formatter$' | awk '{ print ":util:" $1 ":deploy" }' | xargs -r $(dirname "${BASH_SOURCE[0]}")/../gw
 	popd > /dev/null
 fi
 

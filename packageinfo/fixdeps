@@ -27,6 +27,10 @@ fixdeps() {
 
 	checkdeps
 
+	if [ ! -f ${GIT_ROOT}/.redeploy/checkdeps.txt ]; then
+		return 0
+	fi
+
 	# Mass compile check
 
 	if [[ 0 -ne $(cat ${GIT_ROOT}/.redeploy/checkdeps.txt | grep -c '^') ]]; then

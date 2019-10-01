@@ -182,7 +182,7 @@ sendpull() {
 
 		if [[ 0 -eq $EXIT_CODE ]]; then
 			if [ "" != "$(grep setup-libs build.xml)" ]; then
-				ant setup-sdk setup-libs
+				ant setup-sdk
 			fi
 
 			fixdeps && baseline && formatsource && pmdreport
@@ -191,10 +191,6 @@ sendpull() {
 		fi
 
 		popd > /dev/null
-
-		if [[ 0 -ne $EXIT_CODE ]]; then
-			return 1
-		fi
 
 		HAS_CHANGES=$(git status -s | grep -vF '??' | grep -vF gradle.properties)
 
