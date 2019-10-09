@@ -138,8 +138,6 @@ formatbranch() {
 		python $(dirname ${BASH_SOURCE[0]})/formatsource.py "$GIT_ROOT/.redeploy/formatsource.txt"
 	fi
 
-	echo hi
-
 	if [[ 0 -ne $(cat "$GIT_ROOT/.redeploy/changes_ant.txt" | grep -c '^') ]]; then
 		antformatsource ${compare_branch} $(git log --pretty='%H' ${compare_branch}..HEAD | grep -c '^')
 
