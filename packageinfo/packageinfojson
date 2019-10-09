@@ -39,7 +39,7 @@ if [ "" != "${S3_BUCKET}" ]; then
 		popd > /dev/null
 	done
 
-	cd /run/shm
+	cd /tmp
 
 	if [ ! -z "${PORTAL_SOURCE_ROOT_70}" ]; then
 		rm -f metadata-70x.zip
