@@ -33,7 +33,23 @@ function extractOrderBy(orderByCols, x) {
       keys.push(issue.substring(0, issue.indexOf('-')));
     }
     else {
-      keys.push(x.querySelector('td.' + orderBy).textContent.trim());
+      var orderByHeader = x.querySelector('td.' + orderBy);
+
+      if (orderByHeader) {
+        var text = orderByHeader.textContent.trim();
+
+        if (!text) {
+          var orderByImage = orderByHeader.querySelector('img');
+
+          if (orderByImage) {
+            text = orderByImage.getAttribute('alt').trim();
+          }
+        }
+
+        if (text) {
+          keys.push(text);
+        }
+      }
     }
   }
 
@@ -53,11 +69,17 @@ function addBreakpoints() {
     var pos = jql.toLowerCase().lastIndexOf('order by ');
 
     if (pos > -1) {
-      orderByCols = jql.substring(pos + 9).toLowerCase()
+      orderByCols = jql.substring(pos + 9)
         .split(',')
         .filter((x) => x.indexOf('\'') == -1)
         .map((x) => x.trim())
-        .map((x) => x.indexOf(' ') == -1 ? x : x.substring(0, x.indexOf(' ')));
+        .map((x) => x.toLowerCase().indexOf(' desc') == -1 ? x : x.toLowerCase().substring(0, x.indexOf(' desc')))
+        .map((x) => x.toLowerCase().indexOf(' asc') == -1 ? x : x.toLowerCase().substring(0, x.indexOf(' asc')))
+        .map((x) => x.indexOf('"') == 0 ? x.substring(1, x.length - 1) : x)
+        .map((x) => document.querySelector(x.toLowerCase() == 'project' ? 'th span[title="Sort By Key"]' : 'th span[title="Sort By ' + x + '" i]'))
+        .filter((x) => x)
+        .map((x) => x.parentNode.getAttribute('data-id'))
+        .slice(0, 2);
     }
   }
 
@@ -71,8 +93,6 @@ function addBreakpoints() {
 
   var rows = Array.from(table.querySelectorAll('tbody tr'));
   var breakpoints = rows.map(extractOrderBy.bind(null, orderByCols));
-
-  console.log(breakpoints);
 
   var indices = breakpoints.map((x, i) => [i, x]).filter((x, i) => (i == 0) || !(arrayEquals(breakpoints[i-1], breakpoints[i]))).reverse();
 
