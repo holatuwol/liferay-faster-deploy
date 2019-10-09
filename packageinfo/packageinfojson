@@ -6,6 +6,12 @@ s3upload() {
 	. ${SCRIPT_FOLDER}/s3upload $1
 }
 
+if [ "" != "${PACKAGEINFO_ROOT}" ]; then
+	PORTAL_SOURCE_ROOT_70=${PACKAGEINFO_ROOT}/7.0.x/portal
+	PORTAL_SOURCE_ROOT_71=${PACKAGEINFO_ROOT}/7.1.x/portal
+	PORTAL_SOURCE_ROOT_72=${PACKAGEINFO_ROOT}/7.2.x/portal
+fi
+
 # Make sure the packageinfo files are up to date
 
 if [ "update" == "$1" ]; then
