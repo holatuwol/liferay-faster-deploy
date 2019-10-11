@@ -192,6 +192,59 @@ checkfile() {
 	$(dirname $0)/../sourcetrie
 }
 
+COMMIT_RSYNC_MASTER='129fa62ef21429c5305e82a3d0b4ebf3b9330a5b'
+COMMIT_RSYNC_72='f8908d61bf1c6676fbea60bf352b23d37291043b'
+
+changelog() {
+	if [ "" == "${2}" ]; then
+		return 0
+	fi
+
+	if ! checkfile ${1} changelog; then
+		return 0
+	fi
+
+	echo "Generating changelog info for $1"
+
+	if [ "fix-pack-dxp-2-7210" == "${1}" ]; then
+		for ticket in $(git log --pretty='%s' ${2}..${1} | grep -vF LPS-100337 | grep -o 'LPS-[1-9][0-9]*' | sort -u -n -t'-' -k2); do
+			changelog_ticket fix-pack-dxp-2-7210 fix-pack-dxp-1-7210 ${ticket} >> ${OUTPUT_FILE}
+		done
+
+		for ticket in $(git log --pretty='%s' -1 ${COMMIT_RSYNC_72} | grep -o 'LPS-[1-9][0-9]*' | grep -vF 'LPS-100337' | sort -u -n -t'-' -k2); do
+			changelog_ticket ${COMMIT_RSYNC_MASTER} 7.2.0-ga1 ${ticket} >> ${OUTPUT_FILE}
+		done
+	else
+		for ticket in $(git log --pretty='%s' ${2}..${1} | grep -o 'LPS-[1-9][0-9]*' | sort -u -n -t'-' -k2); do
+			changelog_ticket ${1} ${2} ${ticket} >> ${OUTPUT_FILE}
+		done
+	fi
+}
+
+changelog_ticket() {
+	echo -e -n "${3}\t"
+
+	(
+		for hash in $(git log --pretty='%H' --grep=${3} ${2}..${1} | grep -vF "${COMMIT_RSYNC_72}"); do
+			git diff-tree --no-commit-id --name-only -r ${hash}
+		done
+	) | sort -u > ${GIT_ROOT}/.redeploy/changes.txt
+
+	python $(dirname $0)/../gitchanges.py
+
+	(
+		for folder in $(cat .redeploy/changes_ant.txt); do
+			test -f ${folder}/bnd.bnd && test -d ${folder}/src && echo "${folder}" | sed 's/-/./g' | awk '{ print "com.liferay." $1 "" }'
+		done
+
+		for folder in $(cat .redeploy/changes_gradle_1.txt .redeploy/changes_gradle_2.txt); do
+			test -f ${folder}/bnd.bnd && grep '^Bundle-SymbolicName:' ${folder}/bnd.bnd | cut -d' ' -f 2
+		done
+	) | sed '/^$/d' | tr '\n' ',' | sed 's/,$//g'
+
+	echo ''
+}
+
 dependencies() {
 	if [[ $1 == *-private ]]; then
 		return 0
@@ -323,20 +376,37 @@ packageinfo_release() {
 		return 1
 	fi
 
-	OUTPUT_FOLDER=$(dirname $PWD)/metadata
+	local NEW_OUTPUT_FOLDER=
+
+	if [ "" == "${OUTPUT_FOLDER}" ]; then
+		NEW_OUTPUT_FOLDER=$(dirname $PWD)/metadata
+		OUTPUT_FOLDER=${NEW_OUTPUT_FOLDER}
+	fi
 
 	if [ -d ${OUTPUT_FOLDER} ]; then
 		savetags ${2} ${3}
 
-		for tag_id in $(cat $OUTPUT_FOLDER/tags.txt); do
-			bundleinfo $tag_id
-			packageinfo $tag_id
-			requireschema $tag_id
-			dependencies $tag_id
-			bootstrap $tag_id
+		local OLD_TAG_ID=
+
+		for tag_id in $(grep 'ga[0-9]*$' $OUTPUT_FOLDER/tags.txt); do
+			packageinfo_tag ${tag_id} "${OLD_TAG_ID}"
+			OLD_TAG_ID=${tag_id}
+		done
+
+		for tag_id in $(grep -F fix-pack-base- $OUTPUT_FOLDER/tags.txt); do
+			packageinfo_tag ${tag_id} ""
+			OLD_TAG_ID=${tag_id}
+		done
+
+		for tag_id in $(grep -F 'fix-pack-d' $OUTPUT_FOLDER/tags.txt); do
+			packageinfo_tag ${tag_id} ${OLD_TAG_ID}
+			OLD_TAG_ID=${tag_id}
 		done
 	else
-		OUTPUT_FOLDER=/tmp
+		if [ "" == "${OUTPUT_FOLDER}" ]; then
+			NEW_OUTPUT_FOLDER=/tmp
+			OUTPUT_FOLDER=${NEW_OUTPUT_FOLDER}
+		fi
 
 		savetags ${2} ${3}
 
@@ -355,7 +425,20 @@ packageinfo_release() {
 		done
 	fi
 
+	if [ "" != "${NEW_OUTPUT_FOLDER}" ]; then
+		OUTPUT_FOLDER=
+	fi
+
 	popd > /dev/null
+}
+
+packageinfo_tag() {
+	bundleinfo ${1}
+	packageinfo ${1}
+	requireschema ${1}
+	dependencies ${1}
+	bootstrap ${1}
+	changelog ${1} ${2}
 }
 
 requireschema() {
@@ -403,14 +486,20 @@ savetags() {
 		sort -t'-' -nk4,5 | cut -d'/' -f 3 | tee -a $OUTPUT_FOLDER/tags.txt
 }
 
-if [ ! -z ${PORTAL_SOURCE_ROOT_70} ]; then
-	packageinfo_release ${PORTAL_SOURCE_ROOT_70} 7.0 70
-fi
+if [ "" == "${1}" ]; then
+	if [ ! -z ${PORTAL_SOURCE_ROOT_70} ]; then
+		packageinfo_release ${PORTAL_SOURCE_ROOT_70} 7.0 70
+	fi
 
-if [ ! -z ${PORTAL_SOURCE_ROOT_71} ]; then
-	packageinfo_release ${PORTAL_SOURCE_ROOT_71} 7.1 71
-fi
+	if [ ! -z ${PORTAL_SOURCE_ROOT_71} ]; then
+		packageinfo_release ${PORTAL_SOURCE_ROOT_71} 7.1 71
+	fi
 
-if [ ! -z ${PORTAL_SOURCE_ROOT_72} ]; then
-	packageinfo_release ${PORTAL_SOURCE_ROOT_72} 7.2 72
+	if [ ! -z ${PORTAL_SOURCE_ROOT_72} ]; then
+		packageinfo_release ${PORTAL_SOURCE_ROOT_72} 7.2 72
+	fi
+else
+	. $(dirname ${BASH_SOURCE[0]})/../setopts
+
+	packageinfo_tag $@
 fi
