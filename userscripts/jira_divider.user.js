@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Add JIRA Order By Dividers
 // @namespace      holatuwol
-// @version        1.3
+// @version        1.4
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_divider.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_divider.user.js
 // @match          https://issues.liferay.com/issues/*
@@ -72,11 +72,11 @@ function addBreakpoints() {
       orderByCols = jql.substring(pos + 9)
         .split(',')
         .filter((x) => x.indexOf('\'') == -1)
-        .map((x) => x.trim())
-        .map((x) => x.toLowerCase().indexOf(' desc') == -1 ? x : x.toLowerCase().substring(0, x.indexOf(' desc')))
-        .map((x) => x.toLowerCase().indexOf(' asc') == -1 ? x : x.toLowerCase().substring(0, x.indexOf(' asc')))
+        .map((x) => x.trim().toLowerCase())
+        .map((x) => x.indexOf(' desc') == -1 ? x : x.substring(0, x.indexOf(' desc')))
+        .map((x) => x.indexOf(' asc') == -1 ? x : x.substring(0, x.indexOf(' asc')))
         .map((x) => x.indexOf('"') == 0 ? x.substring(1, x.length - 1) : x)
-        .map((x) => document.querySelector(x.toLowerCase() == 'project' ? 'th span[title="Sort By Key"]' : 'th span[title="Sort By ' + x + '" i]'))
+        .map((x) => document.querySelector(x == 'project' ? 'th span[title="Sort By Key"]' : 'th span[title="Sort By ' + x + '" i]'))
         .filter((x) => x)
         .map((x) => x.parentNode.getAttribute('data-id'))
         .slice(0, 2);
