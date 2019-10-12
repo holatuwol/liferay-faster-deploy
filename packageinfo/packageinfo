@@ -234,11 +234,17 @@ changelog_ticket() {
 
 	(
 		for folder in $(cat .redeploy/changes_ant.txt); do
-			test -f ${folder}/bnd.bnd && test -d ${folder}/src && echo "${folder}" | sed 's/-/./g' | awk '{ print "com.liferay." $1 "" }'
+			test -f ${folder}/bnd.bnd && test -d ${folder}/src && echo "${folder}" | sed 's/-/./g' | awk '{ print "com.liferay.portal:com.liferay." $1 }'
 		done
 
 		for folder in $(cat .redeploy/changes_gradle_1.txt .redeploy/changes_gradle_2.txt); do
-			test -f ${folder}/bnd.bnd && grep '^Bundle-SymbolicName:' ${folder}/bnd.bnd | cut -d' ' -f 2
+			test -f ${folder}/bnd.bnd && grep '^Bundle-SymbolicName:' ${folder}/bnd.bnd | cut -d' ' -f 2 | awk '{ print "com.liferay:" $1 }'
+		done
+
+		for file in $(grep -F dependencies.properties .redeploy/changes.txt); do
+			for hash in $(git log --pretty='%H' --grep=${3} ${2}..${1} -- ${file}); do
+				git show ${hash} -- ${file} | grep '^+.*=' | cut -d'=' -f 2 | cut -d':' -f 1,2
+			done
 		done
 	) | sed '/^$/d' | tr '\n' ',' | sed 's/,$//g'
 
