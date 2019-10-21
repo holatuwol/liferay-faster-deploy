@@ -15,7 +15,7 @@ fi
 # Make sure the packageinfo files are up to date
 
 if [ "update" == "$1" ]; then
-	. ${SCRIPT_FOLDER}/packageinfo
+	. ${SCRIPT_FOLDER}/packageinfo ""
 fi
 
 # Generate the JSON files
