@@ -17,6 +17,7 @@ install_jar() {
 		return 0
 	fi
 
+	local PRIVATE_REMOTE=$(git remote -v | grep -F "liferay/liferay-portal-ee" | cut -f 1 | head -1)
 	local PRIVATE_BRANCH=${BASE_BRANCH}
 
 	if [[ ${PRIVATE_BRANCH} != ee-* ]] && [[ ${PRIVATE_BRANCH} != *-private ]]; then
@@ -42,31 +43,33 @@ install_jar() {
 	fi
 
 	local ARTIFACT_PROPERTIES=$(git ls-tree -r --name-only ${REFERENCE_HASH} modules/.releng | grep -F "/$3/" | grep -F artifact.properties)
+	local ARTIFACT_URL=
 
 	if [ "" != "${ARTIFACT_PROPERTIES}" ]; then
-		local ARTIFACT_URL=$(git show ${REFERENCE_HASH}:${ARTIFACT_PROPERTIES} | grep -F artifact.url | cut -d'=' -f 2)
+		ARTIFACT_URL=$(git show ${REFERENCE_HASH}:${ARTIFACT_PROPERTIES} | grep -F artifact.url | cut -d'=' -f 2)
+	else
+		ARTIFACT_PROPERTIES=$(git ls-tree -r --name-only ${REFERENCE_HASH_PRIVATE} modules/.releng | grep -F "/$3/" | grep -F artifact.properties)
 
-		echo "Downloading ${ARTIFACT_URL}"
+		if [ "" == "${ARTIFACT_PROPERTIES}" ]; then
+			return 1
+		fi
+
+		ARTIFACT_URL=$(git show ${REFERENCE_HASH_PRIVATE}:${ARTIFACT_PROPERTIES} | grep -F artifact.url | cut -d'=' -f 2)
+	fi
+
+	if [[ ${ARTIFACT_URL} == */liferay-private-releases/* ]]; then
+		ARTIFACT_URL=$(echo ${ARTIFACT_URL} | sed 's/repository-cdn/repository/g')
+		echo "Downloading private artifact ${ARTIFACT_URL}"
+
+		local PRIVATE_USERNAME=$(git show ${PRIVATE_REMOTE}/${PRIVATE_BRANCH}:working.dir.properties | grep -F "build.repository.private.username=" | cut -d'=' -f 2)
+		local PRIVATE_PASSWORD=$(git show ${PRIVATE_REMOTE}/${PRIVATE_BRANCH}:working.dir.properties | grep -F "build.repository.private.password=" | cut -d'=' -f 2)
+
+		curl -u ${PRIVATE_USERNAME}:${PRIVATE_PASSWORD} -o ${EXTRA_JAR} ${ARTIFACT_URL}
+	else
+		echo "Downloading public artifact ${ARTIFACT_URL}"
 
 		curl -o ${EXTRA_JAR} ${ARTIFACT_URL}
-
-		return 0
 	fi
-
-	ARTIFACT_PROPERTIES=$(git ls-tree -r --name-only ${REFERENCE_HASH_PRIVATE} modules/.releng | grep -F "/$3/" | grep -F artifact.properties)
-
-	if [ "" == "${ARTIFACT_PROPERTIES}" ]; then
-		return 1
-	fi
-
-	local ARTIFACT_URL=$(git show ${REFERENCE_HASH_PRIVATE}:${ARTIFACT_PROPERTIES} | grep -F artifact.url | cut -d'=' -f 2)
-
-	echo "Downloading ${ARTIFACT_URL}"
-
-	local PRIVATE_USERNAME=$(git show ${PRIVATE_BRANCH}:working.dir.properties | grep -F "build.repository.private.username[${PRIVATE_BRANCH}]=" | cut -d'=' -f 2)
-	local PRIVATE_PASSWORD=$(git show ${PRIVATE_BRANCH}:working.dir.properties | grep -F "build.repository.private.password[${PRIVATE_BRANCH}]=" | cut -d'=' -f 2)
-
-	curl -u ${PRIVATE_USERNAME}:${PRIVATE_PASSWORD} -o ${EXTRA_JAR} ${ARTIFACT_URL}
 }
 
 install_jar $1 $2 $3
