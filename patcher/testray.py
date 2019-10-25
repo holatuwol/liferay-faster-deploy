@@ -27,6 +27,10 @@ service_packs = {
 master_version = '7.2'
 
 def get_liferay_version(url):
+	if url.find('.lpkg') != -1:
+		version_number = url[url.rfind('-') + 1:]
+		return '%s.%s' % (version_number[0], version_number[1])
+
 	if url.find('fix-pack-de-') == 0 or url.find('fix-pack-dxp-') == 0:
 		version_number = url[url.rfind('-') + 1:]
 		return '%s.%s' % (version_number[0], version_number[1])
@@ -369,7 +373,7 @@ def get_fixpack_build_id(version_name):
 
 	return get_build_id(routine_id, search_name, matching_name)
 
-def get_hotfix_build_id(hotfix_url):
+def get_hotfix_build_id(hotfix_url, patcher_build=None):
 	if hotfix_url is None:
 		return None
 
@@ -383,8 +387,17 @@ def get_hotfix_build_id(hotfix_url):
 	hotfix_parts = hotfix_id.split('-')
 	hotfix_number = hotfix_parts[2]
 
-	search_name = hotfix_number
-	matching_name = hotfix_id
+	if hotfix_url.find('.lpkg') != -1:
+		test_url = get_jenkins_test_url(patcher_build)
+
+		if test_url is None:
+			return None
+
+		search_name = 'fix.pack.file.name'
+		matching_name = test_url[test_url.rfind('/')+1:]
+	else:
+		search_name = hotfix_number
+		matching_name = hotfix_id
 
 	return get_build_id(routine_id, search_name, matching_name)
 
@@ -508,7 +521,7 @@ def open_testray(urls):
 			build_id = get_fixpack_build_id(url)
 		elif url.find('https://patcher.liferay.com/') == 0:
 			patcher_build = get_patcher_build(url)
-			build_id = get_hotfix_build_id(patcher_build['downloadURL'] if patcher_build is not None else None)
+			build_id = get_hotfix_build_id(patcher_build['downloadURL'] if patcher_build is not None else None, patcher_build)
 		elif url.find('https://files.liferay.com/') == 0:
 			build_id = get_hotfix_build_id(url)
 		elif url.find('http://files.liferay.com/') == 0:
@@ -527,7 +540,7 @@ def open_testray(urls):
 		previous_patcher_build = get_previous_patcher_build(patcher_build)
 
 		if previous_patcher_build is not None:
-			previous_build_id = get_hotfix_build_id(previous_patcher_build['downloadURL'])
+			previous_build_id = get_hotfix_build_id(previous_patcher_build['downloadURL'], previous_patcher_build)
 
 		if previous_build_id is None:
 			print('First build for customer, comparing against fix pack tests')
