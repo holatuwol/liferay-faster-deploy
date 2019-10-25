@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        3.5
+// @version        3.6
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/*
@@ -39,6 +39,10 @@ th.branch-type,
 th.branch-type a {
   font-weight: bold;
   width: 5em;
+}
+
+tr.qa-analysis-needed td {
+  background-color: #dde !important;
 }
 `;
 
@@ -494,7 +498,12 @@ function replaceLesaLink(target) {
       ticketURL = oldNode.value;
     }
     else if (isNaN(oldNode.value)) {
-      ticketURL = 'https://web.liferay.com/group/customer/support/-/support/ticket/' + oldNode.value;
+      if (oldNode.value.indexOf('LPP') == 0) {
+        ticketURL = 'https://issues.liferay.com/browse/' + oldNode.value;
+      }
+      else {
+        ticketURL = 'https://web.liferay.com/group/customer/support/-/support/ticket/' + oldNode.value;
+      }
     }
     else {
       ticketURL = 'https://liferay-support.zendesk.com/agent/tickets/' + oldNode.value;
@@ -719,6 +728,44 @@ function updateFromQueryString() {
   }
 }
 
+function highlightAnalysisNeededBuilds() {
+  var activeTab = document.querySelector('.tab.active');
+
+  if (!activeTab) {
+    return;
+  }
+
+  if ('QA Builds' != activeTab.textContent.trim()) {
+    return;
+  }
+
+  var buildsTable = querySelector('patcherBuildsSearchContainer');
+
+  if (!buildsTable) {
+    return;
+  }
+
+  var headerRow = buildsTable.querySelectorAll('thead tr th');
+  var statusIndex = -1;
+
+  for (var i = 0; i < headerRow.length; i++) {
+    if (headerRow[i].id.indexOf('qa-status') != -1) {
+      statusIndex = i;
+      break;
+    }
+  }
+
+  var rows = buildsTable.querySelectorAll('tbody tr');
+
+  for (var i = 0; i < rows.length; i++) {
+    var status = rows[i].querySelectorAll('td')[statusIndex];
+
+    if (status.textContent.trim() == 'QA Analysis Needed') {
+      rows[i].classList.add('qa-analysis-needed');
+    }
+  }
+}
+
 // Run all the changes we need to the page.
 
 AUI().ready(function() {
@@ -737,6 +784,7 @@ AUI().ready(function() {
   replaceDate('createDate');
   replaceDate('modifiedDate');
   addProductVersionFilter();
+  highlightAnalysisNeededBuilds();
 
   setTimeout(updateFromQueryString, 500);
 });
