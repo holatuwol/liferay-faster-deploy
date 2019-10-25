@@ -192,7 +192,8 @@ def get_previous_patcher_build(patcher_build):
 				best_matching_build_fixes = matching_build_fixes
 				best_matching_build_diff = matching_build_diff
 
-		best_matching_build_name = 'fix-pack-fix-%s' % best_matching_build['patcherFixId']
+		if best_matching_build is not None:
+			best_matching_build_name = 'fix-pack-fix-%s' % best_matching_build['patcherFixId']
 
 	new_fixes = get_new_fixes(patcher_build['patcherBuildId'], best_matching_build_diff)
 
