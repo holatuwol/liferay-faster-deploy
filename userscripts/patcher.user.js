@@ -1,12 +1,11 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        3.6
+// @version        3.7
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
-// @match          https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/*
-// @match          https://patcher.liferay.com/group/guest/patching/-/osb_patcher/fixes/*
-// @match          https://patcher.liferay.com/group/guest/patching/-/osb_patcher/accounts/*
+// @match          https://patcher.liferay.com/group/guest/patching
+// @match          https://patcher.liferay.com/group/guest/patching/-/osb_patcher/*
 // @grant          none
 // ==/UserScript==
 
@@ -736,6 +735,14 @@ function highlightAnalysisNeededBuilds() {
   }
 
   if ('QA Builds' != activeTab.textContent.trim()) {
+    var tabs = document.querySelectorAll('.tab > a');
+
+    for (var i = 0; i < tabs.length; i++) {
+      if ('QA Builds' == tabs[i].textContent.trim()) {
+        tabs[i].href += '&_1_WAR_osbpatcherportlet_delta=200';
+      }
+    }
+
     return;
   }
 
