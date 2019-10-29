@@ -20,6 +20,7 @@ import webbrowser_patch
 # Utility methods for bridging Liferay systems
 
 service_packs = {
+	'6.2': [0] * 12 + [45, 63, 71, 77, 114, 121, 128, 138, 148, 154],
 	'7.0': [0, 7, 12, 14, 22, 30, 32, 40, 50, 60, 70, 80],
 	'7.1': [0, 5, 10],
 	'7.2': [0]
@@ -44,6 +45,9 @@ def get_liferay_version(url):
 	if url.find('https://github.com/') == 0:
 		# TODO
 		return 'master'
+
+	if url.find('portal-') == 0:
+		return '6.2'
 
 	print('Unable to determine Liferay version from %s' % url)
 	return None
@@ -118,6 +122,14 @@ def get_new_fixes(build_id, new_fix_names):
 		['build id'], process_child_builds)
 
 	return links
+
+def get_62_fix_pack(patcher_build):
+	candidates = [x for x in patcher_build['patcherBuildName'].split(',') if x.find('portal-') == 0]
+
+	if len(candidates) == 0:
+		return None
+
+	return candidates[0]
 
 def get_62_fix_pack_tag(fix_pack_name):
 	base_url = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/fix_packs'
@@ -244,12 +256,12 @@ def get_previous_patcher_build(patcher_build):
 		if tag_name.find('6.2') == 0:
 			tag_name = None
 
-			patcher_build_name = [x for x in patcher_build['patcherBuildName'].split(',') if x.find('portal-') == 0]
+			patcher_build_name = get_62_fix_pack(patcher_build)
 
-			if len(patcher_build_name) == 0:
+			if patcher_build_name is None:
 				tag_name = 'fix-pack-base-6210-%s' % tag_name.split(' ')[1].lower()
 			else:
-				tag_name = get_62_fix_pack_tag(patcher_build_name[0])
+				tag_name = get_62_fix_pack_tag(patcher_build_name)
 
 
 		webbrowser.open_new_tab(
@@ -329,6 +341,8 @@ def get_routine_id(url):
 		matching_name = 'CE Pull Request' if url.find('-ee') == -1 else 'EE Pull Request'
 	elif url.find('fix-pack-de-') == 0 or url.find('fix-pack-dxp-') == 0 or url.find('fix-pack-base-') == 0:
 		matching_name = 'Fix Pack Tester'
+	elif url.find('portal-') == 0:
+		matching_name = 'Fix Pack Tester'
 	elif url.find('https://files.liferay.com') == 0:
 		matching_name = 'Hotfix Tester'
 	elif url.find('http://files.liferay.com') == 0:
@@ -402,20 +416,28 @@ def get_fixpack_build_id(version_name):
 	if version_name is None or version_name.find('fix-pack-base-') == 0:
 		return None
 
-	liferay_version = get_liferay_version(version_name)
 	routine_id = get_routine_id(version_name)
 
 	if routine_id is None:
 		return None
 
-	fix_id = int(version_name.split('-')[3])
+	liferay_version = get_liferay_version(version_name)
+
+	if liferay_version == '6.2':
+		fix_id = int(version_name.split('-')[1])
+	else:
+		fix_id = int(version_name.split('-')[3])
 
 	if fix_id == 0:
 		return None
 
 	service_pack = max([x for x, y in enumerate(service_packs[liferay_version]) if y <= fix_id])
 	search_name = '%s.10.%d' % (liferay_version, service_pack) if service_pack > 0 else '%s.10' % liferay_version
-	matching_name = ' - liferay-%s - ' % version_name
+
+	if liferay_version == '6.2':
+		matching_name = ' - liferay-fix-pack-%s-6210 - ' % version_name
+	else:
+		matching_name = ' - liferay-%s - ' % version_name
 
 	return get_build_id(routine_id, search_name, matching_name)
 
@@ -590,7 +612,13 @@ def open_testray(urls):
 
 		if previous_build_id is None:
 			print('First build for customer, comparing against fix pack tests')
-			previous_build_id = get_fixpack_build_id(patcher_build['patcherProjectVersionName'])
+
+			version_name = patcher_build['patcherProjectVersionName']
+
+			if version_name.find('6.2') == 0:
+				version_name = get_62_fix_pack(patcher_build)
+
+			previous_build_id = get_fixpack_build_id(version_name)
 
 		testray_url = get_testray_url(build_id, previous_build_id)
 
