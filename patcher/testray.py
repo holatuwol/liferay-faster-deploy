@@ -119,6 +119,37 @@ def get_new_fixes(build_id, new_fix_names):
 
 	return links
 
+def get_62_fix_pack_tag(fix_pack_name):
+	base_url = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/fix_packs'
+
+	parameters = {
+		'delta': '200'
+	}
+
+	tag_names = []
+
+	def get_fix_pack(columns):
+		for link_tag in columns['name'].find_all('a'):
+			if link_tag.text != fix_pack_name:
+				continue
+
+			html = get_liferay_content(link_tag['href'])
+			soup = BeautifulSoup(html, 'html.parser')
+
+			for fp_label in soup.find_all('label'):
+				if fp_label['for'] is not None and fp_label['for'].find('git-hash') > 0:
+					fp_url = fp_label.find_parent('div').find('a')['href']
+					tag_names.append(fp_url[fp_url.find('...')+3:])
+
+	process_patcher_search_container(
+		base_url, parameters, 'patcherFixPacksSearchContainerSearchContainer',
+		['name'], get_fix_pack)
+
+	if len(tag_names) == 0:
+		return None
+
+	return tag_names[0]
+
 def get_previous_patcher_build(patcher_build):
 	if patcher_build is None:
 		return None
@@ -202,18 +233,28 @@ def get_previous_patcher_build(patcher_build):
 
 	new_fixes = get_new_fixes(patcher_build['patcherBuildId'], best_matching_build_diff)
 
-	if len(new_fixes) > 0 and len(new_fixes) <= 2:
-		for new_fix in new_fixes:
-			webbrowser.open_new_tab(new_fix)
-	elif len(same_baseline_builds) > 0:
+	if len(same_baseline_builds) > 0:
 		webbrowser.open_new_tab(
 			'https://github.com/liferay/liferay-portal-ee/compare/%s...fix-pack-fix-%s' %
 				(best_matching_build_name, patcher_build['patcherFixId'])
 		)
 	else:
+		tag_name = patcher_build['patcherProjectVersionName']
+
+		if tag_name.find('6.2') == 0:
+			tag_name = None
+
+			patcher_build_name = [x for x in patcher_build['patcherBuildName'].split(',') if x.find('portal-') == 0]
+
+			if len(patcher_build_name) == 0:
+				tag_name = 'fix-pack-base-6210-%s' % tag_name.split(' ')[1].lower()
+			else:
+				tag_name = get_62_fix_pack_tag(patcher_build_name[0])
+
+
 		webbrowser.open_new_tab(
 			'https://github.com/liferay/liferay-portal-ee/compare/%s...fix-pack-fix-%s' %
-				(patcher_build['patcherProjectVersionName'], patcher_build['patcherFixId'])
+				(tag_name, patcher_build['patcherFixId'])
 		)
 
 	return best_matching_build
