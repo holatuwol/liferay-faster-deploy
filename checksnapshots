@@ -87,7 +87,7 @@ updatesnapshots() {
 		git clean -xdf
 		popd > /dev/null
 
-		safeant compile
+		safeant setup-sdk compile
 	fi
 
 	for candidate_folder in $(sed -n '/target name="deploy"/,/\/target/p' build.xml | grep -F 'ant dir' | grep -F 'target="deploy"' | cut -d'"' -f 2); do
