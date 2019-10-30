@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        3.8
+// @version        3.9
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -41,8 +41,25 @@ th.branch-type a {
   width: 5em;
 }
 
-tr.qa-analysis-needed td {
-  background-color: #dde !important;
+/**
+ * http://vrl.cs.brown.edu/color
+ * 4 colors, lightness between 25 and 85, add alpha of 0.3
+ */
+
+tr.qa-analysis-needed.version-6210 td {
+  background-color: rgba(79,140,157,0.3) !important;
+}
+
+tr.qa-analysis-needed.version-7010 td {
+  background-color: rgba(75,214,253,0.3) !important;
+}
+
+tr.qa-analysis-needed.version-7110 td {
+  background-color: rgba(101,52,102,0.3) !important;
+}
+
+tr.qa-analysis-needed.version-7210 td {
+  background-color: rgba(131,236,102,0.3) !important;
 }
 `;
 
@@ -92,6 +109,69 @@ function replaceHotfixLink(target) {
 }
 
 /**
+ * Looks up the 6.2 fix pack.
+ */
+
+var fixPackMetadata = null;
+
+function get62FixPack() {
+  if (fixPackMetadata) {
+    return fixPackMetadata;
+  }
+
+  var fixPackListURL = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/fix_packs?' + getQueryString({delta: 200});
+
+  var oldNode = querySelector('patcherFixName');
+
+  if (!oldNode) {
+    oldNode = querySelector('patcherBuildName');
+  }
+
+  var baseTag = null;
+  var fixPackName = oldNode.value.split(',').filter(x => x.indexOf('portal-') == 0)[0];
+
+  if (fixPackName) {
+    var xhr1 = new XMLHttpRequest();
+
+    xhr1.open('GET', fixPackListURL, false);
+    xhr1.onload = function() {
+      // https://stackoverflow.com/questions/20583396/queryselectorall-to-html-from-another-page
+      var container1 = document.implementation.createHTMLDocument().documentElement;
+      container1.innerHTML = xhr1.responseText;
+
+      var fixPackURL = Array.from(container1.querySelectorAll('table tbody tr td a'))
+        .filter(x => x.textContent.trim() == fixPackName)
+        .map(x => x.href)[0];
+
+      var xhr2 = new XMLHttpRequest();
+
+      xhr2.open('GET', fixPackURL, false);
+      xhr2.onload = function() {
+        // https://stackoverflow.com/questions/20583396/queryselectorall-to-html-from-another-page
+        var container2 = document.implementation.createHTMLDocument().documentElement;
+        container2.innerHTML = xhr2.responseText;
+
+        var gitHubURL = container2.querySelector('label[for="' + ns + 'git-hash"]').parentNode.querySelector('a').href;
+        baseTag = gitHubURL.substring(gitHubURL.indexOf('...') + 3);
+      };
+
+      xhr2.send(null);
+    };
+
+    xhr1.send(null);
+  }
+  else {
+    fixPackName = document.querySelector('label[for="' + ns + 'patcherProjectVersionId"]').parentNode.querySelector('a').textContent;
+    baseTag = 'fix-pack-base-6210-' + fixPackName.toLowerCase().substring(fixPackName.indexOf(' ') + 1);
+  }
+
+  return {
+    'tag': baseTag,
+    'name': fixPackName
+  };
+}
+
+/**
  * Replaces the plain text branch name with a link to GitHub.
  */
 
@@ -106,14 +186,19 @@ function replaceBranchName() {
   var projectNode = querySelector('patcherProjectVersionId');
   var baseTag = projectNode.options[projectNode.selectedIndex].textContent.trim();
 
-  var branchName = branchNode.value;
+  if (baseTag.indexOf('6.2') == 0) {
+    var metadata = get62FixPack().tag;
+  }
+
+  var gitRemoteNode = querySelector('gitRemoteURL');
+
   var gitRemoteURL = gitRemoteNode.value;
   var gitRemotePath = gitRemoteURL.substring(gitRemoteURL.indexOf(':') + 1, gitRemoteURL.lastIndexOf('.git'));
   var gitRemoteUser = gitRemotePath.substring(0, gitRemotePath.indexOf('/'));
 
   var gitHubPath = 'https://github.com/' + gitRemotePath;
 
-  replaceNode(branchNode, '<a href="https://github.com/liferay/liferay-portal-ee/compare/' + baseTag + '...' + gitRemoteUser + ':' + branchName + '">' + branchName + '</a>');
+  replaceNode(oldNode, '<a href="https://github.com/liferay/liferay-portal-ee/compare/' + baseTag + '...' + gitRemoteUser + ':' + branchName + '">' + branchName + '</a>');
   replaceNode(gitRemoteNode, '<a href="' + gitHubPath + '">' + gitRemoteURL + '</a>');
 }
 
@@ -266,7 +351,13 @@ function getBuildLinkHTML(build) {
  */
 
 function getChildBuildHash(mergeCompareLink, build) {
-  var compareLink = 'https://github.com/liferay/liferay-portal-ee/compare/' + build.branchName + '...fix-pack-fix-' + build.patcherFixId;
+  var baseTag = build.branchName;
+
+  if (baseTag.indexOf('6.2') == 0) {
+    var baseTag = get62FixPack().tag;
+  }
+
+  var compareLink = 'https://github.com/liferay/liferay-portal-ee/compare/' + baseTag + '...fix-pack-fix-' + build.patcherFixId;
 
   var extraHTML = (compareLink == mergeCompareLink) ? ' (build tag)' : '';
 
@@ -526,9 +617,18 @@ function addProductVersionFilter() {
   }
   else if (productVersionSelect.disabled) {
     var projectVersionSelect = querySelector('patcherProjectVersionId');
-    var patcherTagName = projectVersionSelect.options[projectVersionSelect.selectedIndex].textContent.trim();
 
-    replaceNode(projectVersionSelect, '<a href="https://github.com/liferay/liferay-portal-ee/tree/' + patcherTagName + '">' + patcherTagName + '</a>');
+    var patcherTagName = projectVersionSelect.options[projectVersionSelect.selectedIndex].textContent.trim();
+    var branchName = patcherTagName;
+
+    if (patcherTagName.indexOf('6.2') == 0) {
+      var metadata = get62FixPack();
+
+      patcherTagName = metadata.tag;
+      branchName = metadata.name;
+    }
+
+    replaceNode(projectVersionSelect, '<a href="https://github.com/liferay/liferay-portal-ee/tree/' + patcherTagName + '">' + branchName + '</a>');
     return;
   }
 
@@ -754,21 +854,32 @@ function highlightAnalysisNeededBuilds() {
   }
 
   var headerRow = buildsTable.querySelectorAll('thead tr th');
+
   var statusIndex = -1;
+  var versionIndex = -1;
 
   for (var i = 0; i < headerRow.length; i++) {
     if (headerRow[i].id.indexOf('qa-status') != -1) {
       statusIndex = i;
-      break;
+    }
+
+    if (headerRow[i].id.indexOf('project-version') != -1) {
+      versionIndex = i;
     }
   }
 
   var rows = buildsTable.querySelectorAll('tbody tr');
 
   for (var i = 0; i < rows.length; i++) {
-    var status = rows[i].querySelectorAll('td')[statusIndex];
+    var cells = rows[i].querySelectorAll('td');
+    var status = cells[statusIndex];
 
-    if (status.textContent.trim() == 'QA Analysis Needed') {
+    var projectVersion = cells[versionIndex].textContent.trim();
+    var versionNumber = projectVersion.indexOf('6.2.10') != -1 ? '6210' : projectVersion.substring(projectVersion.lastIndexOf('-') + 1);
+
+    rows[i].classList.add('version-' + versionNumber);
+
+    if (status.textContent.indexOf('QA Analysis Needed') != -1) {
       rows[i].classList.add('qa-analysis-needed');
     }
   }
