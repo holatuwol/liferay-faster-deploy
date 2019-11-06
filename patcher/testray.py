@@ -439,6 +439,16 @@ def get_fixpack_build_id(version_name):
 	else:
 		matching_name = ' - liferay-%s - ' % version_name
 
+	result = get_build_id(routine_id, search_name, matching_name)
+
+	if result is not None:
+		return result
+
+	if liferay_version == '6.2':
+		matching_name = ' - liferay-fix-pack-%s-6210-build' % version_name
+	else:
+		matching_name = ' - liferay-%s-build' % version_name
+
 	return get_build_id(routine_id, search_name, matching_name)
 
 def get_hotfix_build_id(hotfix_url, patcher_build=None):
@@ -610,7 +620,7 @@ def open_testray(urls):
 		if previous_patcher_build is not None:
 			previous_build_id = get_hotfix_build_id(previous_patcher_build['downloadURL'], previous_patcher_build)
 
-		if previous_build_id is None:
+		if previous_build_id is None and patcher_build is not None:
 			print('First build for customer, comparing against fix pack tests')
 
 			version_name = patcher_build['patcherProjectVersionName']
