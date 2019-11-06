@@ -11,8 +11,8 @@ createfile() {
 				createfile ${file}
 			done
 		fi
-	elif [ ! -e ${PRIVATE_FOLDER}/$1 ]; then
-		ln -s $PWD/$1 ${PRIVATE_FOLDER}/$1
+	elif [ ! -e "${PRIVATE_FOLDER}/$1" ]; then
+		ln -s $PWD/$1 "${PRIVATE_FOLDER}/$1"
 	fi
 }
 
