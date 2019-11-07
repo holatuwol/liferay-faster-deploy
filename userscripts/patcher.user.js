@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        4.0
+// @version        4.1
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -886,7 +886,7 @@ function highlightAnalysisNeededBuilds() {
 
     rows[i].classList.add('version-' + versionNumber);
 
-    if (status.textContent.indexOf('QA Analysis Needed') != -1) {
+    if (status.textContent.indexOf('QA Analysis') != -1) {
       rows[i].classList.add('qa-analysis-needed');
     }
     else {
