@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        3.9
+// @version        4.0
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -60,6 +60,10 @@ tr.qa-analysis-needed.version-7110 td {
 
 tr.qa-analysis-needed.version-7210 td {
   background-color: rgba(131,236,102,0.3) !important;
+}
+
+tr.qa-analysis-unneeded {
+  opacity: 0.3;
 }
 `;
 
@@ -868,7 +872,10 @@ function highlightAnalysisNeededBuilds() {
     }
   }
 
-  var rows = buildsTable.querySelectorAll('tbody tr');
+  var buildsTableBody = buildsTable.querySelector('tbody');
+
+  var rows = buildsTableBody.querySelectorAll('tr');
+  var detachedRows = [];
 
   for (var i = 0; i < rows.length; i++) {
     var cells = rows[i].querySelectorAll('td');
@@ -882,6 +889,15 @@ function highlightAnalysisNeededBuilds() {
     if (status.textContent.indexOf('QA Analysis Needed') != -1) {
       rows[i].classList.add('qa-analysis-needed');
     }
+    else {
+      rows[i].classList.add('qa-analysis-unneeded');
+      rows[i].remove();
+      detachedRows.push(rows[i])
+    }
+  }
+
+  for (var i = 0; i < detachedRows.length; i++) {
+    buildsTableBody.appendChild(detachedRows[i]);
   }
 }
 
