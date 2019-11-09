@@ -21,11 +21,21 @@ check_tomcat() {
 		return 1
 	fi
 
-	WEBSPHERE_TAG=$(curl -s https://hub.docker.com/v2/repositories/ibmcom/websphere-traditional/tags/ | jq '.results | .[].name' | cut -d'"' -f 2 | grep "^${1}" | grep -F profile | cut -d '-' -f 1 | sort -t'.' -n -k1,4 | tail -1)-profile
+	local TAG_URL='https://hub.docker.com/v2/repositories/ibmcom/websphere-traditional/tags/'
+	local TAGS=$(curl -s ${TAG_URL})
+
+	WEBSPHERE_TAG='-profile'
+
+	while [ "" != "${TAG_URL}" ] && [ "-profile" == "${WEBSPHERE_TAG}" ]; do
+		TAGS=$(curl -s ${TAG_URL})
+		TAG_URL=$(echo "${TAGS}" | jq '.next' | cut -d'"' -f 2)
+		WEBSPHERE_TAG=$(echo "${TAGS}" | jq '.results | .[].name' | cut -d'"' -f 2 | grep "^${1}" | grep -F profile | cut -d '-' -f 1 | sort -t'.' -n -k1,4 | tail -1)-profile
+	done
 
 	if [ "-profile" == "${WEBSPHERE_TAG}" ]; then
 		echo ""
 		timeecho "Unable to find tag matching $1"
+		timeecho "Please check https://hub.docker.com/v2/repositories/ibmcom/websphere-traditional/tags/"
 		return 1
 	fi
 
