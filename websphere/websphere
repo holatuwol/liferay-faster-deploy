@@ -150,7 +150,7 @@ start_websphere() {
 	fi
 
 	if [ "" == "${WEBSPHERE_PORT}" ]; then
-		WEBSPHERE_PORT=$(python "${SCRIPT_FOLDER}/../tomcat/getport.py" 9080 7800 7801 8000 9443 11311)
+		WEBSPHERE_PORT=$(python "${SCRIPT_FOLDER}/../tomcat/getport.py" 9080 9043 9060 7800 7801 8000 9443 11311)
 	fi
 
 	if [ "" == "${WEBSPHERE_PORT}" ]; then
@@ -169,8 +169,9 @@ start_websphere() {
 
 	local INCREMENT=$(expr ${WEBSPHERE_PORT} '-' 9080)
 
-	local GLOBAL_BIND="$(echo 9080 9443 | tr ' ' '\n' | awk '{ print  "--publish " $1+'${INCREMENT}' ":" $1 }' | xargs)"
-	local LOCAL_BIND="$(echo 8000 11311 | tr ' ' '\n' | awk '{ print  "--publish 127.0.0.1:" $1+'${INCREMENT}' ":" $1 }' | xargs)"
+	local GLOBAL_BIND=
+	#local GLOBAL_BIND="$(echo 9080 9443 | tr ' ' '\n' | awk '{ print  "--publish " $1+'${INCREMENT}' ":" $1 }' | xargs)"
+	local LOCAL_BIND="$(echo 9080 9443 9043 9060 8000 11311 | tr ' ' '\n' | awk '{ print  "--publish 127.0.0.1:" $1+'${INCREMENT}' ":" $1 }' | xargs)"
 	local EXPOSE_ONLY="$(echo 7800 7801 | tr ' ' '\n' | awk '{ print  "--expose " $1 }' | xargs)"
 
 	docker run -d ${GLOBAL_BIND} ${LOCAL_BIND} ${EXPOSE_ONLY} \
