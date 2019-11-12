@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           GitHub Link to LPS Tickets
 // @namespace      holatuwol
-// @version        0.2
+// @version        0.3
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/github_link_lps.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/github_link_lps.user.js
 // @match          https://github.com/*/liferay-portal*
@@ -19,7 +19,9 @@ function createAnchorTag(text, href, classList) {
   link.href = href;
   link.textContent = text;
 
-  copyClassList(classList, link.classList);
+  if (classList) {
+    copyClassList(classList, link.classList);
+  }
 
   return link;
 }
