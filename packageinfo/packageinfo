@@ -11,16 +11,16 @@ bootstrap() {
 
 	echo "Generating bootstrap info for $1"
 
-	while read -r line; do
+	for line in $(grep -F 'group: "com.liferay"' $(git ls-files modules | grep -F '/portal-bootstrap/build.gradle'); do
 		local ARTIFACT_NAME=$(echo "${line}" | grep -o 'name: "[^"]*"' | cut -d'"' -f 2)
 		local ARTIFACT_VERSION=$(echo "${line}" | grep -o 'version: "[^"]*"' | cut -d'"' -f 2)
 
 		if [ "" != "${ARTIFACT_NAME}" ] && [ "" != "${ARTIFACT_VERSION}" ]; then
 			echo "com.liferay,${ARTIFACT_NAME},${ARTIFACT_VERSION}" >> ${OUTPUT_FILE}
 		fi
-	done <<< $(grep -F 'group: "com.liferay"' $(git ls-files modules | grep -F '/portal-bootstrap/build.gradle'))
+	done
 
-	while read -r line; do
+	for line in $(grep -F 'project("' $(git ls-files modules | grep -F '/portal-bootstrap/build.gradle') | grep -o '".*"' | cut -d'"' -f 2); do
 		local PROJECT_PATH=$(echo ${line} | sed 's@:@/@g')
 		local ARTIFACT_NAME=$(grep -F Bundle-SymbolicName "modules${PROJECT_PATH}/bnd.bnd" | cut -d' ' -f 2-)
 		local ARTIFACT_VERSION=
@@ -29,7 +29,7 @@ bootstrap() {
 			ARTIFACT_VERSION=$(grep 'artifact.url' modules/.releng${PROJECT_PATH}/artifact.properties | cut -d'=' -f 2 | grep -o "/${ARTIFACT_NAME}/[^/]*" | cut -d'/' -f 3)
 			echo "com.liferay,${ARTIFACT_NAME},${ARTIFACT_VERSION}" >> ${OUTPUT_FILE}
 		fi
-	done <<< $(grep -F 'project("' $(git ls-files modules | grep -F '/portal-bootstrap/build.gradle') | grep -o '".*"' | cut -d'"' -f 2)
+	done
 }
 
 bundleinfo() {
