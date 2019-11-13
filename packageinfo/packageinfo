@@ -183,7 +183,7 @@ checkfile() {
 		fi
 	fi
 
-	git clean -xdf -e "app.server.$USER.properties" -e "build.$USER.properties"
+	git clean -xdf -e "app.server.${USER}.properties" -e "build.${USER}.properties"
 	git reset --hard
 	git checkout $1
 
@@ -292,15 +292,17 @@ dirnames() {
 }
 
 fixbuildprops() {
-	if [ -f build.$USER.properties ]; then
-		if [[ 0 -ne $(egrep -o $'\r\n'\$ build.$USER.properties | wc -c ) ]]; then
-			perl -pi -e 's/\r\n|\n|\r/\n/g' build.$USER.properties
+	if [ -f build.${USER}.properties ]; then
+		if [[ 0 -ne $(egrep -o $'\r\n'\$ build.${USER}.properties | wc -c ) ]]; then
+			perl -pi -e 's/\r\n|\n|\r/\n/g' build.${USER}.properties
 		fi
 	fi
 
-	if [ "" == "$(grep -F baseline.jar.report.level=off build.$USER.properties)" ]; then
-		sed 's/^\s*baseline.jar.report.level=/#baseline.jar.report.level=/g' build.$USER.properties
-		echo -e '\nbaseline.jar.report.level=off' >> build.$USER.properties
+	touch build.${USER}.properties
+
+	if [ "" == "$(grep -F baseline.jar.report.level=off build.${USER}.properties)" ]; then
+		sed 's/^\s*baseline.jar.report.level=/#baseline.jar.report.level=/g' build.${USER}.properties
+		echo -e '\nbaseline.jar.report.level=off' >> build.${USER}.properties
 	fi
 }
 
