@@ -11,7 +11,7 @@ bootstrap() {
 
 	echo "Generating bootstrap info for $1"
 
-	for line in $(grep -F 'group: "com.liferay"' $(git ls-files modules | grep -F '/portal-bootstrap/build.gradle'); do
+	for line in $(grep -F 'group: "com.liferay"' $(git ls-files modules | grep -F '/portal-bootstrap/build.gradle')); do
 		local ARTIFACT_NAME=$(echo "${line}" | grep -o 'name: "[^"]*"' | cut -d'"' -f 2)
 		local ARTIFACT_VERSION=$(echo "${line}" | grep -o 'version: "[^"]*"' | cut -d'"' -f 2)
 
