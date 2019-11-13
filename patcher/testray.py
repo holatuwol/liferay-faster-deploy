@@ -521,7 +521,7 @@ def get_testray_url(a, b, run_number='1'):
 	if b_run_id is None:
 		return 'https://testray.liferay.com/home/-/testray/case_results?testrayBuildId=%s&testrayRunId=%s' % (a, a_run_id)
 
-	return 'https://testray.liferay.com/home/-/testray/runs/compare?testrayRunIdA=%s&testrayRunIdB=%s&view=details' % (a_run_id, b_run_id)
+	return 'https://testray.liferay.com/home/-/testray/runs/compare?testrayRunIdA=%s&testrayRunIdB=%s&view=components' % (a_run_id, b_run_id)
 
 # Retrieve a Jenkins URL for a patcher build
 
