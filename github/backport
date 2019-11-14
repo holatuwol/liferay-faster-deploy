@@ -18,7 +18,7 @@ generate_patch_files() {
 
 	for commit in $(git log --reverse $2 --pretty='%H' --grep=$1); do
 	  commit_index=$((commit_index+1))
-	  mv $(git format-patch ${commit}~1..${commit}) $(printf '%04d' ${commit_index})-${commit}.patch
+	  mv $(git format-patch --binary ${commit}~1..${commit}) $(printf '%04d' ${commit_index})-${commit}.patch
 	done
 
 	git ls-files modules/apps/ | grep -F bnd.bnd | dirnames > .redeploy/folders.txt
