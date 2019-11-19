@@ -7,11 +7,13 @@ install_jar() {
 		return 0
 	fi
 
-	while read -r lpkg; do
-		if [ "" != "${lpkg}" ] && [ -f ${lpkg} ] && [ "" != "$(unzip -l "${lpkg}" | grep -F $2)" ]; then
-			return 0
-		fi
-	done <<< "$(find ${LIFERAY_HOME}/osgi/marketplace -name '*.lpkg')"
+	if [ -d ${LIFERAY_HOME}/osgi/marketplace ]; then
+		while read -r lpkg; do
+			if [ "" != "${lpkg}" ] && [ -f ${lpkg} ] && [ "" != "$(unzip -l "${lpkg}" | grep -F $2)" ]; then
+				return 0
+			fi
+		done <<< "$(find ${LIFERAY_HOME}/osgi/marketplace -name '*.lpkg')"
+	fi
 
 	if [ "" == "${GIT_ROOT}" ] || [ "" == "${BASE_BRANCH}" ]; then
 		return 0

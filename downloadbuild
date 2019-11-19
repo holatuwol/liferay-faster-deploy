@@ -30,6 +30,10 @@ downloadbranch() {
 		downloadbranchmirror
 	fi
 
+	if [ "" != "$NEW_BASELINE" ]; then
+		return 0
+	fi
+
 	if [ "" == "$(git log -1 --pretty='%H' $NEW_BASELINE 2> /dev/null)" ]; then
 		echo "Checking remotes for updates"
 
@@ -203,7 +207,12 @@ downloadbranchmirror() {
 	BUILD_NAME=$(echo ${ARTIFACT_NAME} | sed "s/liferay-portal-tomcat-${BASE_BRANCH}/${SHORT_NAME}-$BUILD_TIMESTAMP/g")
 
 	if [ -f "$HOME/.liferay/builds/$BUILD_NAME" ]; then
-		NEW_BASELINE=$(cat $HOME/.liferay/builds/${BUILD_NAME}.githash)
+		NEW_BASELINE=
+
+		if [ -f $HOME/.liferay/builds/${BUILD_NAME}.githash ]; then
+			NEW_BASELINE=$(cat $HOME/.liferay/builds/${BUILD_NAME}.githash)
+		fi
+
 		return 0
 	fi
 
@@ -231,7 +240,9 @@ downloadbranchmirror() {
 		fi
 	fi
 
-	echo ${NEW_BASELINE} | tee $HOME/.liferay/builds/${BUILD_NAME}.githash
+	if [ "" != "${NEW_BASELINE}" ]; then
+		echo ${NEW_BASELINE} | tee $HOME/.liferay/builds/${BUILD_NAME}.githash
+	fi
 }
 
 downloadbuild() {
@@ -298,15 +309,15 @@ extract() {
 
 	if [ -f "$LIFERAY_HOME/baseline.txt" ]; then
 		OLD_BASELINE=$(cat "$LIFERAY_HOME/baseline.txt")
+
+		if [ "$OLD_BASELINE" == "$NEW_BASELINE" ]; then
+			echo "$LIFERAY_HOME is already up to date"
+			return 0
+		fi
 	fi
 
 	# Cleanup the folders before we untar. Only file we exclude is
 	# the Hypersonic data files if we already have them.
-
-	if [ "$OLD_BASELINE" == "$NEW_BASELINE" ]; then
-		echo "$LIFERAY_HOME is already up to date"
-		return 0
-	fi
 
 	local EXCLUDES=
 
@@ -484,6 +495,10 @@ rebasebranch() {
 
 resetbasebranch() {
 	CURRENT_HASH=$(git log -1 --pretty='%H')
+
+	if [ "" == "${NEW_BASELINE}" ]; then
+		return 0
+	fi
 
 	if git merge-base --is-ancestor $CURRENT_HASH $NEW_BASELINE; then
 		git merge --ff-only $NEW_BASELINE

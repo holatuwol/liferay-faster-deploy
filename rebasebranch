@@ -1,6 +1,10 @@
 #!/bin/bash
 
 rebasebranch() {
+	if [ "" == "${NEW_BASELINE}" ]; then
+		return 0
+	fi
+
 	local STASH=$(git status -s | grep -v '??')
 
 	if [ "" != "$STASH" ]; then
@@ -36,6 +40,10 @@ rebasebranch() {
 
 resetbasebranch() {
 	CURRENT_HASH=$(git log -1 --pretty='%H')
+
+	if [ "" == "${NEW_BASELINE}" ]; then
+		return 0
+	fi
 
 	if git merge-base --is-ancestor $CURRENT_HASH $NEW_BASELINE; then
 		git merge --ff-only $NEW_BASELINE
