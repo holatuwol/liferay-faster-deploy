@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           GitHub Link to LPS Tickets
 // @namespace      holatuwol
-// @version        0.3
+// @version        0.4
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/github_link_lps.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/github_link_lps.user.js
 // @match          https://github.com/*/liferay-portal*
@@ -16,6 +16,7 @@ function createAnchorTag(text, href, classList) {
   }
 
   var link = document.createElement('a');
+  link.setAttribute('target', '_blank');
   link.href = href;
   link.textContent = text;
 
@@ -41,7 +42,7 @@ function checkCurrentURL() {
 
   lastPath = document.location.pathname;
 
-  var links = document.querySelectorAll('p.commit-title,a[data-hovercard-type="commit"],' + projects.map(x => 'a[title^="' + x + '"],a[aria-label^="' + x + '"]').join(','));
+  var links = document.querySelectorAll('span.js-issue-title,p.commit-title,a[data-hovercard-type="commit"],' + projects.map(x => 'a[title^="' + x + '"],a[aria-label^="' + x + '"]').join(','));
 
   for (var i = 0; i < links.length; i++) {
     var text = links[i].textContent;
