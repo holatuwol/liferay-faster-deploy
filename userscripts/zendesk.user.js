@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        7.7
+// @version        7.8
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -173,6 +173,23 @@ a.generating::after {
   font-weight: normal;
   margin-left: 2px;
   margin-right: 2px;
+}
+
+.rich_text .comment_input .lesa-ui-playbook-reminder {
+  display: none;
+}
+
+.rich_text .comment_input.is-public .lesa-ui-playbook-reminder:not(:empty) {
+  background-color: #eef2fa;
+  border: 1px solid #d8dcde;
+  border-radius: 0 3px 0 0 !important;
+  color: #2e5aac;
+  display: block;
+  padding: 10px;
+}
+
+.rich_text .comment_input.is-public .lesa-ui-playbook-reminder a {
+  text-decoration: underline;
 }
 `;
 }
@@ -915,7 +932,7 @@ function getEmojiAnchorTags(tags) {
  * Add a marker to show the LESA priority on the ticket.
  */
 
-function addPriorityMarker(header, ticketId, ticketInfo) {
+function addPriorityMarker(header, conversation, ticketId, ticketInfo) {
   var priorityElement = header.querySelector('.lesa-ui-priority');
 
   if (priorityElement) {
@@ -935,25 +952,24 @@ function addPriorityMarker(header, ticketId, ticketInfo) {
 
   var subpriority = ticketInfo.ticket.priority || 'none';
 
-  if ((subpriority == 'high') || (subpriority == 'urgent')) {
-    var tagSet = new Set(ticketInfo.ticket.tags);
+  var tags = (ticketInfo && ticketInfo.ticket && ticketInfo.ticket.tags) || [];
+  var tagSet = new Set(tags);
 
+  if ((subpriority == 'high') || (subpriority == 'urgent')) {
     var criticalMarkers = ['production', 'production_completely_shutdown', 'production_severely_impacted_inoperable'].filter(Set.prototype.has.bind(tagSet));
 
     if (criticalMarkers.length >= 2) {
       var criticalElement = document.createElement('span');
       criticalElement.classList.add('lesa-ui-priority-critical');
-      criticalElement.textContent = 'critical';
+      criticalElement.textContent = tagSet.has('platinum') ? 'platinum critical' : 'critical';
       priorityElement.appendChild(criticalElement);
     }
   }
 
-  if (ticketInfo && ticketInfo.ticket && ticketInfo.ticket.tags) {
-    var emojiContainer = getEmojiAnchorTags(ticketInfo.ticket.tags);
+  var emojiContainer = getEmojiAnchorTags(tags);
 
-    if (emojiContainer != null) {
-      priorityElement.appendChild(emojiContainer);
-    }
+  if (emojiContainer != null) {
+    priorityElement.appendChild(emojiContainer);
   }
 
   if (priorityElement.childNodes.length > 0) {
@@ -1014,7 +1030,7 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
 
   // Add a marker indicating the LESA priority based on critical workflow rules
 
-  addPriorityMarker(header, ticketId, ticketInfo);
+  addPriorityMarker(header, conversation, ticketId, ticketInfo);
   addSubjectTextWrap(header, ticketId, ticketInfo);
 
   // Check to see if we have any descriptions that we need to remove.
@@ -1487,6 +1503,46 @@ function addJiraLinks(ticketId, ticketInfo, conversation) {
 }
 
 /**
+ * Add a playbook reminder to the given editor.
+ */
+
+function addPlaybookReminder(ticketId, ticketInfo, conversation) {
+  var editor = conversation.querySelector('.editor');
+
+  if (!editor) {
+    return;
+  }
+
+  var playbookReminderElement = editor.parentElement.querySelector('.lesa-ui-playbook-reminder');
+
+  if (playbookReminderElement) {
+    return;
+  }
+
+  playbookReminderElement = document.createElement('div');
+  playbookReminderElement.classList.add('lesa-ui-playbook-reminder');
+
+  var reminders = [];
+
+  var tags = (ticketInfo && ticketInfo.ticket && ticketInfo.ticket.tags) || [];
+  var tagSet = new Set(tags);
+
+  var subpriority = ticketInfo.ticket.priority || 'none';
+
+  if (((subpriority == 'high') || (subpriority == 'urgent')) && tagSet.has('platinum')) {
+    var criticalMarkers = ['production', 'production_completely_shutdown', 'production_severely_impacted_inoperable'].filter(Set.prototype.has.bind(tagSet));
+
+    if (criticalMarkers.length >= 2) {
+      reminders.push(['platinum critical', 'https://grow.liferay.com/people/How+To+Handle+Critical+Tickets', 'playbook']);
+    }
+  }
+
+  playbookReminderElement.innerHTML = reminders.map(x => 'This is a <strong>' + x[0] + '</strong> ticket. Please remember to follow the <a href="' + x[1] + '">' + x[2] + '</a> !').join('<br/>');
+
+  editor.parentElement.insertBefore(playbookReminderElement, editor);
+}
+
+/**
  * Retrieve information about a ticket, and then call a function
  * once that information is retrieved.
  */
@@ -1823,6 +1879,7 @@ function checkTicketConversation(ticketId, ticketInfo) {
     enablePublicConversation(ticketId, ticketInfo, conversation);
     addStackeditButtons(ticketId, ticketInfo, conversation);
     addJiraLinks(ticketId, ticketInfo, conversation);
+    addPlaybookReminder(ticketId, ticketInfo, conversation);
     addTicketDescription(ticketId, ticketInfo, conversation);
     fixPermaLinkAnchors(ticketId, ticketInfo, conversation);
     addPermaLinks(ticketId, ticketInfo, conversation);
