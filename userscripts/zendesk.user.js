@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        7.9
+// @version        8.0
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -786,7 +786,7 @@ function addPriorityMarker(header, conversation, ticketId, ticketInfo) {
         var customerRegion = ticketInfo.organizations[0].organization_fields.support_region;
         var ticketContainer = header.closest('.main_panes');
         var assigneeElement = ticketContainer.querySelector('.assignee_id .zd-combo-selectmenu');
-        var assigneeText = (assigneeElement.textContent || '').trim();
+        var assigneeText = (assigneeElement.getAttribute('data-original-title') || '').trim();
         var assigneeRegions = new Set(getSupportOffices(assigneeText).map(function (x) { return x.toLowerCase(); }));
         if (!assigneeRegions.has(customerRegion)) {
             var customerRegionElement = document.createElement('span');
@@ -1377,6 +1377,9 @@ function getSupportOffices(assigneeGroup) {
     }
     if (assigneeGroup.indexOf('- BR') != -1) {
         supportOffices.push('Brazil');
+    }
+    if (assigneeGroup.indexOf('- CN') != -1) {
+        supportOffices.push('China');
     }
     if (assigneeGroup.indexOf('- HU') != -1) {
         supportOffices.push('EU');
