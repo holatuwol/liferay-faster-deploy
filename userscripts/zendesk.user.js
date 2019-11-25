@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        8.0
+// @version        8.1
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -786,7 +786,7 @@ function addPriorityMarker(header, conversation, ticketId, ticketInfo) {
         var customerRegion = ticketInfo.organizations[0].organization_fields.support_region;
         var ticketContainer = header.closest('.main_panes');
         var assigneeElement = ticketContainer.querySelector('.assignee_id .zd-combo-selectmenu');
-        var assigneeText = (assigneeElement.getAttribute('data-original-title') || '').trim();
+        var assigneeText = (assigneeElement.getAttribute('data-original-title') || assigneeElement.textContent || '').trim();
         var assigneeRegions = new Set(getSupportOffices(assigneeText).map(function (x) { return x.toLowerCase(); }));
         if (!assigneeRegions.has(customerRegion)) {
             var customerRegionElement = document.createElement('span');
