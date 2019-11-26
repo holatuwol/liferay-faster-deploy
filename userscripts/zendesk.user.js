@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        8.1
+// @version        8.2
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -454,6 +454,25 @@ function addJIRASearchField(propertyBox, ticketId) {
     jiraSearchItems.push(jiraSearchLinkContainer);
     generateFormField(propertyBox, 'lesa-ui-jirasearch', 'JIRA Search', jiraSearchItems);
 }
+function hideSidebarSelectOption(hiddenMenuItemTexts) {
+    var menuItems = Array.from(document.querySelectorAll('.zd-state-focus.zd-state-open ul li'));
+    for (var i = 0; i < menuItems.length; i++) {
+        var menuItemText = (menuItems[i].textContent || '').trim();
+        if (hiddenMenuItemTexts.has(menuItemText)) {
+            menuItems[i].style.display = 'none';
+        }
+    }
+}
+/**
+ * Hide certain select options that we don't want users to select.
+ */
+function hideSidebarSelectOptions(propertyBox, ticketId, ticketInfo) {
+    var workspaceElement = propertyBox.closest('.workspace');
+    var longTermResolutionButton = workspaceElement.querySelector('.custom_field_360013378112');
+    if (longTermResolutionButton) {
+        longTermResolutionButton.onclick = hideSidebarSelectOption.bind(null, new Set(['Documentation (Archived)']));
+    }
+}
 /**
  * Make tags in the sidebar clickable, so we can easily find tickets
  * with similar tags.
@@ -500,6 +519,7 @@ function updateSidebarBoxContainer(ticketId, ticketInfo) {
         addOrganizationField(propertyBoxes[i], ticketId, ticketInfo);
         addJIRASearchField(propertyBoxes[i], ticketId);
         addPatcherPortalField(propertyBoxes[i], ticketId, ticketInfo);
+        hideSidebarSelectOptions(propertyBoxes[i], ticketId, ticketInfo);
     }
 }
 /**
