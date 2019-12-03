@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        4.1
+// @version        4.2
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -187,11 +187,13 @@ function replaceBranchName() {
     return;
   }
 
+  var branchName = branchNode.value;
+
   var projectNode = querySelector('patcherProjectVersionId');
   var baseTag = projectNode.options[projectNode.selectedIndex].textContent.trim();
 
   if (baseTag.indexOf('6.2') == 0) {
-    var metadata = get62FixPack().tag;
+    baseTag = get62FixPack().tag;
   }
 
   var gitRemoteNode = querySelector('gitRemoteURL');
@@ -202,7 +204,7 @@ function replaceBranchName() {
 
   var gitHubPath = 'https://github.com/' + gitRemotePath;
 
-  replaceNode(oldNode, '<a href="https://github.com/liferay/liferay-portal-ee/compare/' + baseTag + '...' + gitRemoteUser + ':' + branchName + '">' + branchName + '</a>');
+  replaceNode(branchNode, '<a href="https://github.com/liferay/liferay-portal-ee/compare/' + baseTag + '...' + gitRemoteUser + ':' + branchName + '">' + branchName + '</a>');
   replaceNode(gitRemoteNode, '<a href="' + gitHubPath + '">' + gitRemoteURL + '</a>');
 }
 
@@ -839,15 +841,15 @@ function highlightAnalysisNeededBuilds() {
     return;
   }
 
-  if ('QA Builds' != activeTab.textContent.trim()) {
-    var tabs = document.querySelectorAll('.tab > a');
+  var tabs = document.querySelectorAll('.tab > a');
 
-    for (var i = 0; i < tabs.length; i++) {
-      if ('QA Builds' == tabs[i].textContent.trim()) {
-        tabs[i].href += '&_1_WAR_osbpatcherportlet_delta=200';
-      }
+  for (var i = 0; i < tabs.length; i++) {
+    if ('QA Builds' == tabs[i].textContent.trim()) {
+      tabs[i].href += '&_1_WAR_osbpatcherportlet_delta=200';
     }
+  }
 
+  if ('QA Builds' != activeTab.textContent.trim()) {
     return;
   }
 
