@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        8.2
+// @version        8.3
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -774,6 +774,37 @@ function getEmojiAnchorTags(tags) {
     return emojiContainer;
 }
 /**
+ * Retrieves the support region
+ */
+function getSupportRegions(assigneeText) {
+    var supportRegions = [];
+    if (assigneeText.indexOf('- AU') != -1) {
+        supportRegions.push('Australia');
+    }
+    if (assigneeText.indexOf('- BR') != -1) {
+        supportRegions.push('Brazil');
+    }
+    if (assigneeText.indexOf('- CN') != -1) {
+        supportRegions.push('China');
+    }
+    if (assigneeText.indexOf('- HU') != -1) {
+        supportRegions.push("Hungary");
+    }
+    if (assigneeText.indexOf('- IN') != -1) {
+        supportRegions.push('India');
+    }
+    if (assigneeText.indexOf('- JP') != -1) {
+        supportRegions.push('Japan');
+    }
+    if ((assigneeText.indexOf('Spain Pod') == 0) || (assigneeText.indexOf(' - ES') != -1)) {
+        supportRegions.push('Spain');
+    }
+    if (assigneeText.indexOf(' - US') != -1) {
+        supportRegions.push('US');
+    }
+    return new Set(supportRegions.map(function (x) { return x.toLowerCase(); }));
+}
+/**
  * Add a marker to show the LESA priority on the ticket.
  */
 function addPriorityMarker(header, conversation, ticketId, ticketInfo) {
@@ -807,7 +838,7 @@ function addPriorityMarker(header, conversation, ticketId, ticketInfo) {
         var ticketContainer = header.closest('.main_panes');
         var assigneeElement = ticketContainer.querySelector('.assignee_id .zd-combo-selectmenu');
         var assigneeText = (assigneeElement.getAttribute('data-original-title') || assigneeElement.textContent || '').trim();
-        var assigneeRegions = new Set(getSupportOffices(assigneeText).map(function (x) { return x.toLowerCase(); }));
+        var assigneeRegions = getSupportRegions(assigneeText);
         if (!assigneeRegions.has(customerRegion)) {
             var customerRegionElement = document.createElement('span');
             customerRegionElement.classList.add('lesa-ui-priority-major');
@@ -1389,17 +1420,15 @@ function addReactLabelValues(testId, values, callback) {
  */
 function getSupportOffices(assigneeGroup) {
     var supportOffices = [];
-    if ((assigneeGroup.indexOf('- AU') != -1) || (assigneeGroup.indexOf('- CN') != -1) || (assigneeGroup.indexOf('- JP') != -1)) {
-        supportOffices.push('APAC');
-    }
     if (assigneeGroup.indexOf('- AU') != -1) {
+        supportOffices.push('APAC');
         supportOffices.push('AU/NZ');
     }
     if (assigneeGroup.indexOf('- BR') != -1) {
         supportOffices.push('Brazil');
     }
     if (assigneeGroup.indexOf('- CN') != -1) {
-        supportOffices.push('China');
+        supportOffices.push('APAC');
     }
     if (assigneeGroup.indexOf('- HU') != -1) {
         supportOffices.push('EU');
@@ -1408,7 +1437,7 @@ function getSupportOffices(assigneeGroup) {
         supportOffices.push('India');
     }
     if (assigneeGroup.indexOf('- JP') != -1) {
-        supportOffices.push('Japan');
+        supportOffices.push('APAC');
     }
     if ((assigneeGroup.indexOf('Spain Pod') == 0) || (assigneeGroup.indexOf(' - ES') != -1)) {
         supportOffices.push('Spain');
@@ -1416,7 +1445,7 @@ function getSupportOffices(assigneeGroup) {
     if (assigneeGroup.indexOf(' - US') != -1) {
         supportOffices.push('US');
     }
-    return supportOffices;
+    return new Set(supportOffices);
 }
 /**
  * Set the initial values for the "Create Issue" modal dialog window
@@ -1436,7 +1465,7 @@ function initJiraTicketValues(data) {
     }
     function setSupportOffice(callback) {
         var assigneeGroup = ticket.assignee.group.name;
-        var supportOffices = getSupportOffices(assigneeGroup);
+        var supportOffices = Array.from(getSupportOffices(assigneeGroup));
         addReactLabelValues('customfield_11523', supportOffices, callback);
     }
     function setAffectsVersion(callback) {
