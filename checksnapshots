@@ -51,27 +51,12 @@ updatesnapshots() {
 		local source_folder=$(echo $artifact | cut -d'.' -f 3- | tr '.' '-')
 		local artifact_folder=${repository_root}/com/liferay/portal/${artifact}/${artifact_version}
 
-		local update_hash=$(git log -1 --pretty='%H' -- ${source_folder})
-		local snapshot_hash=
-
 		if [ -f ${artifact_folder}/${artifact}-${artifact_version}.jar ]; then
-			if [ -f ${artifact_folder}/.githash ]; then
-				snapshot_hash=$(cat ${artifact_folder}/.githash)
-			elif [ -f ${artifact_folder}/git-commit ]; then
-				snapshot_hash=$(cat ${artifact_folder}/git-commit)
-			fi
-		elif [ -f ${artifact_folder}/${artifact}-${artifact_version}.war ]; then
-			if [ -f ${artifact_folder}/.githash ]; then
-				snapshot_hash=$(cat ${artifact_folder}/.githash)
-			elif [ -f ${artifact_folder}/git-commit ]; then
-				snapshot_hash=$(cat ${artifact_folder}/git-commit)
-			fi
+			continue
 		fi
 
-		if [ "${update_hash}" != "${snapshot_hash}" ]; then
-			echo "Outdated snapshot for $artifact (${artifact_version} - ${update_hash} vs. ${snapshot_hash})"
-			missing_artifact="$missing_artifact $artifact"
-		fi
+		echo "Outdated snapshot for $artifact (${artifact_version})"
+		missing_artifact="$missing_artifact $artifact"
 	done
 
 	if [ "" == "$missing_artifact" ]; then
