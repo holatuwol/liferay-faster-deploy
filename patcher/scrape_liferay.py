@@ -27,7 +27,8 @@ def authenticate(base_url, get_params):
 	if r.text.find('SAMLRequest') != -1:
 		saml_request(r.text)
 	elif len(r.history) > 0:
-		login_portlet(r.url, r.text)
+		url_params = parse.parse_qs(parse.urlparse(r.url).query)
+		login_portlet(r.url, url_params, r.text)
 
 def get_liferay_content(base_url, params=None, method='get'):
 	pos = base_url.find('/api/jsonws/')
@@ -57,10 +58,10 @@ def get_liferay_content(base_url, params=None, method='get'):
 def get_namespaced_parameters(portlet_id, parameters):
 	return { ('_%s_%s' % (portlet_id, key)) : value for key, value in parameters.items() }
 
-def login_portlet(login_url, login_response_body):
+def login_portlet(login_url, login_params, login_response_body):
 	soup = BeautifulSoup(login_response_body, 'html.parser')
 
-	portlet_id = parse.parse_qs(parse.urlparse(login_url).query)['p_p_id'][0]
+	portlet_id = login_params['p_p_id'][0]
 
 	namespace = '_%s_' % portlet_id
 
@@ -101,7 +102,13 @@ def saml_request(response_body):
 	form_params = { node.get('name'): node.get('value') for node in form.find_all('input') if node.get('name') is not None }
 
 	r = session.post(form_action, data=form_params)
-	login_portlet(r.url, r.text)
+
+	url_params = parse.parse_qs(parse.urlparse(r.url).query)
+
+	if 'p_p_id' in url_params:
+		login_portlet(r.url, url_params, r.text)
+	else:
+		saml_response(r.text)
 
 def saml_response(response_body):
 	soup = BeautifulSoup(response_body, 'html.parser')
