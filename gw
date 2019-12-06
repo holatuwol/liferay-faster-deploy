@@ -140,7 +140,7 @@ fixgradle() {
 	# If there is a yarn.lock file in the modules folder, we need to make sure to run
 	# ant setup-yarn
 
-	if [ -f $GIT_ROOT/modules/yarn.lock ]; then
+	if [ -f $GIT_ROOT/modules/yarn.lock ] && [ ! -d $GIT_ROOT/modules/node_modules ]; then
 		cd $GIT_ROOT
 		ant setup-yarn
 		cd -
