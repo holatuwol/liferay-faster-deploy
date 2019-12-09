@@ -111,9 +111,7 @@ fixgradle() {
 
 	# if we have a "default" dependency, make sure we have the snapshot in the .m2 cache
 
-	if [ "" != "$GIT_ROOT" ] && [ "" != "$(grep -F '"com.liferay.portal"' build.gradle | grep -F '"default"' | grep -o 'name: "[^"]*"' | cut -d'"' -f 2)" ]; then
-		checksnapshots
-	fi
+	checksnapshots
 
 	# if we are missing util-taglib.jar, some Gradle tasks will fail
 
@@ -129,8 +127,6 @@ fixgradle() {
 
 	if [ "" != "$GIT_ROOT" ] && [ "" != "$TOMCAT_VERSION" ] && [ -d "$GIT_ROOT/util-taglib" ] && [ ! -f $LIFERAY_HOME/tomcat-$TOMCAT_VERSION/webapps/ROOT/WEB-INF/lib/util-taglib.jar ]; then
 		echo "Deploying util-taglib.jar to $LIFERAY_HOME/tomcat-$TOMCAT_VERSION, because it may be needed in Gradle tasks"
-
-		checksnapshots
 
 		cd $GIT_ROOT/util-taglib
 		ant deploy
@@ -221,4 +217,4 @@ if [ "" != "$GIT_ROOT" ]; then
 	cat /dev/null > $GIT_ROOT/.redeploy/gwchanges.txt
 fi
 
-gw $@
+time gw $@

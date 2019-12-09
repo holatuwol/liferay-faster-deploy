@@ -110,19 +110,15 @@ cdroot() {
 	fi
 }
 
+checksnapshots() {
+	. $(dirname "${BASH_SOURCE[0]}")/checksnapshots
+}
+
 deployant() {
 	# Make sure that we have registry-api and anything else that is
 	# part of the portal-pre profile
 
-	echo "Preparing initial portal snapshots..."
-
-	if [ -d ${GIT_ROOT}/modules ]; then
-		pushd ${GIT_ROOT}/modules/core/portal-bootstrap > /dev/null
-		git clean -xdf
-		popd > /dev/null
-
-		safeant setup-sdk compile install-portal-snapshots
-	fi
+	checksnapshots
 
 	# Finally, iterate over the folders that are listed for deployment
 

@@ -44,7 +44,7 @@ updatesnapshots() {
 
 	# Check for missing artifacts
 
-	local artifacts=$(grep -F version .gradle/gradle.properties | grep -F 'com.liferay' | cut -d'=' -f 1 | sed 's/\.version$//g')
+	local artifacts=$(grep -F version .gradle/gradle.properties | grep -F 'com.liferay' | cut -d'=' -f 1 | sed 's/\.version$//g' | grep -vF 'web')
 
 	for artifact in $artifacts; do
 		local artifact_version=$(grep -F "${artifact}.version" .gradle/gradle.properties | cut -d'=' -f 2)
@@ -63,7 +63,7 @@ updatesnapshots() {
 		return 0
 	fi
 
-	echo "Running install-portal-snapshot to ensure all snapshots are available"
+	echo "Running install-portal-snapshots to ensure all snapshots are available"
 
 	# Run the pre-checks for ant
 
@@ -72,33 +72,8 @@ updatesnapshots() {
 		git clean -xdf
 		popd > /dev/null
 
-		safeant setup-sdk compile
+		safeant setup-sdk compile install-portal-snapshots
 	fi
-
-	for candidate_folder in $(sed -n '/target name="deploy"/,/\/target/p' build.xml | grep -F 'ant dir' | grep -F 'target="deploy"' | cut -d'"' -f 2); do
-		for artifact in $missing_artifact; do
-			local source_folder=$(echo $artifact | cut -d'.' -f 3- | tr '.' '-')
-
-			if [ "$candidate_folder" != "$source_folder" ]; then
-				continue
-			fi
-
-			pushd $source_folder > /dev/null
-			ant install-portal-snapshot
-			popd > /dev/null
-		done
-	done
-
-	for artifact in $artifacts; do
-		local artifact_version=$(grep -F "${artifact}.version" .gradle/gradle.properties | cut -d'=' -f 2)
-		local artifact_folder=${repository_root}/com/liferay/portal/${artifact}/${artifact_version}
-
-		if [ -f ${artifact_folder}/${artifact}-${artifact_version}.jar ] || [ -f ${artifact_folder}/${artifact}-${artifact_version}.war ]; then
-			local source_folder=$(echo $artifact | cut -d'.' -f 3- | tr '.' '-')
-			git log -1 --pretty='%H' -- ${source_folder} > ${artifact_folder}/.githash
-			git log -1 --pretty='%H' -- ${source_folder} > ${artifact_folder}/git-commit
-		fi
-	done
 }
 
 setopts && checksnapshots
