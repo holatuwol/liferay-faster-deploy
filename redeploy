@@ -9,7 +9,9 @@ applychanges() {
 
 	# Otherwise, compute all changes
 
-	if [ "" == "$BASE_TAG" ]; then
+	if [ "" != "${NEW_BASELINE}" ]; then
+		$(dirname "${BASH_SOURCE[0]}")/gitchanges ${NEW_BASELINE}
+	elif [ "" == "$BASE_TAG" ]; then
 		$(dirname "${BASH_SOURCE[0]}")/gitchanges $BASE_BRANCH
 	else
 		$(dirname "${BASH_SOURCE[0]}")/gitchanges $BASE_TAG
@@ -119,7 +121,7 @@ deployant() {
 		git clean -xdf
 		popd > /dev/null
 
-		safeant compile install-portal-snapshots
+		safeant setup-sdk compile install-portal-snapshots
 	fi
 
 	# Finally, iterate over the folders that are listed for deployment
