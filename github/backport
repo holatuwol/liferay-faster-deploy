@@ -13,12 +13,20 @@ dirnames() {
 generate_patch_files() {
 	mkdir -p .redeploy
 
+	git log --reverse $2 --pretty='%H' --grep=$1 > .redeploy/commits.txt
+
 	local error_state=0
 	local commit_index=0
 
-	for commit in $(git log --reverse $2 --pretty='%H' --grep=$1); do
+	local commit_format='%04d'
+
+	if [[ $(cat .redeploy/commits.txt | wc -l) -gt 9999 ]]; then
+		commit_format="%0$(cat .redeploy/commits.txt | wc -l | sed 's/[0-9]/0/g' | grep -o '0' | wc -l)d"
+	fi
+
+	for commit in $(cat .redeploy/commits.txt); do
 	  commit_index=$((commit_index+1))
-	  mv $(git format-patch --binary ${commit}~1..${commit}) $(printf '%04d' ${commit_index})-${commit}.patch
+	  mv $(git format-patch --binary ${commit}~1..${commit}) $(printf "${commit_format}" ${commit_index})-${commit}.patch
 	done
 
 	git ls-files modules/ | grep -F bnd.bnd | dirnames > .redeploy/folders.txt
