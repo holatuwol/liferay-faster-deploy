@@ -21,10 +21,11 @@ generate_patch_files() {
 	  mv $(git format-patch --binary ${commit}~1..${commit}) $(printf '%04d' ${commit_index})-${commit}.patch
 	done
 
-	git ls-files modules/apps/ | grep -F bnd.bnd | dirnames > .redeploy/folders.txt
+	git ls-files modules/ | grep -F bnd.bnd | dirnames > .redeploy/folders.txt
 
-	for source_folder in $(grep -oh 'modules/apps/[^ ]*/src/' *.patch | dirnames | dirnames | sort -u); do
+	for source_folder in $(grep -oh 'modules/[^ ]*/src/' *.patch | dirnames | dirnames | sort -u); do
 		project_name=$(basename ${source_folder})
+		echo ${project_name}
 		target_folder=$(grep "/${project_name}$" .redeploy/folders.txt)
 
 		if [ "" == "${target_folder}" ]; then
