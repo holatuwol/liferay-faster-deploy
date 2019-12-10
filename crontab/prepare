@@ -134,7 +134,7 @@ finish() {
 		sed -i.bak 's/ -XX:MaxPermSize=[0-9]*[gm]//g' $TOMCAT_FOLDER/bin/${file}
 		sed -i.bak 's/ -XX:MetaspaceSize=[0-9]*[gm]//g' $TOMCAT_FOLDER/bin/${file}
 		sed -i.bak 's/ -XX:MaxMetaspaceSize=[0-9]*[gm]//g' $TOMCAT_FOLDER/bin/${file}
-		sed -i.bak 's/ -XX:SurvivorRatio=7//g' $TOMCAT_FOLDER/bin/${file}
+		sed -i.bak 's/ -XX:SurvivorRatio=[0-9]*//g' $TOMCAT_FOLDER/bin/${file}
 
 		local SETVAR=
 		local UNSETVAR='#'
@@ -266,10 +266,7 @@ prepare() {
 
 	ANT_OPTS='-Xms4g -Xmx4g'
 
-	if [ "ee-6.2.x" == "$BASE_BRANCH" ]; then
-		export ANT_OPTS="${ANT_OPTS} -XX:MaxPermSize=512m"
-		javahome 6
-	elif [ "ee-6.1.x" == "$BASE_BRANCH" ]; then
+	if [ "ee-6.1.x" == "$BASE_BRANCH" ]; then
 		export ANT_OPTS="${ANT_OPTS} -XX:MaxPermSize=512m"
 		javahome 6
 	else
