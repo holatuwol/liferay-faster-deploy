@@ -25,7 +25,6 @@ generate_patch_files() {
 
 	for source_folder in $(grep -oh 'modules/[^ ]*/src/' *.patch | dirnames | dirnames | sort -u); do
 		project_name=$(basename ${source_folder})
-		echo ${project_name}
 		target_folder=$(grep "/${project_name}$" .redeploy/folders.txt)
 
 		if [ "" == "${target_folder}" ]; then
@@ -46,7 +45,7 @@ generate_patch_files() {
 }
 
 apply_patch_files() {
-	ls *.patch | xargs git am
+	ls *.patch | sort -n | xargs git am
 }
 
 if [ "" == "$2" ]; then
