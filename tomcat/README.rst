@@ -43,7 +43,9 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 	}
 
 	hotfix() {
-		${MCD_RD_CLONE_PATH}/tomcat/hotfix "$@"
+		LIFERAY_FILES_MIRROR='http://mirrors/files.liferay.com' \
+			LIFERAY_RELEASES_MIRROR='http://mirrors/releases.liferay.com' \
+			${MCD_RD_CLONE_PATH}/tomcat/hotfix "$@"
 	}
 
 Docker Bundle
