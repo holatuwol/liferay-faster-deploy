@@ -99,6 +99,8 @@ prepare_server() {
 	fi
 
 	copyextras
+	rm -rf osgi/state
+	rm -rf work
 }
 
 . $(dirname "${BASH_SOURCE[0]}")/download_build.sh
