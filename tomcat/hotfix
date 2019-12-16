@@ -1,0 +1,107 @@
+#!/bin/bash
+
+check_release_info() {
+	local PORTAL_KERNEL=$(find . -name portal-kernel.jar)
+
+	if [ "" == "${PORTAL_KERNEL}" ]; then
+		return 0
+	fi
+
+	echo '
+import com.liferay.portal.kernel.util.ReleaseInfo;
+
+public class GetReleaseInfo
+{
+	public static void main( String [] args )
+	{
+		System.out.println(ReleaseInfo.getBuildNumber());
+	}
+}' > GetReleaseInfo.java
+
+	local CURRENT_VERSION=$(javac -cp .:${PORTAL_KERNEL} GetReleaseInfo.java && java -cp .:${PORTAL_KERNEL} GetReleaseInfo)
+
+	rm GetReleaseInfo.java
+
+	if [[ $1 == *-${CURRENT_VERSION} ]] || [[ $1 == *-${CURRENT_VERSION}.zip ]]; then
+		return 0
+	fi
+
+	echo "Patch level $(basename "$1") is incompatible with ${CURRENT_VERSION}"
+	return 1
+}
+
+get_hotfix_url() {
+	if [ "" == "$1" ]; then
+		if [ -d patches ]; then
+			HOTFIX_URL=$(ls patches/*.zip | tail -1 | cut -d'/' -f 2)
+		elif [ -d patching-tool/patches ]; then
+			HOTFIX_URL=$(ls patching-tool/patches/*.zip | tail -1 | cut -d'/' -f 3)
+		fi
+
+		return 0
+	fi
+
+	rm -f patches/*.zip
+
+	if [[ $1 != https://patcher.liferay.com/* ]]; then
+		HOTFIX_URL=$1
+		return 0
+	fi
+
+	if [ "" == "$(git config files.username)" ] || [ "" == "$(git config files.password)" ]; then
+		echo "Cannot decode $1 unless files.username and files.password are set with git config --global"
+		return 1
+	fi
+
+	HOTFIX_URL=$("$(dirname "${SCRIPT_FOLDER}")/patcher/findhotfix" "$1")
+
+	if [ "" == "${HOTFIX_URL}" ]; then
+		echo "Unable to decode $1 into a hotfix name"
+		return 1
+	fi
+}
+
+prepare_server() {
+	LIFERAY_HOME_MARKER=$(find . -name '.liferay-home')
+
+	if [ "" == "${LIFERAY_HOME_MARKER}" ]; then
+		LIFERAY_HOME="${PWD}"
+	elif [ "./.liferay-home" == "${LIFERAY_HOME_MARKER}" ]; then
+		LIFERAY_HOME="${PWD}"
+	else
+		LIFERAY_HOME="${PWD}/$(echo "${LIFERAY_HOME_MARKER}" | cut -d'/' -f 2-)"
+	fi
+
+	if [ "" == "${BUILD_MOUNT_POINT}" ]; then
+		BUILD_MOUNT_POINT="${HOME}/.liferay/release"
+	fi
+
+	if [ "" == "${LIFERAY_FILES_MIRROR}" ]; then
+		if [ "" == "$(git config files.username)" ] || [ "" == "$(git config files.password)" ]; then
+			echo "Cannot access files.liferay.com unless files.username and files.password are set with git config --global"
+			return 1
+		fi
+
+		FILES_CREDENTIALS="-u $(git config files.username):$(git config files.password)"
+		LIFERAY_FILES_MIRROR="https://files.liferay.com"
+	fi
+
+	if ! check_release_info $1; then
+		return 1
+	fi
+
+	parsearg $1
+
+	if [ -d osgi ]; then
+		checkservicepack
+	else
+		downloadrelease && extract
+	fi
+
+	copyextras
+}
+
+. $(dirname "${BASH_SOURCE[0]}")/download_build.sh
+. $(dirname "${BASH_SOURCE[0]}")/download_release.sh
+
+get_hotfix_url "${1}" && prepare_server "${HOTFIX_URL}"

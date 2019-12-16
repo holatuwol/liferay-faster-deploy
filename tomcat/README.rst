@@ -42,6 +42,10 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 			${MCD_RD_CLONE_PATH}/tomcat/catalinastart $@
 	}
 
+	hotfix() {
+		${MCD_RD_CLONE_PATH}/tomcat/hotfix "$@"
+	}
+
 Docker Bundle
 =============
 
@@ -120,3 +124,18 @@ Start Tomcat
 This is just a script that I use in order to start multiple Tomcat servers on the same machine while allowing the script to simply auto-detect an open port.
 
 * `catalinastart <catalinastart>`__
+
+Apply Hotfix to Bundle
+======================
+
+Provides a command to allow you to apply a fix pack or hotfix to any bundle of the same version (7.0 hotfixes on 7.10, 7.2 hotfixes on 7.2, etc.). The script will attempt to download the specified hotfix and the fix pack it depends on (if applicable).
+
+.. code-block:: bash
+
+	hotfix <fix-level>
+
+Fix levels can have any of the following formats:
+
+* a fix pack, with the format ``dxp-123-7110`` or ``fix-pack-dxp-123-7110``
+* a hotfix, with the format ``hotfix-123-7110`` or ``liferay-hotfix-123-7110`` or a files.liferay.com URL
+* a patcher build URL
