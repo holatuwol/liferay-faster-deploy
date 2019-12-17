@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        4.2
+// @version        4.3
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -595,7 +595,7 @@ function replaceLesaLink(target) {
       ticketURL = oldNode.value;
     }
     else if (isNaN(oldNode.value)) {
-      if (oldNode.value.indexOf('LPP') == 0) {
+      if ((oldNode.value.indexOf('LPP-') == 0) || (oldNode.value.indexOf('GROW-') == 0)) {
         ticketURL = 'https://issues.liferay.com/browse/' + oldNode.value;
       }
       else {
