@@ -50,7 +50,7 @@ tcp_extractxml() {
 	install_jar ${LIFERAY_HOME}/osgi/portal com.liferay.portal.scheduler.multiple portal-scheduler-multiple
 
 	while read -r lpkg; do
-		if [ ! -f ${lpkg} ] || [ "" == "$(unzip -l "${lpkg}" | grep -F 'com.liferay.portal.cluster.multiple')" ]; then
+		if [ ! -f "${lpkg}" ] || [ "" == "$(unzip -l "${lpkg}" | grep -F 'com.liferay.portal.cluster.multiple')" ]; then
 			continue
 		fi
 
