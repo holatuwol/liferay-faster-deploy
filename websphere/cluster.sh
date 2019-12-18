@@ -60,7 +60,10 @@ tcp_extractxml() {
 		rm com.liferay.portal.cluster.multiple*.jar
 		unzip -qq -j jgroups*.jar tcp.xml
 		rm jgroups*.jar
-		mv tcp.xml ${LIFERAY_HOME}/
+
+		if [ "${PWD}" != "${LIFERAY_HOME}" ]; then
+			mv tcp.xml ${LIFERAY_HOME}/
+		fi
 
 		return 0
 	done <<< "$(find ${LIFERAY_HOME}/osgi/marketplace -name '*.lpkg')"
@@ -70,7 +73,10 @@ tcp_extractxml() {
 		unzip -qq -j ${LIFERAY_HOME}/osgi/portal/com.liferay.portal.cluster.multiple.jar 'lib/jgroups*'
 		unzip -qq -j jgroups*.jar tcp.xml
 		rm jgroups*.jar
-		mv tcp.xml ${LIFERAY_HOME}/
+
+		if [ "${PWD}" != "${LIFERAY_HOME}" ]; then
+			mv tcp.xml ${LIFERAY_HOME}/
+		fi
 
 		return 0
 	fi
