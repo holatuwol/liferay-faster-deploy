@@ -21,6 +21,8 @@ check_tomcat() {
 		return 1
 	fi
 
+	WEBSPHERE_VERSION=$1
+
 	local TAG_URL='https://hub.docker.com/v2/repositories/ibmcom/websphere-traditional/tags/'
 	local TAGS=$(curl -s ${TAG_URL})
 
@@ -199,21 +201,27 @@ setup_global_lib() {
 
 	WS_PASSWORD=$(docker exec ${CONTAINER_NAME} cat /tmp/PASSWORD)
 
-	docker_cp ${SCRIPT_FOLDER}/websphere_setup.py ${CONTAINER_NAME}:/
 	docker exec ${CONTAINER_NAME} sed -i 's/=.*$/=UTF-8/g' /opt/IBM/WebSphere/AppServer/properties/encoding.properties
+
+	docker_cp ${SCRIPT_FOLDER}/websphere_setup.py ${CONTAINER_NAME}:/
 	docker exec ${CONTAINER_NAME} wsadmin.sh -lang jython -user wsadmin -password ${WS_PASSWORD} -f /websphere_setup.py
 
 	docker exec -u root ${CONTAINER_NAME} apt-get install -y unzip zip
 
-	docker exec ${CONTAINER_NAME} bash -c "mkdir -p /opt/IBM/WebSphere/AppServer/javaext/"
-	docker_cp ${CATALINA_HOME}/lib/ext/portlet.jar ${CONTAINER_NAME}:/opt/IBM/WebSphere/AppServer/javaext/
+	local GLOBAL_LIB_FOLDER=/opt/IBM/WebSphere/AppServer/lib/
+	docker exec ${CONTAINER_NAME} bash -c "mkdir -p ${GLOBAL_LIB_FOLDER}"
 
-	docker exec ${CONTAINER_NAME} bash -c "test -f /opt/IBM/WebSphere/AppServer/configuration/config.ini && sed -i 's/org.osgi.framework.bootdelegation=/org.osgi.framework.bootdelegation=javax.portlet,javax.portlet.filter,javax.portlet.annotations,/g' /opt/IBM/WebSphere/AppServer/configuration/config.ini"
+	if [ "${WEBSPHERE_VERSION}" == "8.5" ]; then
+		docker_cp ${CATALINA_HOME}/lib/ext/portlet.jar ${CONTAINER_NAME}:/opt/IBM/WebSphere/AppServer/java/jre/lib/ext/
+	else
+		docker exec ${CONTAINER_NAME} bash -c "mkdir -p ${WEBSPHERE_LIFERAY_HOME}/shared_library/"
+		docker_cp ${CATALINA_HOME}/lib/ext/portlet.jar ${CONTAINER_NAME}:${WEBSPHERE_LIFERAY_HOME}/shared_library/
+	fi
 
-	docker exec ${CONTAINER_NAME} bash -c "mkdir -p /opt/IBM/WebSphere/AppServer/lib/ext/"
+	docker exec ${CONTAINER_NAME} bash -c "sed -i 's/com.ibm.CORBA,/com.ibm.CORBA,javax.portlet,javax.portlet.filter,javax.portlet.annotations,/g' /opt/IBM/WebSphere/AppServer/configuration/config.ini"
 
 	for file in ccpp.jar hsql.jar portal-kernel.jar; do
-		docker_cp ${CATALINA_HOME}/lib/ext/${file} ${CONTAINER_NAME}:/opt/IBM/WebSphere/AppServer/lib/ext/
+		docker_cp ${CATALINA_HOME}/lib/ext/${file} ${CONTAINER_NAME}:${GLOBAL_LIB_FOLDER}
 	done
 
 	if [ "" != "${DRIVERS_FOLDER}" ] && [ -d ${DRIVERS_FOLDER} ]; then
@@ -223,15 +231,15 @@ setup_global_lib() {
 			fi
 
 			if [ -h ${file} ]; then
-				docker_cp $(readlink -m ${file}) ${CONTAINER_NAME}:/opt/IBM/WebSphere/AppServer/lib/ext/
+				docker_cp $(readlink -m ${file}) ${CONTAINER_NAME}:${GLOBAL_LIB_FOLDER}
 			else
-				docker_cp ${file} ${CONTAINER_NAME}:/opt/IBM/WebSphere/AppServer/lib/ext/
+				docker_cp ${file} ${CONTAINER_NAME}:${GLOBAL_LIB_FOLDER}
 			fi
 		done
 	fi
 
 	for file in ${CATALINA_HOME}/lib/ext/com.liferay.*; do
-		docker_cp ${file} ${CONTAINER_NAME}:/opt/IBM/WebSphere/AppServer/lib/ext/
+		docker_cp ${file} ${CONTAINER_NAME}:${GLOBAL_LIB_FOLDER}
 	done
 }
 
