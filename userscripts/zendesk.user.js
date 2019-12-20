@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        8.4
+// @version        8.5
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -986,14 +986,19 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
  * plain text with HTML.
  */
 var jiraTicketId = /([^/])(LP[EPS]-[0-9]+)/g;
-var jiraTicketLink = /<a [^>]*href="https:\/\/issues.liferay.com\/browse\/(LP[EPS]-[0-9]+)"[^>]*>[^<]*<\/a>/g;
+var jiraTicketURL = /([^"])(https:\/\/issues\.liferay\.com\/browse\/)(LP[EPS]-[0-9]+)/g;
+var jiraTicketIdLink = /<a [^>]*href="https:\/\/issues\.liferay\.com\/browse\/(LP[EPS]-[0-9]+)"[^>]*>\1<\/a>/g;
+var jiraTicketURLLink = /<a [^>]*href="(https:\/\/issues\.liferay\.com\/browse\/)(LP[EPS]-[0-9]+)"[^>]*>\1\2<\/a>/g;
 function addJiraLinksToElement(element) {
-    var newHTML = element.innerHTML.replace(jiraTicketLink, '$1');
+    var newHTML = element.innerHTML.replace(jiraTicketIdLink, '$1');
+    newHTML = element.innerHTML.replace(jiraTicketURLLink, '$1$2');
     if (element.contentEditable == 'true') {
         newHTML = newHTML.replace(jiraTicketId, '$1<a href="https://issues.liferay.com/browse/$2">$2</a>');
+        newHTML = newHTML.replace(jiraTicketURL, '$1<a href="$2$3">$2$3</a>');
     }
     else {
         newHTML = newHTML.replace(jiraTicketId, '$1<a href="https://issues.liferay.com/browse/$2" target="_blank">$2</a>');
+        newHTML = newHTML.replace(jiraTicketURL, '$1<a href="$2$3" target="_blank">$2$3</a>');
     }
     if (element.innerHTML != newHTML) {
         element.innerHTML = newHTML;
