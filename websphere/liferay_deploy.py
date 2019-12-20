@@ -38,8 +38,6 @@ def add_shared_library_ref(config_type, config_filter, library_name):
 shared_library_files = []
 
 def get_shared_library_files(shared_library_folder):
-    shared_library_folder = '/opt/IBM/WebSphere/AppServer/lib/ext'
-
     if not os.path.isdir(shared_library_folder):
         return []
 

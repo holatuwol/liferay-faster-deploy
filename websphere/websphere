@@ -64,6 +64,11 @@ check_tomcat() {
 }
 
 check_release_info() {
+	if [ "" == "$(which javac)" ]; then
+		echo "JDK must be on the path"
+		return 1
+	fi
+
 	local PORTAL_KERNEL=$(find ${CATALINA_HOME} -name portal-kernel.jar)
 
 	if [ "" == "${PORTAL_KERNEL}" ]; then
@@ -372,6 +377,7 @@ deploy_liferay() {
 }
 
 check_tomcat $1 && \
+	check_release_info && \
 	set_container_mounts && \
 	start_websphere "$1" "$2" "$3" && \
 	install_liferay && restart_websphere && deploy_liferay && \
