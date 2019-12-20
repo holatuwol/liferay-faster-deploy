@@ -8,9 +8,9 @@ docker_cp() {
 	docker cp $1 $2
 
 	if [[ $2 == */ ]]; then
-		docker exec -u root ${CONTAINER_NAME} bash -c "chown was:was $(echo $2 | cut -d':' -f 2)$(basename $1)"
+		docker exec -u root ${CONTAINER_NAME} bash -c "chown was $(echo $2 | cut -d':' -f 2)$(basename $1)"
 	else
-		docker exec -u root ${CONTAINER_NAME} bash -c "chown was:was $(echo $2 | cut -d':' -f 2)"
+		docker exec -u root ${CONTAINER_NAME} bash -c "chown was $(echo $2 | cut -d':' -f 2)"
 	fi
 }
 
@@ -26,15 +26,15 @@ check_tomcat() {
 	local TAG_URL='https://hub.docker.com/v2/repositories/ibmcom/websphere-traditional/tags/'
 	local TAGS=$(curl -s ${TAG_URL})
 
-	WEBSPHERE_TAG='-profile'
+	WEBSPHERE_TAG=''
 
-	while [ "" != "${TAG_URL}" ] && [ "-profile" == "${WEBSPHERE_TAG}" ]; do
+	while [ "" != "${TAG_URL}" ] && [ "" == "${WEBSPHERE_TAG}" ]; do
 		TAGS=$(curl -s ${TAG_URL})
 		TAG_URL=$(echo "${TAGS}" | jq '.next' | cut -d'"' -f 2)
-		WEBSPHERE_TAG=$(echo "${TAGS}" | jq '.results | .[].name' | cut -d'"' -f 2 | grep "^${1}" | grep -F profile | cut -d '-' -f 1 | sort -t'.' -n -k1,4 | tail -1)-profile
+		WEBSPHERE_TAG=$(echo "${TAGS}" | jq '.results | .[].name' | cut -d'"' -f 2 | grep "^${1}" | grep -vF ubi | grep -vF install | sort -t'.' -n -k1,4 | tail -1)
 	done
 
-	if [ "-profile" == "${WEBSPHERE_TAG}" ]; then
+	if [ "" == "${WEBSPHERE_TAG}" ]; then
 		echo ""
 		timeecho "Unable to find tag matching $1"
 		timeecho "Please check https://hub.docker.com/v2/repositories/ibmcom/websphere-traditional/tags/"
@@ -61,6 +61,29 @@ check_tomcat() {
 		echo "${LAMBDA_FILES}" | awk '{ print "  " $1 }'
 		return 1
 	fi
+}
+
+check_release_info() {
+	local PORTAL_KERNEL=$(find ${CATALINA_HOME} -name portal-kernel.jar)
+
+	if [ "" == "${PORTAL_KERNEL}" ]; then
+		return 0
+	fi
+
+	echo '
+import com.liferay.portal.kernel.util.ReleaseInfo;
+
+public class GetReleaseInfo
+{
+	public static void main( String [] args )
+	{
+		System.out.println(ReleaseInfo.getBuildNumber());
+	}
+}' > GetReleaseInfo.java
+
+	LIFERAY_VERSION=$(javac -cp .:${PORTAL_KERNEL} GetReleaseInfo.java && java -cp .:${PORTAL_KERNEL} GetReleaseInfo)
+
+	rm GetReleaseInfo.java
 }
 
 create_network() {
@@ -213,9 +236,11 @@ setup_global_lib() {
 
 	if [ "${WEBSPHERE_VERSION}" == "8.5" ]; then
 		docker_cp ${CATALINA_HOME}/lib/ext/portlet.jar ${CONTAINER_NAME}:/opt/IBM/WebSphere/AppServer/java/jre/lib/ext/
-	else
+	elif [[ ${LIFERAY_VERSION} -ge 7200 ]]; then
 		docker exec ${CONTAINER_NAME} bash -c "mkdir -p ${WEBSPHERE_LIFERAY_HOME}/shared_library/"
 		docker_cp ${CATALINA_HOME}/lib/ext/portlet.jar ${CONTAINER_NAME}:${WEBSPHERE_LIFERAY_HOME}/shared_library/
+	else
+		docker_cp ${CATALINA_HOME}/lib/ext/portlet.jar ${CONTAINER_NAME}:/opt/IBM/WebSphere/AppServer/java/8.0/jre/lib/ext/
 	fi
 
 	docker exec ${CONTAINER_NAME} bash -c "sed -i 's/com.ibm.CORBA,/com.ibm.CORBA,javax.portlet,javax.portlet.filter,javax.portlet.annotations,/g' /opt/IBM/WebSphere/AppServer/configuration/config.ini"
@@ -247,7 +272,7 @@ setup_osgi_folder() {
 	echo ""
 	timeecho "Setting up OSGi folders"
 
-	docker exec -u root ${CONTAINER_NAME} bash -c "chown -R was:was /opt/IBM/WebSphere/AppServer"
+	docker exec -u root ${CONTAINER_NAME} bash -c "chown -R was /opt/IBM/WebSphere/AppServer"
 
 	docker exec ${CONTAINER_NAME} bash -c "mkdir -p ${WEBSPHERE_LIFERAY_HOME}"
 
