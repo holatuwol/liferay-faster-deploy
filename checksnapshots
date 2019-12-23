@@ -44,7 +44,7 @@ updatesnapshots() {
 
 	# Check for missing artifacts
 
-	local artifacts=$(grep -F version .gradle/gradle.properties | grep -F 'com.liferay' | cut -d'=' -f 1 | sed 's/\.version$//g' | grep -vF 'web')
+	local artifacts=$(grep '^com\.liferay\.[^=]*\.version=' .gradle/gradle.properties | cut -d'=' -f 1 | sed 's/\.version$//g' | grep -vF 'web')
 
 	for artifact in $artifacts; do
 		local artifact_version=$(grep -F "${artifact}.version" .gradle/gradle.properties | cut -d'=' -f 2)
