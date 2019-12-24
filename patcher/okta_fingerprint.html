@@ -1,0 +1,41 @@
+<script language="Javascript" src="https://ok7static.oktacdn.com/assets/js/vendor/lib/fingerprint2.min.68ab45bd98459cb766f3ab26d086e5f5.js">
+</script>
+
+<h1 id="data"></h1>
+<pre id="components"></pre>
+
+<script language="Javascript">
+  var options = {
+    excludeAdBlock: true,
+    excludeAvailableScreenResolution: true,
+    excludeCanvas: true,
+    excludeColorDepth: true,
+    excludeCpuClass: true,
+    excludeDeviceMemory: true,
+    excludeDoNotTrack: true,
+    excludeHardwareConcurrency: true,
+    excludeHasLiedBrowser: true,
+    excludeHasLiedLanguages: true,
+    excludeHasLiedOs: true,
+    excludeHasLiedResolution: true,
+    excludeIndexedDB: true,
+    excludeJsFonts: true,
+    excludeLanguage: true,
+    excludeOpenDatabase: true,
+    excludePixelRatio: true,
+    excludePlatform: true,
+    excludePlugins: true,
+    excludeScreenResolution: true,
+    excludeSessionStorage: true,
+    excludeTimezoneOffset: true,
+    excludeTouchSupport: true,
+    excludeUserAgent: true,
+    excludeWebGL: true,
+    excludeWebGLVendorAndRenderer: true,
+  };
+
+  new Fingerprint2(options).get((data, components) => {
+    document.getElementById('data').textContent = data;
+    document.getElementById('components').innerHTML = JSON.stringify(components, null, 2);
+  });
+</script>
