@@ -12,10 +12,7 @@ from scrape_liferay import get_liferay_content, get_namespaced_parameters
 
 assert len(sys.argv) > 2, "python get_feed.py <user.feed.url> <output.file.name>"
 
-screen_name = sys.argv[1]
-
-if screen_name.rfind('/') != -1:
-	screen_name = screen_name[screen_name.rfind('/') + 1:]
+screen_name = sys.argv[1].split('/')[-1]
 
 def get_class_name_id(class_name):
 	api_url = 'https://loop.liferay.com/api/jsonws/classname/fetch-class-name-id'
