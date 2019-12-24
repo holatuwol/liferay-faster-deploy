@@ -31,6 +31,8 @@ def authenticate(base_url, get_params=None):
 
     if r.text.find('SAMLRequest') != -1:
         saml_request(r.url, r.text)
+    elif r.url.find('https://login.liferay.com/') == 0:
+        login_okta(r.url, r.text)
     elif len(r.history) > 0:
         url_params = parse.parse_qs(parse.urlparse(r.url).query)
         login_portlet(r.url, url_params, r.text)
@@ -71,14 +73,14 @@ def saml_request(response_url, response_body):
 
     url_params = parse.parse_qs(parse.urlparse(r.url).query)
 
-    if r.url.find('https://login.liferay.com/') == 0:
-        login_okta(r.text)
+    if r.text.find('SAMLResponse') != -1:
+        saml_response(r.url, r.text)
+    elif r.url.find('https://login.liferay.com/') == 0:
+        login_okta(r.url, r.text)
     elif 'p_p_id' in url_params:
         login_portlet(r.url, url_params, r.text)
-    else:
-        saml_response(r.url, r.text)
 
-def login_okta(response_text):
+def login_okta(response_url, response_text):
     start = response_text.find('{"redirectUri":')
     end = response_text.find('};', start) + 1
 
@@ -93,6 +95,8 @@ def login_okta(response_text):
     }
 
     r = session.post('https://login.liferay.com/api/v1/authn', json=form_params)
+    
+    print(r.json())
 
     request_id = r.headers['X-Okta-Request-Id']
 
