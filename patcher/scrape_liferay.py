@@ -136,7 +136,7 @@ def login_okta(response_url, response_text):
 
     redirect_url = r.json()['_links']['next']['href']
 
-    r = session.get(redirect_url)
+    r = session.get(redirect_url, headers=headers)
 
     # Process the SAML response
 
