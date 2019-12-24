@@ -95,8 +95,6 @@ def login_okta(response_url, response_text):
     }
 
     r = session.post('https://login.liferay.com/api/v1/authn', json=form_params)
-    
-    print(r.json())
 
     request_id = r.headers['X-Okta-Request-Id']
 
