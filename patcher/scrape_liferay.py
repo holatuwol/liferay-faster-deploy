@@ -33,7 +33,7 @@ def authenticate(base_url, get_params=None):
         saml_request(r.url, r.text)
     elif r.url.find('https://login.liferay.com/') == 0:
         login_okta(r.url, r.text)
-    elif len(r.history) > 0:
+    elif len(r.history) > 0 and r.url.find('p_p_id=') != -1:
         url_params = parse.parse_qs(parse.urlparse(r.url).query)
         login_portlet(r.url, url_params, r.text)
 
