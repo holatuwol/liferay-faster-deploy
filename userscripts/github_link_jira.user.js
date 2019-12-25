@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           GitHub Link to LPS Tickets
 // @namespace      holatuwol
-// @version        0.6
+// @version        0.7
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/github_link_lps.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/github_link_lps.user.js
 // @match          https://github.com/*/liferay-portal*
@@ -65,8 +65,7 @@ function replaceLinks(links) {
     
     while ((match = re.exec(text)) !== null) {
       if (match.index != pos) {
-        newElement.appendChild(document.createTextNode(' '));
-        newElement.appendChild(createAnchorTag(text.substring(pos, match.index).trim(), href, classList));
+        newElement.appendChild(createAnchorTag(text.substring(pos, match.index), href, classList));
       }
       
       newElement.appendChild(createAnchorTag(match[0], 'https://issues.liferay.com/browse/' + match[0], classList));
