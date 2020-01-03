@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Marketplace Version Selector
 // @namespace      holatuwol
-// @version        0.1
+// @version        0.2
 // @match          https://web.liferay.com/marketplace/-/mp/application/*
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/marketplace.user.js
 // @grant          none
@@ -17,8 +17,9 @@ function filterVersionHistory() {
   versionHistory.classList.add('versions-filtered');
 
   var downloads = Array.from(versionHistory.querySelectorAll('.body > ul > li'));
-  var versions = downloads.map(x => x.querySelector('.app-package').textContent.trim());
-  var optionTexts = Array.from(new Set(versions)).sort();
+  var versions = downloads.map(x => x.querySelector('.supported-framework-versions').textContent.trim());
+
+  var optionTexts = Array.from(new Set(Array.from(document.querySelectorAll('.supported-framework-versions > .app-package')).map(x => x.textContent.trim()))).sort();
 
   var versionSelect = optionTexts.reduce(function(select, x) {
     var option = document.createElement('option');
@@ -31,7 +32,7 @@ function filterVersionHistory() {
     var selectedValue = versionSelect.options[versionSelect.selectedIndex].value;
     
     for (var i = 0; i < versions.length; i++) {
-      downloads[i].style.display = ((selectedValue == '') || (versions[i] == selectedValue)) ? '' : 'none';
+      downloads[i].style.display = ((selectedValue == '') || (versions[i].indexOf(selectedValue) != -1)) ? '' : 'none';
     }
   }
 
