@@ -63,7 +63,8 @@ var servicePacks = {
 	'7010-de-70': 10,
 	'7010-de-80': 11,
 	'7110-dxp-5': 1,
-	'7110-dxp-10': 2
+	'7110-dxp-10': 2,
+	'7210-dxp-2': 1
 };
 
 var repositoryURLs = {

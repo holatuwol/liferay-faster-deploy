@@ -1,0 +1,68 @@
+<html><head>
+<title>Liferay Enterprise Search Compatibility Matrix</title>
+
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+<!-- Optional theme -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+
+<!-- Latest compiled and minified JavaScript -->
+<script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
+</head>
+
+<body>
+
+<div class="container" role="main">
+
+<table class="table">
+<thead>
+<tr>
+<th>Liferay Version</th>
+<th>Fix Pack Level</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<select id="version" name="version">
+</select>
+</td>
+<td>
+<select id="fixpack" name="fixpack">
+</select>
+</td>
+</tr>
+</tbody>
+</table>
+
+<p>Reference the table below to learn more about the supported configurations for Liferay Enterprise Search, based on your selected Liferay version and fix pack level.</p>
+
+<table class="table" id="elastic-compatibility-matrix">
+	<thead>
+		<tr>
+			<th>Liferay Enterprise<br/>Search Version</th>
+			<th>Elasticsearch<br/>Version</th>
+			<th>Elastic Plugins</th>
+			<th>Liferay Version &amp;<br/>Minimum Patch Level</th>
+			<th>Liferay Connectors<br/>(Marketplace Versions)</th>
+			<th>JDK</th>
+		</tr>
+	</thead>
+	<tbody>
+	</tbody>
+</table>
+
+</div>
+
+</body>
+
+<script src="elasticsearch.js" language="Javascript"></script>
+
+<!--
+<script src="https://s3-us-west-2.amazonaws.com/mdang.grow/elasticsearch.js"></script>
+-->
+
+</html>
