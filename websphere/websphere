@@ -242,8 +242,10 @@ setup_global_lib() {
 	if [ "${WEBSPHERE_VERSION}" == "8.5" ]; then
 		docker_cp ${CATALINA_HOME}/lib/ext/portlet.jar ${CONTAINER_NAME}:/opt/IBM/WebSphere/AppServer/java/jre/lib/ext/
 	elif [[ ${LIFERAY_VERSION} -ge 7200 ]]; then
-		docker exec ${CONTAINER_NAME} bash -c "mkdir -p ${WEBSPHERE_LIFERAY_HOME}/shared_library/"
-		docker_cp ${CATALINA_HOME}/lib/ext/portlet.jar ${CONTAINER_NAME}:${WEBSPHERE_LIFERAY_HOME}/shared_library/
+		PORTLET_LIB_FOLDER=${WEBSPHERE_LIFERAY_HOME}/shared_application_library/
+		docker exec ${CONTAINER_NAME} bash -c "mkdir -p ${PORTLET_LIB_FOLDER}"
+
+		docker_cp ${CATALINA_HOME}/lib/ext/portlet.jar ${CONTAINER_NAME}:${PORTLET_LIB_FOLDER}
 	else
 		docker_cp ${CATALINA_HOME}/lib/ext/portlet.jar ${CONTAINER_NAME}:/opt/IBM/WebSphere/AppServer/java/8.0/jre/lib/ext/
 	fi
@@ -259,6 +261,7 @@ setup_global_lib() {
 			if [ ! -f ${file} ]; then
 				continue
 			fi
+
 
 			if [ -h ${file} ]; then
 				docker_cp $(readlink -m ${file}) ${CONTAINER_NAME}:${GLOBAL_LIB_FOLDER}
@@ -376,9 +379,17 @@ deploy_liferay() {
 	docker exec -it ${CONTAINER_NAME} wsadmin.sh -lang jython -user wsadmin -password ${WS_PASSWORD} -f /liferay_deploy.py
 }
 
-check_tomcat $1 && \
-	check_release_info && \
-	set_container_mounts && \
-	start_websphere "$1" "$2" "$3" && \
-	install_liferay && restart_websphere && deploy_liferay && \
-	docker logs -f ${CONTAINER_NAME}
+start_liferay() {
+	echo ""
+	timeecho "Starting Liferay .war"
+
+	docker_cp ${SCRIPT_FOLDER}/liferay_start.py ${CONTAINER_NAME}:/
+	docker exec -it ${CONTAINER_NAME} wsadmin.sh -lang jython -user wsadmin -password ${WS_PASSWORD} -f /liferay_start.py
+}
+
+check_tomcat $1 \
+	&& check_release_info \
+	&& set_container_mounts \
+	&& start_websphere "$1" "$2" "$3" && install_liferay \
+	&& restart_websphere && deploy_liferay \
+	&& restart_websphere && start_liferay
