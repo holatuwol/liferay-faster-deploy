@@ -34,8 +34,8 @@ var compatibility = {
 			"liferay": {
 				"7.0.10": {
 					"connectors": {
-						"Liferay Enterprise Search - Elastic Marvel Integration (1.0.x)": null,
-						"Liferay Enterprise Search - Elastic Shield Integration (1.0.x)": null
+						"Liferay Enterprise Search - Elastic Marvel Integration (1.0.x)": "https://web.liferay.com/marketplace/-/mp/download/78883781/1.0.0/7010",
+						"Liferay Enterprise Search - Elastic Shield Integration (1.0.x)": "https://web.liferay.com/marketplace/-/mp/download/78883853/1.0.0/7010"
 					},
 					"jdk": [
 						"Oracle JDK 8"
@@ -52,8 +52,8 @@ var compatibility = {
 			"liferay": {
 				"7.0.10.fp22": {
 					"connectors": {
-						"Liferay Enterprise Search - Elastic Marvel Integration (1.1.x)": null,
-						"Liferay Enterprise Search - Elastic Shield Integration (1.1.x)": null
+						"Liferay Enterprise Search - Elastic Marvel Integration (1.1.x)": "https://web.liferay.com/marketplace/-/mp/download/78883781/1.1.0/7010",
+						"Liferay Enterprise Search - Elastic Shield Integration (1.1.x)": "https://web.liferay.com/marketplace/-/mp/download/78883853/1.1.0/7010"
 					},
 					"jdk": [
 						"Oracle JDK 8"
@@ -158,7 +158,7 @@ function getFixPackLabel(version, i) {
 	var name = version + '.10.' + fp;
 
 	if (servicePacks[name]) {
-		return name + ' (sp ' +  servicePacks[name] + ')';
+		return name + ' (sp' +  servicePacks[name] + ')';
 	}
 
 	return name;
@@ -281,14 +281,30 @@ function updateCompatibilityMatrix() {
 		oldRows[i].remove();
 	}
 
+	var anyCompatible = false;
+
 	for (lesVersion in compatibility) {
 		for (elasticVersion in compatibility[lesVersion]) {
 			for (fixPackVersion in compatibility[lesVersion][elasticVersion]['liferay']) {
 				if (isCompatible(fixPackVersion)) {
+					anyCompatible = true;
+
 					addCompatibilityRow(tbody, lesVersion, elasticVersion, fixPackVersion);
 				}
 			}
 		}
+	}
+
+	if (!anyCompatible) {
+		var row = document.createElement('tr');
+
+		var cell = document.createElement('td');
+		cell.setAttribute('colspan', '6');
+		cell.setAttribute('align', 'center');
+		cell.textContent = 'No compatible marketplace releases of the Elasticsearch connector';
+		row.appendChild(cell);
+
+		tbody.appendChild(row);
 	}
 };
 
