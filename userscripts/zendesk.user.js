@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        8.5
+// @version        8.6
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -774,32 +774,44 @@ function getEmojiAnchorTags(tags) {
     return emojiContainer;
 }
 /**
+ * Checks whether the assignee text corresponds to the specified support region.
+ */
+function isSupportRegion(assigneeText, regionText) {
+    if (isSupportRegion(assigneeText, '- ' + regionText)) {
+        return true;
+    }
+    if (assigneeText.indexOf('/' + regionText + '/')) {
+        return true;
+    }
+    return false;
+}
+/**
  * Retrieves the support region
  */
 function getSupportRegions(assigneeText) {
     var supportRegions = [];
-    if (assigneeText.indexOf('- AU') != -1) {
+    if (isSupportRegion(assigneeText, 'AU')) {
         supportRegions.push('Australia');
     }
-    if (assigneeText.indexOf('- BR') != -1) {
+    if (isSupportRegion(assigneeText, 'BR')) {
         supportRegions.push('Brazil');
     }
-    if (assigneeText.indexOf('- CN') != -1) {
+    if (isSupportRegion(assigneeText, 'CN')) {
         supportRegions.push('China');
     }
-    if (assigneeText.indexOf('- HU') != -1) {
+    if (isSupportRegion(assigneeText, 'HU')) {
         supportRegions.push("Hungary");
     }
-    if (assigneeText.indexOf('- IN') != -1) {
+    if (isSupportRegion(assigneeText, 'IN')) {
         supportRegions.push('India');
     }
-    if (assigneeText.indexOf('- JP') != -1) {
+    if (isSupportRegion(assigneeText, 'JP')) {
         supportRegions.push('Japan');
     }
-    if ((assigneeText.indexOf('Spain Pod') == 0) || (assigneeText.indexOf(' - ES') != -1)) {
+    if ((assigneeText.indexOf('Spain Pod') == 0) || (isSupportRegion(assigneeText, 'ES'))) {
         supportRegions.push('Spain');
     }
-    if (assigneeText.indexOf(' - US') != -1) {
+    if (isSupportRegion(assigneeText, 'US')) {
         supportRegions.push('US');
     }
     return new Set(supportRegions.map(function (x) { return x.toLowerCase(); }));
