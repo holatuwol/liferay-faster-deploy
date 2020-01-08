@@ -2,6 +2,17 @@
 
 SCRIPT_FOLDER=$(dirname ${BASH_SOURCE[0]})
 
+addhost() {
+	if [ "" == "${1}" ]; then
+		return 0
+	fi
+
+	local HOSTNAME=$(echo $1 | grep -o '//[^/]*/' | cut -d'/' -f 3)
+	local IP_ADDRESS=$(ping -c 1 ${HOSTNAME} | grep -o '[1-9][0-9]*\.[1-9][0-9]*\.[1-9][0-9]*\.[1-9][0-9]*' | uniq)
+
+	ADD_HOST="${ADD_HOST} --add-host=${HOSTNAME}:${IP_ADDRESS}"
+}
+
 copy_driver() {
 	if [ "" == "${CATALINA_HOME}" ]; then
 		mkdir -p ${LIFERAY_HOME}/tomcat/lib/ext
@@ -265,31 +276,37 @@ start_liferay() {
 	local MIRRORS=
 
 	if [ "" != "${BRANCH_ARCHIVE_MIRROR}" ]; then
+		addhost ${BRANCH_ARCHIVE_MIRROR}
 		MIRRORS="${MIRRORS} -e BRANCH_ARCHIVE_MIRROR=${BRANCH_ARCHIVE_MIRROR}"
 	fi
 
 	if [ "" != "${LIFERAY_FILES_MIRROR}" ]; then
+		addhost ${LIFERAY_FILES_MIRROR}
 		MIRRORS="${MIRRORS} -e LIFERAY_FILES_MIRROR=${LIFERAY_FILES_MIRROR}"
 	fi
 
 	if [ "" != "${LIFERAY_RELEASES_MIRROR}" ]; then
+		addhost ${LIFERAY_RELEASES_MIRROR}
 		MIRRORS="${MIRRORS} -e LIFERAY_RELEASES_MIRROR=${LIFERAY_RELEASES_MIRROR}"
 	fi
 
 	if [ "" != "${LICENSE_MIRROR}" ]; then
+		addhost ${LICENSE_MIRROR}
 		MIRRORS="${MIRRORS} -e LICENSE_MIRROR=${LICENSE_MIRROR}"
 	fi
 
 	START_TIME=$(date '+%s')
 
 	if get_hotfix_url $1; then
+		echo "${ADD_HOST}"
+
 		docker run ${GLOBAL_BIND} ${LOCAL_BIND} ${EXPOSE_ONLY} \
 			${LIFERAY_HOME_MOUNT} ${LIFERAY_RDBUILD_MOUNT} ${LIFERAY_RELEASE_MOUNT} ${DOCLIB_MOUNT} \
 			-e RELEASE_ID=${RELEASE_ID} \
 			-e LIFERAY_PASSWORD=${LIFERAY_PASSWORD} \
 			-e IS_UPGRADE=${IS_UPGRADE} \
 			-e JVM_HEAP_SIZE=${JVM_HEAP_SIZE} \
-			${MIRRORS} ${NETWORK_METADATA} ${EXTRA_ARGS} --name ${CONTAINER_NAME} \
+			${MIRRORS} ${NETWORK_METADATA} ${ADD_HOST} ${EXTRA_ARGS} --name ${CONTAINER_NAME} \
 			--detach ${IMAGE_NAME} ${HOTFIX_URL}
 
 		notify_finish &
