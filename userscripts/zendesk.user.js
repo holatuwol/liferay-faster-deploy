@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        8.6
+// @version        8.7
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -777,10 +777,10 @@ function getEmojiAnchorTags(tags) {
  * Checks whether the assignee text corresponds to the specified support region.
  */
 function isSupportRegion(assigneeText, regionText) {
-    if (isSupportRegion(assigneeText, '- ' + regionText)) {
+    if (assigneeText.indexOf('- ' + regionText) != -1) {
         return true;
     }
-    if (assigneeText.indexOf('/' + regionText + '/')) {
+    if (assigneeText.indexOf('/' + regionText + '/') != -1) {
         return true;
     }
     return false;
