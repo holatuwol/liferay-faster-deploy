@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           GitHub Link to LPS Tickets
 // @namespace      holatuwol
-// @version        0.9
+// @version        1.0
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/github_link_lps.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/github_link_lps.user.js
 // @match          https://github.com/*/liferay-portal*
@@ -85,15 +85,19 @@ function replaceLinks(links) {
   }
 }
 
-var jiraTicketId = /([^/])(LP[EPS]-[0-9]+)/g;
-var jiraTicketURL = /([^"])(https:\/\/issues\.liferay\.com\/browse\/)(LP[EPS]-[0-9]+)/g;
+var jiraTicketId1 = /([^/])(LP[EPS]-[0-9]+)/g;
+var jiraTicketId2 = /^(LP[EPS]-[0-9]+)/g;
+var jiraTicketURL1 = /([^"])(https:\/\/issues\.liferay\.com\/browse\/)(LP[EPS]-[0-9]+)/g;
+var jiraTicketURL2 = /^(https:\/\/issues\.liferay\.com\/browse\/)(LP[EPS]-[0-9]+)/g;
 
-function addJiraLink(element) {
+function addJiraLink(element, debug) {
   if (element.nodeType == Node.TEXT_NODE) {
     var newHTML = element.textContent;
 
-    newHTML = newHTML.replace(jiraTicketId, '$1<a href="https://issues.liferay.com/browse/$2" target="_blank" data-link-replaced="true">$2</a>');
-    newHTML = newHTML.replace(jiraTicketURL, '$1<a href="$2$3" target="_blank" data-link-replaced="true">$2$3</a>');
+    newHTML = newHTML.replace(jiraTicketId1, '$1<a href="https://issues.liferay.com/browse/$2" target="_blank" data-link-replaced="true">$2</a>');
+    newHTML = newHTML.replace(jiraTicketId2, '<a href="https://issues.liferay.com/browse/$1" target="_blank" data-link-replaced="true">$1</a>');
+    newHTML = newHTML.replace(jiraTicketURL1, '$1<a href="$2$3" target="_blank" data-link-replaced="true">$2$3</a>');
+    newHTML = newHTML.replace(jiraTicketURL2, '<a href="$1$2" target="_blank" data-link-replaced="true">$1$2</a>');
 
     if (element.textContent != newHTML) {
       var newElement = document.createElement('span');
