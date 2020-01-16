@@ -35,7 +35,7 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 	}
 
 	pushorigin() {
-		${MCD_RD_CLONE_PATH}/github/pushorigin "$1" "$2"
+		${MCD_RD_CLONE_PATH}/github/pushorigin $@
 	}
 
 	itest() {
@@ -131,11 +131,15 @@ You can invoke it without arguments to simply apply the symlinks. Optionally, yo
 Push Branch to Origin
 =====================
 
-For Git histories involving commits with many files, GitHub won't allow you to easily push up your commit history. This can be problematic if someone creates a branch new branch in your upstream with tens of thousands of commits that diverged many thousands of commits earlier in your existing branches. To work around the problem, it's possible to break your commit history up into much smaller pieces (for example, 10k commits) and push it up that way.
+For Git histories involving commits with many files, GitHub won't allow you to easily push up your commit history. This can be problematic if someone creates a branch new branch in your upstream with tens of thousands of commits that diverged many thousands of commits earlier in your existing branches.
+
+To work around the problem, it's possible to break your commit history up into much smaller pieces (for example, 10k commits) and push it up that way. To do that, the script makes sure that the current understanding of the specified upstream is up to date, and then pushes the tag to the specified origin.
 
 .. code-block:: bash
 
 	pushorigin <BRANCH_NAME> <UPSTREAM_NAME> [ORIGIN_NAME]
+
+If you don't specify an origin, it will try to guess the origin based on the provided upstream. You can also specify the same value for the ``UPSTREAM_NAME`` and the ``ORIGIN_NAME`` if you're just trying to update your origin.
 
 Run Test Group
 ==============
