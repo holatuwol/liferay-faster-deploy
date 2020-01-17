@@ -87,7 +87,7 @@ sample.sql.max.wiki.node.count=0
 prepare_schema() {
 	cd sql
 
-	echo 'update User_ set passwordModifiedDate = null;' >> portal-tables.sql
+	echo 'update User_ set passwordModifiedDate = null;' >> indexes.sql
 	git ls-files ../modules/ | grep '\.lfrbuild-portal$' | xargs -I {} dirname {} | xargs git ls-files | grep -F '/tables.sql' | grep -vF '/testIntegration/' | grep -vF slim-runtime | xargs cat >> portal-tables.sql
 	git ls-files ../modules/ | grep '\.lfrbuild-portal$' | xargs -I {} dirname {} | xargs git ls-files | grep -F '/tables.sql' | grep -vF '/testIntegration/' | grep -vF slim-runtime | sed 's/tables\.sql$/indexes.sql/g' | xargs cat >> indexes.sql
 
