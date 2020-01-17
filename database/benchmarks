@@ -1,0 +1,176 @@
+#!/bin/bash
+
+SCRIPT_FOLDER=$(dirname ${BASH_SOURCE[0]})
+
+start_container() {
+	if [ "" == "${CONTAINER_NAME}" ]; then
+		DB_TYPE='mysql'
+		. ${SCRIPT_FOLDER}/common
+		containername
+	fi
+
+	docker stop ${CONTAINER_NAME}
+	docker rm -v ${CONTAINER_NAME}
+
+	. ${SCRIPT_FOLDER}/mysql
+}
+
+fix_sql_builder_deps() {
+	for dependency in $(grep 'group: "com.liferay", ' modules/util/portal-tools-sample-sql-builder/build.gradle | grep -o 'name: "[^"]*"' | cut -d'"' -f 2); do
+		local folder=$(git ls-files modules/ | grep -F bnd.bnd | xargs grep -l "^Bundle-SymbolicName: ${dependency}$" | xargs -r dirname)
+
+		if [ "" == "${folder}" ] || [[ ${folder} == modules/third-party/* ]]; then
+			continue
+		fi
+
+		local module=:$(echo ${folder} | cut -d'/' -f 2- | sed 's@/@:@g')
+
+		sed -i.bak '/'${dependency}'/s@group: .*$@project("'${module}'")@g' modules/util/portal-tools-sample-sql-builder/build.gradle
+	done
+}
+
+compile_sql_builder() {
+	ANT_OPTS='-Xmx4g' ant setup-sdk compile install-portal-snapshots
+
+	local project=$(grep ":$module$" ${GIT_ROOT}/.redeploy/bnd.txt | cut -d':' -f 1 | sed 's@modules@@' | tr '\\' '/' | dirnames | tr '/' ':')
+
+	cat /dev/null > modules/util/portal-tools-sample-sql-builder/src/main/resources/com/liferay/portal/tools/sample/sql/builder/dependencies/commerce_product.ftl
+
+	cd modules/util/portal-tools-sample-sql-builder
+	GRADLE_OPTS='-Xmx4g' ../../../gradlew jar
+	cd -
+}
+
+run_sql_builder() {
+	cd benchmarks
+
+	test ! -f benchmarks.${USER}.properties && echo '
+sample.sql.max.asset.publisher.page.count=0
+sample.sql.max.asset.entry.to.asset.category.count=0
+sample.sql.max.asset.entry.to.asset.tag.count=0
+
+sample.sql.max.blogs.entry.count=0
+
+sample.sql.max.commerce.product.count=0
+sample.sql.max.commerce.product.definition.count=0
+sample.sql.max.commerce.product.instance.count=0
+
+sample.sql.max.content.layout.count=0
+
+sample.sql.max.ddl.record.count=0
+sample.sql.max.ddl.record.set.count=0
+
+sample.sql.max.dl.file.entry.count=0
+sample.sql.max.dl.folder.depth=0
+sample.sql.max.dl.folder.count=0
+
+sample.sql.max.journal.article.count=0
+sample.sql.max.mb.thread.count=0
+
+sample.sql.max.group.count=1
+sample.sql.max.user.count='${USER_COUNT}'
+sample.sql.max.user.to.group.count=0
+
+sample.sql.max.wiki.node.count=0
+	' > benchmarks.${USER}.properties
+
+	for line in $(grep -F '=' benchmarks.${USER}.properties); do
+	  property=$(echo ${line} | cut -d'=' -f 1)
+	  sed -i.bak "s/${property}=.*$/${line}/g" benchmarks.properties
+	done
+
+	ANT_OPTS='-Xmx4g' ant build-sample-sql
+
+	cd -
+}
+
+prepare_schema() {
+	cd sql
+
+	echo 'update User_ set passwordModifiedDate = null;' >> portal-tables.sql
+	git ls-files ../modules/ | grep '\.lfrbuild-portal$' | xargs -I {} dirname {} | xargs git ls-files | grep -F '/tables.sql' | grep -vF '/testIntegration/' | grep -vF slim-runtime | xargs cat >> portal-tables.sql
+	git ls-files ../modules/ | grep '\.lfrbuild-portal$' | xargs -I {} dirname {} | xargs git ls-files | grep -F '/tables.sql' | grep -vF '/testIntegration/' | grep -vF slim-runtime | sed 's/tables\.sql$/indexes.sql/g' | xargs cat >> indexes.sql
+
+	echo 'insert into Release_ values' >> portal-tables.sql
+
+	releaseid=2
+
+	for folder in $(git ls-files ../modules/ | grep '\.lfrbuild-portal$' | xargs -I {} dirname {}); do
+	  if [ ! -f ${folder}/bnd.bnd ] || [ ! -f ${folder}/service.xml ]; then
+	  	continue
+	  fi
+
+	  name=$(grep 'Bundle-SymbolicName: ' ${folder}/bnd.bnd | cut -d' ' -f 2)
+
+	  if [ "" != "$(grep -F ${name} ../benchmarks/sample.sql)" ]; then
+	    continue
+	  fi
+
+	  version=$(grep -F 'Liferay-Require-SchemaVersion: ' ${folder}/bnd.bnd | cut -d' ' -f 2)
+
+	  if [ "" == "${version}" ]; then
+	  	version=$(grep 'Bundle-Version: ' ${folder}/bnd.bnd | cut -d' ' -f 2)
+	  fi
+
+	  if [ 2 -ne ${releaseid} ]; then
+	  	echo ',' >> portal-tables.sql
+	  fi
+
+	  releaseid=$((releaseid + 1))
+
+	  echo -n "(1, ${releaseid}, null, null, '${name}', '${version}', 1, null, TRUE, 0, null)" >> portal-tables.sql
+	done
+
+	echo ';' >> portal-tables.sql
+
+	counter=1$(wc -l ../benchmarks/sample.sql | cut -d' ' -f 1 | sed 's/[0-9]/0/g')
+
+	echo "insert into Counter values ('com.liferay.counter.kernel.model.Counter', ${counter});" >> portal-tables.sql
+
+	ANT_OPTS='-Xmx4g' ant build-db
+
+	cd -
+}
+
+load_schema() {
+	docker cp benchmarks/sample-mysql.sql ${CONTAINER_NAME}:/
+	docker cp sql/portal-tables/portal-tables-mysql.sql ${CONTAINER_NAME}:/
+	docker cp sql/indexes/indexes-mysql.sql ${CONTAINER_NAME}:/
+
+	echo '
+use lportal;
+
+source portal-tables-mysql.sql;
+source sample-mysql.sql;
+source indexes-mysql.sql;
+	' > init.sql
+
+	docker cp init.sql ${CONTAINER_NAME}:/
+
+	docker exec -it ${CONTAINER_NAME} sh -c 'mysql < init.sql > /dev/null'
+}
+
+. ${SCRIPT_FOLDER}/../setopts
+
+if [ "" == "${GIT_ROOT}" ]; then
+	exit 1
+fi
+
+if [ "${PWD}" != "${GIT_ROOT}" ]; then
+	cd ${GIT_ROOT}
+fi
+
+USER_COUNT=${1}
+
+if [ "" == "${USER_COUNT}" ]; then
+	USER_COUNT=100000
+fi
+
+git checkout sql/portal-tables.sql sql/indexes.sql
+
+start_container
+fix_sql_builder_deps
+compile_sql_builder
+run_sql_builder
+prepare_schema
+load_schema
