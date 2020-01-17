@@ -270,19 +270,19 @@ repopass() {
 }
 
 set_sdk_version() {
-	if [ "1.0" != "$(grep build.sdk.version build.properties | cut -d'=' -f 2 | cut -d'.' -f 1,2)" ]; then
+	if [ "1.0" != "$(grep build.sdk.version ${GIT_ROOT}/build.properties | cut -d'=' -f 2 | cut -d'.' -f 1,2)" ]; then
 		return 0
 	fi
 
-	if [[ 20 -le $(grep build.sdk.version build.properties | cut -d'=' -f 2 | cut -d'.' -f 3) ]]; then
+	if [[ 20 -le $(grep build.sdk.version ${GIT_ROOT}/build.properties | cut -d'=' -f 2 | cut -d'.' -f 3) ]]; then
 		return 0
 	fi
 
-	if [ -f build.${USER}.properties ] && [ "" != "$(grep build.sdk.version= build.${USER}.properties)" ]; then
+	if [ -f ${GIT_ROOT}/build.${USER}.properties ] && [ "" != "$(grep build.sdk.version= ${GIT_ROOT}/build.${USER}.properties)" ]; then
 		return 0
 	fi
 
-	echo -e '\nbuild.sdk.version=1.0.20' >> build.${USER}.properties
+	echo -e '\nbuild.sdk.version=1.0.20' >> ${GIT_ROOT}/build.${USER}.properties
 }
 
 setopts
