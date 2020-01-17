@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        8.7
+// @version        8.8
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -444,7 +444,7 @@ function addPatcherPortalField(propertyBox, ticketId, ticketInfo) {
  * the relevant JIRA tickets.
  */
 function addJIRASearchField(propertyBox, ticketId) {
-    var query = ("\n\"Customer Ticket Permalink\" = \"https://" + document.location.host + document.location.pathname + "\" OR\n\"Zendesk Ticket IDs\" ~ " + ticketId + "\n  ").trim();
+    var query = ("\n\"Customer Ticket Permalink\" = \"https://" + document.location.host + document.location.pathname + "\" OR\n\"Zendesk Ticket IDs\" ~ " + ticketId + " OR\n\"Customer Ticket\" = \"https://" + document.location.host + document.location.pathname + "\"\n  ").trim();
     var encodedQuery = encodeURIComponent(query);
     var jiraSearchItems = [];
     var jiraSearchLinkHREF = 'https://issues.liferay.com/issues/?jql=' + encodedQuery;
