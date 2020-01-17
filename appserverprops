@@ -5,10 +5,10 @@ appserveruserprops() {
 		return 0
 	fi
 
-	touch "$GIT_ROOT/app.server.$USER.properties"
+	touch "$GIT_ROOT/app.server.${USER}.properties"
 
-	if [[ 0 -ne $(egrep -o $'\r\n'\$ "$GIT_ROOT/app.server.$USER.properties" | wc -c ) ]]; then
-		perl -pi -e 's/\r\n|\n|\r/\n/g' "$GIT_ROOT/app.server.$USER.properties"
+	if [[ 0 -ne $(egrep -o $'\r\n'\$ "$GIT_ROOT/app.server.${USER}.properties" | wc -c ) ]]; then
+		perl -pi -e 's/\r\n|\n|\r/\n/g' "$GIT_ROOT/app.server.${USER}.properties"
 	fi
 
 	return 0
@@ -19,9 +19,11 @@ buildprops() {
 		return 0
 	fi
 
-	if [ -f $GIT_ROOT/build.$USER.properties ]; then
-		if [[ 0 -ne $(egrep -o $'\r\n'\$ "$GIT_ROOT/build.$USER.properties" | wc -c ) ]]; then
-			perl -pi -e 's/\r\n|\n|\r/\n/g' "$GIT_ROOT/build.$USER.properties"
+	if [ -f $GIT_ROOT/build.${USER}.properties ]; then
+		set_sdk_version
+
+		if [[ 0 -ne $(egrep -o $'\r\n'\$ "$GIT_ROOT/build.${USER}.properties" | wc -c ) ]]; then
+			perl -pi -e 's/\r\n|\n|\r/\n/g' "$GIT_ROOT/build.${USER}.properties"
 		fi
 
 		if [ "" == "$(grep -F baseline.jar.report.level $GIT_ROOT/build.${USER}.properties)" ]; then
@@ -33,17 +35,17 @@ buildprops() {
 		return 0
 	fi
 
-	cat /dev/null > $GIT_ROOT/build.$USER.properties
+	cat /dev/null > $GIT_ROOT/build.${USER}.properties
 
 	# If we're on an older CentOS server, we can't use the node.js SASS compiler
 
 	if [ "" != "$(which rpm 2> /dev/null)" ] && [ ! -f modules/yarn.lock ]; then
-		echo 'sass.compiler.class.name=ruby' >> $GIT_ROOT/build.$USER.properties
+		echo 'sass.compiler.class.name=ruby' >> $GIT_ROOT/build.${USER}.properties
 	fi
 
 	# Avoid using ECJ for compilation
 
-	echo 'javac.compiler=modern' >> $GIT_ROOT/build.$USER.properties
+	echo 'javac.compiler=modern' >> $GIT_ROOT/build.${USER}.properties
 
 	# Make sure baseline report is turned off
 
@@ -82,8 +84,8 @@ cleanappserver() {
 	TOMCAT_FOLDER=
 	CATALINA_HOME=
 
-	if [ -f $GIT_ROOT/app.server.$USER.properties ]; then
-		TOMCAT_VERSION=$(grep -F app.server.tomcat.version= $GIT_ROOT/app.server.$USER.properties | cut -d'=' -f 2)
+	if [ -f $GIT_ROOT/app.server.${USER}.properties ]; then
+		TOMCAT_VERSION=$(grep -F app.server.tomcat.version= $GIT_ROOT/app.server.${USER}.properties | cut -d'=' -f 2)
 	fi
 
 	if [ "" == "$TOMCAT_VERSION" ]; then
@@ -159,13 +161,13 @@ gradleprops() {
 	local GRADLE_LIFERAY_HOME=
 
 	if [ -f "$GIT_ROOT/app.server.properties" ]; then
-		if [ -f "$GIT_ROOT/app.server.$USER.properties" ]; then
-			ANT_LIFERAY_HOME=$(grep -F 'app.server.parent.dir=' "$GIT_ROOT/app.server.$USER.properties" | grep -vF '#' | cut -d'=' -f 2)
+		if [ -f "$GIT_ROOT/app.server.${USER}.properties" ]; then
+			ANT_LIFERAY_HOME=$(grep -F 'app.server.parent.dir=' "$GIT_ROOT/app.server.${USER}.properties" | grep -vF '#' | cut -d'=' -f 2)
 		fi
 
 		if [ "" == "${ANT_LIFERAY_HOME}" ]; then
 			ANT_LIFERAY_HOME=$(grep -F 'app.server.parent.dir=' "$GIT_ROOT/app.server.properties" | grep -vF '#' | cut -d'=' -f 2)
-			echo -e "\napp.server.parent.dir=${ANT_LIFERAY_HOME}" >> app.server.$USER.properties
+			echo -e "\napp.server.parent.dir=${ANT_LIFERAY_HOME}" >> app.server.${USER}.properties
 
 			LIFERAY_HOME="$(echo ${ANT_LIFERAY_HOME} | sed 's@${project.dir}/@'${GIT_ROOT}'/@g')"
 			return 0
@@ -228,12 +230,12 @@ gradleprops() {
 
 	if [ "" == "$ANT_LIFERAY_HOME" ]; then
 		if [ "" == "$GRADLE_LIFERAY_HOME" ]; then
-			echo "Missing app.server.$USER.properties and gradle.properties"
+			echo "Missing app.server.${USER}.properties and gradle.properties"
 			return 1
 		fi
 
 		if [ ! -f "$GIT_ROOT/gradle.properties" ]; then
-			echo -e "\napp.server.parent.dir=$GRADLE_LIFERAY_HOME" >> $GIT_ROOT/app.server.$USER.properties
+			echo -e "\napp.server.parent.dir=$GRADLE_LIFERAY_HOME" >> $GIT_ROOT/app.server.${USER}.properties
 		fi
 
 		ANT_LIFERAY_HOME=$GRADLE_LIFERAY_HOME
@@ -243,7 +245,7 @@ gradleprops() {
 		if [ "" == "$GRADLE_LIFERAY_HOME" ]; then
 			echo "Missing .gradle/gradle.properties, generating via ant setup-sdk"
 		else
-			echo "Fixing mismatch between app.server.$USER.properties (${ANT_LIFERAY_HOME}) and .gradle/gradle.properties (${GRADLE_LIFERAY_HOME}) via ant setup-sdk"
+			echo "Fixing mismatch between app.server.${USER}.properties (${ANT_LIFERAY_HOME}) and .gradle/gradle.properties (${GRADLE_LIFERAY_HOME}) via ant setup-sdk"
 		fi
 
 		pushd $GIT_ROOT > /dev/null
@@ -265,6 +267,22 @@ setopts() {
 
 repopass() {
 	$(dirname "${BASH_SOURCE[0]}")/repopass
+}
+
+set_sdk_version() {
+	if [ "1.0" != "$(grep build.sdk.version build.properties | cut -d'=' -f 2 | cut -d'.' -f 1,2)" ]; then
+		return 0
+	fi
+
+	if [[ 20 -le $(grep build.sdk.version build.properties | cut -d'=' -f 2 | cut -d'.' -f 3) ]]; then
+		return 0
+	fi
+
+	if [ -f build.${USER}.properties ] && [ "" != "$(grep build.sdk.version= build.${USER}.properties)" ]; then
+		return 0
+	fi
+
+	echo -e '\nbuild.sdk.version=1.0.20' >> build.${USER}.properties
 }
 
 setopts
