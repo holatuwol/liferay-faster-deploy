@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           GitHub Link to LPS Tickets
 // @namespace      holatuwol
-// @version        1.0
+// @version        1.1
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/github_link_lps.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/github_link_lps.user.js
 // @match          https://github.com/*/liferay-portal*
@@ -123,7 +123,7 @@ function addJiraLinks(elements) {
   }
 }
 
-var projects = ['CLDSVCS', 'LPP', 'LPS', 'LRQA'];
+var projects = ['CLDSVCS', 'LPP', 'LPS', 'LRCI', 'LRQA'];
 
 function checkCurrentURL() {
   var textSelectors = ['a[data-hovercard-type="commit"]'];
