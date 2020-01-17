@@ -14,6 +14,8 @@ copydriver() {
 		DRIVER='db2jcc4.jar'
 	elif [ "org.mariadb.jdbc.Driver" == "${DRIVER_CLASS_NAME}" ]; then
 		DRIVER='mariadb.jar'
+	elif [ "com.mysql.cj.jdbc.Driver" == "${DRIVER_CLASS_NAME}" ]; then
+		DRIVER='mysql.jar'
 	elif [ "com.mysql.jdbc.Driver" == "${DRIVER_CLASS_NAME}" ]; then
 		DRIVER='mysql.jar'
 	elif [ "oracle.jdbc.OracleDriver" == "${DRIVER_CLASS_NAME}" ]; then

@@ -57,8 +57,15 @@ updateprops() {
 		sed -i.bak 's/^jdbc.default/#jdbc.default/g' ${LIFERAY_HOME}/portal-ext.properties
 	fi
 
+	echo '' >> ${LIFERAY_HOME}/portal-ext.properties
+
+	if [ -f portal-impl/src/portal.properties ]; then
+		grep -F mysql portal-impl/src/portal.properties | grep -F jdbc.default.driverClassName | sed 's/ *#//g' >> ${LIFERAY_HOME}/portal-ext.properties
+	else
+		echo "jdbc.default.driverClassName=com.mysql.jdbc.Driver" >> ${LIFERAY_HOME}/portal-ext.properties
+	fi
+
 	echo "
-jdbc.default.driverClassName=com.mysql.jdbc.Driver
 jdbc.default.url=jdbc:mysql://${DB_HOST_NAME}/lportal?characterEncoding=UTF-8&dontTrackOpenResources=true&holdResultsOpenOverStatementClose=true&useFastDateParsing=false&useUnicode=true&serverTimezone=GMT
 jdbc.default.username=lportal
 jdbc.default.password=lportal
