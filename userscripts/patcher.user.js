@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        4.3
+// @version        4.4
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -68,6 +68,9 @@ tr.qa-analysis-unneeded {
 `;
 
 document.head.appendChild(styleElement);
+
+AUI = unsafeWindow.AUI;
+Liferay = unsafeWindow.Liferay;
 
 var portletId = '1_WAR_osbpatcherportlet';
 var ns = '_' + portletId + '_';
@@ -394,10 +397,22 @@ function replaceGitHashes(childBuildsMetadata) {
   }
 
   for (var i = 0; i < childBuildsMetadata.length; i++) {
+    var childBuildFunction = joinFunction.bind(null, childBuildsMetadata[i]);
+
+    if (exportFunction) {
+      childBuildFunction = exportFunction(childBuildFunction, unsafeWindow);
+    }
+
+    var childBuildArguments = { id: childBuildsMetadata[i].buildId };
+
+    if (cloneInto) {
+      childBuildArguments = cloneInto(childBuildArguments, unsafeWindow);
+    }
+
     Liferay.Service(
       '/osb-patcher-portlet.builds/view',
-      { id: childBuildsMetadata[i].buildId },
-      joinFunction.bind(null, childBuildsMetadata[i])
+      childBuildArguments,
+      childBuildFunction
     );
   }
 }
@@ -905,7 +920,7 @@ function highlightAnalysisNeededBuilds() {
 
 // Run all the changes we need to the page.
 
-AUI().ready(function() {
+function applyPatcherCustomizations(A) {
   replaceJenkinsLinks();
   replacePopupWindowLinks();
   addBaselineToBuildTemplate();
@@ -924,4 +939,10 @@ AUI().ready(function() {
   highlightAnalysisNeededBuilds();
 
   setTimeout(updateFromQueryString, 500);
-});
+};
+
+if (exportFunction) {
+  applyPatcherCustomizations = exportFunction(applyPatcherCustomizations, unsafeWindow);
+}
+
+AUI().ready(applyPatcherCustomizations);
