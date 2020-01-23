@@ -110,6 +110,8 @@ class LogSplitter:
 		thread_dump = False
 		counter = 0
 
+		files = dict()
+
 		for line in lines:
 			line = line.rstrip()
 
@@ -121,12 +123,23 @@ class LogSplitter:
 				if thread_dump:
 					thread_dump_file.close()
 
-				counter += 1
+				thread_name = line[1:line.rfind('"')]
 
-				thread_dump_filename = os.path.join(
-					foldername, 'thread_%05d' % counter)
+				if thread_name in files:
+					thread_dump_filename = files[thread_name]
+					thread_dump_file = open(thread_dump_filename, 'a')
+				else:
+					counter += 1
 
-				thread_dump_file = open(thread_dump_filename, 'w')
+					# thread_dump_filename = os.path.join(
+					# 	foldername, 'thread_%05d' % counter)
+
+					thread_dump_filename = os.path.join(
+						foldername, 'thread_%s' % thread_name.replace('/', '_'))
+
+					files[thread_name] = thread_dump_filename
+					thread_dump_file = open(thread_dump_filename, 'w')
+
 				thread_dump = True
 
 			if thread_dump:
