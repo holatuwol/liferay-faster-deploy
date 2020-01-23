@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        4.4
+// @version        4.5
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -113,6 +113,35 @@ function replaceHotfixLink(target) {
 
   var href = anchor.getAttribute('href');
   anchor.textContent = href.substring(href.lastIndexOf('/') + 1);
+
+  if (target == 'official') {
+    var buildMetadataCallback = function(obj) {
+      buildMetadata = obj.data;
+      anchor.parentNode.appendChild(document.createElement('br'));
+      var qaStatusNode = document.createTextNode('(' + Liferay.Language.get(buildMetadata.qaStatusLabel) + ')');
+      anchor.parentNode.appendChild(qaStatusNode);
+    }
+
+    if (exportFunction) {
+      buildMetadataCallback = exportFunction(buildMetadataCallback, unsafeWindow);
+    }
+
+    var buildId = document.location.pathname.substring(document.location.pathname.lastIndexOf('/') + 1);
+
+    var buildMetadataArguments = {
+      id: buildId
+    };
+
+    if (cloneInto) {
+      buildMetadataArguments = cloneInto(buildMetadataArguments, unsafeWindow);
+    }
+
+    Liferay.Service(
+      '/osb-patcher-portlet.builds/view',
+      buildMetadataArguments,
+      buildMetadataCallback
+    );
+  }
 }
 
 /**
