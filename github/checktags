@@ -1,0 +1,58 @@
+#!/bin/bash
+
+NEW_TAG=
+
+fetch_repo() {
+	TAGS=
+
+	if [ "" == "$(git remote -v) | grep '/liferay-portal$')" ]; then
+		return 0
+	fi
+
+	TAGS=$(git ls-remote -t git@github.com:liferay/${1}.git | awk '{ print $2 }')
+}
+
+fetch_tag() {
+	# If we have not checked out the tag locally, make sure to check it out
+
+	if [ "" != "$(git for-each-ref '**/'${2})" ]; then
+		return 0
+	fi
+
+	git fetch --no-tags git@github.com:liferay/${1}.git tags/${2}:refs/tags/${2}
+
+	if [ "" == "$(git for-each-ref '**/'${2})" ]; then
+		echo "Unable to find tag ${2}"
+		return 1
+	fi
+}
+
+check_baseline() {
+	if [[ $1 == *-base-6* ]]; then
+		return 0
+	fi
+
+	if [ "" != "$(grep -F '"'$1'"' "$(dirname "${BASH_SOURCE}")/../patcher/patcher.json")" ]; then
+		return 0
+	fi
+
+	echo Missing ${1} from patcher.json
+}
+
+fetch_repo liferay-portal
+
+for tag in $(echo "${TAGS}" | grep '/[0-9]*.[0-9]*.[0-9]*-ga[0-9]*$' | sort | cut -d'/' -f 3); do
+	fetch_tag liferay-portal ${tag}
+done
+
+fetch_repo liferay-portal-ee
+
+for tag in $(echo "${TAGS}" | grep -e '/fix-pack-base-[0-9]*\(-private\)*$' | sort -t'-' -nk4 | cut -d'/' -f 3); do
+	fetch_tag liferay-portal-ee ${tag}
+	check_baseline ${tag}
+done
+
+for tag in $(echo "${TAGS}" | grep -e '/fix-pack-\(de\|dxp\)-[0-9]*-[0-9]*\(-private\)*$' | sort -t'-' -nk5 -nk4 | cut -d'/' -f 3); do
+	fetch_tag liferay-portal-ee ${tag}
+	check_baseline ${tag}
+done
