@@ -17,6 +17,10 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 
 	MCD_RD_CLONE_PATH=/path/to/clone/location
 
+	checktags() {
+		${MCD_RD_CLONE_PATH}/checktags
+	}
+
 	gw() {
 		${MCD_RD_CLONE_PATH}/gw $@
 	}
@@ -31,6 +35,16 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 			BRANCH_ARCHIVE_MIRROR='http://cloud-10-50-0-165/builds/branches' \
 				${MCD_RD_CLONE_PATH}/redeploy $@
 	}
+
+Liferay Tag Checker
+===================
+
+Downloads any missing liferay-portal and liferay-portal-ee tags corresponding to a Liferay release.
+
+.. code-block:: bash
+
+	checktags
+
 
 Robust Gradle Wrapper
 =====================

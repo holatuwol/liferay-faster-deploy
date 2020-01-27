@@ -36,7 +36,7 @@ check_baseline() {
 		return 0
 	fi
 
-	echo Missing ${1} from patcher.json
+	echo "Missing ${1} from patcher.json, so 'patcher' script cannot use it as a baseline"
 }
 
 fetch_repo liferay-portal
