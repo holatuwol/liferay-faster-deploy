@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        8.8
+// @version        8.9
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -845,7 +845,7 @@ function addPriorityMarker(header, conversation, ticketId, ticketInfo) {
             priorityElement.appendChild(criticalElement);
         }
     }
-    if (ticketInfo.ticket.status != 'closed') {
+    if ((ticketInfo.ticket.status != 'closed') && (ticketInfo.organizations.length > 0)) {
         var customerRegion = ticketInfo.organizations[0].organization_fields.support_region;
         var ticketContainer = header.closest('.main_panes');
         var assigneeElement = ticketContainer.querySelector('.assignee_id .zd-combo-selectmenu');
