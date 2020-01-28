@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        9.0
+// @version        9.1
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -612,7 +612,6 @@ function addAttachmentDate(container, attachment, oldDate) {
     var attachmentExtraInfo = document.createElement('div');
     attachmentExtraInfo.classList.add('lesa-ui-attachment-extra-info');
     attachmentExtraInfo.appendChild(document.createTextNode(attachment.author + ' on '));
-    var attachmentCommentLink = createAnchorTag(attachment.time, null);
     var attachmentCommentLink = createAnchorTag(newDate, null);
     attachmentCommentLink.classList.add('attachment-comment-link');
     attachmentCommentLink.onclick = highlightComment.bind(null, attachment.commentId);
@@ -639,7 +638,9 @@ function addAttachmentRow(container, attachment) {
     container.appendChild(attachmentCheckbox);
     var attachmentLink = createAnchorTag(attachment.text, attachment.href, attachment.download);
     attachmentLink.classList.add('attachment');
-    container.appendChild(attachmentLink);
+    var attachmentWrapper = document.createElement('span');
+    attachmentWrapper.appendChild(attachmentLink);
+    container.appendChild(attachmentWrapper);
 }
 /**
  * Generate a zip file containing all attachments for the specified ticket.
