@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        9.1
+// @version        9.2
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -1379,31 +1379,60 @@ function setReactInputValue(selector, value, callback) {
  * then selecting everything that matches.
  */
 function setReactSearchSelectValue(testId, value, callback) {
-    var buttonField = document.querySelector('div[data-test-id=' + testId + ']');
-    if (!buttonField.querySelector('div[aria-haspopup=true]')) {
-        var button = buttonField.querySelector('div[role=button]');
-        button.click();
-    }
-    function clickSearchMenuOptions() {
-        var searchMenu = document.querySelector('div[class*="ssc-scrollable"]');
-        if (!searchMenu) {
-            setTimeout(clickSearchMenuOptions, 100);
+    function requestPopup(callback) {
+        var buttonField = document.querySelector('div[data-test-id=' + testId + ']');
+        if (!buttonField) {
+            setTimeout(requestPopup.bind(null, callback), 100);
             return;
         }
-        var options = Array.from(searchMenu.querySelectorAll('div[class*="optionText"]'));
-        if (options.length == 0) {
-            setTimeout(clickSearchMenuOptions, 100);
-            return;
-        }
-        for (var i = 0; i < options.length; i++) {
-            options[i].click();
+        if (!buttonField.querySelector('div[aria-haspopup=true]')) {
+            var button = buttonField.querySelector('div[role=button]');
+            button.click();
         }
         if (callback) {
             callback();
         }
     }
-    ;
-    setReactInputValue('input[data-test-id=' + testId + '-search]', value, clickSearchMenuOptions);
+    function waitForPopup(callback) {
+        var searchMenu = document.querySelector('div[data-test-id=' + testId + '-list]');
+        if (!searchMenu) {
+            setTimeout(waitForPopup.bind(null, callback), 100);
+            return;
+        }
+        var options = Array.from(searchMenu.querySelectorAll('div[class*="optionText"]'));
+        if (options.length == 0) {
+            setTimeout(waitForPopup.bind(null, callback), 100);
+            return;
+        }
+        if (callback) {
+            callback();
+        }
+    }
+    function setPopupValue(callback) {
+        function clickSearchMenuOptions() {
+            var searchMenu = document.querySelector('div[data-test-id=' + testId + '-list]');
+            if (!searchMenu) {
+                setTimeout(clickSearchMenuOptions, 100);
+                return;
+            }
+            var options = Array.from(searchMenu.querySelectorAll('div[class*="optionText"]'));
+            if (options.length != 1) {
+                setTimeout(clickSearchMenuOptions, 100);
+                return;
+            }
+            for (var i = 0; i < options.length; i++) {
+                options[i].click();
+            }
+            if (callback) {
+                callback();
+            }
+        }
+        ;
+        setReactInputValue('input[data-test-id=' + testId + '-search]', value, clickSearchMenuOptions);
+    }
+    var callOrder = [requestPopup, waitForPopup, setPopupValue];
+    var nestedFunction = callOrder.reverse().reduce(function (accumulator, x) { return x.bind(null, accumulator); });
+    nestedFunction();
 }
 /**
  * Utility method to add a new value to a list of tag-like values. Similar to the
@@ -1521,11 +1550,14 @@ function initJiraTicketValues(data) {
                 (productVersion.indexOf('7_2') != -1) ? '7210' : null;
         setReactInputValue('input[data-test-id=customfield_22551]', Array.from(baselines).join(' '), callback);
     }
-    function focusSummary() {
+    function focusSummary(callback) {
         var summary = document.querySelector('input[data-test-id=summary]');
         summary.focus();
         var app = document.getElementById('app');
         app.scrollIntoView();
+        if (callback) {
+            callback();
+        }
     }
     var callOrder = [setProjectId, setSummary, setCustomerTicketCreationDate, setSupportOffice, setAffectsVersion, setDeliveryBaseFixPack, focusSummary];
     var nestedFunction = callOrder.reverse().reduce(function (accumulator, x) { return x.bind(null, accumulator); });
@@ -1558,11 +1590,11 @@ function initZafParentClient(client, callback) {
  * ZAF parent client instance so we can retrieve ticket metadata.
  */
 function initZafClient(callback) {
-    if (!ZAFClient) {
-        setTimeout(initZafClient, 1000);
+    if (!window.ZAFClient) {
+        setTimeout(initZafClient.bind(null, callback), 1000);
         return;
     }
-    var client = ZAFClient.init();
+    var client = window.ZAFClient.init();
     client.on('app.registered', initZafParentClient.bind(null, client, callback));
 }
 if (window.location.hostname == '24475.apps.zdusercontent.com') {
