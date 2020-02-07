@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        9.2
+// @version        9.3
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -878,7 +878,10 @@ function addPriorityMarker(header, conversation, ticketId, ticketInfo) {
  * so that we can see the entire subject (untruncated).
  */
 function addSubjectTextWrap(header, ticketId, ticketInfo) {
-    var oldSubjectField = header.querySelector('input[name="subject"]');
+    var oldSubjectField = header.querySelector('input[data-test-id=ticket-pane-subject]');
+    if (!oldSubjectField) {
+        return;
+    }
     oldSubjectField.setAttribute('type', 'hidden');
     var newSubjectField = header.querySelector('.lesa-ui-subject');
     if (newSubjectField) {
