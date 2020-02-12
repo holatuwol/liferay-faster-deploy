@@ -102,6 +102,12 @@ def getparent(check_tags):
 	elif base_branch in ee_branches:
 		base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=fix-pack-base-6%s*' % base_branch[5])
 
+		if base_tag is None or len(base_tag) == 0:
+			if base_branch.find('ee-') == 0:
+				base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=%s.%s.*-ga*' % (base_branch[3], base_branch[5]))
+			else:
+				base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=%s.%s.*-ga*' % (base_branch[0], base_branch[2]))
+
 	if base_tag is None:
 		return base_branch
 
