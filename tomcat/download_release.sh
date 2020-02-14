@@ -231,9 +231,9 @@ downloadrelease() {
 
 	if [[ 10 -le $(echo "$RELEASE_ID" | cut -d'.' -f 3 | cut -d'-' -f 1) ]]; then
 		downloadlicense
-		REQUEST_URL="$LIFERAY_FILES_MIRROR/private/ee/portal/${RELEASE_ID}/"
+		REQUEST_URL="${LIFERAY_FILES_MIRROR}/${LIFERAY_FILES_EE_FOLDER}/portal/${RELEASE_ID}/"
 	else
-		REQUEST_URL="$LIFERAY_RELEASES_MIRROR/portal/${RELEASE_ID}/"
+		REQUEST_URL="${LIFERAY_RELEASES_MIRROR}/portal/${RELEASE_ID}/"
 	fi
 
 	echo "Identifying build candidate (release) via ${REQUEST_URL}"
@@ -290,11 +290,18 @@ downloadlicense() {
 		fi
 	done
 
+	local RELEASE_ID_NUMERIC=$(echo "$RELEASE_ID" | cut -d'.' -f 1,2,3 | tr -d '.')
+
+	if [ -f /license/${RELEASE_ID_NUMERIC}.xml ]; then
+		mkdir -p ${LIFERAY_HOME}/deploy
+		cp /license/${RELEASE_ID_NUMERIC}.xml ${LIFERAY_HOME}/deploy/license.xml
+		return $?
+	fi
+
 	if [ "" == "${LICENSE_MIRROR}" ]; then
 		return 1
 	fi
 
-	local RELEASE_ID_NUMERIC=$(echo "$RELEASE_ID" | cut -d'.' -f 1,2,3 | tr -d '.')
 	local LICENSE_URL="${LICENSE_MIRROR}/${RELEASE_ID_NUMERIC}.xml"
 
 	echo "Downloading developer license from ${LICENSE_URL}"
@@ -327,7 +334,7 @@ getpatch() {
 		echo "Using existing patch file ${PATCH_LOCATION}"
 	else
 		local RELEASE_ID_SHORT=$(echo "$RELEASE_ID" | cut -d'.' -f 1,2,3)
-		local REQUEST_URL="$LIFERAY_FILES_MIRROR/private/ee/fix-packs/${RELEASE_ID_SHORT}/${PATCH_FOLDER}/${PATCH_FILE}"
+		local REQUEST_URL="${LIFERAY_FILES_MIRROR}/${LIFERAY_FILES_EE_FOLDER}/fix-packs/${RELEASE_ID_SHORT}/${PATCH_FOLDER}/${PATCH_FILE}"
 
 		echo "Attempting to download ${REQUEST_URL}"
 		curl ${FILES_CREDENTIALS} -o ${PATCH_LOCATION} "${REQUEST_URL}"
@@ -360,7 +367,7 @@ getpatch() {
 }
 
 getpatchingtool() {
-	local REQUEST_URL=${LIFERAY_FILES_MIRROR}/private/ee/fix-packs/patching-tool/
+	local REQUEST_URL=${LIFERAY_FILES_MIRROR}/${LIFERAY_FILES_EE_FOLDER}/fix-packs/patching-tool/
 
 	echo "Checking for latest patching tool at ${REQUEST_URL}"
 	local PATCHING_TOOL_VERSION=
