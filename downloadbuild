@@ -30,8 +30,8 @@ downloadbranch() {
 		downloadbranchmirror
 	fi
 
-	if [ "" != "$NEW_BASELINE" ]; then
-		return 0
+	if [ "" == "$NEW_BASELINE" ]; then
+		return 1
 	fi
 
 	if [ "" == "$(git log -1 --pretty='%H' $NEW_BASELINE 2> /dev/null)" ]; then

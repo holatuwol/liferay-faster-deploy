@@ -72,6 +72,10 @@ install_jar() {
 
 		curl -o ${EXTRA_JAR} ${ARTIFACT_URL}
 	fi
+
+	if ! unzip -l ${EXTRA_JAR} > /dev/null; then
+		rm -f ${EXTRA_JAR}
+	fi
 }
 
 install_jar $1 $2 $3
