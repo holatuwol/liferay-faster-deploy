@@ -10,7 +10,9 @@ addhost() {
 	local HOSTNAME=$(echo $1 | grep -o '//[^/]*/' | cut -d'/' -f 3)
 	local IP_ADDRESS=$(ping -c 1 ${HOSTNAME} | grep -o '[1-9][0-9]*\.[1-9][0-9]*\.[1-9][0-9]*\.[1-9][0-9]*' | uniq)
 
-	ADD_HOST="${ADD_HOST} --add-host=${HOSTNAME}:${IP_ADDRESS}"
+	if [ "" != "${IP_ADDRESS}" ]; then
+		ADD_HOST="${ADD_HOST} --add-host=${HOSTNAME}:${IP_ADDRESS}"
+	fi
 }
 
 copy_driver() {
@@ -106,6 +108,10 @@ set_container_mounts() {
 	mkdir -p ${HOME}/.liferay/release
 
 	LIFERAY_RELEASE_MOUNT="-v ${HOME}/.liferay/release:/release"
+
+	if [ "" != "${LIFERAY_LICENSE_FOLDER}" ]; then
+		LIFERAY_LICENSE_MOUNT="-v ${LIFERAY_LICENSE_FOLDER}:/license"
+	fi
 
 	if [ -d ${LIFERAY_HOME}/document_library ]; then
 		LIFERAY_RELEASE_MOUNT="${LIFERAY_RELEASE_MOUNT} -v ${LIFERAY_HOME}/document_library:/opt/liferay/data/document_library"
@@ -283,6 +289,10 @@ start_liferay() {
 	if [ "" != "${LIFERAY_FILES_MIRROR}" ]; then
 		addhost ${LIFERAY_FILES_MIRROR}
 		MIRRORS="${MIRRORS} -e LIFERAY_FILES_MIRROR=${LIFERAY_FILES_MIRROR}"
+
+		if [ "" != "${LIFERAY_FILES_EE_FOLDER}" ]; then
+			MIRRORS="${MIRRORS} -e LIFERAY_FILES_EE_FOLDER=${LIFERAY_FILES_EE_FOLDER}"
+		fi
 	fi
 
 	if [ "" != "${LIFERAY_RELEASES_MIRROR}" ]; then
@@ -301,7 +311,7 @@ start_liferay() {
 		echo "${ADD_HOST}"
 
 		docker run ${GLOBAL_BIND} ${LOCAL_BIND} ${EXPOSE_ONLY} \
-			${LIFERAY_HOME_MOUNT} ${LIFERAY_RDBUILD_MOUNT} ${LIFERAY_RELEASE_MOUNT} ${DOCLIB_MOUNT} \
+			${LIFERAY_HOME_MOUNT} ${LIFERAY_RDBUILD_MOUNT} ${LIFERAY_RELEASE_MOUNT} ${DOCLIB_MOUNT} ${LIFERAY_LICENSE_MOUNT} \
 			-e RELEASE_ID=${RELEASE_ID} \
 			-e LIFERAY_PASSWORD=${LIFERAY_PASSWORD} \
 			-e IS_UPGRADE=${IS_UPGRADE} \
