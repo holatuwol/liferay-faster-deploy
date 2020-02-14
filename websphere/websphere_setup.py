@@ -15,7 +15,7 @@ for web_container in get_config('WebContainer'):
     AdminConfig.create('Property', '(%s)' % web_container, '[[validationExpression ""] [name "com.ibm.ws.webcontainer.invokeFilterInitAtStartup"] [description ""] [value "true"] [required "false"]]')
     AdminConfig.create('Property', '(%s)' % web_container, '[[validationExpression ""] [name "com.ibm.ws.jsp.jdksourcelevel"] [description ""] [value "18"] [required "false"]]')
 
-# Setting up JVM Parameters for Liferay DXP
+# Setting up JVM Parameters for Liferay
 
 AdminTask.setJVMProperties('[-nodeName DefaultNode01 -serverName server1 -verboseModeClass false -verboseModeGarbageCollection false -verboseModeJNI false -initialHeapSize %d -maximumHeapSize %d -runHProf false -hprofArguments -debugMode false -debugArgs "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=%d" -executableJarFileName -genericJvmArguments "-Dfile.encoding=UTF-8" -disableJIT false]' % (heap_size, heap_size, jpda_port))
 

@@ -35,6 +35,10 @@ tcp_cluster() {
 }
 
 tcp_extractxml() {
+	if [ ! -d "${LIFERAY_HOME}/osgi" ]; then
+		return 0
+	fi
+
 	rm -f ${LIFERAY_HOME}/tcp.xml
 
 	if [ -f ${LIFERAY_HOME}/tomcat/webapps/ROOT/WEB-INF/lib/jgroups.jar ]; then
