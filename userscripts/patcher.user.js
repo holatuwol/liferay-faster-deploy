@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        4.5
+// @version        4.6
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -260,6 +260,12 @@ function replaceJenkinsLinks() {
     }
 
     links[i].href = href + 'consoleText';
+  }
+
+  links = document.querySelectorAll('a[href*="//test-5-2/"]');
+
+  for (var i = 0; i < links.length; i++) {
+    links[i].href = links[i].href.replace(/\/\/test-5-2\//gi, '//test-5-2.liferay.com/');
   }
 }
 
