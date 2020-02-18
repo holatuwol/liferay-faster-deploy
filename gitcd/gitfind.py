@@ -47,6 +47,16 @@ def find(needle):
 			commit = file.readline().strip()
 			folders, files = git_find(git_root, needle, commit)
 
+	working_dir_properties = join(git_root, 'working.dir.properties')
+
+	if isfile(working_dir_properties):
+		with open(working_dir_properties, 'r') as file:
+			matching_properties = [x.strip() for x in file.readlines() if x.find('lcs.sha=') != -1]
+
+			if len(matching_properties) > 0:
+				commit = matching_properties[0].split('=')[1]
+				folders, files = git_find(git_root, needle, commit)
+
 	return (git_root_relpaths(folders), git_root_relpaths(files))
 
 def get_filtered_folders(filtered_list, needle):
