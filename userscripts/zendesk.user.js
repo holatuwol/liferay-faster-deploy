@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        9.3
+// @version        9.4
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -1600,8 +1600,18 @@ function initZafClient(callback) {
     var client = window.ZAFClient.init();
     client.on('app.registered', initZafParentClient.bind(null, client, callback));
 }
+function detachModalWindowHandler() {
+    var backdrop = document.querySelector('.modal-backdrop.in');
+    if (!backdrop) {
+        return;
+    }
+    jQuery(backdrop).unbind('click');
+}
 if (window.location.hostname == '24475.apps.zdusercontent.com') {
     setTimeout(initZafClient.bind(null, attachCopyFieldsLinkListener), 1000);
+}
+else {
+    setInterval(detachModalWindowHandler, 1000);
 }
 /**
  * Shows the public conversation tab so that you can get help.liferay.com links to
