@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        9.4
+// @version        9.5
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -59,9 +59,11 @@ function downloadFile(href, filename, callback) {
     var xhr = new XMLHttpRequest();
     xhr.responseType = 'blob';
     xhr.onload = function () {
-        downloadBlob(filename, this.response);
         if (callback) {
             callback(this.response);
+        }
+        else {
+            downloadBlob(filename, this.response);
         }
     };
     xhr.onerror = function () {
@@ -699,10 +701,11 @@ function isLiferayLargeAttachment(anchor) {
  * link which allows the user to download all of the selected attachments at once.
  */
 function createAttachmentsContainer(ticketId, ticketInfo, conversation) {
-    var attachmentLinks = Array.from(conversation.querySelectorAll('.attachment'));
+    var attachmentLinks = Array.from(conversation.querySelectorAll('a.attachment'));
+    var attachmentThumbnails = Array.from(conversation.querySelectorAll('a[data-test-id="attachment-thumbnail"]'));
     var externalLinks = Array.from(conversation.querySelectorAll('.is-public .zd-comment > a:not(.attachment)'));
     externalLinks = externalLinks.filter(isLiferayLargeAttachment);
-    if (attachmentLinks.length + externalLinks.length == 0) {
+    if (attachmentLinks.length + attachmentThumbnails.length + externalLinks.length == 0) {
         return null;
     }
     var attachmentsContainer = document.createElement('div');
@@ -712,13 +715,9 @@ function createAttachmentsContainer(ticketId, ticketInfo, conversation) {
     attachmentsLabel.innerHTML = 'Attachments:';
     attachmentsContainer.appendChild(attachmentsLabel);
     // Accumulate the attachments, and then sort them by date
-    var attachments = [];
-    for (var i = 0; i < attachmentLinks.length; i++) {
-        attachments.push(extractAttachmentLinkMetadata(attachmentLinks[i]));
-    }
-    for (var i = 0; i < externalLinks.length; i++) {
-        attachments.push(extractExternalLinkMetadata(externalLinks[i]));
-    }
+    var attachments = attachmentLinks.map(extractAttachmentLinkMetadata).
+        concat(attachmentThumbnails.map(extractAttachmentLinkMetadata)).
+        concat(externalLinks.map(extractExternalLinkMetadata));
     attachments.sort(function (a, b) {
         return a.timestamp > b.timestamp ? -1 : a.timestamp < b.timestamp ? 1 :
             a.text > b.text ? 1 : a.text < b.text ? -1 : 0;
@@ -736,7 +735,7 @@ function createAttachmentsContainer(ticketId, ticketInfo, conversation) {
         var downloadAllContainer = document.createElement('div');
         downloadAllContainer.classList.add('lesa-ui-attachments-bulk-download');
         var attachmentsZipLink = createAnchorTag('Generate Bulk Download', null);
-        attachmentsZipLink.onclick = createAttachmentZip.bind(null, attachmentsZipLink, attachmentsZipLink, ticketId, ticketInfo);
+        attachmentsZipLink.onclick = createAttachmentZip.bind(attachmentsZipLink, ticketId, ticketInfo);
         downloadAllContainer.appendChild(attachmentsZipLink);
         attachmentsContainer.appendChild(downloadAllContainer);
     }
