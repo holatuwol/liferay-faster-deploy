@@ -2,7 +2,7 @@
 // @name           ZenDesk Attachment List
 // @namespace      holatuwol
 // @license        0BSD
-// @version        1.5
+// @version        1.6
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk_attachment_list.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk_attachment_list.user.js
 // @match          https://*.zendesk.com/agent/*
@@ -290,7 +290,7 @@ function createAttachmentZip(ticketId, ticketInfo) {
  */
 
 function createAttachmentsContainer(ticketId, ticketInfo, conversation) {
-  var attachmentLinks = conversation.querySelectorAll('.attachment');
+  var attachmentLinks = conversation.querySelectorAll('a.attachment,a[data-test-id="attachment-thumbnail"]');
 
   if (attachmentLinks.length == 0) {
     return null;
