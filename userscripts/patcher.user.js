@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        4.6
+// @version        4.7
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -114,7 +114,7 @@ function replaceHotfixLink(target) {
   var href = anchor.getAttribute('href');
   anchor.textContent = href.substring(href.lastIndexOf('/') + 1);
 
-  if (target == 'official') {
+  if ((target === 'official') || (target === 'debug')) {
     var buildMetadataCallback = function(obj) {
       buildMetadata = obj.data;
       anchor.parentNode.appendChild(document.createElement('br'));
@@ -261,7 +261,7 @@ function replaceJenkinsLinks() {
 
     links[i].href = href + 'consoleText';
   }
-
+  
   links = document.querySelectorAll('a[href*="//test-5-2/"]');
 
   for (var i = 0; i < links.length; i++) {
@@ -959,6 +959,7 @@ function applyPatcherCustomizations(A) {
   replaceJenkinsLinks();
   replacePopupWindowLinks();
   addBaselineToBuildTemplate();
+  replaceHotfixLink('debug');
   replaceHotfixLink('official');
   replaceHotfixLink('sourceZip');
   replaceBranchName();
