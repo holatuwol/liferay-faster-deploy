@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        9.5
+// @version        9.6
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -472,7 +472,7 @@ function hideSidebarSelectOptions(propertyBox, ticketId, ticketInfo) {
     var workspaceElement = propertyBox.closest('.workspace');
     var longTermResolutionButton = workspaceElement.querySelector('.custom_field_360013378112');
     if (longTermResolutionButton) {
-        longTermResolutionButton.onclick = hideSidebarSelectOption.bind(null, new Set(['Documentation (Archived)']));
+        longTermResolutionButton.onclick = hideSidebarSelectOption.bind(null, new Set(['Documentation (Archived)', 'Partner Audit']));
     }
 }
 /**
