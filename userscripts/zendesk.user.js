@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        9.6
+// @version        9.7
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -457,13 +457,19 @@ function addJIRASearchField(propertyBox, ticketId) {
     generateFormField(propertyBox, 'lesa-ui-jirasearch', 'JIRA Search', jiraSearchItems);
 }
 function hideSidebarSelectOption(hiddenMenuItemTexts) {
-    var menuItems = Array.from(document.querySelectorAll('.zd-state-focus.zd-state-open ul li'));
+    var menu = document.querySelector('.zd-state-focus.zd-state-open ul');
+    var menuItems = Array.from(menu.querySelectorAll('li'));
+    var menuItemCount = menuItems.length;
     for (var i = 0; i < menuItems.length; i++) {
         var menuItemText = (menuItems[i].textContent || '').trim();
         if (hiddenMenuItemTexts.has(menuItemText)) {
             menuItems[i].style.display = 'none';
+            --menuItemCount;
         }
     }
+    var menuParentElement = menu.parentElement;
+    var spacerElement = menuParentElement.querySelector('div');
+    spacerElement.style.height = (menuItemCount * 36) + 'px';
 }
 /**
  * Hide certain select options that we don't want users to select.
