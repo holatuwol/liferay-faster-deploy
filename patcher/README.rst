@@ -19,6 +19,7 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 
 	findbuild() {
 		FILES_MIRROR=http://mirrors/files.liferay.com \
+			FILES_EE_FOLDER=private/ee \
 			${MCD_RD_CLONE_PATH}/patcher/findbuild $@
 	}
 

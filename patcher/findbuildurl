@@ -19,11 +19,22 @@ gethotfix() {
 		FIX_NAME="liferay-hotfix-$1-$2"
 	fi
 
-	if [ ! -f $FIX_NAME.zip ]; then
-		echo "Downloading $FIX_NAME to check fixpack_documentation.xml"
-		echo $FILES_MIRROR/private/ee/fix-packs/$VERSION/hotfix/$FIX_NAME.zip
-		curl -s -O "$FILES_MIRROR/private/ee/fix-packs/$VERSION/hotfix/$FIX_NAME.zip"
+	if [ -f $FIX_NAME.zip ]; then
+		return 0
 	fi
+
+	local FILE_URL=
+
+	if [ "" == "${FILES_EE_FOLDER}" ]; then
+		FILE_URL=$FILES_MIRROR/private/ee/fix-packs/$VERSION/hotfix/$FIX_NAME.zip
+	else
+		FILE_URL=$FILES_MIRROR/${FILES_EE_FOLDER}/fix-packs/$VERSION/hotfix/$FIX_NAME.zip
+	fi
+
+	echo "Downloading $FIX_NAME to check fixpack_documentation.xml"
+	echo $FILE_URL
+	echo
+	curl -s -O "$FILE_URL"
 }
 
 findbuildurl() {
