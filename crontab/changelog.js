@@ -1,6 +1,63 @@
 var request = new XMLHttpRequest();
 var requestURL = 'changelog.json';
 
+function generateMissingReport(changelog) {
+	var releaseIds = Object.keys(changelog).sort();
+
+	document.getElementById('jira-header').textContent = 'Add missing MP tags for ' + releaseIds.join(', ') + ' apps';
+
+	var missingReportEntries = [];
+
+	for (var i = 0; i < releaseIds.length; i++) {
+		var releaseId = releaseIds[i];
+		var entries = changelog[releaseId];
+
+		for (var j = 0; j < entries.length; j++) {
+			var update = entries[j];
+
+			if (update.currentTags.length != 0) {
+				continue;
+			}
+			else if (update.path.indexOf('liferay/') != -1) {
+				continue;
+			}
+			else if (update.category && (update.category == 'Themes')) {
+				continue;
+			}
+			else if (update.labs) {
+				continue;
+			}
+
+			missingReportEntries.push(generateMissingReportEntry(releaseId, update));
+		}
+	}
+
+	document.getElementById('jira-text').innerHTML =
+		'||App Name||Version||Branch||Carol\'s tag||Status||\n' + missingReportEntries.join('\n');
+}
+
+function generateMissingReportEntry(releaseId, update) {
+	var carolTags = update.carolTags || [];
+
+	var carolTagsText = carolTags
+		.map(tag => '[' + tag + '|https://github.com/carolmoreschi/liferay-portal-ee/releases/tags/' + tag + ']')
+		.join(' \\ ');
+
+	if (carolTagsText == '') {
+		carolTagsText = '(missing)';
+	}
+
+	return [
+		'',
+		update.name.replace('Liferay CE ', '').replace('Liferay ', ''),
+		update.version,
+		releaseId,
+		carolTagsText,
+		' ',
+		''
+	].join('|');
+}
+
 function generateChangelog(releaseId, updates) {
 	var container = document.createElement('div');
 
@@ -52,7 +109,7 @@ function generateChangelogHeaderRow() {
 
 	cell = document.createElement('th');
 	cell.classList.add('app-name');
-	cell.textContent = 'Name and Version';
+	cell.textContent = 'App Name';
 	headerRow.appendChild(cell);
 
 	cell = document.createElement('th');
@@ -61,22 +118,32 @@ function generateChangelogHeaderRow() {
 	headerRow.appendChild(cell);
 
 	cell = document.createElement('th');
-	cell.classList.add('app-tag-name');
+	cell.classList.add('app-version');
+	cell.textContent = 'Version';
+	headerRow.appendChild(cell);
+
+	cell = document.createElement('th');
+	cell.classList.add('app-version');
+	cell.textContent = 'Branch';
+	headerRow.appendChild(cell);
+
+	cell = document.createElement('th');
+	cell.classList.add('app-tags');
 	cell.textContent = 'Patcher Tag';
 	headerRow.appendChild(cell);
 
 	cell = document.createElement('th');
 	cell.classList.add('app-release-date');
-	cell.textContent = 'Release Commit Date';
+	cell.textContent = 'Patcher Date';
 	headerRow.appendChild(cell);
 
 	cell = document.createElement('th');
 	cell.classList.add('app-fix-count');
-	cell.textContent = 'Count';
+	cell.textContent = 'Unreleased Fix Count';
 	headerRow.appendChild(cell);
 
 	cell = document.createElement('th');
-	cell.classList.add('app-fixes');
+	cell.classList.add('app-fix-list');
 	cell.setAttribute('data-sortable', 'false');
 	cell.textContent = 'Unreleased Fix IDs';
 	headerRow.appendChild(cell);
@@ -132,6 +199,10 @@ function compareMarketplaceVersion(a, b) {
 	return compareVersion(getMarketplaceVersion(a), getMarketplaceVersion(b));
 }
 
+function setCellHTML(cell, html) {
+	cell.innerHTML = '<div>' + html + '</div>';
+}
+
 function generateChangelogEntry(releaseId, update) {
 	var row = document.createElement('tr');
 
@@ -139,7 +210,8 @@ function generateChangelogEntry(releaseId, update) {
 
 	cell = document.createElement('td');
 	cell.classList.add('app-name');
-	cell.innerHTML = '<a href="https://web.liferay.com/marketplace/-/mp/application/' + update.marketplace + '">' + update.name + '</a> (' + update.version + ')';
+
+	setCellHTML(cell, '<a href="https://web.liferay.com/marketplace/-/mp/application/' + update.marketplace + '">' + update.name + '</a>');
 	row.appendChild(cell);
 
 	cell = document.createElement('td');
@@ -149,31 +221,44 @@ function generateChangelogEntry(releaseId, update) {
 		'https://github.com/' + update.path + '/tree/' + update.branch :
 			'liferay/liferay-portal-ee/tree/' + releaseId + '/' + update.path;
 
-	cell.innerHTML = '<a href="' + githubURL + '">' + update.path + '</a>';
+	setCellHTML(cell, '<a href="' + githubURL + '">' + update.path + '</a>');
 	row.appendChild(cell);
 
 	cell = document.createElement('td');
+	cell.classList.add('app-version');
+
+	setCellHTML(cell, update.version);
+	row.appendChild(cell);
+
+	cell = document.createElement('td');
+	cell.classList.add('app-branch');
+
+	setCellHTML(cell, releaseId);
+	row.appendChild(cell);
+
+	cell = document.createElement('td');
+	cell.classList.add('app-tags');
+
+	var tagsHTML = '';
 
 	if (update.currentTags && (update.currentTags.length > 0)) {
 		update.currentTags.sort(compareMarketplaceVersion);
 
-		var tags = update.currentTags.map(function(tag) {
+		tagsHTML = update.currentTags.map(function(tag) {
 			return '<a href="https://github.com/liferay/liferay-portal-ee/tree/' + tag + '">' + tag + '</a>';
 		}).join('<br/>');
-
-		cell.innerHTML = tags;
 	}
 	else if (update.path.indexOf('liferay/') != -1) {
-		cell.textContent = 'not patchable (subrepository)';
+		tagsHTML = 'not patchable (subrepository)';
 	}
 	else if (update.category && (update.category == 'Themes')) {
-		cell.textContent = 'not patchable (theme)';
+		tagsHTML = 'not patchable (theme)';
 	}
 	else if (update.labs) {
-		cell.textContent = 'not patchable (labs)';
+		tagsHTML = 'not patchable (labs)';
 	}
 	else {
-		cell.classList.add('missing');
+		row.classList.add('missing');
 
 		var pastTags = update.pastTags || [];
 
@@ -186,29 +271,37 @@ function generateChangelogEntry(releaseId, update) {
 			});
 		}
 
-		var tags = pastTags.map(function(tag) {
+		tagsHTML = pastTags.map(function(tag) {
 			return '<a href="https://github.com/liferay/liferay-portal-ee/tree/' + tag + '">' + tag + '</a>';
 		}).join('<br/>');
 
-		cell.innerHTML = 'missing current release tag, ' + (tags == '' ? 'no past release tags' : 'latest past release tag:' + '<br/>' + tags);
+		if (tagsHTML == '') {
+			tagsHTML = 'missing current release tag, no past release tags';
+		}
+		else {
+			tagsHTML = 'missing current release tag, latest past release tag:<br/>' + tagsHTML;
+		}
 	}
 
-	cell.classList.add('app-tag-name');
+	setCellHTML(cell, tagsHTML);
 	row.appendChild(cell);
 
 	cell = document.createElement('td');
-	cell.textContent = update.releaseDate || 'no changelog';
 	cell.classList.add('app-release-date');
+
+	setCellHTML(cell, update.releaseDate || 'no changelog');
 	row.appendChild(cell);
 
 	cell = document.createElement('td');
 	cell.classList.add('app-fix-count');
-	cell.textContent = update.fixes.length;
+
+	setCellHTML(cell, update.fixes.length);
 	row.appendChild(cell);
 
 	cell = document.createElement('td');
-	cell.classList.add('app-fixes');
-	cell.innerHTML = update.fixes.length == 0 ? 'none' : update.fixes.map(createJiraLink).join(', ');
+	cell.classList.add('app-fix-list');
+
+	setCellHTML(cell, update.fixes.length == 0 ? 'none' : update.fixes.map(createJiraLink).join(', '));
 	row.appendChild(cell);
 
 	return row;
@@ -229,6 +322,8 @@ request.onreadystatechange = function() {
 		for (var i = 0; i < releaseIds.length; i++) {
 			generateChangelog(releaseIds[i], metadata.changelog[releaseIds[i]]);
 		}
+
+		generateMissingReport(metadata.changelog);
 
 		if (document.location.hash) {
 			document.getElementById(document.location.hash.substring(1)).scrollIntoView();

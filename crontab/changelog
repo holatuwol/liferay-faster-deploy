@@ -4,7 +4,6 @@ getchangelog() {
 	echo '    "'${1}'": ['
 
 	git ls-tree -r --name-only upstream/${1} -- modules/ > .modules
-	git ls-tree -r --name-only upstream/${1}-private -- modules/ > .modules-private
 
 	(
 		for file in $(grep -Fh app.properties .modules); do
@@ -12,20 +11,7 @@ getchangelog() {
 		done
 	) | sed '$s/,$//g'
 
-	echo '    ],'
-
-	echo '    "'${1}'-private": ['
-
-	(
-		for file in $(grep -Fh app.properties .modules .modules-private); do
-			getfixes $(dirname ${file}) ${1}-private
-		done
-
-		getcontenttargeting ${1}
-	) | sed '$s/,$//g'
-
 	rm -f .modules
-	rm -f .modules-private
 
 	echo -n '    ]'
 }
@@ -85,24 +71,16 @@ getcontenttargeting() {
 
 getfixes() {
 	local APPBND_FOLDER=$(echo ${1} | sed 's@\.releng/@@g')
-	local APPBND_BRANCH=
-	local MODULE_FOLDER=
 	local MODULE_BRANCH=${2}
 	local LIFERAY_VERSION_NUMBER="$(echo ${MODULE_BRANCH} | grep -o '[0-9]' | perl -ne 'chomp and print')10"
+	local APPBND_BRANCH=${MODULE_BRANCH}
+	local MODULE_FOLDER=${APPBND_FOLDER}
 
-	if [[ ${MODULE_BRANCH} == *-private ]] && [[ ${APPBND_FOLDER} != modules/private/apps/* ]]; then
-		APPBND_BRANCH=$(echo ${MODULE_BRANCH} | sed 's/-private$//g')
-		MODULE_FOLDER=$(echo ${APPBND_FOLDER} | sed 's@^modules/apps@modules/private/apps@g')
-	else
-		APPBND_BRANCH=${MODULE_BRANCH}
-		MODULE_FOLDER=${APPBND_FOLDER}
-	fi
-
-	if [ "" == "$(grep -F ${APPBND_FOLDER}/app.bnd .modules)" ] && [ "" == "$(grep -F ${APPBND_FOLDER}/app.bnd .modules-private)" ]; then
+	if [ "" == "$(grep -F ${APPBND_FOLDER}/app.bnd .modules)" ]; then
 		return 0
 	fi
 
-	if [ "${APPBND_FOLDER}" != "${MODULE_FOLDER}" ] && [ "" == "$(grep -F ${MODULES_FOLDER}/ .modules-private)" ]; then
+	if [ "${APPBND_FOLDER}" != "${MODULE_FOLDER}" ]; then
 		return 0
 	fi
 
@@ -122,10 +100,6 @@ getfixes() {
 
 	if [ "" == "${NAME}" ]; then
 		return 0
-	fi
-
-	if [ "${APPBND_FOLDER}" != "${MODULE_FOLDER}" ]; then
-		NAME="${NAME} (private)"
 	fi
 
 	local ID=$(git show upstream/${APPBND_BRANCH}:$1/app.properties | grep -F app.marketplace.id= | cut -d'=' -f 2)
@@ -164,12 +138,19 @@ getfixes() {
 
 	echo -n '], '
 
+	echo -n '"carolTags": ['
+
+	grep -F "marketplace-$(basename ${MODULE_FOLDER})-${VERSION}-${LIFERAY_VERSION_NUMBER}" carol-tags.txt | \
+		awk '{ print "\"" $1 "\"" }' | tr '\n' ',' | sed 's/,$//g'
+
+	echo -n '], '
+
 	echo -n '"version": "'${VERSION}'", '
 	echo -n '"path": "'${MODULE_FOLDER}'", '
 
 	local RELEASE_HASH=
 
-	if [ "" != "$(grep -F ${1}/app.changelog .modules)" ] || [ "" != "$(grep -F ${1}/app.changelog .modules-private)" ]; then
+	if [ "" != "$(grep -F ${1}/app.changelog .modules)" ]; then
 		RELEASE_HASH=$(git show upstream/${APPBND_BRANCH}:$1/app.changelog | grep -F app.git.id-${VERSION}= | cut -d'=' -f 2)
 
 		if [ "" == "${RELEASE_HASH}" ] || [ "" == "$(git log -1 --pretty='%H' ${RELEASE_HASH} 2> /dev/null)" ]; then
@@ -213,6 +194,9 @@ if git fetch upstream --no-tags; then
 	git ls-remote -t git@github.com:liferay/liferay-portal-ee.git | awk '{ print $2 }' |
 		grep '^refs/tags/marketplace-.*-[0-9]*10' | cut -d'/' -f 3 > marketplace-tags.txt
 
+	git ls-remote -t git@github.com:carolmoreschi/liferay-portal-ee.git | awk '{ print $2 }' |
+		grep '^refs/tags/marketplace-.*-[0-9]*10' | cut -d'/' -f 3 > carol-tags.txt
+
 	echo '{'
 	echo '  "timestamp": "'$(date)'",'
 	echo '  "changelog": {'
@@ -230,4 +214,5 @@ if git fetch upstream --no-tags; then
 	echo '}'
 
 	rm -f marketplace-tags.txt
+	rm -f carol-tags.txt
 fi

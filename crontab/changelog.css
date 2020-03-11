@@ -2,17 +2,54 @@ table[data-sortable] th {
 	vertical-align: top;
 }
 
-th,
 td.app-release-date,
 td.app-fix-count,
-td.app-tag-name a {
+td.app-fix-list a,
+td.app-tags {
 	white-space: nowrap;
 }
 
-td.missing {
-	background-color: #fcc;
+td.app-path,
+td.app-path a {
+    overflow-wrap: break-word;
 }
 
-.app-fixes a {
-	white-space: nowrap;
+.missing .app-tags {
+    background-color: #fcc;
+}
+
+td.app-name div {
+    width: 150px;
+}
+
+td.app-path div {
+    width: 200px;
+}
+
+td.app-branch div,
+td.app-version div {
+    width: 50px;
+}
+
+td.app-tags div {
+    width: 320px;
+}
+
+.app-fix-count,
+.app-fix-count div {
+    width: 70px;
+}
+
+.app-release-date,
+.app-release-date div {
+    width: 100px;
+}
+
+td.app-tags div {
+    overflow-x: auto;
+}
+
+td.app-fix-list div {
+    height: 5em;
+    overflow-y: auto;
 }
