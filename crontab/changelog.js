@@ -32,8 +32,14 @@ function generateMissingReport(changelog) {
 		}
 	}
 
-	document.getElementById('jira-text').innerHTML =
+	var jiraText = document.getElementById('jira-text');
+
+	jiraText.innerHTML =
 		'||App Name||Version||Branch||Carol\'s tag||Status||\n' + missingReportEntries.join('\n');
+
+	jiraText.onclick = function () {
+        jiraText.setSelectionRange(0, jiraText.value.length);
+    };
 }
 
 function generateMissingReportEntry(releaseId, update) {
