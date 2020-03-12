@@ -38,6 +38,7 @@ generate_patch_files() {
 		if [ "" == "${target_folder}" ]; then
 			echo "Unknown folder ${source_folder}"
 			error_state=1
+			continue
 		fi
 
 		if [ "${source_folder}" == "${target_folder}" ]; then
