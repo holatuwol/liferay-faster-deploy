@@ -44,23 +44,27 @@ updatesnapshots() {
 
 	# Check for missing artifacts
 
-	local artifacts=$(grep '^com\.liferay\.[^=]*\.version=' .gradle/gradle.properties | cut -d'=' -f 1 | sed 's/\.version$//g' | grep -vF 'web')
+	local artifacts=
 
-	for artifact in $artifacts; do
-		local artifact_version=$(grep -F "${artifact}.version" .gradle/gradle.properties | cut -d'=' -f 2)
-		local source_folder=$(echo $artifact | cut -d'.' -f 3- | tr '.' '-')
-		local artifact_folder=${repository_root}/com/liferay/portal/${artifact}/${artifact_version}
+	if [ -f .gradle/gradle.properties ]; then
+		artifacts=$(grep '^com\.liferay\.[^=]*\.version=' .gradle/gradle.properties | cut -d'=' -f 1 | sed 's/\.version$//g' | grep -vF 'web')
 
-		if [ -f ${artifact_folder}/${artifact}-${artifact_version}.jar ]; then
-			continue
+		for artifact in $artifacts; do
+			local artifact_version=$(grep -F "${artifact}.version" .gradle/gradle.properties | cut -d'=' -f 2)
+			local source_folder=$(echo $artifact | cut -d'.' -f 3- | tr '.' '-')
+			local artifact_folder=${repository_root}/com/liferay/portal/${artifact}/${artifact_version}
+
+			if [ -f ${artifact_folder}/${artifact}-${artifact_version}.jar ]; then
+				continue
+			fi
+
+			echo "Outdated snapshot for $artifact (${artifact_version})"
+			missing_artifact="$missing_artifact $artifact"
+		done
+
+		if [ "" == "$missing_artifact" ]; then
+			return 0
 		fi
-
-		echo "Outdated snapshot for $artifact (${artifact_version})"
-		missing_artifact="$missing_artifact $artifact"
-	done
-
-	if [ "" == "$missing_artifact" ]; then
-		return 0
 	fi
 
 	echo "Running install-portal-snapshots to ensure all snapshots are available"
