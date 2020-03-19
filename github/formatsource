@@ -122,12 +122,12 @@ formatbranch() {
 		if [ -d ${GIT_ROOT}/modules ]; then
 			cd ${GIT_ROOT}/modules
 
-			cat $GIT_ROOT/.redeploy/format.txt | xargs -r $(dirname "${BASH_SOURCE[0]}")/../gw | tee $GIT_ROOT/.redeploy/formatsource.txt
+			cat $GIT_ROOT/.redeploy/format.txt | xargs -r $(dirname "${BASH_SOURCE[0]}")/../gw -x packageRunFormat | tee $GIT_ROOT/.redeploy/formatsource.txt
 			EXIT_CODE=$?
 
 			cd -
 		else
-			cat $GIT_ROOT/.redeploy/format.txt | xargs -r $(dirname "${BASH_SOURCE[0]}")/../gw | tee $GIT_ROOT/.redeploy/formatsource.txt
+			cat $GIT_ROOT/.redeploy/format.txt | xargs -r $(dirname "${BASH_SOURCE[0]}")/../gw -x packageRunFormat | tee $GIT_ROOT/.redeploy/formatsource.txt
 			EXIT_CODE=$?
 		fi
 
@@ -159,7 +159,7 @@ gradleformatsource() {
 	fi
 
 	echo gradlew formatSource $ARGS
-	$(dirname "${BASH_SOURCE[0]}")/../gw formatSource $ARGS
+	$(dirname "${BASH_SOURCE[0]}")/../gw -x packageRunFormat formatSource $ARGS
 }
 
 setopts() {
@@ -176,7 +176,7 @@ if [ -d "$GIT_ROOT/modules" ]; then
 	checksnapshots
 
 	pushd $GIT_ROOT/modules > /dev/null
-	ls -1 util/ | grep 'formatter$' | awk '{ print ":util:" $1 ":deploy" }' | xargs -r $(dirname "${BASH_SOURCE[0]}")/../gw
+	ls -1 util/ | grep 'formatter$' | awk '{ print ":util:" $1 ":deploy" }' | xargs -r $(dirname "${BASH_SOURCE[0]}")/../gw -x packageRunFormat
 	popd > /dev/null
 fi
 
