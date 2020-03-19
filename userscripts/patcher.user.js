@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        4.7
+// @version        4.8
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -187,8 +187,12 @@ function get62FixPack() {
         var container2 = document.implementation.createHTMLDocument().documentElement;
         container2.innerHTML = xhr2.responseText;
 
-        var gitHubURL = container2.querySelector('label[for="' + ns + 'git-hash"]').parentNode.querySelector('a').href;
-        baseTag = gitHubURL.substring(gitHubURL.indexOf('...') + 3);
+        var gitHubNode = container2.querySelector('label[for="' + ns + 'git-hash"]').parentNode.querySelector('a');
+
+        if (gitHubNode) {
+          var gitHubURL = gitHubNode.href;
+          baseTag = gitHubURL.substring(gitHubURL.indexOf('...') + 3);
+        }
       };
 
       xhr2.send(null);
@@ -197,7 +201,17 @@ function get62FixPack() {
     xhr1.send(null);
   }
   else {
-    fixPackName = document.querySelector('label[for="' + ns + 'patcherProjectVersionId"]').parentNode.querySelector('a').textContent;
+    var versionHolder = document.querySelector('label[for="' + ns + 'patcherProjectVersionId"]').parentNode;
+    var versionNode = versionHolder.querySelector('a');
+
+    if (versionNode) {
+      fixPackName = versionNode.textContent;
+    }
+    else {
+      var versionOption = versionHolder.querySelector('option[selected]');
+      fixPackName = versionOption.textContent.trim();
+    }
+
     baseTag = 'fix-pack-base-6210-' + fixPackName.toLowerCase().substring(fixPackName.indexOf(' ') + 1);
   }
 
