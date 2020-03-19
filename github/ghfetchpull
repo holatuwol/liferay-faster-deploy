@@ -11,7 +11,12 @@ fetchpr() {
 
 	BASE_BRANCH=$(cat "$SCRATCH_FILE" | jq '.base.ref' | cut -d'"' -f 2)
 
-	local target_branch=$(cat "$SCRATCH_FILE" | jq '.head.ref' | tr -d '"')
+	local target_branch=${2}
+
+	if [ "" == "${target_branch}" ]; then
+		target_branch=$(cat "$SCRATCH_FILE" | jq '.head.ref' | tr -d '"')
+	fi
+
 	local upstream_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
 
 	if [ "" == "$upstream_remote" ] && [ -f "$GIT_ROOT/release.properties" ]; then
@@ -32,10 +37,6 @@ fetchpr() {
 
 	git fetch --no-tags ${repo_url} pull/${pull_id}/head:${target_branch}
 	git checkout ${target_branch}
-
-	if [[ 0 -eq $? ]]; then
-		git rebase ${upstream_remote}/${BASE_BRANCH}
-	fi
 }
 
 setopts() {
@@ -47,4 +48,4 @@ if [[ "$1" != https://github.com/* ]]; then
 	exit 1
 fi
 
-setopts && fetchpr $1
+setopts && fetchpr $@
