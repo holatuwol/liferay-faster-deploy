@@ -506,6 +506,10 @@ if [ "" == "${1}" ]; then
 	if [ ! -z ${PORTAL_SOURCE_ROOT_72} ]; then
 		packageinfo_release ${PORTAL_SOURCE_ROOT_72} 7.2 72
 	fi
+
+	if [ ! -z ${PORTAL_SOURCE_ROOT_73} ]; then
+		packageinfo_release ${PORTAL_SOURCE_ROOT_73} 7.3 73
+	fi
 else
 	. $(dirname ${BASH_SOURCE[0]})/../setopts
 

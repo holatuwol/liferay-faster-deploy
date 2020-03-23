@@ -10,6 +10,7 @@ if [ "" != "${PACKAGEINFO_ROOT}" ]; then
 	PORTAL_SOURCE_ROOT_70=${PACKAGEINFO_ROOT}/7.0.x/portal
 	PORTAL_SOURCE_ROOT_71=${PACKAGEINFO_ROOT}/7.1.x/portal
 	PORTAL_SOURCE_ROOT_72=${PACKAGEINFO_ROOT}/7.2.x/portal
+	PORTAL_SOURCE_ROOT_73=${PACKAGEINFO_ROOT}/7.3.x/portal
 fi
 
 # Make sure the packageinfo files are up to date
@@ -20,8 +21,8 @@ fi
 
 # Generate the JSON files
 
-python ${SCRIPT_FOLDER}/packageinfojson.py $(dirname $PORTAL_SOURCE_ROOT_70) $(dirname $PORTAL_SOURCE_ROOT_71) $(dirname $PORTAL_SOURCE_ROOT_72)
-python ${SCRIPT_FOLDER}/requireschemajson.py $(dirname $PORTAL_SOURCE_ROOT_70) $(dirname $PORTAL_SOURCE_ROOT_71) $(dirname $PORTAL_SOURCE_ROOT_72)
+python ${SCRIPT_FOLDER}/packageinfojson.py $(dirname $PORTAL_SOURCE_ROOT_70) $(dirname $PORTAL_SOURCE_ROOT_71) $(dirname $PORTAL_SOURCE_ROOT_72) $(dirname $PORTAL_SOURCE_ROOT_73)
+python ${SCRIPT_FOLDER}/requireschemajson.py $(dirname $PORTAL_SOURCE_ROOT_70) $(dirname $PORTAL_SOURCE_ROOT_71) $(dirname $PORTAL_SOURCE_ROOT_72) $(dirname $PORTAL_SOURCE_ROOT_73)
 
 PORTAL_SOURCE_ROOT=${PORTAL_SOURCE_ROOT_70} ${SCRIPT_FOLDER}/jsversions > dxpjslibrary.json
 
@@ -57,5 +58,11 @@ if [ "" != "${S3_BUCKET}" ]; then
 		rm -f metadata-72x.zip
 		zip -jqqr metadata-72x.zip $(dirname $PORTAL_SOURCE_ROOT_72)/metadata
 		s3upload metadata-72x.zip
+	fi
+
+	if [ ! -z "${PORTAL_SOURCE_ROOT_73}" ]; then
+		rm -f metadata-73x.zip
+		zip -jqqr metadata-73x.zip $(dirname $PORTAL_SOURCE_ROOT_73)/metadata
+		s3upload metadata-73x.zip
 	fi
 fi
