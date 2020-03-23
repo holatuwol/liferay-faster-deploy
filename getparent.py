@@ -21,7 +21,6 @@ def get_git_file_property(commit, file_name, property):
 	return lines[0].split('=')[1] if len(lines) > 0 else None
 
 def getparent(check_tags):
-
 	if git_root is None:
 		return current_branch
 
@@ -119,8 +118,8 @@ def getparent(check_tags):
 def getparent_origin():
 	remote_refs = git.for_each_ref('--format=%(refname)', 'refs/remotes/').split('\n')
 
-	origin_branches = [ref[len('refs/remotes/'):] for ref in remote_refs if ref.find('refs/remotes/origin') == 0]
-	upstream_branches = [ref[len('refs/remotes/'):] for ref in remote_refs if ref.find('refs/remotes/upstream') == 0]
+	origin_branches = [ref[len('refs/remotes/'):] for ref in remote_refs if ref.find('refs/remotes/origin') == 0 and ref[-5:] != '/HEAD']
+	upstream_branches = [ref[len('refs/remotes/'):] for ref in remote_refs if ref.find('refs/remotes/upstream') == 0 and ref[-5:] != '/HEAD']
 
 	closest_branch = None
 	closest_branch_diff = -1
