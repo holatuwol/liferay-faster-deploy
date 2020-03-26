@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        9.9
+// @version        10.0
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -1141,10 +1141,6 @@ function addJiraLinks(ticketId, ticketInfo, conversation) {
         return;
     }
     conversation.classList.add('lesa-ui-jiralink');
-    var newComments = Array.from(conversation.querySelectorAll('.zendesk-editor--rich-text-container .zendesk-editor--rich-text-comment'));
-    for (var i = 0; i < newComments.length; i++) {
-        newComments[i].onblur = _.debounce(addJiraLinksToElement.bind(null, newComments[i]), 500);
-    }
     var comments = Array.from(conversation.querySelectorAll('div[data-comment-id]'));
     for (var i = 0; i < comments.length; i++) {
         addJiraLinksToElement(comments[i]);
