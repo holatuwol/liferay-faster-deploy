@@ -8,7 +8,7 @@ addhost() {
 	fi
 
 	local HOSTNAME=$(echo $1 | grep -o '//[^/]*/' | cut -d'/' -f 3)
-	local IP_ADDRESS=$(ping -c 1 ${HOSTNAME} | grep -o '[1-9][0-9]*\.[1-9][0-9]*\.[1-9][0-9]*\.[1-9][0-9]*' | uniq)
+	local IP_ADDRESS=$(ping -c 1 ${HOSTNAME} | grep -o '[1-9][0-9]*\.[1-9][0-9]*\.[1-9][0-9]*\.[1-9][0-9]*' | head -1)
 
 	if [ "" != "${IP_ADDRESS}" ]; then
 		ADD_HOST="${ADD_HOST} --add-host=${HOSTNAME}:${IP_ADDRESS}"
