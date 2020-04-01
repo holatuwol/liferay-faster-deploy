@@ -32,10 +32,12 @@ cr() {
 	if [ "" != "$BUILD_NAME" ]; then
 		local TIMESTAMP=$(echo "$BUILD_NAME" | sed "s/^${1}-//g" | cut -d'.' -f 1)
 
-		if [ ! -d "$BUILD_FOLDER_PREFIX/$1/$TIMESTAMP" ]; then
-			mkdir -p $BUILD_FOLDER_PREFIX/$1/$TIMESTAMP
-			tar -zxf /var/www/html/builds/branches/$BUILD_NAME -C $BUILD_FOLDER_PREFIX/$1/$TIMESTAMP/
+		if [ -d "$BUILD_FOLDER_PREFIX/$1/$TIMESTAMP" ]; then
+			rm -rf "$BUILD_FOLDER_PREFIX/$1/$TIMESTAMP"
 		fi
+
+		mkdir -p $BUILD_FOLDER_PREFIX/$1/$TIMESTAMP
+		tar -zxf /var/www/html/builds/branches/$BUILD_NAME -C $BUILD_FOLDER_PREFIX/$1/$TIMESTAMP/
 	fi
 
 	CATALINA_HOME=$(find $BUILD_FOLDER_PREFIX/$1/$TIMESTAMP -type d -name 'tomcat*' | sort -u | tail -1)
