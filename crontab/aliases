@@ -105,8 +105,7 @@ switchport() {
 
 	sed -i.bak "s/\"$1/\"$2/g" $CATALINA_HOME/conf/server.xml
 
-	sed -i.bak '/AJP\//s@<!-- @@g' $CATALINA_HOME/conf/server.xml
-	sed -i.bak '/AJP\//s@ -->@@g' $CATALINA_HOME/conf/server.xml
+	python $(dirname ${BASH_SOURCE[0]})/enable_ajp.py $CATALINA_HOME/conf/server.xml
 
 	sed -i.bak "s/JPDA_ADDRESS=${1}/JPDA_ADDRESS=${2}/g" $CATALINA_HOME/bin/setenv.sh
 	sed -i.bak "s/JPDA_ADDRESS=${1}/JPDA_ADDRESS=${2}/g" $CATALINA_HOME/bin/setenv.bat
