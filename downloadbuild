@@ -204,7 +204,8 @@ downloadbranchmirror() {
 	REQUEST_URL="${REQUEST_URL}${ARTIFACT_NAME}"
 
 	BUILD_TIMESTAMP=$(echo ${BUILD_TIMESTAMP} | cut -d'/' -f 1)
-	BUILD_NAME=$(echo ${ARTIFACT_NAME} | sed "s/liferay-portal-tomcat-${BASE_BRANCH}/${SHORT_NAME}-$BUILD_TIMESTAMP/g")
+
+	BUILD_NAME=$(echo ${ARTIFACT_NAME} | sed "s/liferay-portal-tomcat-${BASE_BRANCH}/${SHORT_NAME}-$BUILD_TIMESTAMP/g" | sed 's/[0-9][0-9][0-9][0-9].7z$/.7z/g')
 
 	if [ -f "$HOME/.liferay/builds/$BUILD_NAME" ]; then
 		NEW_BASELINE=
