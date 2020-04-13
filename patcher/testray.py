@@ -281,7 +281,7 @@ def get_project_id(url):
 
 	print('Looking up testray projects for Liferay version %s' % version)
 
-	base_url = 'https://testray.liferay.com/api/jsonws/osb-testray-web.projects/index'
+	base_url = 'https://testray.liferay.com/home/-/testray/projects/index.json'
 
 	parameters = {
 		'cur': 0,
@@ -317,7 +317,7 @@ def get_routine_id(url):
 
 	print('Looking up testray routine by project')
 
-	base_url = 'https://testray.liferay.com/api/jsonws/osb-testray-web.routines/index'
+	base_url = 'https://testray.liferay.com/home/-/testray/routines/index.json'
 
 	parameters = {
 		'testrayProjectId': project_id,
@@ -364,7 +364,7 @@ def get_routine_id(url):
 def get_build_id(routine_id, search_name, matching_name, archived=False):
 	print('Looking up testray build by routine (archived = %r)' % archived)
 
-	base_url = 'https://testray.liferay.com/api/jsonws/osb-testray-web.builds/index'
+	base_url = 'https://testray.liferay.com/home/-/testray/builds/index.json'
 
 	parameters = {
 		'name': search_name,
@@ -485,7 +485,7 @@ def get_run_id(build_id, run_number):
 
 	print('Looking up testray run by testray build')
 
-	base_url = 'https://testray.liferay.com/api/jsonws/osb-testray-web.runs/index'
+	base_url = 'https://testray.liferay.com/home/-/testray/runs/index.json'
 
 	parameters = {
 		'testrayBuildId': build_id,
