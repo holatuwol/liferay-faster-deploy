@@ -1,9 +1,10 @@
 // ==UserScript==
 // @name           GitHub Link to LPS Tickets
 // @namespace      holatuwol
-// @version        1.3
+// @version        1.4
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/github_link_lps.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/github_link_lps.user.js
+// @match          https://github.com/LiferayCloud/*
 // @match          https://github.com/*/liferay-portal*
 // @grant          none
 // ==/UserScript==
@@ -58,9 +59,13 @@ function replaceLinks(links) {
         newElement.appendChild(createAnchorTag(text.substring(pos, match.index), href, classList));
       }
       
-      newElement.appendChild(createAnchorTag(match[0], 'https://issues.liferay.com/browse/' + match[0], classList));
+      var issueKey = match[0];
+      var projectKey = issueKey.substring(0, issueKey.indexOf('-'));
+      var projectDomain = projects[projectKey] || 'issues.liferay.com';
+      
+      newElement.appendChild(createAnchorTag(issueKey, 'https://' + projectDomain + '/browse/' + issueKey, classList));
 
-      pos = match.index + match[0].length;
+      pos = match.index + issueKey.length;
 
       var spaceCount = 0;
 
@@ -85,17 +90,30 @@ function replaceLinks(links) {
   }
 }
 
-var projects = ['BPR', 'CLDSVCS', 'LPP', 'LPS', 'LRCI', 'LRQA'];
+var projects = {
+  'BPR': 'issues.liferay.com',
+  'CLDSVCS': 'issues.liferay.com',
+  'LCP': 'services.liferay.com',
+  'LPP': 'issues.liferay.com',
+  'LPS': 'issues.liferay.com',
+  'LRCI': 'issues.liferay.com',
+  'LRQA': 'issues.liferay.com'
+};
 
 function addJiraLink(element, debug) {
   if (element.nodeType == Node.TEXT_NODE) {
     var newHTML = element.textContent;
+    
+    var projectKeys = Object.keys(projects);
 
-    for (var i = 0; i < projects.length; i++) {
-      newHTML = newHTML.replace(new RegExp("([^/])(" + projects[i] + "-[0-9]+)", "g"), '$1<a href="https://issues.liferay.com/browse/$2" target="_blank" data-link-replaced="true">$2</a>');
-      newHTML = newHTML.replace(new RegExp("^(" + projects[i] + "-[0-9]+)", "g"), '<a href="https://issues.liferay.com/browse/$1" target="_blank" data-link-replaced="true">$1</a>');
-      newHTML = newHTML.replace(new RegExp("([^\"])(https://issues\.liferay\.com/browse/)(" + projects[i] + "-[0-9]+)", "g"), '$1<a href="$2$3" target="_blank" data-link-replaced="true">$2$3</a>');
-      newHTML = newHTML.replace(new RegExp("^(https:\/\/issues\.liferay\.com\/browse\/)(" + projects[i] + "-[0-9]+)", "g"), '<a href="$1$2" target="_blank" data-link-replaced="true">$1$2</a>');
+    for (var i = 0; i < projectKeys.length; i++) {
+      var projectKey = projectKeys[i];
+      var projectDomain = projects[projectKey] || 'issues.liferay.com';
+
+      newHTML = newHTML.replace(new RegExp("([^/])(" + projectKey + "-[0-9]+)", "g"), '$1<a href="https://' + projectDomain + '/browse/$2" target="_blank" data-link-replaced="true">$2</a>');
+      newHTML = newHTML.replace(new RegExp("^(" + projectKey + "-[0-9]+)", "g"), '<a href="https://' + projectDomain + '/browse/$1" target="_blank" data-link-replaced="true">$1</a>');
+      newHTML = newHTML.replace(new RegExp("([^\"])(https:\/\/" + projectDomain + "\/browse\/)(" + projectKey + "-[0-9]+)", "g"), '$1<a href="$2$3" target="_blank" data-link-replaced="true">$2$3</a>');
+      newHTML = newHTML.replace(new RegExp("^(https:\/\/" + projectDomain + "\/browse\/)(" + projectKey + "-[0-9]+)", "g"), '<a href="$1$2" target="_blank" data-link-replaced="true">$1$2</a>');
     }
     
     if (element.textContent != newHTML) {
@@ -124,8 +142,9 @@ function addJiraLinks(elements) {
 
 function checkCurrentURL() {
   var textSelectors = ['a[data-hovercard-type="commit"]'];
-  var projectSelectors = projects.map(x => 'a[title^="' + x + '"],a[aria-label^="' + x + '"]')
-
+  var projectKeys = Array.from(Object.keys(projects));
+  
+  var projectSelectors = projectKeys.map(x => 'a[title^="' + x + '"],a[aria-label^="' + x + '"]')
   var selector = textSelectors.concat(projectSelectors);
   var selectorString = selector.map(x => x + ':not([data-link-replaced="true"])').join(',');
 
