@@ -1,12 +1,16 @@
 /* ==UserStyle==
 @name           JIRA User Style
 @namespace      holatuwol
-@version        1.0.0
+@version        1.1.0
 @description    A user style for issues.liferay.com
 @author         holatuwol
 ==/UserStyle== */
 
 @-moz-document domain("issues.liferay.com") {
+  html body {
+    overflow-y: auto;
+  }
+
   .aui-badge {
     background: rgba(0,0,0,0.1);
     font-size: 1em;
