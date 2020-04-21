@@ -60,11 +60,13 @@ checkservicepack() {
 	SERVICE_PACKS[de-70]=7.0.10.10
 	SERVICE_PACKS[de-80]=7.0.10.11
 	SERVICE_PACKS[de-87]=7.0.10.12
+	SERVICE_PACKS[de-90]=7.0.10.13
 
 	SERVICE_PACKS[dxp-0-7110]=7.1.10
 	SERVICE_PACKS[dxp-5-7110]=7.1.10.1
 	SERVICE_PACKS[dxp-10-7110]=7.1.10.2
 	SERVICE_PACKS[dxp-15-7110]=7.1.10.3
+	SERVICE_PACKS[dxp-17-7110]=7.1.10.4
 
 	SERVICE_PACKS[dxp-0-7210]=7.2.10
 	SERVICE_PACKS[dxp-2-7210]=7.2.10.1
@@ -183,7 +185,7 @@ copyextras() {
 		cd -
 	fi
 
-	if [ "" != "$PATCH_ID" ]; then
+	if [ "" != "${PATCH_ID}" ] && [[ ${PATCH_ID} != *-0 ]] && [[ ${PATCH_ID} != *-0-* ]]; then
 		cd "${LIFERAY_HOME}"
 		mkdir -p patches
 		getpatch $PATCH_ID
@@ -348,21 +350,27 @@ getpatch() {
 		PATCH_ID=
 		NEEDED_PATCH_ID=$(unzip -c ${PATCH_LOCATION} fixpack_documentation.xml | grep requirements | grep -o 'de=[0-9]*' | cut -d'=' -f 2)
 
-		if [ "" != "${NEEDED_PATCH_ID}" ]; then
+		if [ "" == "${NEEDED_PATCH_ID}" ]; then
+			PATCH_ID=de-0
+		else
 			PATCH_ID=de-${NEEDED_PATCH_ID}
 		fi
 	elif [[ "${PATCH_FILE}" == liferay-hotfix-*-7110.zip ]]; then
 		PATCH_ID=
 		NEEDED_PATCH_ID=$(unzip -c ${PATCH_LOCATION} fixpack_documentation.xml | grep requirements | grep -o 'dxp=[0-9]*' | cut -d'=' -f 2)
 
-		if [ "" != "${NEEDED_PATCH_ID}" ]; then
+		if [ "" == "${NEEDED_PATCH_ID}" ]; then
+			PATCH_ID=dxp-0-7110
+		else
 			PATCH_ID=dxp-${NEEDED_PATCH_ID}-7110
 		fi
 	elif [[ "${PATCH_FILE}" == liferay-hotfix-*-7210.zip ]]; then
 		PATCH_ID=
 		NEEDED_PATCH_ID=$(unzip -c ${PATCH_LOCATION} fixpack_documentation.xml | grep requirements | grep -o 'dxp=[0-9]*' | cut -d'=' -f 2)
 
-		if [ "" != "${NEEDED_PATCH_ID}" ]; then
+		if [ "" == "${NEEDED_PATCH_ID}" ]; then
+			PATCH_ID=dxp-0-7210
+		else
 			PATCH_ID=dxp-${NEEDED_PATCH_ID}-7210
 		fi
 	fi
