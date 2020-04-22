@@ -13,10 +13,12 @@ buildworkingdir() {
 			ant -f build-working-dir.xml
 		fi
 	elif [ -d modules/private ]; then
-		pushd modules/private > /dev/null
-		git clean -xdf
-		popd > /dev/null
-		rmdir modules/private
+		if [ "" == "${BASE_TAG}" ] || [[ ${BASE_TAG} != fix-pack-de-*-7010 ]] || [[ $(echo ${BASE_TAG} | cut -d'-' -f 4) -ge 28 ]]; then
+			pushd modules/private > /dev/null
+			git clean -xdf
+			popd > /dev/null
+			rmdir modules/private
+		fi
 	fi
 }
 
