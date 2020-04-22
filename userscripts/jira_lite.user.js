@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           JIRA When javascript.enabled=false
 // @namespace      holatuwol
-// @version        0.2
+// @version        0.3
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_lite.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_lite.user.js
 // @match          https://issues.liferay.com/browse/*
@@ -115,14 +115,43 @@ function addComment(comment) {
   activityContentNode.appendChild(activityCommentNode);
 }
 
-var xhr = new XMLHttpRequest();
+function addComments() {
+  var xhr = new XMLHttpRequest();
 
-xhr.addEventListener('load', function() {
-  var comments = JSON.parse(this.responseText).comments;
-  for (var i = 0; i < comments.length; i++) {
-    addComment(comments[i]);
+  xhr.addEventListener('load', function() {
+    var comments = JSON.parse(this.responseText).comments;
+    for (var i = 0; i < comments.length; i++) {
+      addComment(comments[i]);
+    }
+  });
+
+  xhr.open('GET', restURL);
+  xhr.send();
+}
+
+function enableShowMoreLinks() {
+  var showMoreLinks = document.getElementById('show-more-links');
+
+  if (!showMoreLinks) {
+    return;
   }
-});
 
-xhr.open('GET', restURL);
-xhr.send();
+  showMoreLinks.onclick = function() {
+    showMoreLinks.style.visibility = 'hidden';
+
+    var collapsedLinksLists = document.querySelectorAll('.collapsed-links-list');
+
+    for (var i = 0; i < collapsedLinksLists.length; i++) {
+      collapsedLinksLists[i].classList.remove('collapsed-links-list');
+    }
+
+    var collapsedLinks = document.querySelectorAll('.collapsed-link');
+
+    for (var i = 0; i < collapsedLinks.length; i++) {
+      collapsedLinks[i].classList.remove('collapsed-link');
+    }
+  }
+}
+
+addComments();
+enableShowMoreLinks();
