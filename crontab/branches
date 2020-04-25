@@ -138,6 +138,10 @@ checkout() {
 
 	echo "Running git checkout $1"
 	git checkout -f $1
+
+	if [[ $1 == *-private ]]; then
+		git log -1 $(git branch | cut -d')' -f 1 | grep -F '*' | cut -d' ' -f 5 | sed 's/-private$//') --pretty='%H' > git-commit-portal
+	fi
 }
 
 fixpack() {
