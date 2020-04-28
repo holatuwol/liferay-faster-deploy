@@ -34,7 +34,7 @@ gethotfix() {
 	echo "Downloading $FIX_NAME to check fixpack_documentation.xml"
 	echo $FILE_URL
 	echo
-	curl -s -O "$FILE_URL"
+	curl -f -s -O "$FILE_URL"
 }
 
 findbuildurl() {
