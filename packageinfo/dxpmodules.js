@@ -348,7 +348,7 @@ function checkVersionInfo() {
 			}
 		}
 		else {
-			return Math.floor(versionNumber / 1000) + '.' + Math.floor((versionNumber % 1000) / 100) + '.' + (versionNumber % 100);
+			return Math.floor(versionNumber / 1000) + '.' + Math.floor((versionNumber % 1000) / 100) + '.' + (versionNumber % 100) + selectValue.substring(selectValue.lastIndexOf('-'));
 		}
 	}
 
