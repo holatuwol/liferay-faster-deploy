@@ -64,6 +64,7 @@ def read_bundle_file(folder, file_name):
 				'name': row[1],
 				'version': row[2],
 				'repository': row[3],
+				'sourceFolder': row[4],
 				'packaging': row[6]
 			}
 			for row in reader
@@ -80,6 +81,7 @@ def read_bundle_file(folder, file_name):
 					'name': row[1],
 					'version': row[2],
 					'repository': row[3],
+					'sourceFolder': row[4],
 					'packaging': row[6]
 				}
 
@@ -169,6 +171,7 @@ def add_bundle_file(bundles, folder, file_name, suffix):
 				'group': row['group'],
 				'name': row['name'],
 				'repository': row['repository'],
+				'sourceFolder': row['sourceFolder'],
 				'version': '0.0.0',
 				'packaging': row['packaging']
 			}
@@ -186,6 +189,7 @@ def add_bootstrap_file(bundles, folder, file_name, suffix):
 				'name': row['name'],
 				'version': '0.0.0',
 				'repository': 'public',
+				'sourceFolder': None,
 				'packaging': 'jar'
 			}
 
@@ -200,6 +204,7 @@ def add_dependencies_file(bundles, folder, file_name, suffix):
 				'group': row['group'],
 				'name': row['name'],
 				'repository': row['repository'],
+				'sourceFolder': None,
 				'version': '0.0.0',
 				'packaging': row['packaging']
 			}
@@ -253,7 +258,7 @@ for row in packages.values():
 
 # Identify module changes
 
-columns = ['group', 'name', 'version', 'repository', 'packaging']
+columns = ['group', 'name', 'version', 'repository', 'sourceFolder', 'packaging']
 columns += ['version_%s' % suffix for suffix in json_suffixes]
 
 unique_modules = {(row['group'], row['name']): row for row in bundles.values()}

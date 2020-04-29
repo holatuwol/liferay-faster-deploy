@@ -491,9 +491,9 @@ function checkVersionInfo() {
 		}
 
 		return true;
-	}
+	};
 
-	var getArtifactLink = function(versionInfo, name) {
+	var getArtifactLink = function(versionInfo, name, tagName) {
 		if (!(versionInfo['repository'] in repositoryURLs)) {
 			return versionInfo[name];
 		}
@@ -512,7 +512,7 @@ function checkVersionInfo() {
 			version = version.substring(0, classifierSeparator);
 		}
 
-		return [
+		var artifactLink = [
 			'<a href="',
 			repositoryURLs[versionInfo['repository']],
 			versionInfo['group'].replace(/\./g, '/'), '/',
@@ -522,15 +522,29 @@ function checkVersionInfo() {
 			dependencyClassifier ? '-' + dependencyClassifier : '',
 			'.', versionInfo['packaging'],
 			'">', versionInfo[name], '</a>'
-		].join('');
+		];
+
+		if (versionInfo['sourceFolder']) {
+			artifactLink = artifactLink.concat([
+				' (<a href="https://github.com/liferay/',
+				tagName.indexOf('fix-pack-') == 0 ? 'liferay-portal-ee' : 'liferay-portal',
+				'/commits/',
+				tagName,
+				'/',
+				versionInfo['sourceFolder'],
+				'">commits</a>)'
+			]);
+		}
+
+		return artifactLink.join('');
 	};
 
 	var getRowData = function(versionInfo) {
 		if (name1 == name2) {
-			return [versionInfo['group'], versionInfo['name'], getArtifactLink(versionInfo, name1)];
+			return [versionInfo['group'], versionInfo['name'], getArtifactLink(versionInfo, name1, tagName1)];
 		}
 		else {
-			return [versionInfo['group'], versionInfo['name'], getArtifactLink(versionInfo, name1), getArtifactLink(versionInfo, name2)];
+			return [versionInfo['group'], versionInfo['name'], getArtifactLink(versionInfo, name1, tagName1), getArtifactLink(versionInfo, name2, tagName2)];
 		}
 	};
 
