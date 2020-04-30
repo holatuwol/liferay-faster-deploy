@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           JIRA When javascript.enabled=false
 // @namespace      holatuwol
-// @version        0.3
+// @version        0.4
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_lite.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_lite.user.js
 // @match          https://issues.liferay.com/browse/*
@@ -19,15 +19,35 @@ styleElement.textContent = `
 
 document.head.appendChild(styleElement);
 
-var ticketId = document.location.pathname.substring(document.location.pathname.lastIndexOf('/') + 1);
-var restURL = 'https://' + document.location.host + '/rest/api/2/issue/' + ticketId + '/comment?expand=renderedBody';
+var ticketName = document.location.pathname.substring(document.location.pathname.lastIndexOf('/') + 1);
+var ticketId = document.querySelector('a[data-issue-key="' + ticketName + '"]').getAttribute('rel');
+var currentUser = document.querySelector('#header-details-user-fullname').getAttribute('data-username');
 
 var activityContentNode = document.querySelector('#activitymodule .mod-content')
 
-function getActionHead(comment) {
-  var actionHeadNode = document.createElement('div');
-  actionHeadNode.classList.add('action-head');
+function getActionLinks(comment) {
+  var actionLinksNode = document.createElement('div');
+  actionLinksNode.classList.add('action-links');
 
+  if (comment.author.key == currentUser) {
+    var editCommentNode = document.createElement('a');
+    editCommentNode.setAttribute('id', 'edit_comment_' + comment.id);
+    editCommentNode.setAttribute('href', '/secure/EditComment!default.jspa?id=' + ticketId + '&commentId=' + comment.id);
+    editCommentNode.setAttribute('title', 'Edit');
+    editCommentNode.classList.add('edit-comment', 'issue-comment-action');
+
+    var editCommentIcon = document.createElement('span');
+    editCommentIcon.classList.add('icon-default', 'aui-icon', 'aui-icon-small', 'aui-iconfont-edit');
+    editCommentIcon.textContent = 'Edit';
+
+    editCommentNode.appendChild(editCommentIcon);
+    actionLinksNode.appendChild(editCommentNode);
+  }
+
+  return actionLinksNode;
+}
+
+function getActionDetails(comment) {
   var actionDetailsNode = document.createElement('div');
   actionDetailsNode.classList.add('action-details');
 
@@ -35,12 +55,10 @@ function getActionHead(comment) {
   avatarNode.setAttribute('id', 'commentauthor_' + comment.id + '_verbose');
   avatarNode.setAttribute('rel', comment.author.key);
   avatarNode.setAttribute('href', '/secure/ViewProfile.jspa?name=' + comment.author.name);
-  avatarNode.classList.add('user-hover');
-  avatarNode.classList.add('user-avatar');
+  avatarNode.classList.add('user-hover', 'user-avatar');
 
   var avatarOuterContainerNode = document.createElement('span');
-  avatarOuterContainerNode.classList.add('aui-avatar');
-  avatarOuterContainerNode.classList.add('aui-avatar-xsmall');
+  avatarOuterContainerNode.classList.add('aui-avatar', 'aui-avatar-xsmall');
 
   var avatarInnerContainerNode = document.createElement('span');
   avatarInnerContainerNode.classList.add('aui-avatar-inner');
@@ -78,7 +96,15 @@ function getActionHead(comment) {
   actionDetailsNode.appendChild(document.createTextNode(' added a comment - '));
   actionDetailsNode.appendChild(commentDateContainer);
 
-  actionHeadNode.appendChild(actionDetailsNode);
+  return actionDetailsNode;
+}
+
+function getActionHead(comment) {
+  var actionHeadNode = document.createElement('div');
+  actionHeadNode.classList.add('action-head');
+
+  actionHeadNode.appendChild(getActionLinks(comment));
+  actionHeadNode.appendChild(getActionDetails(comment));
 
   return actionHeadNode;
 }
@@ -94,19 +120,12 @@ function getActionBody(comment) {
 }
 
 function addComment(comment) {
-  console.log(comment);
-
   var activityCommentNode = document.createElement('div');
   activityCommentNode.setAttribute('id', 'comment-' + comment.id);
-  activityCommentNode.classList.add('issue-data-block');
-  activityCommentNode.classList.add('activity-comment');
-  activityCommentNode.classList.add('twixi-block');
-  activityCommentNode.classList.add('expanded');
+  activityCommentNode.classList.add('issue-data-block', 'activity-comment', 'twixi-block', 'expanded');
 
   var actionContainerNode = document.createElement('div');
-  actionContainerNode.classList.add('twixi-wrap');
-  actionContainerNode.classList.add('verbose');
-  actionContainerNode.classList.add('actionContainer');
+  actionContainerNode.classList.add('twixi-wrap', 'verbose', 'actionContainer');
 
   actionContainerNode.appendChild(getActionHead(comment));
   actionContainerNode.appendChild(getActionBody(comment));
@@ -125,6 +144,8 @@ function addComments() {
     }
   });
 
+  var restURL = 'https://' + document.location.host + '/rest/api/2/issue/' + ticketName + '/comment?expand=renderedBody';
+
   xhr.open('GET', restURL);
   xhr.send();
 }
@@ -136,7 +157,7 @@ function enableShowMoreLinks() {
     return;
   }
 
-  showMoreLinks.onclick = function() {
+  function showMoreLinksListener() {
     showMoreLinks.style.visibility = 'hidden';
 
     var collapsedLinksLists = document.querySelectorAll('.collapsed-links-list');
@@ -151,7 +172,11 @@ function enableShowMoreLinks() {
       collapsedLinks[i].classList.remove('collapsed-link');
     }
   }
+
+  showMoreLinks.addEventListener('click', showMoreLinksListener);
 }
 
-addComments();
-enableShowMoreLinks();
+if (!document.querySelector('#activitymodule .aui-tabs')) {
+  addComments();
+  enableShowMoreLinks();
+}
