@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           JIRA When javascript.enabled=false
 // @namespace      holatuwol
-// @version        0.4
+// @version        0.5
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_lite.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_lite.user.js
 // @match          https://issues.liferay.com/browse/*
@@ -144,10 +144,46 @@ function addComments() {
     }
   });
 
-  var restURL = 'https://' + document.location.host + '/rest/api/2/issue/' + ticketName + '/comment?expand=renderedBody';
+  var restURL = 'https://' + document.location.host + '/rest/api/2/issue/' + ticketId + '/comment?expand=renderedBody';
 
   xhr.open('GET', restURL);
   xhr.send();
+}
+
+function updateTicketActions() {
+  var operationsContainer = document.getElementById('opsbar-opsbar-operations');
+
+  var attachNode = document.createElement('a');
+  attachNode.setAttribute('href', '/secure/AttachFile!default.jspa?id=' + ticketId);
+  attachNode.classList.add('aui-button', 'toolbar-trigger');
+  attachNode.textContent = 'Attach Files';
+
+  var linkTicketNode = document.createElement('a');
+
+  linkTicketNode.setAttribute('href', '/secure/LinkJiraIssue!default.jspa?id=' + ticketId);
+  linkTicketNode.classList.add('aui-button', 'toolbar-trigger');
+  linkTicketNode.textContent = 'Link Issue';
+
+  operationsContainer.appendChild(attachNode);
+//  operationsContainer.appendChild(linkTicketNode);
+
+  document.getElementById('opsbar-operations_more').remove();
+
+  var transitionsContainer = document.getElementById('opsbar-opsbar-transitions');
+  var hiddenTransitionNodes = document.querySelectorAll('aui-item-link.issueaction-workflow-transition');
+
+  for (var i = 0; i < hiddenTransitionNodes.length; i++) {
+    var hiddenTransitionNode = hiddenTransitionNodes[i];
+
+    var transitionNode = document.createElement('a');
+    transitionNode.setAttribute('href', hiddenTransitionNode.getAttribute('href'));
+    transitionNode.classList.add('aui-button', 'toolbar-trigger', 'issueaction-workflow-transition');
+    transitionNode.innerHTML = hiddenTransitionNode.innerHTML;
+
+    transitionsContainer.appendChild(transitionNode);
+  }
+
+  document.getElementById('opsbar-transitions_more').remove();
 }
 
 function enableShowMoreLinks() {
@@ -176,7 +212,10 @@ function enableShowMoreLinks() {
   showMoreLinks.addEventListener('click', showMoreLinksListener);
 }
 
-if (!document.querySelector('#activitymodule .aui-tabs')) {
-  addComments();
-  enableShowMoreLinks();
+if (document.location.pathname.indexOf('/browse/') == 0) {
+  if (!document.querySelector('#activitymodule .aui-tabs')) {
+    addComments();
+    updateTicketActions();
+    enableShowMoreLinks();
+  }
 }
