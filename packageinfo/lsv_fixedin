@@ -1,0 +1,13 @@
+#!/bin/bash
+
+SCRIPT_FOLDER=$(dirname $0)
+
+s3upload() {
+	. ${SCRIPT_FOLDER}/s3upload $1
+}
+
+python ${SCRIPT_FOLDER}/lsv_fixedin.py
+
+if [ "" != "${S3_BUCKET}" ]; then
+	s3upload lsv_fixedin.json
+fi
