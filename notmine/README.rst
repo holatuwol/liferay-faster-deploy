@@ -10,18 +10,15 @@ CDS
 
 	. ${MCD_RD_CLONE_PATH}/notmine/cds
 
-CheckIt
-=======
+GM
+==
 
-* Wrapper: ``checkit``
-* Repository: `jwu910/check-it-out <https://github.com/jwu910/check-it-out>`__
+* Wrapper: ``gm``
+* Repository: `drewbrokke/gist <https://gist.github.com/drewbrokke/d6e4889c0dff1ea4d7c5c31a17cded94>`__
 
 .. code-block:: bash
 
-	checkit() {
-		REPO_PATH=/path/to/checkit/repository \
-			${MCD_RD_CLONE_PATH}/notmine/checkit $@
-	}
+	. ${MCD_RD_CLONE_PATH}/notmine/gm
 
 Jack
 ====

@@ -1,0 +1,45 @@
+#!/bin/bash
+
+# Running this will display a filterable list of modules
+# Once you select one, you will navigate to it
+# You can call it with an argument to be used as a pre-filter on the module list
+
+# Requires 'fzf', I highly recommend it.
+# https://github.com/junegunn/fzf
+# In this case, 'fzf' is reading from stdin
+
+# USAGE EXAMPLES
+# gm              (will present the full list of modules)
+# gm segments     (will present a list of modules pre-filtered by "segments")
+
+function gm() {
+	# The optional filter pattern. If none is given, all modules will be shown
+	local PATTERN
+	PATTERN="$1"
+
+	# Find the root of the Git project.
+	local PROJECT_ROOT
+	PROJECT_ROOT="$(git rev-parse --show-toplevel)"
+
+	# Get the module path
+	local MODULE_PATH
+	MODULE_PATH="$(
+		# List all files at project root
+		git -C "${PROJECT_ROOT}" ls-files |
+		# Filter down to only app.bnd or bnd.bnd
+		grep -E '/(app|bnd)\.bnd$' |
+		# Apply additional filtering
+		grep "$PATTERN" |
+		# Strip the filename, leaving just the directory name.
+		# This is WAY faster than using "dirname"
+		sed -E 's,/(app|bnd)\.bnd$,,g' |
+		# Pass the results to 'fzf' so the user can choose
+		fzf
+	)"
+
+	# If you actually chose a module path, navigate to it. Otherwise do nothing.
+	if [ -n "${MODULE_PATH}" ]
+	then
+		cd "${PROJECT_ROOT}/${MODULE_PATH}" || return 1
+	fi
+}
