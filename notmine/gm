@@ -28,13 +28,11 @@ function gm() {
 		git -C "${PROJECT_ROOT}" ls-files |
 		# Filter down to only app.bnd or bnd.bnd
 		grep -E '/(app|bnd)\.bnd$' |
-		# Apply additional filtering
-		grep "$PATTERN" |
 		# Strip the filename, leaving just the directory name.
-		# This is WAY faster than using "dirname"
-		sed -E 's,/(app|bnd)\.bnd$,,g' |
+		# On OSX, this WAY faster than using "dirname".
+		sed -E 's,/[^/]*$,,g' |
 		# Pass the results to 'fzf' so the user can choose
-		fzf
+		fzf -q "${PATTERN}"
 	)"
 
 	# If you actually chose a module path, navigate to it. Otherwise do nothing.
