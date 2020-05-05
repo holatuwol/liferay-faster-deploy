@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           JIRA When javascript.enabled=false
 // @namespace      holatuwol
-// @version        0.8
+// @version        0.9
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_lite.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_lite.user.js
 // @match          https://issues.liferay.com/*
@@ -173,7 +173,11 @@ function updateTicketActions() {
   operationsContainer.appendChild(attachNode);
   operationsContainer.appendChild(linkTicketNode);
 
-  document.getElementById('opsbar-operations_more').remove();
+  var moreOperationsElement = document.getElementById('opsbar-operations_more');
+  
+  if (moreOperationsElement) {
+    moreOperations.remove();
+  }
 
   var transitionsContainer = document.getElementById('opsbar-opsbar-transitions');
   var hiddenTransitionNodes = document.querySelectorAll('aui-item-link.issueaction-workflow-transition');
@@ -189,7 +193,11 @@ function updateTicketActions() {
     transitionsContainer.appendChild(transitionNode);
   }
 
-  document.getElementById('opsbar-transitions_more').remove();
+  var moreTransitionsElement = document.getElementById('opsbar-transitions_more');
+  
+  if (moreTransitionsElement) {
+    moreTransitionsElement.remove();
+  }
 }
 
 function enableShowMoreLinks() {
@@ -287,10 +295,10 @@ function addAdvancedSearch() {
     var sortDesc = sortJQL.indexOf(sortColumnDesc);
 
     if (sortAsc != -1) {
-      advancedSearchElement.textContent = sortJQL.substring(0, sortAsc) + sortColumnDesc + sortJQL.substring(sortAsc + column.length + 5);
+      advancedSearchElement.textContent = sortJQL.substring(0, sortAsc) + sortColumnDesc + sortJQL.substring(sortAsc + sortColumnAsc.length);
     }
     else if (sortDesc != -1) {
-      advancedSearchElement.textContent = sortJQL.substring(0, sortDesc) + sortColumnAsc + sortJQL.substring(sortDesc + column.length + 5);
+      advancedSearchElement.textContent = sortJQL.substring(0, sortDesc) + sortColumnAsc + sortJQL.substring(sortDesc + sortColumnDesc.length);
     }
   }
 
