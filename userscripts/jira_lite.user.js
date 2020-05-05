@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           JIRA When javascript.enabled=false
 // @namespace      holatuwol
-// @version        0.7
+// @version        0.8
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_lite.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_lite.user.js
 // @match          https://issues.liferay.com/*
@@ -270,9 +270,28 @@ function addAdvancedSearch() {
   advancedSearchElement.style.height = '50px';
 
   if (document.location.search && (document.location.search.length > 1)) {
-    var jql = JSON.parse(document.querySelector('.navigator-content').getAttribute('data-issue-table-model-state')).issueTable.columnSortJql.summary;
+    var issueTableModelState = JSON.parse(document.querySelector('.navigator-content').getAttribute('data-issue-table-model-state'));
+    var issueTable = issueTableModelState.issueTable;
 
-    advancedSearchElement.textContent = jql;
+    var activeSortElement = document.querySelector('#issuetable th.active');
+
+    var column = activeSortElement ? activeSortElement.getAttribute('data-id') : 'issuekey';
+
+    var sortJQL = issueTable['columnSortJql'][column];
+    var sortColumn = (column == 'issuekey') ? 'key' : column;
+
+    var sortColumnAsc = sortColumn + ' ASC';
+    var sortColumnDesc = sortColumn + ' DESC';
+
+    var sortAsc = sortJQL.indexOf(sortColumnAsc);
+    var sortDesc = sortJQL.indexOf(sortColumnDesc);
+
+    if (sortAsc != -1) {
+      advancedSearchElement.textContent = sortJQL.substring(0, sortAsc) + sortColumnDesc + sortJQL.substring(sortAsc + column.length + 5);
+    }
+    else if (sortDesc != -1) {
+      advancedSearchElement.textContent = sortJQL.substring(0, sortDesc) + sortColumnAsc + sortJQL.substring(sortDesc + column.length + 5);
+    }
   }
 
   advancedSearchElement.addEventListener('keypress', function(e) {
