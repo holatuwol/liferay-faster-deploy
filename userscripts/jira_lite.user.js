@@ -1,11 +1,13 @@
 // ==UserScript==
 // @name           JIRA When javascript.enabled=false
 // @namespace      holatuwol
-// @version        0.5
+// @version        0.6
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_lite.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_lite.user.js
 // @match          https://issues.liferay.com/browse/*
+// @match          https://issues.liferay.com/secure/LinkJiraIssue!*
 // @match          https://services.liferay.com/browse/*
+// @match          https://services.liferay.com/secure/LinkJiraIssue!*
 // @grant          none
 // ==/UserScript==
 
@@ -19,20 +21,24 @@ styleElement.textContent = `
 
 document.head.appendChild(styleElement);
 
-var ticketName = document.location.pathname.substring(document.location.pathname.lastIndexOf('/') + 1);
-var ticketId = document.querySelector('a[data-issue-key="' + ticketName + '"]').getAttribute('rel');
-var currentUser = document.querySelector('#header-details-user-fullname').getAttribute('data-username');
+function getTicketId() {
+  var ticketName = document.location.pathname.substring(document.location.pathname.lastIndexOf('/') + 1);
 
-var activityContentNode = document.querySelector('#activitymodule .mod-content')
+  return document.querySelector('a[data-issue-key="' + ticketName + '"]').getAttribute('rel');
+}
+
+function getCurrentUser() {
+  return document.querySelector('#header-details-user-fullname').getAttribute('data-username');
+}
 
 function getActionLinks(comment) {
   var actionLinksNode = document.createElement('div');
   actionLinksNode.classList.add('action-links');
 
-  if (comment.author.key == currentUser) {
+  if (comment.author.key == getCurrentUser()) {
     var editCommentNode = document.createElement('a');
     editCommentNode.setAttribute('id', 'edit_comment_' + comment.id);
-    editCommentNode.setAttribute('href', '/secure/EditComment!default.jspa?id=' + ticketId + '&commentId=' + comment.id);
+    editCommentNode.setAttribute('href', '/secure/EditComment!default.jspa?id=' + getTicketId() + '&commentId=' + comment.id);
     editCommentNode.setAttribute('title', 'Edit');
     editCommentNode.classList.add('edit-comment', 'issue-comment-action');
 
@@ -120,6 +126,8 @@ function getActionBody(comment) {
 }
 
 function addComment(comment) {
+  var activityContentNode = document.querySelector('#activitymodule .mod-content')
+
   var activityCommentNode = document.createElement('div');
   activityCommentNode.setAttribute('id', 'comment-' + comment.id);
   activityCommentNode.classList.add('issue-data-block', 'activity-comment', 'twixi-block', 'expanded');
@@ -144,7 +152,7 @@ function addComments() {
     }
   });
 
-  var restURL = 'https://' + document.location.host + '/rest/api/2/issue/' + ticketId + '/comment?expand=renderedBody';
+  var restURL = 'https://' + document.location.host + '/rest/api/2/issue/' + getTicketId() + '/comment?expand=renderedBody';
 
   xhr.open('GET', restURL);
   xhr.send();
@@ -154,18 +162,18 @@ function updateTicketActions() {
   var operationsContainer = document.getElementById('opsbar-opsbar-operations');
 
   var attachNode = document.createElement('a');
-  attachNode.setAttribute('href', '/secure/AttachFile!default.jspa?id=' + ticketId);
+  attachNode.setAttribute('href', '/secure/AttachFile!default.jspa?id=' + getTicketId());
   attachNode.classList.add('aui-button', 'toolbar-trigger');
   attachNode.textContent = 'Attach Files';
 
   var linkTicketNode = document.createElement('a');
 
-  linkTicketNode.setAttribute('href', '/secure/LinkJiraIssue!default.jspa?id=' + ticketId);
+  linkTicketNode.setAttribute('href', '/secure/LinkJiraIssue!default.jspa?id=' + getTicketId());
   linkTicketNode.classList.add('aui-button', 'toolbar-trigger');
   linkTicketNode.textContent = 'Link Issue';
 
   operationsContainer.appendChild(attachNode);
-//  operationsContainer.appendChild(linkTicketNode);
+  operationsContainer.appendChild(linkTicketNode);
 
   document.getElementById('opsbar-operations_more').remove();
 
@@ -212,10 +220,33 @@ function enableShowMoreLinks() {
   showMoreLinks.addEventListener('click', showMoreLinksListener);
 }
 
+function addIssueKeySelect() {
+  var issueKeysLabel = document.querySelector('label[for="jira-issue-keys"]');
+
+  var children = issueKeysLabel.parentElement.children;
+
+  for (var i = children.length - 1; i >= 1; i--) {
+    children[i].remove();
+  }
+
+  var issueKeysInput = document.createElement('input');
+  issueKeysInput.setAttribute('name', 'issueKeys');
+  issueKeysInput.classList.add('text', 'long-field');
+
+  issueKeysLabel.parentElement.appendChild(issueKeysInput);
+}
+
+console.log(document.location.pathname);
+
 if (document.location.pathname.indexOf('/browse/') == 0) {
   if (!document.querySelector('#activitymodule .aui-tabs')) {
     addComments();
     updateTicketActions();
     enableShowMoreLinks();
+  }
+}
+else if (document.location.pathname.indexOf('/secure/LinkJiraIssue!') == 0) {
+  if (!document.getElementById('jira-issue-keys-textarea')) {
+    addIssueKeySelect();
   }
 }
