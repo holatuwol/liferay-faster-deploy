@@ -37,7 +37,18 @@ def authenticate(base_url, get_params=None):
         url_params = parse.parse_qs(parse.urlparse(r.url).query)
         login_portlet(r.url, url_params, r.text)
 
+def get_liferay_file(base_url, target_file, params=None, method='get'):
+    r = make_liferay_request(base_url, params, method)
+
+    with open(target_file, 'wb') as f:
+        f.write(r.content)
+
 def get_liferay_content(base_url, params=None, method='get'):
+    r = make_liferay_request(base_url, params, method)
+
+    return r.text
+
+def make_liferay_request(base_url, params, method):
     pos = base_url.find('/api/jsonws/')
 
     if pos != -1:
@@ -60,7 +71,7 @@ def get_liferay_content(base_url, params=None, method='get'):
     else:
         r = session.post(base_url, data=params)
 
-    return r.text
+    return r
 
 def saml_request(response_url, response_body):
     soup = BeautifulSoup(response_body, 'html.parser')
@@ -209,3 +220,5 @@ def get_json_auth_token(base_url):
     json_auth_token[base_url] = p_auth_input['value']
     return json_auth_token[base_url]
 
+if __name__ == '__main__':
+    get_liferay_file(sys.argv[1], sys.argv[2])
