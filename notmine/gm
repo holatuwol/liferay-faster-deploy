@@ -25,14 +25,14 @@ function gm() {
 	local MODULE_PATH
 	MODULE_PATH="$(
 		# List all files at project root
-		git -C "${PROJECT_ROOT}" ls-files |
-		# Filter down to only app.bnd or bnd.bnd
-		grep -E '/(app|bnd)\.bnd$' |
+		git -C "${PROJECT_ROOT}" ls-files -- '*.bnd' |
 		# Strip the filename, leaving just the directory name.
 		# On OSX, this WAY faster than using "dirname".
 		sed -E 's,/[^/]*$,,g' |
+		# Gets rid of any duplicates in case a module has more than one *.bnd file
+		uniq |
 		# Pass the results to 'fzf' so the user can choose
-		fzf -q "${PATTERN}"
+		fzf --query "${PATTERN}" --select-1 --exit-0
 	)"
 
 	# If you actually chose a module path, navigate to it. Otherwise do nothing.
