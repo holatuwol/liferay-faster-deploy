@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Add JIRA Order By Dividers
 // @namespace      holatuwol
-// @version        1.6
+// @version        1.7
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_divider.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_divider.user.js
 // @match          https://issues.liferay.com/issues/*
@@ -35,7 +35,7 @@ function extractOrderBy(orderByCols, x) {
       var issue = x.querySelector('td.issuekey').textContent.trim();
       keys.push(issue.substring(0, issue.indexOf('-')));
     }
-    else {
+    else if (orderBy != 'summary') {
       var orderByHeader = x.querySelector('td.' + orderBy);
 
       if (orderByHeader) {
@@ -63,7 +63,11 @@ function addBreakpoints() {
   var navigatorContent = document.querySelector('.navigator-content');
 
   var modelState = JSON.parse(navigatorContent.getAttribute('data-issue-table-model-state'));
-  var orderByCols = [modelState.issueTable.sortBy.fieldId];
+  var orderByCols = [];
+
+  if (modelState.issueTable.sortBy && modelState.issueTable.sortBy.fieldId) {
+    orderByCols.push(modelState.issueTable.sortBy.fieldId);
+  }
 
   var search = document.querySelector('#advanced-search');
 
