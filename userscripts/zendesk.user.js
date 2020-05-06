@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        10.2
+// @version        10.3
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -1654,7 +1654,7 @@ if (window.location.hostname == '24475.apps.zdusercontent.com') {
 else {
     setInterval(detachModalWindowHandler, 1000);
 }
-function addArticleCodeButton(toolbarContainer) {
+function addArticleCodeButton(toolbarContainer, tinymce) {
     // Gets the buttons toolbar
     var toolbar = toolbarContainer.querySelector('.ssc-view-3df91d6a.ssc-group-f69f19c1');
     // Creates the code format container button
@@ -1681,9 +1681,13 @@ function addArticleCodeButton(toolbarContainer) {
     toolbar.insertBefore(codeFormatButton, toolbarPreButton);
     // Registers the button functionality
     // API: https://www.tiny.cloud/docs/api/tinymce/tinymce.formatter/
-    tinymce.activeEditor.formatter.register('codeformat', {
+    var registerArguments = {
         inline: 'code'
-    });
+    };
+    if (cloneInto) {
+        registerArguments = cloneInto(registerArguments, unsafeWindow);
+    }
+    tinymce.activeEditor.formatter.register('codeformat', registerArguments);
     // Adds function to the button
     codeFormatButton.addEventListener('click', function (e) {
         var target = e.currentTarget;
@@ -1692,16 +1696,24 @@ function addArticleCodeButton(toolbarContainer) {
         tinymce.DOM.toggleClass(target, 'src-components-EditorToolbar-ToolbarButton---active---3qTSV');
     });
     // Adds event listener to check <code> markup everywhere on the active editor
-    tinymce.activeEditor.on('click', function (e) {
+    var checkIfInCodeTag = function (e) {
         if ((tinymce.activeEditor.selection.getNode().nodeName) == "CODE") {
             codeFormatButton.classList.add('src-components-EditorToolbar-ToolbarButton---active---3qTSV');
         }
         else {
             codeFormatButton.classList.remove('src-components-EditorToolbar-ToolbarButton---active---3qTSV');
         }
-    });
+    };
+    if (exportFunction) {
+        checkIfInCodeTag = exportFunction(checkIfInCodeTag, unsafeWindow);
+    }
+    tinymce.activeEditor.on('click', checkIfInCodeTag);
 }
 function addArticleFormattingButtons() {
+    var tinymce = unsafeWindow.tinymce;
+    if (!tinymce) {
+        return;
+    }
     var toolbarContainers = Array.from(document.querySelectorAll('div[class*="ssc-container-85be2f31 src-components-EditorToolbar-index---bar---"]'));
     for (var i = 0; i < toolbarContainers.length; i++) {
         var toolbarContainer = toolbarContainers[i];
@@ -1709,7 +1721,7 @@ function addArticleFormattingButtons() {
             continue;
         }
         toolbarContainer.classList.add('lesa-ui-stackedit');
-        addArticleCodeButton(toolbarContainer);
+        addArticleCodeButton(toolbarContainer, tinymce);
     }
 }
 /**
