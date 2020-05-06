@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        10.1
+// @version        10.2
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
+// @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/knowledge\/.*/
 // @include        /https:\/\/24475.apps.zdusercontent.com\/24475\/assets\/.*\/issue_creator.html/
 // @grant          none
 // @require        https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.5/jszip.min.js
@@ -1040,7 +1041,7 @@ function addJiraLinksToElement(element) {
  * Adds a button which loads a window which allows you to compose a
  * post with Markdown.
  */
-function addStackeditButton(element, callback) {
+function addReplyStackeditButton(element, callback) {
     var img = document.createElement('img');
     img.title = 'Compose with Stackedit';
     img.classList.add('lesa-ui-stackedit-icon');
@@ -1056,7 +1057,7 @@ function addStackeditButton(element, callback) {
 /**
  * Adds an underline button to the regular formatter.
  */
-function addUnderlineButton(element) {
+function addReplyUnderlineButton(element) {
     var underlineSVGPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     underlineSVGPath.setAttribute('fill', 'currentColor');
     underlineSVGPath.setAttribute('d', 'M11 7.5c0 2.5-1.4 3.8-3.9 3.8-2.6 0-4.1-1.2-4.1-3.8V1.2h1.3v6.3c0 1.8 1 2.7 2.7 2.7 1.7 0 2.6-.9 2.6-2.7V1.2H11v6.3zm-9 5.3v-.7h10v.7H2z');
@@ -1094,15 +1095,15 @@ function addUnderlineButton(element) {
  * Add buttons which load windows that allow you to compose a post
  * with Markdown.
  */
-function addStackeditButtons(ticketId, ticketInfo, conversation) {
+function addReplyFormattingButtons(ticketId, ticketInfo, conversation) {
     if (conversation.classList.contains('lesa-ui-stackedit')) {
         return;
     }
     conversation.classList.add('lesa-ui-stackedit');
     var newComments = Array.from(conversation.querySelectorAll('.zendesk-editor--rich-text-container .zendesk-editor--rich-text-comment'));
     for (var i = 0; i < newComments.length; i++) {
-        addUnderlineButton(newComments[i]);
-        addStackeditButton(newComments[i], addJiraLinksToElement);
+        addReplyUnderlineButton(newComments[i]);
+        addReplyStackeditButton(newComments[i], addJiraLinksToElement);
     }
 }
 /**
@@ -1653,6 +1654,64 @@ if (window.location.hostname == '24475.apps.zdusercontent.com') {
 else {
     setInterval(detachModalWindowHandler, 1000);
 }
+function addArticleCodeButton(toolbarContainer) {
+    // Gets the buttons toolbar
+    var toolbar = toolbarContainer.querySelector('.ssc-view-3df91d6a.ssc-group-f69f19c1');
+    // Creates the code format container button
+    var codeFormatButton = document.createElement('div');
+    codeFormatButton.classList.add('ssc-view-3df91d6a', 'src-components-EditorToolbar-ToolbarButton---button---2IfvR');
+    codeFormatButton.setAttribute('tabindex', '0');
+    codeFormatButton.setAttribute('role', 'button');
+    codeFormatButton.setAttribute('id', 'custom-code-format-button');
+    codeFormatButton.setAttribute('data-test-id', 'toolbarCodeFormatButton');
+    // Creates the code format label
+    var codeFormatLabel = document.createElement('div');
+    codeFormatLabel.classList.add('src-components-EditorToolbar-ToolbarButton---label---PACxZ');
+    codeFormatLabel.setAttribute('title', 'Code Format');
+    // Creates the code format icon
+    var codeFormatIcon = document.createElement('img');
+    codeFormatIcon.setAttribute('src', 'https://www.tiny.cloud/docs/images/icons/code-sample.svg'); // Icon taken from https://www.tiny.cloud/docs/advanced/editor-icon-identifiers/
+    codeFormatIcon.setAttribute('alt', "code format");
+    // Adds icon to the label
+    codeFormatLabel.appendChild(codeFormatIcon);
+    // Adds the label to the button
+    codeFormatButton.appendChild(codeFormatLabel);
+    // Adds the button to the toolbar
+    var toolbarPreButton = toolbar.querySelector('div[data-test-id="toolbarPreButton"]');
+    toolbar.insertBefore(codeFormatButton, toolbarPreButton);
+    // Registers the button functionality
+    // API: https://www.tiny.cloud/docs/api/tinymce/tinymce.formatter/
+    tinymce.activeEditor.formatter.register('codeformat', {
+        inline: 'code'
+    });
+    // Adds function to the button
+    codeFormatButton.addEventListener('click', function (e) {
+        var target = e.currentTarget;
+        tinymce.activeEditor.focus();
+        tinymce.activeEditor.formatter.toggle('codeformat');
+        tinymce.DOM.toggleClass(target, 'src-components-EditorToolbar-ToolbarButton---active---3qTSV');
+    });
+    // Adds event listener to check <code> markup everywhere on the active editor
+    tinymce.activeEditor.on('click', function (e) {
+        if ((tinymce.activeEditor.selection.getNode().nodeName) == "CODE") {
+            codeFormatButton.classList.add('src-components-EditorToolbar-ToolbarButton---active---3qTSV');
+        }
+        else {
+            codeFormatButton.classList.remove('src-components-EditorToolbar-ToolbarButton---active---3qTSV');
+        }
+    });
+}
+function addArticleFormattingButtons() {
+    var toolbarContainers = Array.from(document.querySelectorAll('div[class*="ssc-container-85be2f31 src-components-EditorToolbar-index---bar---"]'));
+    for (var i = 0; i < toolbarContainers.length; i++) {
+        var toolbarContainer = toolbarContainers[i];
+        if (toolbarContainer.classList.contains('lesa-ui-stackedit')) {
+            continue;
+        }
+        toolbarContainer.classList.add('lesa-ui-stackedit');
+        addArticleCodeButton(toolbarContainer);
+    }
+}
 /**
  * Shows the public conversation tab so that you can get help.liferay.com links to
  * share with customers.
@@ -1677,7 +1736,7 @@ function checkTicketConversation(ticketId, ticketInfo) {
             return;
         }
         enablePublicConversation(ticketId, ticketInfo, conversation);
-        addStackeditButtons(ticketId, ticketInfo, conversation);
+        addReplyFormattingButtons(ticketId, ticketInfo, conversation);
         addJiraLinks(ticketId, ticketInfo, conversation);
         addPlaybookReminder(ticketId, ticketInfo, conversation);
         addTicketDescription(ticketId, ticketInfo, conversation);
@@ -1799,8 +1858,13 @@ function checkForSubtitles() {
 // Since there's an SPA framework in place that I don't fully understand,
 // attempt to do everything once per second.
 if (window.location.hostname.indexOf('zendesk.com') != -1) {
-    setInterval(checkForConversations, 1000);
-    setInterval(checkForSubtitles, 1000);
-    setInterval(checkSidebarTags, 1000);
-    setInterval(makeDraggableModals, 1000);
+    if (window.location.pathname.indexOf('/agent/') == 0) {
+        setInterval(checkForConversations, 1000);
+        setInterval(checkForSubtitles, 1000);
+        setInterval(checkSidebarTags, 1000);
+        setInterval(makeDraggableModals, 1000);
+    }
+    else if (window.location.pathname.indexOf('/knowledge/') == 0) {
+        setInterval(addArticleFormattingButtons, 1000);
+    }
 }
