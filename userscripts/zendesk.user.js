@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        10.3
+// @version        10.4
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -1697,7 +1697,7 @@ function addArticleCodeButton(toolbarContainer, tinymce) {
     });
     // Adds event listener to check <code> markup everywhere on the active editor
     var checkIfInCodeTag = function (e) {
-        if ((tinymce.activeEditor.selection.getNode().nodeName) == "CODE") {
+        if (e.element.nodeName == 'CODE') {
             codeFormatButton.classList.add('src-components-EditorToolbar-ToolbarButton---active---3qTSV');
         }
         else {
@@ -1707,7 +1707,7 @@ function addArticleCodeButton(toolbarContainer, tinymce) {
     if (exportFunction) {
         checkIfInCodeTag = exportFunction(checkIfInCodeTag, unsafeWindow);
     }
-    tinymce.activeEditor.on('click', checkIfInCodeTag);
+    tinymce.activeEditor.on('NodeChange', checkIfInCodeTag);
 }
 function addArticleFormattingButtons() {
     var tinymce = unsafeWindow.tinymce;
