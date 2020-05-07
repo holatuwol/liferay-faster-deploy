@@ -51,12 +51,17 @@ def expand_fix_version(issue):
 	fix_pack_labels = [label for label in issue['fields']['labels'] if label.find('liferay-fixpack-') == 0]
 
 	sev_labels = [label for label in issue['fields']['labels'] if label[0:4] == 'sev-']
+	lsv_labels = [label for label in issue['fields']['labels'] if label[0:4] == 'lsv-']
 
 	if len(sev_labels) > 0:
 		fix_version['sev'] = int(sev_labels[0][4:])
 
+	if len(lsv_labels) > 0:
+		fix_version['lsv'] = int(lsv_labels[0][4:])
+
 	for fix_branch in fix_branches:
 		base_version = '.'.join(fix_branch.split('.', 3)[0:2])
+		build_number = '';
 
 		if base_version == '6.1':
 			prefix = 'liferay-fixpack-portal-'
@@ -71,11 +76,13 @@ def expand_fix_version(issue):
 			prefix = 'liferay-fixpack-dxp-'
 			suffix = '-%s10' % ''.join(fix_branch.split('.', 3)[0:2])
 
+		build_number = suffix[1:]
+
 		for label in fix_pack_labels:
 			if label[:len(prefix)] != prefix or label[-len(suffix):] != suffix:
 				continue
 
-			fix_version[base_version] = int(label[len(prefix):-len(suffix)])
+			fix_version[build_number] = int(label[len(prefix):-len(suffix)])
 
 	return fix_version
 

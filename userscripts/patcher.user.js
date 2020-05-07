@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        4.8
+// @version        4.9
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -17,6 +17,10 @@ a.included-in-baseline,
 a.included-in-baseline:hover {
   color: #ddd;
   text-decoration: line-through;
+}
+
+.nowrap {
+  white-space: nowrap;
 }
 
 #_1_WAR_osbpatcherportlet_patcherProductVersionId,
@@ -275,7 +279,7 @@ function replaceJenkinsLinks() {
 
     links[i].href = href + 'consoleText';
   }
-  
+
   links = document.querySelectorAll('a[href*="//test-5-2/"]');
 
   for (var i = 0; i < links.length; i++) {
@@ -507,7 +511,7 @@ function processChildBuilds(xhr, oldFixesNode) {
  * Returns a link to the ticket.
  */
 
-function getTicketLink(className, ticket) {
+function getTicketLink(className, ticket, title) {
   if (ticket.toUpperCase() != ticket) {
     return ticket;
   }
@@ -530,7 +534,11 @@ function getTicketLink(className, ticket) {
     ticketURL = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher?' + getQueryString(params);
   }
 
-  return '<a class="' + className + '" href="' + ticketURL + '" target="_blank">' + ticket + '</a>';
+  if (!title) {
+    title = ticket;
+  }
+
+  return '<a class="nowrap ' + className + '" href="' + ticketURL + '" title="' + title + '" target="_blank">' + ticket + '</a>';
 }
 
 /**
@@ -967,6 +975,72 @@ function highlightAnalysisNeededBuilds() {
   }
 }
 
+function renderMissingSecurityFixes() {
+  var lsvTickets = JSON.parse(this.responseText);
+
+  var projectNode = querySelector('patcherProjectVersionId');
+  var tagName = projectNode.parentElement.querySelector('a').textContent;
+
+  var buildNumber = tagName.indexOf('portal-') == 0 ? '6210' : tagName.substring(tagName.lastIndexOf('-') + 1);
+
+  var buildName = querySelector('patcherBuildName').value.split(',');
+  var ticketList = new Set(buildName.map(x => x.trim()));
+  var missingTicketList = [[],[],[],[]];
+
+  var fixPackNumber = 0;
+
+  if (buildNumber == '6210') {
+    fixPackNumber = parseInt(tagName.substring('portal-'.length));
+  }
+  else {
+    fixPackNumber = parseInt(tagName.substring(tagName.indexOf('-', 'fix-pack-'.length) + 1, tagName.lastIndexOf('-')));
+  }
+
+  for (var ticketName in lsvTickets) {
+    if (!ticketList.has(ticketName) && lsvTickets[ticketName][buildNumber] && lsvTickets[ticketName][buildNumber] > fixPackNumber) {
+      var lsvNumber = lsvTickets[ticketName]['lsv'];
+      var severity = lsvTickets[ticketName]['sev'] || 3;
+
+      missingTicketList[severity].push(getTicketLink('', ticketName, lsvNumber ? 'LSV-' + lsvNumber : ticketName));
+    }
+  }
+
+  var tableRows = missingTicketList.map((x, i) => (x.length == 0) ? '' : '<tr><th class="nowrap">SEV-' + i + '</th><td>' + x.join(', ') + '</td></tr>');
+  var tableRowsHTML = tableRows.join('');
+
+  if (tableRowsHTML.length == 0) {
+    return;
+  }
+
+  var container = document.createElement('div');
+  container.classList.add('control-group', 'input-text-wrapper');
+
+  var label = document.createElement('label');
+  label.classList.add('control-label');
+  label.textContent = 'Missing Security Fixes';
+
+  container.appendChild(label);
+
+  var tableContainer = document.createElement('span');
+  tableContainer.innerHTML = '<table class="table table-bordered table-hover"><tbody class="table-data">' + tableRowsHTML + '</tbody></table>';
+
+  container.appendChild(tableContainer);
+
+  var accountElement = querySelector('patcherBuildAccountEntryCode');
+  accountElement.parentElement.parentElement.insertBefore(container, accountElement.parentElement);
+}
+
+function showMissingSecurityFixes() {
+  var xhr = new XMLHttpRequest();
+
+  var lsvFixedInURL = 'https://s3-us-west-2.amazonaws.com/mdang.grow/lsv_fixedin.json';
+
+  xhr.open('GET', lsvFixedInURL);
+  xhr.onload = renderMissingSecurityFixes.bind(xhr);
+
+  xhr.send(null);
+}
+
 // Run all the changes we need to the page.
 
 function applyPatcherCustomizations(A) {
@@ -987,6 +1061,7 @@ function applyPatcherCustomizations(A) {
   replaceDate('modifiedDate');
   addProductVersionFilter();
   highlightAnalysisNeededBuilds();
+  showMissingSecurityFixes();
 
   setTimeout(updateFromQueryString, 500);
 };
