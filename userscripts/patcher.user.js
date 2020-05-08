@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        5.0
+// @version        5.1
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -763,9 +763,6 @@ function renderMissingSecurityFixes() {
     }
     var tableRows = missingTicketList.map(function (x, i) { return (x.length == 0) ? '' : '<tr><th class="nowrap">SEV-' + i + '</th><td>' + x.join(', ') + '</td></tr>'; });
     var tableRowsHTML = tableRows.join('');
-    if (tableRowsHTML.length == 0) {
-        return;
-    }
     var container = document.createElement('div');
     container.classList.add('control-group', 'input-text-wrapper');
     var label = document.createElement('label');
@@ -773,7 +770,12 @@ function renderMissingSecurityFixes() {
     label.textContent = 'Missing Security Fixes';
     container.appendChild(label);
     var tableContainer = document.createElement('span');
-    tableContainer.innerHTML = '<table class="table table-bordered table-hover"><tbody class="table-data">' + tableRowsHTML + '</tbody></table>';
+    if (tableRowsHTML.length == 0) {
+        tableContainer.innerHTML = 'none';
+    }
+    else {
+        tableContainer.innerHTML = '<table class="table table-bordered table-hover"><tbody class="table-data">' + tableRowsHTML + '</tbody></table>';
+    }
     container.appendChild(tableContainer);
     var accountElement = querySelector('patcherBuildAccountEntryCode');
     var accountParentElement = accountElement.parentElement;
