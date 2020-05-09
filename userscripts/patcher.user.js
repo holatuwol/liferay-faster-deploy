@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        5.1
+// @version        5.2
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -201,23 +201,29 @@ function replaceJenkinsLinks() {
  */
 var fixPackMetadata = null;
 function getFixPack() {
-    if (fixPackMetadata) {
+    var projectNode = querySelector('patcherProjectVersionId');
+    if (projectNode.selectedIndex == -1) {
+        return null;
+    }
+    var versionElement = projectNode.options[projectNode.selectedIndex];
+    var versionId = versionElement.value;
+    if (fixPackMetadata && fixPackMetadata.versionId == versionId) {
         return fixPackMetadata;
     }
-    var projectNode = querySelector('patcherProjectVersionId');
-    var baseTag = (projectNode.options[projectNode.selectedIndex].textContent || '').trim();
+    var baseTag = (versionElement.textContent || '').trim();
     if (baseTag.indexOf('6.2') == 0) {
-        fixPackMetadata = get62FixPack();
+        fixPackMetadata = get62FixPack(versionId);
     }
     else {
         fixPackMetadata = {
             'tag': baseTag,
-            'name': baseTag
+            'name': baseTag,
+            'versionId': versionId
         };
     }
     return fixPackMetadata;
 }
-function get62FixPack() {
+function get62FixPack(versionId) {
     var fixPackListURL = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/fix_packs?' + getQueryString({ delta: 200 });
     var oldNode = querySelector('patcherFixName');
     if (!oldNode) {
@@ -270,7 +276,8 @@ function get62FixPack() {
     }
     return {
         'tag': baseTag,
-        'name': fixPackName
+        'name': fixPackName,
+        'versionId': versionId
     };
 }
 /**
@@ -282,7 +289,11 @@ function replaceBranchName() {
     if (!branchNode || !gitRemoteNode || !branchNode.readOnly) {
         return;
     }
-    var baseTag = getFixPack().tag;
+    var fixPack = getFixPack();
+    if (!fixPack) {
+        return;
+    }
+    var baseTag = fixPack.tag;
     var branchName = branchNode.value;
     var gitRemoteURL = gitRemoteNode.value;
     var gitRemotePath = gitRemoteURL.substring(gitRemoteURL.indexOf(':') + 1, gitRemoteURL.lastIndexOf('.git'));
@@ -406,6 +417,9 @@ function updateProjectVersionOrder() {
     for (var i = 0; i < sortedOptions.length; i++) {
         projectVersionSelect.appendChild(sortedOptions[i]);
     }
+    var event = document.createEvent('HTMLEvents');
+    event.initEvent('change', false, true);
+    projectVersionSelect.dispatchEvent(event);
 }
 /**
  * Updates the product version select based on the value of the Liferay
@@ -489,7 +503,8 @@ function getBuildLinkHTML(build) {
 function getChildBuildHash(mergeCompareLink, build) {
     var baseTag = build.branchName;
     if (baseTag.indexOf('6.2') == 0) {
-        baseTag = getFixPack().tag;
+        var fixPack = getFixPack();
+        baseTag = fixPack.tag;
     }
     var compareLink = 'https://github.com/liferay/liferay-portal-ee/compare/' + baseTag + '...fix-pack-fix-' + build.patcherFixId;
     var extraHTML = (compareLink == mergeCompareLink) ? ' (build tag)' : '';
@@ -736,14 +751,29 @@ function highlightAnalysisNeededBuilds() {
         buildsTableBody.appendChild(detachedRows[i]);
     }
 }
-function renderMissingSecurityFixes() {
-    var lsvTickets = JSON.parse(this.responseText);
+function renderMissingSecurityFixes(buildNameNode, lsvTickets) {
+    var fixPack = getFixPack();
+    if (!fixPack) {
+        return;
+    }
     var projectNode = querySelector('patcherProjectVersionId');
     var projectParentElement = projectNode.parentElement;
-    var tagName = getFixPack().tag;
-    var buildNumber = tagName.indexOf('portal-') == 0 ? '6210' : tagName.substring(tagName.lastIndexOf('-') + 1);
-    var buildNameNode = querySelector('patcherBuildName');
-    var buildName = buildNameNode.value.split(',');
+    var tagName = fixPack.tag;
+    var buildNumber = '';
+    var liferayVersion = getLiferayVersion(tagName);
+    if (tagName.indexOf('portal-') == 0) {
+        buildNumber = '6210';
+    }
+    else {
+        buildNumber = '' + Math.floor(liferayVersion / 1000);
+    }
+    var buildName = [];
+    if (buildNameNode.tagName.toLowerCase() == 'select') {
+        buildName = buildNameNode.value.split(',');
+    }
+    else {
+        buildName = buildNameNode.value.split(',');
+    }
     var ticketList = new Set(buildName.map(function (x) { return x.trim(); }));
     var missingTicketList = [[], [], [], []];
     var fixPackNumber = 0;
@@ -751,7 +781,7 @@ function renderMissingSecurityFixes() {
         fixPackNumber = parseInt(tagName.substring('portal-'.length));
     }
     else {
-        fixPackNumber = parseInt(tagName.substring(tagName.indexOf('-', 'fix-pack-'.length) + 1, tagName.lastIndexOf('-')));
+        fixPackNumber = liferayVersion % 1000;
     }
     for (var ticketName in lsvTickets) {
         if (!ticketList.has(ticketName) && lsvTickets[ticketName][buildNumber] && lsvTickets[ticketName][buildNumber] > fixPackNumber) {
@@ -763,7 +793,12 @@ function renderMissingSecurityFixes() {
     }
     var tableRows = missingTicketList.map(function (x, i) { return (x.length == 0) ? '' : '<tr><th class="nowrap">SEV-' + i + '</th><td>' + x.join(', ') + '</td></tr>'; });
     var tableRowsHTML = tableRows.join('');
-    var container = document.createElement('div');
+    var container = document.getElementById('missing-security-fixes');
+    if (container) {
+        container.remove();
+    }
+    container = document.createElement('div');
+    container.setAttribute('id', 'missing-security-fixes');
     container.classList.add('control-group', 'input-text-wrapper');
     var label = document.createElement('label');
     label.classList.add('control-label');
@@ -786,13 +821,18 @@ function showMissingSecurityFixes() {
     if (document.location.pathname.indexOf('/-/osb_patcher/builds/') == -1) {
         return;
     }
-    if (document.location.pathname.indexOf('/-/osb_patcher/builds/create') != -1) {
-        return;
-    }
+    var buildNameNode = querySelector('patcherBuildName');
     var xhr = new XMLHttpRequest();
     var lsvFixedInURL = 'https://s3-us-west-2.amazonaws.com/mdang.grow/lsv_fixedin.json';
     xhr.open('GET', lsvFixedInURL);
-    xhr.onload = renderMissingSecurityFixes.bind(xhr);
+    xhr.onload = function () {
+        var lsvTickets = JSON.parse(this.responseText);
+        var renderMissingSecurityFixesListener = renderMissingSecurityFixes.bind(xhr, buildNameNode, lsvTickets);
+        buildNameNode.addEventListener('blur', renderMissingSecurityFixesListener);
+        var projectVersionNode = querySelector('patcherProjectVersionId');
+        projectVersionNode.addEventListener('change', renderMissingSecurityFixesListener);
+        renderMissingSecurityFixesListener();
+    };
     xhr.send(null);
 }
 // Run all the changes we need to the page.
