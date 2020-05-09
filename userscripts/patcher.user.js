@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        5.2
+// @version        5.3
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -202,15 +202,27 @@ function replaceJenkinsLinks() {
 var fixPackMetadata = null;
 function getFixPack() {
     var projectNode = querySelector('patcherProjectVersionId');
-    if (projectNode.selectedIndex == -1) {
-        return null;
+    var versionId = '';
+    var baseTag = '';
+    if (projectNode.tagName.toLowerCase() == 'input') {
+        var projectInputElement = projectNode;
+        versionId = projectInputElement.value;
+        var container = projectNode.parentElement;
+        var versionNode = container.querySelector('a');
+        baseTag = versionNode.textContent || '';
     }
-    var versionElement = projectNode.options[projectNode.selectedIndex];
-    var versionId = versionElement.value;
+    else {
+        var projectSelectNode = projectNode;
+        if (projectSelectNode.selectedIndex == -1) {
+            return null;
+        }
+        var versionElement = projectSelectNode.options[projectSelectNode.selectedIndex];
+        versionId = versionElement.value;
+        baseTag = (versionElement.textContent || '').trim();
+    }
     if (fixPackMetadata && fixPackMetadata.versionId == versionId) {
         return fixPackMetadata;
     }
-    var baseTag = (versionElement.textContent || '').trim();
     if (baseTag.indexOf('6.2') == 0) {
         fixPackMetadata = get62FixPack(versionId);
     }
