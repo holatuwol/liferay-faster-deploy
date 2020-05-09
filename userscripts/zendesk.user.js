@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        10.4
+// @version        10.5
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -561,7 +561,7 @@ function downloadAttachment(checkbox, callback) {
     link.classList.add('downloading');
     downloadFile(href, download, function (blob) {
         link.classList.remove('downloading');
-        callback(href, blob);
+        callback(download, blob);
     });
     var xhr = new XMLHttpRequest();
     xhr.responseType = 'blob';
