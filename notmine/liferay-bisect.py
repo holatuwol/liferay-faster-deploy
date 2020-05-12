@@ -88,10 +88,26 @@ def get_hash_info(commit_hash):
 
 def list_generate(bad, good):
     last_ticket_id = None
+
+    matching_tags = {}
+
+    for line in git.log('--date=short', '--format=format:%H %cd', '--simplify-by-decoration', bad + '...' + good).split('\n'):
+        commit_hash, commit_date = line.split()[0:2]
+        commit_tag = git.tag('--points-at', commit_hash)
+
+        metadata = {'hash': commit_tag, 'date': commit_date, 'ticket': '', 'status': None}
+
+        matching_tags[commit_tag] = metadata
+        matching_tags[commit_hash] = metadata
+
     notable_hashes = []
 
     for line in git.log('--date=short', '--pretty=%H %cd %s', bad + '...' + good).split('\n'):
         commit_hash, commit_date, ticket_id = line.split()[0:3]
+
+        if commit_hash in matching_tags:
+            notable_hashes.append(matching_tags[commit_hash])
+            continue
 
         if ticket_id != ticket_id.upper():
             continue
@@ -102,17 +118,31 @@ def list_generate(bad, good):
         notable_hashes.append({'hash': commit_hash, 'date': commit_date, 'ticket': ticket_id, 'status': None})
 
     bad_date, bad_ticket_id = get_hash_info(bad)
-    bad_hash = {'hash': bad, 'date': bad_date, 'ticket': bad_ticket_id, 'status': 'bad'}
+    bash_hash = None
+
+    if bad in matching_tags:
+        matching_tags[bad]['status'] = 'bad'
+    else:
+        bad_hash = {'hash': bad, 'date': bad_date, 'ticket': bad_ticket_id, 'status': 'bad'}
 
     good_date, good_ticket_id = get_hash_info(good)
-    good_hash = {'hash': good, 'date': good_date, 'ticket': good_ticket_id, 'status': 'good'}
+    good_hash = None
+
+    if good in matching_tags:
+        matching_tags[good]['status'] = 'good'
+    else:
+        good_hash = {'hash': good, 'date': good_date, 'ticket': good_ticket_id, 'status': 'good'}
 
     if git.is_ancestor(bad, good):
-        notable_hashes.insert(0, good_hash)
-        notable_hashes.append(bad_hash)
+        if good_hash is not None:
+            notable_hashes.insert(0, good_hash)
+        if bad_hash is not None:
+            notable_hashes.append(bad_hash)
     else:
-        notable_hashes.insert(0, bad_hash)
-        notable_hashes.append(good_hash)
+        if bad_hash is not None:
+            notable_hashes.insert(0, bad_hash)
+        if good_hash is not None:
+            notable_hashes.append(good_hash)
 
     generate_html(notable_hashes)
 

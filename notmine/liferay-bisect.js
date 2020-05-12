@@ -144,6 +144,52 @@ table.appendChild(tbody);
 
 document.querySelector('div[role=main]').appendChild(table);
 
+function getFixPackIndices() {
+	var fixPackIndices = [];
+
+	for (var i = 0; i < notableHashes.length; i++) {
+		if (notableHashes[i].hash.indexOf('fix-pack-') != -1) {
+			fixPackIndices.push(i);
+		}
+	}
+
+	return fixPackIndices;
+}
+
+var fixPackIndices = getFixPackIndices();
+
+function getMidpoint(endIndex1, endIndex2) {
+	var fixPackIndex1 = -1;
+	var fixPackIndex2 = -1;
+
+	for (var i = 0; i < fixPackIndices.length; i++) {
+		if (fixPackIndices[i] == endIndex1) {
+			fixPackIndex1 = i;
+		}
+
+		if (fixPackIndices[i] == endIndex2) {
+			fixPackIndex2 = i;
+		}
+	}
+
+	if ((fixPackIndex1 != -1) && (fixPackIndex2 != -1) && (fixPackIndex2 - fixPackIndex1 > 1)) {
+		var fixPackIndex = Math.floor((fixPackIndex1 + fixPackIndex2) / 2);
+		return fixPackIndices[fixPackIndex];
+	}
+
+	var midpoint = Math.floor((endIndex1 + endIndex2) / 2);
+
+	if (midpoint == endIndex1) {
+		midpoint++;
+	}
+
+	if (midpoint == endIndex2) {
+		midpoint--;
+	}
+
+	return midpoint;
+}
+
 function checkStatuses(checked) {
 	// Reset all previous statuses
 
@@ -187,17 +233,7 @@ function checkStatuses(checked) {
 
 	// Return the halfway point
 
-	var midpoint = Math.floor((endIndex1 + endIndex2) / 2);
-
-	if (midpoint == endIndex1) {
-		midpoint++;
-	}
-
-	if (midpoint == endIndex2) {
-		midpoint--;
-	}
-
-	return midpoint;
+	return getMidpoint(endIndex1, endIndex2);
 }
 
 function updateCheckboxes() {
@@ -225,7 +261,6 @@ function updateCheckboxes() {
 	var badIndex, goodIndex;
 
 	if (notableHashes[0].status == 'bad') {
-		console.log('branch 1');
 		for (var i = 1; i < checked.length; i++) {
 			if (checked[i].getAttribute('data-value') == 'bad') {
 				continue;
@@ -237,7 +272,6 @@ function updateCheckboxes() {
 		}
 	}
 	else {
-		console.log('branch 2');
 		for (var i = 1; i < checked.length; i++) {
 			if (checked[i].getAttribute('data-value') == 'good') {
 				continue;
@@ -284,3 +318,5 @@ function hideMarked(event) {
 document.getElementById('hideMarked').onchange = hideMarked;
 
 document.getElementById('newCommand').onclick = highlightTextField;
+
+document.getElementById('hideUnmarked').click();
