@@ -78,22 +78,20 @@ var notableHashes = %s;
     with open(os.path.join(dir_path, filename),'w' if write else 'a', encoding='UTF-8') as file:
         file.write(html_content)
 
-def get_hash_info(commit_hash):
-    commit_date, ticket_id = git.log('-1', '--date=short', '--pretty=%cd %s', commit_hash).strip().split()[0:2]
 
-    if ticket_id != ticket_id.upper():
-        ticket_id = None
-
-    return commit_date, ticket_id
-
-def list_generate(bad, good):
+def sublist_generate(start, end):
+    matching_tags = {}
     last_ticket_id = None
 
-    matching_tags = {}
-
-    for line in git.log('--date=short', '--format=format:%H %cd', '--simplify-by-decoration', bad + '...' + good).split('\n'):
+    for line in git.log('--date=short', '--format=format:%H %cd', '--simplify-by-decoration', '%s..%s' % (start, end)).split('\n'):
         commit_hash, commit_date = line.split()[0:2]
         commit_tag = git.tag('--points-at', commit_hash)
+
+        if commit_tag.find('\n') != -1:
+            commit_tag = [x for x in commit_tag.split('\n') if x.find('fix-pack-') == 0][0]
+
+        if commit_tag.find('fix-pack-') != 0:
+            continue
 
         metadata = {'hash': commit_tag, 'date': commit_date, 'ticket': '', 'status': None}
 
@@ -102,7 +100,7 @@ def list_generate(bad, good):
 
     notable_hashes = []
 
-    for line in git.log('--date=short', '--pretty=%H %cd %s', bad + '...' + good).split('\n'):
+    for line in git.log('--date=short', '--pretty=%H %cd %s', '%s..%s' % (start, end)).split('\n'):
         commit_hash, commit_date, ticket_id = line.split()[0:3]
 
         if commit_hash in matching_tags:
@@ -117,32 +115,41 @@ def list_generate(bad, good):
         last_ticket_id = ticket_id
         notable_hashes.append({'hash': commit_hash, 'date': commit_date, 'ticket': ticket_id, 'status': None})
 
-    bad_date, bad_ticket_id = get_hash_info(bad)
-    bash_hash = None
+    return notable_hashes
 
-    if bad in matching_tags:
-        matching_tags[bad]['status'] = 'bad'
+def list_generate(bad, good):
+    notable_hashes = []
+    start = None
+    end = None
+
+    if git.is_ancestor('fix-pack-base-7010', bad):
+        if git.is_ancestor('fix-pack-base-7010', good):
+            start = bad if git.is_ancestor(bad, good) else good
+            end = bad if start == good else good
+            notable_hashes = sublist_generate(start + '~1', end)
+        else:
+            start = bad
+            end = good
+            notable_hashes = notable_hashes + sublist_generate('cc57347219da4911d30b154188a99c6a628f6079', end)
+            notable_hashes = notable_hashes + sublist_generate(start + '~1', 'fix-pack-de-27-7010')
     else:
-        bad_hash = {'hash': bad, 'date': bad_date, 'ticket': bad_ticket_id, 'status': 'bad'}
+        if git.is_ancestor('fix-pack-base-7010', good):
+            start = good
+            end = bad
 
-    good_date, good_ticket_id = get_hash_info(good)
-    good_hash = None
+            notable_hashes = notable_hashes + sublist_generate('cc57347219da4911d30b154188a99c6a628f6079', end)
+            notable_hashes = notable_hashes + sublist_generate(start + '~1', 'fix-pack-de-27-7010')
+        else:
+            start = bad if git.is_ancestor(bad, good) else good
+            end = bad if start == good else good
+            notable_hashes = sublist_generate(start + '~1', end)
 
-    if good in matching_tags:
-        matching_tags[good]['status'] = 'good'
+    if start == bad:
+        notable_hashes[0]['status'] = 'good'
+        notable_hashes[-1]['status'] = 'bad'
     else:
-        good_hash = {'hash': good, 'date': good_date, 'ticket': good_ticket_id, 'status': 'good'}
-
-    if git.is_ancestor(bad, good):
-        if good_hash is not None:
-            notable_hashes.insert(0, good_hash)
-        if bad_hash is not None:
-            notable_hashes.append(bad_hash)
-    else:
-        if bad_hash is not None:
-            notable_hashes.insert(0, bad_hash)
-        if good_hash is not None:
-            notable_hashes.append(good_hash)
+        notable_hashes[-1]['status'] = 'good'
+        notable_hashes[0]['status'] = 'bad'
 
     generate_html(notable_hashes)
 
@@ -154,7 +161,7 @@ def main():
         print_help()
 
     elif num_args == 2:
-    	print_help()
+        print_help()
 
     elif num_args == 3:
         bad = sys.argv[1]
