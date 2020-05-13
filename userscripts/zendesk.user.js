@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        10.6
+// @version        10.7
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -1858,7 +1858,7 @@ function checkForSubtitles() {
     var subtitles = Array.from(document.querySelectorAll('div[data-test-id="header-tab-subtitle"]'));
     for (var i = 0; i < subtitles.length; i++) {
         var subtitle = subtitles[i];
-        var textContent = (subtitle.textContent || '').trim();
+        var textContent = (subtitle.children[0].textContent || '').trim();
         if (textContent[0] != '#') {
             continue;
         }
