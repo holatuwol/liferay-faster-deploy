@@ -1,12 +1,57 @@
 // ==UserScript==
 // @name           Hide Older Liferay Continuous Integration Test Results
 // @namespace      holatuwol
-// @version        0.2
+// @version        0.3
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/github_hide_liferayci.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/github_hide_liferayci.user.js
 // @match          https://github.com/*
 // @grant          none
 // ==/UserScript==
+
+var styleElement = document.createElement('style');
+
+styleElement.textContent = `
+.extra-timeline-item {
+  display: none;
+}
+`;
+
+document.querySelector('head').appendChild(styleElement);
+
+/**
+ * Hides the given timeline item.
+ */
+
+function hideTimelineItem(item) {
+  item.classList.add('extra-timeline-item');
+
+  var details = item.closest('details');
+
+  if (!details) {
+    return;
+  }
+
+  var visibleCommentCount = details.querySelectorAll('.js-timeline-item').length - details.querySelectorAll('.extra-timeline-item').length;
+  var similarCommentElement = details.querySelector('summary span');
+
+  similarCommentElement.textContent = visibleCommentCount + ' similar comment' + (visibleCommentCount == 1 ? '' : 's');
+
+  if (visibleCommentCount == 0) {
+    details.classList.add('extra-timeline-item');
+  }
+}
+
+/**
+ * Hides the given list of timeline items.
+ */
+
+function hideTimelineItems(items, count) {
+  count = count || items.length;
+
+  for (var i = 0; i < count; i++) {
+    hideTimelineItem(items[i]);
+  }
+}
 
 /**
  * Checks if the author of the specified item is the
@@ -15,8 +60,13 @@
 
 function isAuthorLiferayContinuousIntegration(item) {
   var author = item.querySelector('a.author');
+  var authorText = '';
 
-  return author && author.textContent.trim() == 'liferay-continuous-integration';
+  if (author) {
+    authorText = author.textContent.trim();
+  }
+
+  return authorText == 'liferay-continuous-integration' || authorText == 'liferay-continuous-integration-hu';
 }
 
 /**
@@ -29,42 +79,63 @@ function hideAuthorLiferayContinuousIntegration() {
   var items = Array.from(document.querySelectorAll('.js-timeline-item')).filter(isAuthorLiferayContinuousIntegration);
 
   var commandItems = {};
+  var detailsItems = [];
+  var notRunNotice = null;
 
   for (var i = 0; i < items.length; i++) {
-    var commentH3 = items[i].querySelector('.comment-body h3');
+    var commentBody = items[i].querySelector('.comment-body');
 
-    if (!commentH3) {
+    if (!commentBody) {
       continue;
     }
 
-    var commandInfo = commentH3.childNodes[1].textContent.trim();
-    var command = commandInfo.substring(0, commandInfo.indexOf(' '));
+    var commentH3 = commentBody.querySelector('h3');
+    var commentDetails = commentBody.querySelector('details');
 
-    if (command in commandItems) {
-      commandItems[command].push(items[i]);
+    if (commentH3) {
+      var commandInfo = commentH3.childNodes[1].textContent.trim();
+      var command = commandInfo.substring(0, commandInfo.indexOf(' '));
+
+      if (command in commandItems) {
+        commandItems[command].push(items[i]);
+      }
+      else {
+        commandItems[command] = [items[i]];
+      }
+    }
+    else if (commentDetails) {
+      detailsItems.push(items[i]);
     }
     else {
-      commandItems[command] = [items[i]];
+      var bodyContent = commentBody.textContent.trim();
+
+      if (bodyContent.indexOf('To conserve resources, the PR Tester does not automatically run for every pull') != -1) {
+        notRunNotice = items[i];
+      }
+      if (bodyContent.indexOf('The test will run without rebasing') != -1) {
+        hideTimelineItem(items[i]);
+      }
     }
   }
 
   var keys = Object.keys(commandItems);
 
-  for (var i = 0; i < keys.length; i++) {
-    var values = commandItems[keys[i]];
+  if (keys.length > 0) {
+    hideTimelineItem(notRunNotice);
 
-    for (var j = 0; j < values.length - 1; j++) {
-      values[j].style.display = 'none';
+    for (var i = 0; i < keys.length; i++) {
+      var values = commandItems[keys[i]];
+      hideTimelineItems(values, values.length - 1);
     }
   }
+
+  hideTimelineItems(detailsItems, detailsItems.length - 1);
 }
 
 function hideLabelLiferayContinuousIntegration() {
-  var items = Array.from(document.querySelectorAll('.discussion-item')).filter(isAuthorLiferayContinuousIntegration);
+  var items = Array.from(document.querySelectorAll('div[id*="event-"]')).filter(isAuthorLiferayContinuousIntegration);
 
-  for (var i = 0; i < items.length; i++) {
-    items[i].style.display = 'none';
-  }
+  hideTimelineItems(items);
 }
 
 /**
@@ -88,9 +159,7 @@ function isCommentLiferayContinuousIntegrationCommand(item) {
 function hideCommentLiferayContinuousIntegrationCommand() {
   var items = Array.from(document.querySelectorAll('.js-timeline-item')).filter(isCommentLiferayContinuousIntegrationCommand);
 
-  for (var i = 0; i < items.length; i++) {
-    items[i].style.display = 'none';
-  }
+  hideTimelineItems(items);
 }
 
 /**
