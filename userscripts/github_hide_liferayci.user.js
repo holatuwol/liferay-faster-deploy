@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Hide Older Liferay Continuous Integration Test Results
 // @namespace      holatuwol
-// @version        0.3
+// @version        0.4
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/github_hide_liferayci.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/github_hide_liferayci.user.js
 // @match          https://github.com/*
@@ -23,6 +23,10 @@ document.querySelector('head').appendChild(styleElement);
  */
 
 function hideTimelineItem(item) {
+  if (!item) {
+    return;
+  }
+
   item.classList.add('extra-timeline-item');
 
   var details = item.closest('details');
@@ -45,10 +49,8 @@ function hideTimelineItem(item) {
  * Hides the given list of timeline items.
  */
 
-function hideTimelineItems(items, count) {
-  count = count || items.length;
-
-  for (var i = 0; i < count; i++) {
+function hideTimelineItems(items) {
+  for (var i = 0; i < items.length; i++) {
     hideTimelineItem(items[i]);
   }
 }
@@ -79,18 +81,23 @@ function hideAuthorLiferayContinuousIntegration() {
   var items = Array.from(document.querySelectorAll('.js-timeline-item')).filter(isAuthorLiferayContinuousIntegration);
 
   var commandItems = {};
-  var detailsItems = [];
-  var notRunNotice = null;
+  var validTicketChecks = [];
+  var notRunNotices = [];
 
   for (var i = 0; i < items.length; i++) {
-    var commentBody = items[i].querySelector('.comment-body');
+    var comment = items[i].querySelector('.timeline-comment');
 
-    if (!commentBody) {
+    if (!comment) {
       continue;
     }
 
-    var commentH3 = commentBody.querySelector('h3');
-    var commentDetails = commentBody.querySelector('details');
+    var taskLists = comment.querySelector('task-lists');
+
+    if (!taskLists) {
+      continue;
+    }
+
+    var commentH3 = taskLists.querySelector('h3');
 
     if (commentH3) {
       var commandInfo = commentH3.childNodes[1].textContent.trim();
@@ -103,16 +110,16 @@ function hideAuthorLiferayContinuousIntegration() {
         commandItems[command] = [items[i]];
       }
     }
-    else if (commentDetails) {
-      detailsItems.push(items[i]);
+    else if (taskLists.querySelector('a[href*="valid_tickets"]')) {
+      validTicketChecks.push(items[i]);
     }
     else {
-      var bodyContent = commentBody.textContent.trim();
+      var content = taskLists.textContent.trim();
 
-      if (bodyContent.indexOf('To conserve resources, the PR Tester does not automatically run for every pull') != -1) {
-        notRunNotice = items[i];
+      if (content.indexOf('the PR Tester does not automatically run for every pull') != -1) {
+        notRunNotices.push(items[i]);
       }
-      if (bodyContent.indexOf('The test will run without rebasing') != -1) {
+      if (content.indexOf('The test will run without rebasing') != -1) {
         hideTimelineItem(items[i]);
       }
     }
@@ -121,15 +128,17 @@ function hideAuthorLiferayContinuousIntegration() {
   var keys = Object.keys(commandItems);
 
   if (keys.length > 0) {
-    hideTimelineItem(notRunNotice);
+    hideTimelineItems(notRunNotices);
 
     for (var i = 0; i < keys.length; i++) {
       var values = commandItems[keys[i]];
-      hideTimelineItems(values, values.length - 1);
+      var oldValues = values.slice(0, values.length - 1);
+
+      hideTimelineItems(oldValues);
     }
   }
 
-  hideTimelineItems(detailsItems, detailsItems.length - 1);
+  hideTimelineItems(validTicketChecks.slice(0, validTicketChecks.length - 1));
 }
 
 function hideLabelLiferayContinuousIntegration() {
@@ -160,6 +169,12 @@ function hideCommentLiferayContinuousIntegrationCommand() {
   var items = Array.from(document.querySelectorAll('.js-timeline-item')).filter(isCommentLiferayContinuousIntegrationCommand);
 
   hideTimelineItems(items);
+}
+
+function hideContinuousIntegration() {
+  hideAuthorLiferayContinuousIntegration();
+  hideLabelLiferayContinuousIntegration();
+  hideCommentLiferayContinuousIntegrationCommand();
 }
 
 /**
@@ -201,10 +216,7 @@ function checkCurrentURL() {
   }
 
   document.body.setAttribute('data-lastpath', lastPath);
-
-  hideAuthorLiferayContinuousIntegration();
-  hideLabelLiferayContinuousIntegration();
-  hideCommentLiferayContinuousIntegrationCommand();
+  hideContinuousIntegration();
 }
 
 setInterval(checkCurrentURL, 1000);
