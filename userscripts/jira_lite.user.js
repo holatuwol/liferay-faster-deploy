@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           JIRA When javascript.enabled=false
 // @namespace      holatuwol
-// @version        1.6
+// @version        1.7
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_lite.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_lite.user.js
 // @match          https://issues.liferay.com/*
@@ -190,7 +190,7 @@ function enableShowMoreLinks() {
     }
 }
 function addIssueKeySelect() {
-    if (!document.getElementById('jira-issue-keys-textarea')) {
+    if (document.getElementById('jira-issue-keys-textarea')) {
         return;
     }
     var issueKeysLabel = document.querySelector('label[for="jira-issue-keys"]');
@@ -205,7 +205,7 @@ function addIssueKeySelect() {
     parentElement.appendChild(issueKeysInput);
 }
 function addAssigneeInput() {
-    if (!document.getElementById('assignee-field')) {
+    if (document.getElementById('assignee-field')) {
         return;
     }
     var oldAssigneeElement = document.getElementById('assignee');
@@ -219,7 +219,7 @@ function addAssigneeInput() {
     parentElement.replaceChild(newAssigneeElement, oldAssigneeElement);
 }
 function addAdvancedSearch() {
-    if (!document.getElementById('advanced-search')) {
+    if (document.getElementById('advanced-search')) {
         return;
     }
     var navigatorSearchElement = document.querySelector('.aui.navigator-search');
@@ -366,7 +366,7 @@ function makeCreateIssueUsable() {
     }
 }
 function updateTicket() {
-    if (!document.querySelector('#activitymodule .aui-tabs')) {
+    if (document.querySelector('#activitymodule .aui-tabs')) {
         return;
     }
     addComments();
