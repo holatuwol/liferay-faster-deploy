@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        10.7
+// @version        10.8
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -1685,7 +1685,7 @@ function addArticleCodeButton(toolbarContainer, tinymce) {
         inline: 'code'
     };
     if (cloneInto) {
-        registerArguments = cloneInto(registerArguments, unsafeWindow);
+        registerArguments = cloneInto(registerArguments, window);
     }
     tinymce.activeEditor.formatter.register('codeformat', registerArguments);
     // Adds function to the button
@@ -1705,12 +1705,12 @@ function addArticleCodeButton(toolbarContainer, tinymce) {
         }
     };
     if (exportFunction) {
-        checkIfInCodeTag = exportFunction(checkIfInCodeTag, unsafeWindow);
+        checkIfInCodeTag = exportFunction(checkIfInCodeTag, window);
     }
     tinymce.activeEditor.on('NodeChange', checkIfInCodeTag);
 }
 function addArticleFormattingButtons() {
-    var tinymce = unsafeWindow.tinymce;
+    var tinymce = window.tinymce;
     if (!tinymce) {
         return;
     }
