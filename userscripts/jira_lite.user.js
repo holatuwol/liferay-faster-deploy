@@ -1,12 +1,13 @@
 // ==UserScript==
 // @name           JIRA When javascript.enabled=false
 // @namespace      holatuwol
-// @version        1.3
+// @version        1.4
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_lite.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_lite.user.js
 // @match          https://issues.liferay.com/*
 // @match          https://services.liferay.com/*
 // @grant          none
+// @require        https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js
 // ==/UserScript==
 /**
  * Compiled from TypeScript
@@ -289,16 +290,25 @@ function addAdvancedSearch() {
     navigatorSearchElement.appendChild(groupElement);
 }
 function updateProjectKey(projectElement, projectKeyElement, issueTypeElement) {
+    var issueTypeOptions = issueTypeElement.options;
+    for (var i = issueTypeElement.options.length - 1; i >= 0; i--) {
+        issueTypeElement.options[i].remove();
+    }
     var projectKey = projectKeyElement.value;
     var xhr = new XMLHttpRequest();
     xhr.addEventListener('load', function () {
-        var project = JSON.parse(this.responseText).projects[0];
+        var projects = JSON.parse(this.responseText).projects;
+        var project = null;
+        for (var i = 0; i < projects.length; i++) {
+            if (projects[i].key == projectKey) {
+                project = projects[i];
+            }
+        }
+        if (!project) {
+            return;
+        }
         projectElement.value = project.id;
         var issuetypes = project.issuetypes;
-        var issueTypeOptions = issueTypeElement.options;
-        for (var i = issueTypeElement.options.length - 1; i >= 0; i--) {
-            issueTypeElement.options[i].remove();
-        }
         for (var i = 0; i < issuetypes.length; i++) {
             var optionElement = document.createElement('option');
             optionElement.setAttribute('value', issuetypes[i].id);
@@ -321,7 +331,8 @@ function makeProjectSelectUsable() {
     newIssueTypeElement.setAttribute('name', 'issuetype');
     var parentElement = oldIssueTypeElement.parentElement;
     parentElement.replaceChild(newIssueTypeElement, oldIssueTypeElement);
-    var projectKeyListener = updateProjectKey.bind(null, projectElement, projectKeyElement, newIssueTypeElement);
+    var projectKeyListener = _.debounce(updateProjectKey.bind(null, projectElement, projectKeyElement, newIssueTypeElement), 200);
+    projectKeyElement.addEventListener('keyup', projectKeyListener);
     projectKeyElement.addEventListener('change', projectKeyListener);
     parentElement = projectElement.parentElement;
     parentElement.appendChild(projectKeyElement);
