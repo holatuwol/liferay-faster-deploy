@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           JIRA When javascript.enabled=false
 // @namespace      holatuwol
-// @version        1.4
+// @version        1.5
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_lite.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_lite.user.js
 // @match          https://issues.liferay.com/*
@@ -289,34 +289,46 @@ function addAdvancedSearch() {
     groupElement.appendChild(itemElement);
     navigatorSearchElement.appendChild(groupElement);
 }
+var projectCache = {};
+function updateProjectCache(projects) {
+    for (var i = 0; i < projects.length; i++) {
+        projectCache[projects[i].key] = projects[i];
+    }
+}
+function setProject(projectElement, issueTypeElement, project) {
+    if (!project) {
+        return;
+    }
+    projectElement.value = project.id;
+    var issuetypes = project.issuetypes;
+    for (var i = 0; i < issuetypes.length; i++) {
+        var optionElement = document.createElement('option');
+        optionElement.setAttribute('value', issuetypes[i].id);
+        optionElement.textContent = issuetypes[i].name;
+        issueTypeElement.appendChild(optionElement);
+    }
+}
 function updateProjectKey(projectElement, projectKeyElement, issueTypeElement) {
+    var oldProjectKey = issueTypeElement.getAttribute('data-project-key');
+    var newProjectKey = projectKeyElement.value;
+    if (oldProjectKey == newProjectKey) {
+        return;
+    }
+    issueTypeElement.setAttribute('data-project-key', newProjectKey);
     var issueTypeOptions = issueTypeElement.options;
     for (var i = issueTypeElement.options.length - 1; i >= 0; i--) {
         issueTypeElement.options[i].remove();
     }
-    var projectKey = projectKeyElement.value;
+    if (newProjectKey in projectCache) {
+        setProject(projectElement, issueTypeElement, projectCache[newProjectKey]);
+        return;
+    }
     var xhr = new XMLHttpRequest();
     xhr.addEventListener('load', function () {
-        var projects = JSON.parse(this.responseText).projects;
-        var project = null;
-        for (var i = 0; i < projects.length; i++) {
-            if (projects[i].key == projectKey) {
-                project = projects[i];
-            }
-        }
-        if (!project) {
-            return;
-        }
-        projectElement.value = project.id;
-        var issuetypes = project.issuetypes;
-        for (var i = 0; i < issuetypes.length; i++) {
-            var optionElement = document.createElement('option');
-            optionElement.setAttribute('value', issuetypes[i].id);
-            optionElement.textContent = issuetypes[i].name;
-            issueTypeElement.appendChild(optionElement);
-        }
+        updateProjectCache(JSON.parse(this.responseText).projects);
+        setProject(projectElement, issueTypeElement, projectCache[newProjectKey]);
     });
-    var restURL = 'https://issues.liferay.com/rest/api/2/issue/createmeta?projectKeys=' + projectKey + '&fields=projects.issuetypes.fields';
+    var restURL = 'https://issues.liferay.com/rest/api/2/issue/createmeta?projectKeys=' + newProjectKey + '&fields=projects.issuetypes.fields';
     xhr.open('GET', restURL);
     xhr.send();
 }
@@ -331,7 +343,7 @@ function makeProjectSelectUsable() {
     newIssueTypeElement.setAttribute('name', 'issuetype');
     var parentElement = oldIssueTypeElement.parentElement;
     parentElement.replaceChild(newIssueTypeElement, oldIssueTypeElement);
-    var projectKeyListener = _.debounce(updateProjectKey.bind(null, projectElement, projectKeyElement, newIssueTypeElement), 200);
+    var projectKeyListener = _.debounce(updateProjectKey.bind(null, projectElement, projectKeyElement, newIssueTypeElement), 500);
     projectKeyElement.addEventListener('keyup', projectKeyListener);
     projectKeyElement.addEventListener('change', projectKeyListener);
     parentElement = projectElement.parentElement;
