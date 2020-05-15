@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           JIRA When javascript.enabled=false
 // @namespace      holatuwol
-// @version        1.5
+// @version        1.6
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_lite.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_lite.user.js
 // @match          https://issues.liferay.com/*
@@ -373,22 +373,29 @@ function updateTicket() {
     updateTicketActions();
     enableShowMoreLinks();
 }
+function isMatchesPathName(partialPathName) {
+    return pathName.indexOf('/secure/' + partialPathName + '!') == 0 ||
+        pathName === '/secure/' + partialPathName + '.jspa';
+}
 var pathName = document.location.pathname;
 if (pathName.indexOf('/browse/') == 0) {
     updateTicket();
 }
-else if ((pathName.indexOf('/secure/AssignIssue!') == 0) || (pathName === '/secure/AssignIssue.jspa')) {
+else if (isMatchesPathName('AssignIssue')) {
     addAssigneeInput();
 }
-else if (pathName.indexOf('/secure/CreateIssue!') == 0 || (pathName === '/secure/CreateIssue.jspa')) {
+else if (isMatchesPathName('CreateIssue')) {
     makeCreateIssueUsable();
 }
-else if (pathName.indexOf('/secure/LinkJiraIssue!') == 0) {
+else if (isMatchesPathName('EditIssue')) {
+    enableToggleTabs();
+}
+else if (isMatchesPathName('LinkJiraIssue')) {
     addIssueKeySelect();
 }
 else if (pathName.indexOf('/issues/') == 0) {
     addAdvancedSearch();
 }
-else if (pathName.indexOf('/secure/QuickSearch.jspa') == 0) {
+else if (isMatchesPathName('QuickSearch')) {
     addAdvancedSearch();
 }
