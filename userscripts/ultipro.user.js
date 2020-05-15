@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Liferay Ultipro Timesheet Link
 // @namespace      holatuwol
-// @version        1.3
+// @version        1.4
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/ultipro.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/ultipro.user.js
 // @match          https://wfm-toa-web2.ultipro.com/*
@@ -174,7 +174,7 @@ function fixSelectedPolicy() {
     return;
   }
 
-  var angular = unsafeWindow.angular;
+  var angular = window.angular;
 
   var selectedPolicyName = getValue('timeOffAllowance');
 
