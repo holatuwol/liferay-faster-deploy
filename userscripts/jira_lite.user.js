@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           JIRA When javascript.enabled=false
 // @namespace      holatuwol
-// @version        1.2
+// @version        1.3
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_lite.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_lite.user.js
 // @match          https://issues.liferay.com/*
@@ -13,7 +13,7 @@
  * https://github.com/holatuwol/liferay-issues-userscript
  */ 
 var styleElement = document.createElement('style');
-styleElement.textContent = "\nhtml body {\n  overflow-y: auto;\n}\n\n#assign-to-me-trigger,\n#show-more-links {\n  visibility: hidden;\n}\n";
+styleElement.textContent = "\nhtml body {\n  overflow-y: auto;\n}\n\n.aui-header-primary .aui-nav {\n  width: auto;\n}\n\n.ajs-multi-select-placeholder,\n.wiki-button-bar {\n  display: none;\n}\n\n#assign-to-me-trigger,\n#show-more-links {\n  visibility: hidden;\n}\n";
 document.head.appendChild(styleElement);
 function getTicketId() {
     var ticketName = document.location.pathname.substring(document.location.pathname.lastIndexOf('/') + 1);
@@ -23,6 +23,32 @@ function getTicketId() {
 function getCurrentUser() {
     var fullNameElement = document.querySelector('#header-details-user-fullname');
     return fullNameElement.getAttribute('data-username');
+}
+function toggleTab(e) {
+    var tabElements = document.querySelectorAll('.tabs-menu li');
+    var tabContentElements = document.querySelectorAll('.tabs-pane');
+    for (var i = 0; i < tabElements.length; i++) {
+        tabElements[i].classList.remove('active-tab');
+    }
+    var targetElement = e.currentTarget;
+    targetElement.classList.add('active-tab');
+    for (var i = 0; i < tabContentElements.length; i++) {
+        tabContentElements[i].classList.remove('active-pane');
+    }
+    var linkElement = targetElement.querySelector('a');
+    var href = linkElement.getAttribute('href');
+    if (href && href.charAt(0) == '#') {
+        var newActivePane = document.querySelector(href);
+        newActivePane.classList.add('active-pane');
+    }
+    e.stopPropagation();
+    e.preventDefault();
+}
+function enableToggleTabs() {
+    var tabElements = document.querySelectorAll('.tabs-menu li');
+    for (var i = 0; i < tabElements.length; i++) {
+        tabElements[i].addEventListener('click', toggleTab);
+    }
 }
 function getActionLinks(comment) {
     var actionLinksNode = document.createElement('div');
@@ -163,6 +189,9 @@ function enableShowMoreLinks() {
     }
 }
 function addIssueKeySelect() {
+    if (!document.getElementById('jira-issue-keys-textarea')) {
+        return;
+    }
     var issueKeysLabel = document.querySelector('label[for="jira-issue-keys"]');
     var parentElement = issueKeysLabel.parentElement;
     var siblingElements = parentElement.children;
@@ -175,6 +204,9 @@ function addIssueKeySelect() {
     parentElement.appendChild(issueKeysInput);
 }
 function addAssigneeInput() {
+    if (!document.getElementById('assignee-field')) {
+        return;
+    }
     var oldAssigneeElement = document.getElementById('assignee');
     var oldAssignee = oldAssigneeElement.options[oldAssigneeElement.selectedIndex].value;
     var newAssigneeElement = document.createElement('input');
@@ -186,6 +218,9 @@ function addAssigneeInput() {
     parentElement.replaceChild(newAssigneeElement, oldAssigneeElement);
 }
 function addAdvancedSearch() {
+    if (!document.getElementById('advanced-search')) {
+        return;
+    }
     var navigatorSearchElement = document.querySelector('.aui.navigator-search');
     navigatorSearchElement.classList.add('query-component', 'generic-styled');
     var groupElement = document.createElement('div');
@@ -253,31 +288,84 @@ function addAdvancedSearch() {
     groupElement.appendChild(itemElement);
     navigatorSearchElement.appendChild(groupElement);
 }
+function updateProjectKey(projectElement, projectKeyElement, issueTypeElement) {
+    var projectKey = projectKeyElement.value;
+    var xhr = new XMLHttpRequest();
+    xhr.addEventListener('load', function () {
+        var project = JSON.parse(this.responseText).projects[0];
+        projectElement.value = project.id;
+        var issuetypes = project.issuetypes;
+        var issueTypeOptions = issueTypeElement.options;
+        for (var i = issueTypeElement.options.length - 1; i >= 0; i--) {
+            issueTypeElement.options[i].remove();
+        }
+        for (var i = 0; i < issuetypes.length; i++) {
+            var optionElement = document.createElement('option');
+            optionElement.setAttribute('value', issuetypes[i].id);
+            optionElement.textContent = issuetypes[i].name;
+            issueTypeElement.appendChild(optionElement);
+        }
+    });
+    var restURL = 'https://issues.liferay.com/rest/api/2/issue/createmeta?projectKeys=' + projectKey + '&fields=projects.issuetypes.fields';
+    xhr.open('GET', restURL);
+    xhr.send();
+}
+function makeProjectSelectUsable() {
+    var projectOptionsElement = document.getElementById('project-options');
+    var projectElement = document.getElementById('project');
+    projectElement.setAttribute('type', 'hidden');
+    var projectKeyElement = document.createElement('input');
+    projectKeyElement.value = 'LPS';
+    var oldIssueTypeElement = document.getElementById('issuetype');
+    var newIssueTypeElement = document.createElement('select');
+    newIssueTypeElement.setAttribute('name', 'issuetype');
+    var parentElement = oldIssueTypeElement.parentElement;
+    parentElement.replaceChild(newIssueTypeElement, oldIssueTypeElement);
+    var projectKeyListener = updateProjectKey.bind(null, projectElement, projectKeyElement, newIssueTypeElement);
+    projectKeyElement.addEventListener('change', projectKeyListener);
+    parentElement = projectElement.parentElement;
+    parentElement.appendChild(projectKeyElement);
+    projectKeyListener();
+}
+function makeSummaryUsable() {
+    enableToggleTabs();
+    var hiddenSelectElements = document.querySelectorAll('select.hidden');
+    for (var i = 0; i < hiddenSelectElements.length; i++) {
+        hiddenSelectElements[i].classList.remove('hidden');
+    }
+}
+function makeCreateIssueUsable() {
+    if (document.getElementById('project')) {
+        makeProjectSelectUsable();
+    }
+    if (document.getElementById('summary')) {
+        makeSummaryUsable();
+    }
+}
+function updateTicket() {
+    if (!document.querySelector('#activitymodule .aui-tabs')) {
+        return;
+    }
+    addComments();
+    updateTicketActions();
+    enableShowMoreLinks();
+}
 var pathName = document.location.pathname;
 if (pathName.indexOf('/browse/') == 0) {
-    if (!document.querySelector('#activitymodule .aui-tabs')) {
-        addComments();
-        updateTicketActions();
-        enableShowMoreLinks();
-    }
+    updateTicket();
 }
-else if ((pathName.indexOf('/secure/AssignIssue!') == 0) || (pathName.indexOf('/secure/AssignIssue.jspa') == 0)) {
-    if (!document.getElementById('assignee-field')) {
-        addAssigneeInput();
-    }
+else if ((pathName.indexOf('/secure/AssignIssue!') == 0) || (pathName === '/secure/AssignIssue.jspa')) {
+    addAssigneeInput();
+}
+else if (pathName.indexOf('/secure/CreateIssue!') == 0 || (pathName === '/secure/CreateIssue.jspa')) {
+    makeCreateIssueUsable();
 }
 else if (pathName.indexOf('/secure/LinkJiraIssue!') == 0) {
-    if (!document.getElementById('jira-issue-keys-textarea')) {
-        addIssueKeySelect();
-    }
+    addIssueKeySelect();
 }
 else if (pathName.indexOf('/issues/') == 0) {
-    if (!document.getElementById('advanced-search')) {
-        addAdvancedSearch();
-    }
+    addAdvancedSearch();
 }
 else if (pathName.indexOf('/secure/QuickSearch.jspa') == 0) {
-    if (!document.getElementById('advanced-search')) {
-        addAdvancedSearch();
-    }
+    addAdvancedSearch();
 }
