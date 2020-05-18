@@ -1,13 +1,13 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        5.5
+// @version        5.6
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
 // @match          https://patcher.liferay.com/group/guest/patching/-/osb_patcher*
 // @match          https://patcher.liferay.com/group/guest/patching/-/osb_patcher/*
-// @grant          none
+// @grant          unsafeWindow
 // ==/UserScript==
 /**
  * Compiled from TypeScript
@@ -16,9 +16,9 @@
 var styleElement = document.createElement('style');
 styleElement.textContent = "\na.included-in-baseline,\na.included-in-baseline:hover {\n  color: #ddd;\n  text-decoration: line-through;\n}\n\n.nowrap {\n  white-space: nowrap;\n}\n\n#_1_WAR_osbpatcherportlet_patcherProductVersionId,\n#_1_WAR_osbpatcherportlet_patcherProjectVersionId {\n  width: auto;\n}\n\n#_1_WAR_osbpatcherportlet_patcherProductVersionId option {\n  display: none;\n}\n\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"6.x\"] option[data-liferay-version=\"6.x\"],\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"7.0\"] option[data-liferay-version=\"7.0\"],\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"7.1\"] option[data-liferay-version=\"7.1\"],\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"7.2\"] option[data-liferay-version=\"7.2\"] {\n  display: block;\n}\n\nth.branch-type,\nth.branch-type a {\n  font-weight: bold;\n  width: 5em;\n}\n\n/**\n * http://vrl.cs.brown.edu/color\n * 4 colors, lightness between 25 and 85, add alpha of 0.3\n */\n\ntr.qa-analysis-needed.version-6210 td {\n  background-color: rgba(79,140,157,0.3) !important;\n}\n\ntr.qa-analysis-needed.version-7010 td {\n  background-color: rgba(75,214,253,0.3) !important;\n}\n\ntr.qa-analysis-needed.version-7110 td {\n  background-color: rgba(101,52,102,0.3) !important;\n}\n\ntr.qa-analysis-needed.version-7210 td {\n  background-color: rgba(131,236,102,0.3) !important;\n}\n\ntr.qa-analysis-unneeded {\n  opacity: 0.3;\n}\n";
 document.head.appendChild(styleElement);
-var AUI = window.AUI;
-var Liferay = window.Liferay;
-var _1_WAR_osbpatcherportlet_productVersionOnChange = window._1_WAR_osbpatcherportlet_productVersionOnChange;
+var AUI = unsafeWindow.AUI;
+var Liferay = unsafeWindow.Liferay;
+var _1_WAR_osbpatcherportlet_productVersionOnChange = unsafeWindow._1_WAR_osbpatcherportlet_productVersionOnChange;
 var portletId = '1_WAR_osbpatcherportlet';
 var ns = '_' + portletId + '_';
 /**
@@ -544,11 +544,11 @@ function replaceGitHashes(childBuildsMetadata) {
     for (var i = 0; i < childBuildsMetadata.length; i++) {
         var childBuildFunction = joinFunction.bind(null, childBuildsMetadata[i]);
         if (exportFunction) {
-            childBuildFunction = exportFunction(childBuildFunction, window);
+            childBuildFunction = exportFunction(childBuildFunction, unsafeWindow);
         }
         var childBuildArguments = { id: childBuildsMetadata[i].buildId };
         if (cloneInto) {
-            childBuildArguments = cloneInto(childBuildArguments, window);
+            childBuildArguments = cloneInto(childBuildArguments, unsafeWindow);
         }
         Liferay.Service('/osb-patcher-portlet.builds/view', childBuildArguments, childBuildFunction);
     }
@@ -677,14 +677,14 @@ function replaceHotfixLink(target) {
             anchorParentElement.appendChild(qaStatusNode);
         };
         if (exportFunction) {
-            buildMetadataCallback = exportFunction(buildMetadataCallback, window);
+            buildMetadataCallback = exportFunction(buildMetadataCallback, unsafeWindow);
         }
         var buildId = document.location.pathname.substring(document.location.pathname.lastIndexOf('/') + 1);
         var buildMetadataArguments = {
             id: buildId
         };
         if (cloneInto) {
-            buildMetadataArguments = cloneInto(buildMetadataArguments, window);
+            buildMetadataArguments = cloneInto(buildMetadataArguments, unsafeWindow);
         }
         Liferay.Service('/osb-patcher-portlet.builds/view', buildMetadataArguments, buildMetadataCallback);
     }

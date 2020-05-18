@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        10.8
+// @version        10.9
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -1367,8 +1367,8 @@ function makeDraggableModal(header, element) {
         dragX = e.clientX;
         dragY = e.clientY;
         var rect = element.getBoundingClientRect();
-        elementX = rect.left + (window.pageXOffset || document.documentElement.scrollLeft);
-        elementY = rect.top + (window.pageYOffset || document.documentElement.scrollTop);
+        elementX = rect.left + (unsafeWindow.pageXOffset || document.documentElement.scrollLeft);
+        elementY = rect.top + (unsafeWindow.pageYOffset || document.documentElement.scrollTop);
     });
     element.addEventListener('dragend', function (e) {
         element.style.transform = 'translate(0px, 0px)';
@@ -1634,11 +1634,11 @@ function initZafParentClient(client, callback) {
  * ZAF parent client instance so we can retrieve ticket metadata.
  */
 function initZafClient(callback) {
-    if (!window.ZAFClient) {
+    if (!unsafeWindow.ZAFClient) {
         setTimeout(initZafClient.bind(null, callback), 1000);
         return;
     }
-    var client = window.ZAFClient.init();
+    var client = unsafeWindow.ZAFClient.init();
     client.on('app.registered', initZafParentClient.bind(null, client, callback));
 }
 function detachModalWindowHandler() {
@@ -1648,7 +1648,7 @@ function detachModalWindowHandler() {
     }
     jQuery(backdrop).unbind('click');
 }
-if (window.location.hostname == '24475.apps.zdusercontent.com') {
+if (unsafeWindow.location.hostname == '24475.apps.zdusercontent.com') {
     setTimeout(initZafClient.bind(null, attachCopyFieldsLinkListener), 1000);
 }
 else {
@@ -1685,7 +1685,7 @@ function addArticleCodeButton(toolbarContainer, tinymce) {
         inline: 'code'
     };
     if (cloneInto) {
-        registerArguments = cloneInto(registerArguments, window);
+        registerArguments = cloneInto(registerArguments, unsafeWindow);
     }
     tinymce.activeEditor.formatter.register('codeformat', registerArguments);
     // Adds function to the button
@@ -1705,12 +1705,12 @@ function addArticleCodeButton(toolbarContainer, tinymce) {
         }
     };
     if (exportFunction) {
-        checkIfInCodeTag = exportFunction(checkIfInCodeTag, window);
+        checkIfInCodeTag = exportFunction(checkIfInCodeTag, unsafeWindow);
     }
     tinymce.activeEditor.on('NodeChange', checkIfInCodeTag);
 }
 function addArticleFormattingButtons() {
-    var tinymce = window.tinymce;
+    var tinymce = unsafeWindow.tinymce;
     if (!tinymce) {
         return;
     }
@@ -1868,14 +1868,14 @@ function checkForSubtitles() {
 }
 // Since there's an SPA framework in place that I don't fully understand,
 // attempt to do everything once per second.
-if (window.location.hostname.indexOf('zendesk.com') != -1) {
-    if (window.location.pathname.indexOf('/agent/') == 0) {
+if (unsafeWindow.location.hostname.indexOf('zendesk.com') != -1) {
+    if (unsafeWindow.location.pathname.indexOf('/agent/') == 0) {
         setInterval(checkForConversations, 1000);
         setInterval(checkForSubtitles, 1000);
         setInterval(checkSidebarTags, 1000);
         setInterval(makeDraggableModals, 1000);
     }
-    else if (window.location.pathname.indexOf('/knowledge/') == 0) {
+    else if (unsafeWindow.location.pathname.indexOf('/knowledge/') == 0) {
         setInterval(addArticleFormattingButtons, 1000);
     }
 }
