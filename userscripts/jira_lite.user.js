@@ -1,9 +1,10 @@
 // ==UserScript==
 // @name           JIRA When javascript.enabled=false
 // @namespace      holatuwol
-// @version        1.8
+// @version        1.9
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_lite.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_lite.user.js
+// @match          https://issues.redhat.com/*
 // @match          https://issues.liferay.com/*
 // @match          https://services.liferay.com/*
 // @grant          none
@@ -23,7 +24,7 @@ function getTicketId() {
 }
 function getCurrentUser() {
     var fullNameElement = document.querySelector('#header-details-user-fullname');
-    return fullNameElement.getAttribute('data-username');
+    return fullNameElement ? fullNameElement.getAttribute('data-username') : null;
 }
 function toggleTab(e) {
     var tabElements = document.querySelectorAll('.tabs-menu li');
@@ -343,7 +344,7 @@ function updateProjectKey(projectElement, projectKeyElement, issueTypeElement) {
         updateProjectCache(JSON.parse(this.responseText).projects);
         setProject(projectElement, issueTypeElement, projectCache[newProjectKey]);
     });
-    var restURL = 'https://issues.liferay.com/rest/api/2/issue/createmeta?projectKeys=' + newProjectKey + '&fields=projects.issuetypes.fields';
+    var restURL = 'https://' + document.location.host + '/rest/api/2/issue/createmeta?projectKeys=' + newProjectKey + '&fields=projects.issuetypes.fields';
     xhr.open('GET', restURL);
     xhr.send();
 }
