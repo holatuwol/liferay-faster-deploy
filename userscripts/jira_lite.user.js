@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           JIRA When javascript.enabled=false
 // @namespace      holatuwol
-// @version        1.7
+// @version        1.8
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_lite.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_lite.user.js
 // @match          https://issues.liferay.com/*
@@ -259,11 +259,26 @@ function addAdvancedSearch() {
         var sortColumnDesc = sortColumn + ' DESC';
         var sortAsc = sortJQL.indexOf(sortColumnAsc);
         var sortDesc = sortJQL.indexOf(sortColumnDesc);
-        if (sortAsc != -1) {
-            advancedSearchElement.textContent = sortJQL.substring(0, sortAsc) + sortColumnDesc + sortJQL.substring(sortAsc + sortColumnAsc.length);
+        if (activeSortElement) {
+            if (sortAsc != -1) {
+                advancedSearchElement.textContent = sortJQL.substring(0, sortAsc) + sortColumnDesc + sortJQL.substring(sortAsc + sortColumnAsc.length);
+            }
+            else if (sortDesc != -1) {
+                advancedSearchElement.textContent = sortJQL.substring(0, sortDesc) + sortColumnAsc + sortJQL.substring(sortDesc + sortColumnDesc.length);
+            }
         }
-        else if (sortDesc != -1) {
-            advancedSearchElement.textContent = sortJQL.substring(0, sortDesc) + sortColumnAsc + sortJQL.substring(sortDesc + sortColumnDesc.length);
+        else {
+            if (sortAsc != -1) {
+                sortJQL = sortJQL.substring(0, sortAsc) + sortJQL.substring(sortAsc + sortColumnAsc.length + 1);
+            }
+            else if (sortDesc != -1) {
+                sortJQL = sortJQL.substring(0, sortDesc) + sortJQL.substring(sortDesc + sortColumnDesc.length + 1);
+            }
+            sortJQL = sortJQL.trim();
+            if (sortJQL.toLowerCase().lastIndexOf('order by') == sortJQL.length - 8) {
+                sortJQL = sortJQL.substring(0, sortJQL.length - 8).trim();
+            }
+            advancedSearchElement.textContent = sortJQL;
         }
     }
     advancedSearchElement.addEventListener('keypress', function (e) {
