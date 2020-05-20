@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        11.0
+// @version        11.1
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -903,16 +903,17 @@ function addSubjectTextWrap(header, ticketId, ticketInfo) {
     }
     else {
         var newTextArea = document.createElement('textarea');
-        var oldMaxLength = oldSubjectField.getAttribute('maxlength');
-        if (oldMaxLength) {
-            newTextArea.setAttribute('maxlength', oldMaxLength);
-        }
-        var oldName = oldSubjectField.getAttribute('name');
-        if (oldName) {
-            newTextArea.setAttribute('name', oldName);
+        var oldClassList = Array.from(oldSubjectField.classList);
+        for (var i = 0; i < oldClassList.length; i++) {
+            newTextArea.classList.add(oldClassList[i]);
         }
         newTextArea.value = oldSubjectField.value;
-        newTextArea.classList.add('ember-text-area');
+        newTextArea.onchange = function () {
+            oldSubjectField.value = newTextArea.value;
+            var event = document.createEvent('HTMLEvents');
+            event.initEvent('blur', false, true);
+            oldSubjectField.dispatchEvent(event);
+        };
         newSubjectField = newTextArea;
     }
     newSubjectField.classList.add('lesa-ui-subject');
