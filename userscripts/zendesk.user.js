@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        11.1
+// @version        11.2
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -897,27 +897,22 @@ function addSubjectTextWrap(header, ticketId, ticketInfo) {
         var parentElement = newSubjectField.parentElement;
         parentElement.removeChild(newSubjectField);
     }
-    if (oldSubjectField.readOnly) {
-        newSubjectField = document.createElement('div');
-        newSubjectField.textContent = oldSubjectField.value;
+    newSubjectField = document.createElement('div');
+    var oldClassList = Array.from(oldSubjectField.classList);
+    for (var i = 0; i < oldClassList.length; i++) {
+        newSubjectField.classList.add(oldClassList[i]);
     }
-    else {
-        var newTextArea = document.createElement('textarea');
-        var oldClassList = Array.from(oldSubjectField.classList);
-        for (var i = 0; i < oldClassList.length; i++) {
-            newTextArea.classList.add(oldClassList[i]);
-        }
-        newTextArea.value = oldSubjectField.value;
-        newTextArea.onchange = function () {
-            oldSubjectField.value = newTextArea.value;
+    newSubjectField.textContent = oldSubjectField.value;
+    if (!oldSubjectField.readOnly) {
+        newSubjectField.setAttribute('contenteditable', 'true');
+        newSubjectField.addEventListener('blur', function () {
+            oldSubjectField.value = this.textContent || '';
             var event = document.createEvent('HTMLEvents');
             event.initEvent('blur', false, true);
             oldSubjectField.dispatchEvent(event);
-        };
-        newSubjectField = newTextArea;
+        });
     }
     newSubjectField.classList.add('lesa-ui-subject');
-    newSubjectField.classList.add('ember-view');
     newSubjectField.setAttribute('data-ticket-id', ticketId);
     var parentElement = oldSubjectField.parentElement;
     parentElement.insertBefore(newSubjectField, oldSubjectField);
