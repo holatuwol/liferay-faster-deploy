@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        11.2
+// @version        11.3
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -374,11 +374,11 @@ function addOrganizationField(propertyBox, ticketId, ticketInfo) {
 /**
  * Generate a URL to Patcher Portal's accounts view.
  */
-function getPatcherPortalAccountsHREF(params) {
+function getPatcherPortalAccountsHREF(path, params) {
     var portletId = '1_WAR_osbpatcherportlet';
     var ns = '_' + portletId + '_';
     var queryString = Object.keys(params).map(function (key) { return (key.indexOf('p_p_') == 0 ? key : (ns + key)) + '=' + encodeURIComponent(params[key]); }).join('&');
-    return 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/accounts/view?p_p_id=' + portletId + '&' + queryString;
+    return 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/accounts' + path + '?p_p_id=' + portletId + '&' + queryString;
 }
 /**
  * Retrieve the Liferay version from the sidebar.
@@ -424,13 +424,13 @@ function addPatcherPortalField(propertyBox, ticketId, ticketInfo) {
     var accountCode = getAccountCode(ticketId, ticketInfo, propertyBox);
     var patcherPortalItems = [];
     if (accountCode) {
-        var allBuildsLinkHREF = getPatcherPortalAccountsHREF({
-            'patcherBuildAccountEntryCode': accountCode
+        var allBuildsLinkHREF = getPatcherPortalAccountsHREF('', {
+            'accountEntryCode': accountCode
         });
         patcherPortalItems.push(createAnchorTag('All Builds', allBuildsLinkHREF));
         var version = getProductVersion(propertyBox);
         if (version) {
-            var versionBuildsLinkHREF = getPatcherPortalAccountsHREF({
+            var versionBuildsLinkHREF = getPatcherPortalAccountsHREF('/view', {
                 'patcherBuildAccountEntryCode': accountCode,
                 'patcherProductVersionId': getProductVersionId(version)
             });
