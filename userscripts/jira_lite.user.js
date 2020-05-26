@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           JIRA When javascript.enabled=false
 // @namespace      holatuwol
-// @version        1.9
+// @version        2.0
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_lite.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_lite.user.js
 // @match          https://issues.redhat.com/*
@@ -51,6 +51,21 @@ function enableToggleTabs() {
     for (var i = 0; i < tabElements.length; i++) {
         tabElements[i].addEventListener('click', toggleTab);
     }
+}
+/**
+ * Generate an anchor tag with the specified text, href, and download attributes.
+ * If the download attribute has an extension that looks like it will probably be
+ * served inline, use the downloadBlob function instead.
+ */
+function createAnchorTag(text, href) {
+    var link = document.createElement('a');
+    link.textContent = text;
+    if (href.indexOf('https://') != 0) {
+        href = 'https://' + document.location.host + href;
+    }
+    link.href = href;
+    link.target = '_blank';
+    return link;
 }
 function getActionLinks(comment) {
     var actionLinksNode = document.createElement('div');
@@ -145,6 +160,70 @@ function addComments() {
     xhr.open('GET', restURL);
     xhr.send();
 }
+function setMenuActions(e) {
+    var target = e.currentTarget;
+    if (!target) {
+        return;
+    }
+    var visibleMenuElements = document.querySelectorAll('div[resolved][aria-hidden="false"]');
+    for (var i = 0; i < visibleMenuElements.length; i++) {
+        visibleMenuElements[i].setAttribute('aria-hidden', 'true');
+    }
+    var menuId = target.getAttribute('id');
+    var menuContainerElement = document.getElementById(menuId + '-content');
+    if (menuContainerElement.getAttribute('resolved')) {
+        if (menuContainerElement.getAttribute('aria-hidden')) {
+            menuContainerElement.setAttribute('aria-hidden', 'false');
+            e.stopPropagation();
+            e.preventDefault();
+        }
+        return;
+    }
+    var menuURL = 'https://issues.liferay.com/rest/api/1.0/menus/' + menuId + '?inAdminMode=false';
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', menuURL);
+    xhr.addEventListener('load', function () {
+        var xml = this.responseXML;
+        var sections = xml.querySelectorAll('sections');
+        for (var i = 0; i < sections.length; i++) {
+            var section = sections[i];
+            var id = section.querySelector('id');
+            var sectionContainer = document.createElement('div');
+            sectionContainer.classList.add('aui-dropdown2-section');
+            var label = section.querySelector('label');
+            if (label) {
+                var labelElement = document.createElement('strong');
+                labelElement.textContent = label.textContent;
+                sectionContainer.appendChild(labelElement);
+            }
+            var sectionItemsElement = document.createElement('ul');
+            sectionItemsElement.classList.add('aui-list-truncate');
+            var items = section.querySelectorAll('items');
+            for (var j = 0; j < items.length; j++) {
+                var item = items[j];
+                var itemTitle = (item.querySelector('title') || item.querySelector('label')).textContent || '';
+                var itemURL = item.querySelector('url').textContent || '';
+                var itemElement = document.createElement('li');
+                itemElement.appendChild(createAnchorTag(itemTitle, itemURL));
+                sectionItemsElement.appendChild(itemElement);
+            }
+            sectionContainer.appendChild(sectionItemsElement);
+            menuContainerElement.appendChild(sectionContainer);
+        }
+        menuContainerElement.setAttribute('resolved', 'true');
+        menuContainerElement.setAttribute('aria-hidden', 'false');
+        menuContainerElement.style.zIndex = '3000';
+    });
+    xhr.send(null);
+    e.stopPropagation();
+    e.preventDefault();
+}
+function enableMenuActions() {
+    var navigationMenuItems = document.querySelectorAll('ul.aui-nav > li > a');
+    for (var i = 0; i < navigationMenuItems.length; i++) {
+        navigationMenuItems[i].addEventListener('click', setMenuActions);
+    }
+}
 function updateTicketActions() {
     var operationsContainer = document.getElementById('opsbar-opsbar-operations');
     var attachNode = document.createElement('a');
@@ -188,6 +267,74 @@ function enableShowMoreLinks() {
     var collapsedLinks = document.querySelectorAll('.collapsed-link');
     for (var i = 0; i < collapsedLinks.length; i++) {
         collapsedLinks[i].classList.remove('collapsed-link');
+    }
+}
+function getProductVersionName(version) {
+    if (!version) {
+        return '';
+    }
+    if (version.indexOf('7.2') == 0) {
+        return '7.2';
+    }
+    if (version.indexOf('7.1') == 0) {
+        return '7.1';
+    }
+    if (version.indexOf('7.0') == 0) {
+        return '7.0';
+    }
+    if (version.indexOf('6.2') == 0) {
+        return '6.2';
+    }
+    if (version.indexOf('6.1') == 0) {
+        return '6.1';
+    }
+    return '';
+}
+function getProductVersionId(version) {
+    if (version == '7.2') {
+        return '130051253';
+    }
+    if (version == '7.1') {
+        return '102311424';
+    }
+    if (version == '7.0') {
+        return '101625504';
+    }
+    if (version == '6.x') {
+        return '101625503';
+    }
+    return '';
+}
+function getPatcherPortalAccountsHREF(path, params) {
+    var portletId = '1_WAR_osbpatcherportlet';
+    var ns = '_' + portletId + '_';
+    var queryString = Object.keys(params).map(function (key) { return (key.indexOf('p_p_') == 0 ? key : (ns + key)) + '=' + encodeURIComponent(params[key]); }).join('&');
+    return 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/accounts' + path + '?p_p_id=' + portletId + '&' + queryString;
+}
+function addPatcherPortalLinks() {
+    var customFieldElement = document.getElementById('rowForcustomfield_14827');
+    if (!customFieldElement) {
+        return;
+    }
+    var valueElement = customFieldElement.querySelector('.value');
+    var accountCode = (valueElement.textContent || '').trim();
+    var allBuildsLinkHREF = getPatcherPortalAccountsHREF('', {
+        'accountEntryCode': accountCode
+    });
+    https: //patcher.liferay.com/group/guest/patching/-/osb_patcher/accounts/view?_1_WAR_osbpatcherportlet_patcherBuildAccountEntryCode=OTIS
+     valueElement.appendChild(document.createTextNode(' | '));
+    valueElement.appendChild(createAnchorTag('All Builds', allBuildsLinkHREF));
+    var versionsField = document.getElementById('versions-field');
+    if (versionsField) {
+        var version = getProductVersionName(versionsField.querySelectorAll('span')[0].textContent);
+        if (version) {
+            var versionBuildsLinkHREF = getPatcherPortalAccountsHREF('/view', {
+                'patcherBuildAccountEntryCode': accountCode,
+                'patcherProductVersionId': getProductVersionId(version)
+            });
+            valueElement.appendChild(document.createTextNode(' | '));
+            valueElement.appendChild(createAnchorTag(version + ' Builds', versionBuildsLinkHREF));
+        }
     }
 }
 function addIssueKeySelect() {
@@ -388,11 +535,13 @@ function updateTicket() {
     addComments();
     updateTicketActions();
     enableShowMoreLinks();
+    addPatcherPortalLinks();
 }
 function isMatchesPathName(partialPathName) {
     return pathName.indexOf('/secure/' + partialPathName + '!') == 0 ||
         pathName === '/secure/' + partialPathName + '.jspa';
 }
+enableMenuActions();
 var pathName = document.location.pathname;
 if (pathName.indexOf('/browse/') == 0) {
     updateTicket();
