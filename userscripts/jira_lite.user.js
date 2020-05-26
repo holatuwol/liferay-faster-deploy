@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           JIRA When javascript.enabled=false
 // @namespace      holatuwol
-// @version        2.0
+// @version        2.1
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_lite.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_lite.user.js
 // @match          https://issues.redhat.com/*
@@ -64,7 +64,6 @@ function createAnchorTag(text, href) {
         href = 'https://' + document.location.host + href;
     }
     link.href = href;
-    link.target = '_blank';
     return link;
 }
 function getActionLinks(comment) {
@@ -160,15 +159,18 @@ function addComments() {
     xhr.open('GET', restURL);
     xhr.send();
 }
+function hideMenus() {
+    var visibleMenuElements = document.querySelectorAll('div[resolved][aria-hidden="false"]');
+    for (var i = 0; i < visibleMenuElements.length; i++) {
+        visibleMenuElements[i].setAttribute('aria-hidden', 'true');
+    }
+}
 function setMenuActions(e) {
     var target = e.currentTarget;
     if (!target) {
         return;
     }
-    var visibleMenuElements = document.querySelectorAll('div[resolved][aria-hidden="false"]');
-    for (var i = 0; i < visibleMenuElements.length; i++) {
-        visibleMenuElements[i].setAttribute('aria-hidden', 'true');
-    }
+    hideMenus();
     var menuId = target.getAttribute('id');
     var menuContainerElement = document.getElementById(menuId + '-content');
     if (menuContainerElement.getAttribute('resolved')) {
@@ -223,6 +225,7 @@ function enableMenuActions() {
     for (var i = 0; i < navigationMenuItems.length; i++) {
         navigationMenuItems[i].addEventListener('click', setMenuActions);
     }
+    document.body.addEventListener('click', hideMenus);
 }
 function updateTicketActions() {
     var operationsContainer = document.getElementById('opsbar-opsbar-operations');
