@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        11.3
+// @version        11.4
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -1705,11 +1705,38 @@ function addArticleCodeButton(toolbarContainer, tinymce) {
     }
     tinymce.activeEditor.on('NodeChange', checkIfInCodeTag);
 }
-function addArticleFormattingButtons() {
-    var tinymce = unsafeWindow.tinymce;
-    if (!tinymce) {
+function wrapLiferayGatedContent(tinymce) {
+    // Only runs if on a KCS
+    var isFastTrack = Array.from(document.querySelectorAll([
+        'div[data-test-id="sectionSelector-section"]',
+        'div[data-test-id="section-name"]' // Visible when sidebar is closed
+    ].join(','))).filter(function (x) { return x.textContent == 'Fast Track'; }).length > 0;
+    if (!isFastTrack) {
         return;
     }
+    var allEditorH2 = tinymce.activeEditor.contentDocument.getElementsByTagName('h2');
+    for (var i = 0; i < allEditorH2.length; i++) {
+        if ((allEditorH2[i].textContent == 'Resolution' || allEditorH2[i].textContent == 'Additional Information') &&
+            allEditorH2[i].nextSibling.tagName != 'DIV') {
+            tinymce.dom.DomQuery(allEditorH2[i]).nextUntil().wrapAll('<div>');
+        }
+    }
+}
+function addArticleSubmissionListeners(tinymce) {
+    var validationButtons = document.querySelectorAll([
+        'div[data-test-id="createButton-menu-button"]',
+        'div[data-test-id="updateButton-menu-button"]' // appears when updating an existing one
+    ].join(','));
+    for (var i = 0; i < validationButtons.length; i++) {
+        var button = validationButtons[i];
+        if (button.classList.contains('lesa-ui-button-listen')) {
+            continue;
+        }
+        button.classList.add('lesa-ui-button-listen');
+        button.addEventListener('click', wrapLiferayGatedContent.bind(null, tinymce));
+    }
+}
+function addArticleFormattingButtons(tinymce) {
     var toolbarContainers = Array.from(document.querySelectorAll('div[class*="ssc-container-85be2f31 src-components-EditorToolbar-index---bar---"]'));
     for (var i = 0; i < toolbarContainers.length; i++) {
         var toolbarContainer = toolbarContainers[i];
@@ -1719,6 +1746,18 @@ function addArticleFormattingButtons() {
         toolbarContainer.classList.add('lesa-ui-stackedit');
         addArticleCodeButton(toolbarContainer, tinymce);
     }
+}
+function updateKnowledgeCenterEditor() {
+    var tinymce = unsafeWindow.tinymce;
+    if (!tinymce) {
+        return;
+    }
+    addArticleFormattingButtons(tinymce);
+    addArticleSubmissionListeners(tinymce);
+}
+if ((unsafeWindow.location.hostname.indexOf('zendesk.com') != -1) &&
+    (unsafeWindow.location.pathname.indexOf('/knowledge/') == 0)) {
+    setInterval(updateKnowledgeCenterEditor, 1000);
 }
 /**
  * Shows the public conversation tab so that you can get help.liferay.com links to
@@ -1870,8 +1909,5 @@ if (unsafeWindow.location.hostname.indexOf('zendesk.com') != -1) {
         setInterval(checkForSubtitles, 1000);
         setInterval(checkSidebarTags, 1000);
         setInterval(makeDraggableModals, 1000);
-    }
-    else if (unsafeWindow.location.pathname.indexOf('/knowledge/') == 0) {
-        setInterval(addArticleFormattingButtons, 1000);
     }
 }
