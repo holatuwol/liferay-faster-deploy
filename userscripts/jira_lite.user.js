@@ -17,9 +17,12 @@
 var styleElement = document.createElement('style');
 styleElement.textContent = "\nhtml body {\n  overflow-y: auto;\n}\n\n.aui-header-primary .aui-nav {\n  width: auto;\n}\n\n.ajs-multi-select-placeholder,\n.wiki-button-bar {\n  display: none;\n}\n\n#assign-to-me-trigger,\n#show-more-links {\n  visibility: hidden;\n}\n\n#documentation-web-panel,\n#greenhopper-agile-issue-web-panel,\n#packages-issue-panel,\n#slack-viewissue-panel,\n#issue-panel {\n  display: none;\n}\n\n#activitymodule {\n  width: 90vw;\n}\n";
 document.head.appendChild(styleElement);
+function getTicketName() {
+    var ticketElement = document.querySelector('.aui-page-header-main a[data-issue-key]');
+    return ticketElement.getAttribute('data-issue-key');
+}
 function getTicketId() {
-    var ticketName = document.location.pathname.substring(document.location.pathname.lastIndexOf('/') + 1);
-    var ticketElement = document.querySelector('a[data-issue-key="' + ticketName + '"]');
+    var ticketElement = document.querySelector('.aui-page-header-main a[data-issue-key]');
     return ticketElement.getAttribute('rel');
 }
 function getCurrentUser() {
@@ -66,20 +69,25 @@ function createAnchorTag(text, href) {
     link.href = href;
     return link;
 }
+function getActionLink(comment, actionName, actionTitle, actionPath) {
+    var anchorNode = createAnchorTag('', actionPath);
+    anchorNode.setAttribute('id', actionName + '_comment_' + comment.id);
+    anchorNode.setAttribute('title', actionTitle);
+    anchorNode.classList.add(actionName + '-comment', 'issue-comment-action');
+    var icon = document.createElement('span');
+    icon.classList.add('icon-default', 'aui-icon', 'aui-icon-small', 'aui-iconfont-' + actionName);
+    icon.textContent = actionTitle;
+    anchorNode.appendChild(icon);
+    return anchorNode;
+}
 function getActionLinks(comment) {
     var actionLinksNode = document.createElement('div');
     actionLinksNode.classList.add('action-links');
+    actionLinksNode.appendChild(getActionLink(comment, 'link', 'Permalink', '/browse/' + getTicketName() + '?focusedCommentId=' + comment.id +
+        '&page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-' + comment.id));
     if (comment.author.key == getCurrentUser()) {
-        var editCommentNode = document.createElement('a');
-        editCommentNode.setAttribute('id', 'edit_comment_' + comment.id);
-        editCommentNode.setAttribute('href', '/secure/EditComment!default.jspa?id=' + getTicketId() + '&commentId=' + comment.id);
-        editCommentNode.setAttribute('title', 'Edit');
-        editCommentNode.classList.add('edit-comment', 'issue-comment-action');
-        var editCommentIcon = document.createElement('span');
-        editCommentIcon.classList.add('icon-default', 'aui-icon', 'aui-icon-small', 'aui-iconfont-edit');
-        editCommentIcon.textContent = 'Edit';
-        editCommentNode.appendChild(editCommentIcon);
-        actionLinksNode.appendChild(editCommentNode);
+        actionLinksNode.appendChild(getActionLink(comment, 'edit', 'Edit', '/secure/EditComment!default.jspa?id=' + getTicketId() + '&commentId=' + comment.id));
+        actionLinksNode.appendChild(getActionLink(comment, 'delete', 'Delete', '/secure/DeleteComment!default.jspa?id=' + getTicketId() + '&commentId=' + comment.id));
     }
     return actionLinksNode;
 }
@@ -153,6 +161,12 @@ function addComments() {
         var comments = JSON.parse(this.responseText).comments;
         for (var i = 0; i < comments.length; i++) {
             addComment(comments[i]);
+        }
+        if (document.location.hash) {
+            var comment = document.querySelector(document.location.hash);
+            if (comment) {
+                comment.scrollIntoView();
+            }
         }
     });
     var restURL = 'https://' + document.location.host + '/rest/api/2/issue/' + getTicketId() + '/comment?expand=renderedBody';
