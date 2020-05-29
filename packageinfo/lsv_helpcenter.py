@@ -13,9 +13,17 @@ import git
 session = requests.session()
 
 def zendesk_json_request(domain, api_path, attribute_name, request_type, json_params):
-    auth_headers = {
-        'Authorization': 'Bearer %s' % git.config('%s.token' % domain)
-    }
+    oauth_token = git.config('%s.token' % domain)
+
+    if oauth_token == '':
+        oauth_token = None
+
+    if oauth_token is None:
+        auth_headers = {}
+    else:
+        auth_headers = {
+            'Authorization': 'Bearer %s' % oauth_token
+        }
 
     url = 'https://%s/api/v2%s' % (domain, api_path)
 
@@ -37,6 +45,14 @@ def zendesk_json_request(domain, api_path, attribute_name, request_type, json_pa
         return None
 
 def get_zendesk_article_content(domain, article_id):
+    oauth_token = git.config('%s.token' % domain)
+
+    if oauth_token == '':
+        oauth_token = None
+
+    if oauth_token is None:
+        return None
+
     article = zendesk_json_request(
         domain, '/help_center/en-us/articles/%s.json' % article_id,
         'article', 'GET', None)
@@ -47,11 +63,14 @@ def get_zendesk_article_content(domain, article_id):
     return article['body']
 
 def get_lsv_articles():
+    lsv_articles = {}
+
     article_content = get_zendesk_article_content('liferay-support.zendesk.com', '360018875952')
 
-    soup = BeautifulSoup(article_content, 'html.parser')
+    if article_content is None:
+        return lsv_articles
 
-    lsv_articles = {}
+    soup = BeautifulSoup(article_content, 'html.parser')
 
     for link in soup.find_all('a'):
         href = link.get('href')

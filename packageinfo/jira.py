@@ -8,11 +8,15 @@ sys.path.insert(0, dirname(dirname(abspath(inspect.getfile(inspect.currentframe(
 import git
 
 jira_base_url = 'https://issues.liferay.com'
+
 jira_username = git.config('jira.session-username')
 jira_password = git.config('jira.session-password')
 
-assert(jira_username is not None)
-assert(jira_password is not None)
+if jira_username == '':
+    jira_username = None
+
+if jira_password == '':
+    jira_password = None
 
 def get_jira_cookie():
     jira_cookie = None
@@ -26,6 +30,12 @@ def get_jira_cookie():
     except:
         pass
 
+    if jira_cookie_name == '':
+        jira_cookie_name = None
+
+    if jira_cookie_value == '':
+        jira_cookie_value = None
+
     if jira_cookie_name is not None and jira_cookie_value is not None:
         jira_cookie = {
             jira_cookie_name: jira_cookie_value
@@ -38,6 +48,9 @@ def get_jira_cookie():
 
     if jira_cookie is not None:
         return jira_cookie
+
+    if jira_username is None or jira_password is None:
+        return None
 
     post_json = {
         'username': jira_username,
@@ -65,8 +78,6 @@ def get_jira_cookie():
 
     return jira_cookie
 
-assert(get_jira_cookie() is not None)
-
 def get_issues(jql, fields):
 	start_at = 0
 
@@ -81,12 +92,12 @@ def get_issues(jql, fields):
 
 	r = requests.get(search_url, cookies=get_jira_cookie(), params=payload)
 
+	issues = {}
+
 	if r.status_code != 200:
 		return issues
 
 	response_json = r.json()
-
-	issues = {}
 
 	for issue in response_json['issues']:
 		issues[issue['key']] = issue

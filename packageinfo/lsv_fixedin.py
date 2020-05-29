@@ -47,7 +47,7 @@ def get_bpr_fix_pack_label(issue_key, base_version):
 				max_fix_pack = 9999
 
 	if max_fix_pack_number == 0 or max_fix_pack == 9999:
-		return '%s-9999-%s' % (prefix, suffix)
+		return '%s9999%s' % (prefix, suffix)
 
 	print('https://issues.liferay.com/browse/%s' % issue_key, 'liferay-fixpack-%s%s' % (max_fix_pack, suffix))
 	return 'liferay-fixpack-%s%s' % (max_fix_pack, suffix)
@@ -122,17 +122,18 @@ for issue_key, issue in issues.items():
 
 lsv_articles = get_lsv_articles()
 
-for fix_version in fix_versions.values():
-	if 'lsv' not in fix_version:
-		continue
+if len(lsv_articles) > 0:
+	for fix_version in fix_versions.values():
+		if 'lsv' not in fix_version:
+			continue
 
-	lsv_ticket_name = 'LSV-%d' % fix_version['lsv']
-	sev = fix_version['sev'] if 'sev' in fix_version else 3
+		lsv_ticket_name = 'LSV-%d' % fix_version['lsv']
+		sev = fix_version['sev'] if 'sev' in fix_version else 3
 
-	if lsv_ticket_name in lsv_articles:
-		fix_version['hc'] = lsv_articles[lsv_ticket_name]
-	elif sev < 3:
-		print('%s (sev-%d) is missing a security advisory' % (lsv_ticket_name, sev))
+		if lsv_ticket_name in lsv_articles:
+			fix_version['hc'] = lsv_articles[lsv_ticket_name]
+		elif sev < 3:
+			print('%s (sev-%d) is missing a security advisory' % (lsv_ticket_name, sev))
 
 with open('lsv_fixedin.json', 'w') as f:
 	json.dump(fix_versions, f, separators=(',', ':'))
