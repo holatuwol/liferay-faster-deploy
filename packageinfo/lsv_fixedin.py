@@ -21,17 +21,17 @@ def get_bpr_fix_pack_label(issue_key, base_version):
 		prefix = 'liferay-fixpack-dxp-'
 		suffix = '-%s10' % ''.join(base_version.split('.', 3)[0:2])
 
-	issues = get_issues(
+	linked_issues = get_issues(
 		'project = BPR and issueFunction in linkedIssuesOf("issue in linkedIssues(%s)")' % issue_key,
 		['customfield_14424', 'customfield_19421'])
 
 	max_fix_pack = None
 	max_fix_pack_number = 0
 
-	for issue_key, issue in issues.items():
-		if issue['fields']['customfield_14424']['name'].find(base_version) != -1:
-			if 'customfield_19421' in issue['fields']:
-				fix_pack = issue['fields']['customfield_19421']
+	for linked_issue in linked_issues.values():
+		if linked_issue['fields']['customfield_14424']['name'].find(base_version) != -1:
+			if 'customfield_19421' in linked_issue['fields']:
+				fix_pack = linked_issue['fields']['customfield_19421']
 
 				if fix_pack is None or fix_pack.find('-') == -1:
 					max_fix_pack = 9999
@@ -48,6 +48,7 @@ def get_bpr_fix_pack_label(issue_key, base_version):
 	if max_fix_pack_number == 0 or max_fix_pack == 9999:
 		return '%s-9999-%s' % (prefix, suffix)
 
+	print('https://issues.liferay.com/browse/%s' % issue_key, 'liferay-fixpack-%s%s' % (max_fix_pack, suffix))
 	return 'liferay-fixpack-%s%s' % (max_fix_pack, suffix)
 
 def get_fix_pack_labels(issue_key, issue):
