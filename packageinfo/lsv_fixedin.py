@@ -6,6 +6,7 @@ import requests
 import subprocess
 
 from jira import get_issues
+from lsv_helpcenter import get_lsv_articles
 
 def get_bpr_fix_pack_label(issue_key, base_version):
 	if base_version == '6.1':
@@ -114,8 +115,24 @@ fix_versions = {}
 for issue_key, issue in issues.items():
 	fix_version = expand_fix_version(issue_key, issue)
 
-	if len(fix_version) > 0:
-		fix_versions[issue_key] = fix_version
+	if len(fix_version) == 0:
+		continue
+
+	fix_versions[issue_key] = fix_version
+
+lsv_articles = get_lsv_articles()
+
+for fix_version in fix_versions.values():
+	if 'lsv' not in fix_version:
+		continue
+
+	lsv_ticket_name = 'LSV-%d' % fix_version['lsv']
+	sev = fix_version['sev'] if 'sev' in fix_version else 3
+
+	if lsv_ticket_name in lsv_articles:
+		fix_version['hc'] = lsv_articles[lsv_ticket_name]
+	elif sev < 3:
+		print('%s (sev-%d) is missing a security advisory' % (lsv_ticket_name, sev))
 
 with open('lsv_fixedin.json', 'w') as f:
 	json.dump(fix_versions, f, separators=(',', ':'))
