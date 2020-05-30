@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           JIRA When javascript.enabled=false
 // @namespace      holatuwol
-// @version        2.2
+// @version        2.3
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_lite.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_lite.user.js
 // @match          https://issues.redhat.com/*
@@ -537,7 +537,7 @@ function makeSummaryUsable() {
         hiddenSelectElements[i].classList.remove('hidden');
     }
 }
-function makeCreateIssueUsable() {
+function makeCreateEditIssueUsable() {
     if (document.getElementById('project')) {
         makeProjectSelectUsable();
     }
@@ -571,10 +571,10 @@ else if (isMatchesPathName('AssignIssue')) {
     addAssigneeInput();
 }
 else if (isMatchesPathName('CreateIssue')) {
-    makeCreateIssueUsable();
+    makeCreateEditIssueUsable();
 }
 else if (isMatchesPathName('EditIssue')) {
-    enableToggleTabs();
+    makeCreateEditIssueUsable();
 }
 else if (isMatchesPathName('LinkJiraIssue')) {
     addIssueKeySelect();
