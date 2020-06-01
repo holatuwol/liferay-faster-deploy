@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        5.8
+// @version        5.9
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -830,14 +830,17 @@ function addSecurityAdvisories(container, lsvTickets, missingTicketList) {
     var lsvList = document.createElement('ul');
     for (var i = 0; i < securityAdvisoryLSVList.length; i++) {
         var ticketName = securityAdvisoryLSVList[i];
-        console.log(ticketName);
         if (!('hc' in lsvTickets[ticketName])) {
             continue;
         }
         var lsvNumber = lsvTickets[ticketName]['lsv'];
         var helpCenterNumber = lsvTickets[ticketName]['hc'];
         var listItem = document.createElement('li');
-        listItem.innerHTML = '<strong>LSV-' + lsvNumber + '</strong>: <a href="https://help.liferay.com/hc/articles/' + helpCenterNumber + '">https://help.liferay.com/hc/articles/' + helpCenterNumber + '</a>';
+        listItem.innerHTML = [
+            '<strong>LSV-', lsvNumber, ' / ', ticketName, '</strong>: ',
+            '<a href="https://help.liferay.com/hc/articles/', helpCenterNumber,
+            '">https://help.liferay.com/hc/articles/', helpCenterNumber, '</a>'
+        ].join('');
         lsvList.appendChild(listItem);
     }
     container.append(lsvList);
