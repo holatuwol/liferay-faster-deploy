@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        5.9
+// @version        6.0
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -626,21 +626,6 @@ function replaceBuild() {
     }
 }
 /**
- * Replaces the account name with a link to all builds for the account.
- */
-function replaceAccountLink(target) {
-    var oldNode = querySelector(target);
-    if (oldNode && oldNode.readOnly) {
-        var projectVersionElement = querySelector('patcherProductVersionId');
-        var params = {
-            'p_p_id': portletId,
-            'patcherBuildAccountEntryCode': oldNode.value,
-            'patcherProductVersionId': projectVersionElement.value
-        };
-        replaceNode(oldNode, '<a href="https://patcher.liferay.com/group/guest/patching/-/osb_patcher/accounts/view?' + getQueryString(params) + '" target="_blank">' + oldNode.value + '</a>');
-    }
-}
-/**
  * Replaces the list of fixes with a list of JIRA links.
  */
 function replaceFixes() {
@@ -899,8 +884,6 @@ var applyPatcherCustomizations = function () {
     replaceBranchName();
     replaceFixes();
     replaceBuild();
-    replaceAccountLink('accountEntryCode');
-    replaceAccountLink('patcherBuildAccountEntryCode');
     replaceLesaLink('lesaTicket');
     replaceLesaLink('supportTicket');
     replaceDate('createDate');
