@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        5.7
+// @version        5.8
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -856,6 +856,13 @@ function renderMissingSecurityFixes(buildNameNode, lsvTickets) {
     addMissingSecurityFixesTable(container, missingTicketList);
     addSecurityAdvisories(container, lsvTickets, missingTicketList);
     var accountElement = querySelector('patcherBuildAccountEntryCode');
+    if (!accountElement) {
+        var label = document.querySelector('label[for="' + ns + 'account-code"]');
+        accountElement = label.nextSibling;
+    }
+    if (!accountElement) {
+        return;
+    }
     var accountParentElement = accountElement.parentElement;
     var accountGrandParentElement = accountParentElement.parentElement;
     accountGrandParentElement.insertBefore(container, accountParentElement);
