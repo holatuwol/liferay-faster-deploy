@@ -479,7 +479,7 @@ def get_hotfix_build_id(hotfix_url, patcher_build=None):
 
 	return get_build_id(routine_id, search_name, matching_name)
 
-def get_run_id(build_id, run_number):
+def get_run_id(build_id):
 	if build_id is None:
 		return None
 
@@ -499,24 +499,33 @@ def get_run_id(build_id, run_number):
 		print('Unable to determine testray runs for testray build %s' % (build_id))
 		return None
 
-	first_runs = [
-		run['testrayRunId'] for run in json_response['data']
-			if run['number'] == run_number
+	runs = json_response['data']
+
+	run_factors = [(
+		run, {
+			factor['testrayFactorCategoryName']: factor['testrayFactorOptionName']
+				for factor in run['testrayFactors']
+		}
+	) for run in runs]
+
+	first_run_ids = [
+		run['testrayRunId'] for run, run_factor in run_factors
+			if run_factor['Application Server'].find('Tomcat') != -1 and run_factor['Database'].find('MySQL') != -1
 	]
 
-	if len(first_runs) == 0:
+	if len(first_run_ids) == 0:
 		print('Unable to determine testray runs for testray build %s' % (build_id))
 		return None
 
-	return first_runs[0]
+	return first_run_ids[0]
 
-def get_testray_url(a, b, run_number='1'):
-	a_run_id = get_run_id(a, run_number)
+def get_testray_url(a, b):
+	a_run_id = get_run_id(a)
 
 	if a_run_id is None:
 		return None
 
-	b_run_id = get_run_id(b, run_number)
+	b_run_id = get_run_id(b)
 
 	if b_run_id is None:
 		return 'https://testray.liferay.com/home/-/testray/case_results?testrayBuildId=%s&testrayRunId=%s' % (a, a_run_id)
