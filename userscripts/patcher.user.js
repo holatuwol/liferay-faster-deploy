@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        6.1
+// @version        6.2
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -663,7 +663,6 @@ function replaceHotfixLink(target) {
     if (!anchor || !anchor.textContent) {
         return;
     }
-    anchor.classList.add('hotfix-download-link');
     var href = anchor.getAttribute('href');
     anchor.textContent = href.substring(href.lastIndexOf('/') + 1);
 }
@@ -672,23 +671,48 @@ function replaceHotfixLink(target) {
  */
 function replaceLesaLink(target) {
     var oldNode = querySelector(target);
-    if (oldNode && oldNode.readOnly) {
-        var ticketURL;
+    if (!oldNode) {
+        return;
+    }
+    if (oldNode.readOnly) {
+        var ticketHREF;
+        var ticketId;
+        var jiraSearchLinkHREF = null;
         if (oldNode.value.indexOf('https:') == 0) {
-            ticketURL = oldNode.value;
+            ticketHREF = oldNode.value;
+            ticketId = ticketHREF.substring(ticketHREF.lastIndexOf('/') + 1);
         }
         else if (isNaN(parseInt(oldNode.value))) {
-            if ((oldNode.value.indexOf('LPP-') == 0) || (oldNode.value.indexOf('GROW-') == 0)) {
-                ticketURL = 'https://issues.liferay.com/browse/' + oldNode.value;
+            if ((oldNode.value.indexOf('LPP-') == 0) || (oldNode.value.indexOf('GROW-') == 0) || (oldNode.value.indexOf('LRP-') == 0)) {
+                ticketHREF = 'https://issues.liferay.com/browse/' + oldNode.value;
+                ticketId = oldNode.value;
+                jiraSearchLinkHREF = ticketHREF;
             }
             else {
-                ticketURL = 'https://web.liferay.com/group/customer/support/-/support/ticket/' + oldNode.value;
+                ticketHREF = 'https://web.liferay.com/group/customer/support/-/support/ticket/' + oldNode.value;
+                ticketId = oldNode.value;
             }
         }
         else {
-            ticketURL = 'https://liferay-support.zendesk.com/agent/tickets/' + oldNode.value;
+            ticketHREF = 'https://liferay-support.zendesk.com/agent/tickets/' + oldNode.value;
+            ticketId = oldNode.value;
         }
-        replaceNode(oldNode, '<a href="' + ticketURL + '" target="_blank">' + ticketURL + '</a>');
+        if (jiraSearchLinkHREF == null) {
+            var query = "\"Customer Ticket Permalink\" = \"" + ticketHREF + "\" OR \"Zendesk Ticket IDs\" ~ " + ticketId + " OR \"Customer Ticket\" = \"" + ticketId + "\" OR \"Customer Ticket\" = \"" + ticketHREF + "\"";
+            var encodedQuery = encodeURIComponent(query);
+            jiraSearchLinkHREF = 'https://issues.liferay.com/issues/?jql=' + encodedQuery;
+        }
+        var newNode;
+        if (ticketHREF == jiraSearchLinkHREF) {
+            newNode = ticketId + " | <a href=\"" + jiraSearchLinkHREF + "\" target=\"_blank\">JIRA ticket</a>";
+        }
+        else if (ticketHREF.indexOf('https://web.liferay.com/') == 0) {
+            newNode = ticketId + " | <a href=\"" + ticketHREF + "\" target=\"_blank\">LESA ticket</a> | <a href=\"" + jiraSearchLinkHREF + "\" target=\"_blank\">JIRA tickets</a>";
+        }
+        else {
+            newNode = ticketId + " | <a href=\"" + ticketHREF + "\" target=\"_blank\">zendesk ticket</a> | <a href=\"" + jiraSearchLinkHREF + "\" target=\"_blank\">JIRA tickets</a>";
+        }
+        replaceNode(oldNode, newNode);
     }
 }
 function highlightAnalysisNeededBuilds() {
