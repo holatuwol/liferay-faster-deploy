@@ -99,7 +99,7 @@ with open(get_rd_file('packageinfo.txt'), 'r') as f:
 		if os.path.exists(packageinfo):
 			with open(packageinfo, 'r') as pif:
 				package_version = pif.read().split(' ')[1].strip()
-		else:
+		elif path != 'portal-test':
 			package_version = '1.0.0'
 
 		module_versions.append(node.value[0:-1] + (package_name, package_version))
