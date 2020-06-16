@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           GitHub Link to LPS Tickets
 // @namespace      holatuwol
-// @version        1.4
+// @version        1.5
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/github_link_lps.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/github_link_lps.user.js
 // @match          https://github.com/LiferayCloud/*
@@ -34,6 +34,16 @@ function copyClassList(source, target) {
   }
 }
 
+var projects = {
+  'BPR': 'issues.liferay.com',
+  'CLDSVCS': 'issues.liferay.com',
+  'LCP': 'services.liferay.com',
+  'LPP': 'issues.liferay.com',
+  'LPS': 'issues.liferay.com',
+  'LRCI': 'issues.liferay.com',
+  'LRQA': 'issues.liferay.com'
+};
+
 function replaceLinks(links) {
   for (var i = 0; i < links.length; i++) {
     var dataLinkReplaced = links[i].getAttribute('data-link-replaced');
@@ -61,7 +71,12 @@ function replaceLinks(links) {
       
       var issueKey = match[0];
       var projectKey = issueKey.substring(0, issueKey.indexOf('-'));
-      var projectDomain = projects[projectKey] || 'issues.liferay.com';
+
+      if (!(projectKey in projects)) {
+        continue;
+      }
+
+      var projectDomain = projects[projectKey];
       
       newElement.appendChild(createAnchorTag(issueKey, 'https://' + projectDomain + '/browse/' + issueKey, classList));
 
@@ -89,16 +104,6 @@ function replaceLinks(links) {
     }
   }
 }
-
-var projects = {
-  'BPR': 'issues.liferay.com',
-  'CLDSVCS': 'issues.liferay.com',
-  'LCP': 'services.liferay.com',
-  'LPP': 'issues.liferay.com',
-  'LPS': 'issues.liferay.com',
-  'LRCI': 'issues.liferay.com',
-  'LRQA': 'issues.liferay.com'
-};
 
 function addJiraLink(element, debug) {
   if (element.nodeType == Node.TEXT_NODE) {
