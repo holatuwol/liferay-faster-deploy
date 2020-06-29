@@ -1,5 +1,16 @@
 #!/bin/bash
 
+fix_dependencies() {
+	if [[ ${2} == com.liferay.portal.* ]]; then
+		sed -i.bak "/${2}/s/version: \"[1-9][^\"]*\"/version: \"default\"/g" ${1}
+	else
+		local project=$(git ls-files | grep -F bnd.bnd | xargs grep -l ": ${2}$" | sed 's@/bnd\.bnd$@@g' | sed 's@^modules@@g' | tr '/' ':')
+		sed -i.bak "/${2}/s/group:.*$/project(\"${project}\")/g" ${1}
+	fi
+
+	git add ${1}
+}
+
 checkcommonerrors() {
 	local PATCHER_JSON=$(dirname "${BASH_SOURCE[0]}")/patcher.json
 	local BASELINE_ID=$(cat $PATCHER_JSON | jq '.["'$BASE_TAG'"]')
@@ -58,6 +69,33 @@ checkcommonerrors() {
 			echo "$file"
 			git log --pretty='   %C(yellow)%H%Creset %Cgreen%ci%Creset %s' $BASE_TAG..HEAD -- $file
 		done
+	fi
+
+	local CHANGED_GRADLE=$(grep -F '/build.gradle' $GIT_ROOT/.redeploy/patcher_diff.txt)
+	local MODIFIED_GRADLE_VERSION=
+	local PORTAL_BOOTSTRAP=$(git ls-files modules/core | grep -F portal-bootstrap/build.gradle)
+
+	for file in $CHANGED_GRADLE; do
+		if [ "" != "$(git diff $BASE_TAG..HEAD -- $file | grep -F '+' | grep -F 'version: ')" ]; then
+			for bundle in $(git diff $BASE_TAG..HEAD -- $file | grep -F '+' | grep -F 'version: ' | grep -o 'name: "[^"]*"' | cut -d'"' -f 2); do
+				fix_dependencies "${file}" "${bundle}"
+				fix_dependencies "${PORTAL_BOOTSTRAP}" "${bundle}"
+			done
+		fi
+
+		if [ "" != "$(git status | grep -F "${file}")" ]; then
+			MODIFIED_GRADLE_VERSION="$MODIFIED_GRADLE_VERSION\n$file"
+		fi
+	done
+
+	if [ "" != "$MODIFIED_GRADLE_VERSION" ]; then
+		echo ""
+		echo "A fix must not modify dependency version (switch to default or project dependency versions):"
+		echo -e "${MODIFIED_GRADLE_VERSION}"
+
+		git add ${PORTAL_BOOTSTRAP}
+		echo ""
+		git commit -m "Fix dependency versions"
 	fi
 
 	# If any of the checks failed, abort
