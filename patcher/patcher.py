@@ -97,7 +97,7 @@ def get_fix_id(typeFilter='0'):
 		if re.search('^[0-9]*$', sys.argv[2]) is not None:
 			return sys.argv[2], None
 		else:
-			candidate_fix_names = [''.join(sys.argv[2:])]
+			candidate_fix_names = [','.join(sys.argv[2:])]
 
 	if candidate_fix_names is None:
 		candidate_fix_names = get_candidate_fix_names()
@@ -122,15 +122,18 @@ def get_fix_id(typeFilter='0'):
 			if candidate_fix_name == fix_name:
 				fix_ids.append(columns['fix id'].text.strip())
 
-		process_patcher_search_container(
-			base_url, parameters, 'patcherFixsSearchContainerSearchContainer',
-			['fix id', 'content'], process_fix_row)
+		try:
+			process_patcher_search_container(
+				base_url, parameters, 'patcherFixsSearchContainerSearchContainer',
+				['fix id', 'content'], process_fix_row)
+		except:
+			pass
 
 		if len(fix_ids) == 1:
 			return fix_ids[0], fix_name
 
 	if len(sys.argv) >= 3 and len(sys.argv[2]) > 0:
-		return None, ''.join(sys.argv[2:])
+		return None, ','.join(sys.argv[2:])
 
 	return None, None
 
