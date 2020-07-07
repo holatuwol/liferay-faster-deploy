@@ -1,0 +1,5 @@
+#!/bin/bash
+
+if . $(dirname "${BASH_SOURCE[0]}")/appserverprops; then
+	. $(dirname "${BASH_SOURCE[0]}")/installjar ${CATALINA_HOME}/webapps/ROOT/WEB-INF/lib com.liferay.portal.dao.db portal-dao-db
+fi

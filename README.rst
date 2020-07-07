@@ -21,6 +21,10 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 		${MCD_RD_CLONE_PATH}/checktags
 	}
 
+	dbjar() {
+		${MCD_RD_CLONE_PATH}/dbjar
+	}
+
 	gw() {
 		${MCD_RD_CLONE_PATH}/gw $@
 	}
@@ -45,6 +49,14 @@ Downloads any missing liferay-portal and liferay-portal-ee tags corresponding to
 
 	checktags
 
+Enable EE-only Databases
+========================
+
+In order to run EE-only databases, you need the appropriate com.liferay.portal.dao.db.jar. This script will auto-download it and place it in the ``ROOT/WEB-INF/lib`` folder of the Tomcat bundle specified in ``app.server.USERNAME.properties``.
+
+.. code-block:: bash
+
+	dbjar
 
 Robust Gradle Wrapper
 =====================

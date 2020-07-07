@@ -4,6 +4,7 @@ install_jar() {
 	local EXTRA_JAR="${1}/${2}.jar"
 
 	if [ -f ${EXTRA_JAR} ]; then
+		echo "Artifact ${EXTRA_JAR} already exists"
 		return 0
 	fi
 
