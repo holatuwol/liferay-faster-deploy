@@ -5,7 +5,9 @@ containername() {
 		return
 	fi
 
-	if [[ ${BASE_BRANCH} == ee-* ]]; then
+	if [ "" == "${BASE_BRANCH}" ]; then
+		CONTAINER_NAME=${DB_TYPE}
+	elif [[ ${BASE_BRANCH} == ee-* ]]; then
 		CONTAINER_NAME=$(echo ${BASE_BRANCH} | cut -d'-' -f 2- | tr -d '.')-${DB_TYPE}
 	else
 		CONTAINER_NAME=$(echo ${BASE_BRANCH} | cut -d'-' -f 1 | tr -d '.')-${DB_TYPE}
