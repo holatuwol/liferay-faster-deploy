@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        11.4
+// @version        11.5
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -835,6 +835,11 @@ function getSupportRegions(assigneeText) {
  * Add a marker to show the LESA priority on the ticket.
  */
 function addPriorityMarker(header, conversation, ticketId, ticketInfo) {
+    var ticketContainer = header.closest('.main_panes');
+    var assigneeElement = ticketContainer.querySelector('.js-zero-state-ticket-tutorial-assignee-field span');
+    if (!assigneeElement) {
+        return;
+    }
     var priorityElement = header.querySelector('.lesa-ui-priority');
     if (priorityElement) {
         if (priorityElement.getAttribute('data-ticket-id') == ticketId) {
@@ -862,8 +867,6 @@ function addPriorityMarker(header, conversation, ticketId, ticketInfo) {
     }
     if ((ticketInfo.ticket.status != 'closed') && (ticketInfo.organizations.length > 0)) {
         var customerRegion = ticketInfo.organizations[0].organization_fields.support_region;
-        var ticketContainer = header.closest('.main_panes');
-        var assigneeElement = ticketContainer.querySelector('.assignee_id .zd-combo-selectmenu');
         var assigneeText = (assigneeElement.getAttribute('data-original-title') || assigneeElement.textContent || '').trim();
         var assigneeRegions = getSupportRegions(assigneeText);
         if (!assigneeRegions.has(customerRegion)) {
