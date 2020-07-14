@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        11.5
+// @version        11.6
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -836,7 +836,7 @@ function getSupportRegions(assigneeText) {
  */
 function addPriorityMarker(header, conversation, ticketId, ticketInfo) {
     var ticketContainer = header.closest('.main_panes');
-    var assigneeElement = ticketContainer.querySelector('.js-zero-state-ticket-tutorial-assignee-field span');
+    var assigneeElement = ticketContainer.querySelector('.js-zero-state-ticket-tutorial-assignee-field > div');
     if (!assigneeElement) {
         return;
     }
@@ -867,7 +867,7 @@ function addPriorityMarker(header, conversation, ticketId, ticketInfo) {
     }
     if ((ticketInfo.ticket.status != 'closed') && (ticketInfo.organizations.length > 0)) {
         var customerRegion = ticketInfo.organizations[0].organization_fields.support_region;
-        var assigneeText = (assigneeElement.getAttribute('data-original-title') || assigneeElement.textContent || '').trim();
+        var assigneeText = (assigneeElement.textContent || '').trim();
         var assigneeRegions = getSupportRegions(assigneeText);
         if (!assigneeRegions.has(customerRegion)) {
             var customerRegionElement = document.createElement('span');
@@ -1769,7 +1769,7 @@ if ((unsafeWindow.location.hostname.indexOf('zendesk.com') != -1) &&
 function enablePublicConversation(ticketId, ticketInfo, conversation) {
     var fullTab = conversation.querySelector('.event-nav.conversation .fullConversation');
     var publicTab = conversation.querySelector('.event-nav.conversation .publicConversation');
-    if (parseInt(publicTab.getAttribute('data-count') || '0') == 0) {
+    if (publicTab && parseInt(publicTab.getAttribute('data-count') || '0') == 0) {
         publicTab.setAttribute('data-count', fullTab.getAttribute('data-count') || '0');
     }
 }
