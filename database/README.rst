@@ -24,17 +24,32 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 
 	mysql() {
 		DRIVERS_FOLDER=/path/to/jdbc/drivers \
-			${MCD_RD_CLONE_PATH}/database/mysql
+			${MCD_RD_CLONE_PATH}/database/db2 $@
+	}
+
+	mssql() {
+		DRIVERS_FOLDER=/path/to/jdbc/drivers \
+			${MCD_RD_CLONE_PATH}/database/mssql $@
+	}
+
+	mysql() {
+		DRIVERS_FOLDER=/path/to/jdbc/drivers \
+			${MCD_RD_CLONE_PATH}/database/mysql $@
 	}
 
 	oracle() {
 		DRIVERS_FOLDER=/path/to/jdbc/drivers \
-			${MCD_RD_CLONE_PATH}/database/oracle
+			${MCD_RD_CLONE_PATH}/database/oracle $@
+	}
+
+	postgres() {
+		DRIVERS_FOLDER=/path/to/jdbc/drivers \
+			${MCD_RD_CLONE_PATH}/database/postgres $@
 	}
 
 	sybase() {
 		DRIVERS_FOLDER=/path/to/jdbc/drivers \
-			${MCD_RD_CLONE_PATH}/database/sybase
+			${MCD_RD_CLONE_PATH}/database/sybase $@
 	}
 
 Run Liferay Sample SQL Builder
