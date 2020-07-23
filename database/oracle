@@ -2,22 +2,26 @@
 
 . "$(dirname ${BASH_SOURCE[0]})/common"
 
+execute_script() {
+	echo "${1}"
+
+	mkdir -p ${LIFERAY_HOME}/oracle
+
+	echo -e "ALTER SESSION SET \"_ORACLE_SCRIPT\"=true;\n\n${1}\n\ncommit;" > ${LIFERAY_HOME}/oracle/tmp.sql
+
+	docker exec -i ${CONTAINER_NAME} sqlplus sys/\"${SYS_PASSWORD}\"@//localhost:1521/ORCLCDB as sysdba < ${LIFERAY_HOME}/oracle/tmp.sql
+
+	rm -f ${LIFERAY_HOME}/oracle/tmp.sql
+}
+
 restorebackup() {
 	mkdir -p ${LIFERAY_HOME}/oracle
 
-	echo "
-ALTER SESSION SET \"_ORACLE_SCRIPT\"=true;
-
+	execute_script "
 create or replace directory export_lportal as '${BACKUP_FOLDER_NAME}';
 
 grant read, write on directory export_lportal to lportal;
-grant imp_full_database to lportal;
-commit;
-" > ${LIFERAY_HOME}/oracle/import_backup.sql
-
-	local SYS_PASSWORD=$(docker logs ${CONTAINER_NAME} | grep -F PASSWORD | cut -d':' -f 2 | sed 's/^ *//g')
-
-	docker exec -i ${CONTAINER_NAME} sqlplus sys/\"${SYS_PASSWORD}\"@//localhost:1521/ORCLCDB as sysdba < ${LIFERAY_HOME}/oracle/import_backup.sql
+grant imp_full_database to lportal;"
 
 	local FILENAME=$(docker exec -i ${CONTAINER_NAME} ls -1 ${BACKUP_FOLDER_NAME} | grep -F '.dmp')
 
@@ -33,12 +37,8 @@ commit;
 	    $(echo "$OLD_TABLESPACE" | awk '{print "remap_tablespace=" $1 ":lportal"}' | tr '\n' ' ') \
 	    exclude=INDEX table_exists_action=TRUNCATE version=${ORACLE_COMPAT_VERSION}
 
-	echo "
-revoke imp_full_database from lportal;
-commit;
-" > ${LIFERAY_HOME}/oracle/finish_backup.sql
-
-	docker exec -i ${CONTAINER_NAME} sqlplus sys/\"${SYS_PASSWORD}\"@//localhost:1521/ORCLCDB as sysdba < ${LIFERAY_HOME}/oracle/finish_backup.sql
+	execute_script "
+revoke imp_full_database from lportal;"
 }
 
 startdatabase() {
@@ -60,11 +60,9 @@ startdatabase() {
 
 	waitfor_database
 
-	mkdir -p ${LIFERAY_HOME}/oracle
+	SYS_PASSWORD=$(docker logs ${CONTAINER_NAME} | grep -F PASSWORD | cut -d':' -f 2 | sed 's/^ *//g')
 
-	echo "
-ALTER SESSION SET \"_ORACLE_SCRIPT\"=true;
-
+	execute_script "
 CREATE TABLESPACE lportal DATAFILE 'lportal.dbf' SIZE 64m AUTOEXTEND ON NEXT 32m MAXSIZE UNLIMITED;
 
 CREATE USER lportal IDENTIFIED BY lportal DEFAULT TABLESPACE lportal;
@@ -72,11 +70,7 @@ GRANT create session, resource, unlimited tablespace TO lportal;
 
 CREATE UNDO TABLESPACE lportal_undo DATAFILE 'lportal_undo.dpf' SIZE 64m AUTOEXTEND ON NEXT 32m MAXSIZE UNLIMITED;
 ALTER TABLESPACE lportal_undo RETENTION GUARANTEE;
-" > ${LIFERAY_HOME}/oracle/init.sql
-
-	local SYS_PASSWORD=$(docker logs ${CONTAINER_NAME} | grep -F PASSWORD | cut -d':' -f 2 | sed 's/^ *//g')
-
-	docker exec -i ${CONTAINER_NAME} sqlplus sys/\"${SYS_PASSWORD}\"@//localhost:1521/ORCLCDB as sysdba < ${LIFERAY_HOME}/oracle/init.sql
+ALTER SYSTEM SET UNDO_TABLESPACE=lportal_undo SCOPE=BOTH;"
 }
 
 updateprops() {
