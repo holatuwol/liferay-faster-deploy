@@ -3,6 +3,10 @@
 . "$(dirname ${BASH_SOURCE[0]})/common"
 
 execute_script() {
+	if [ "" == "${SYS_PASSWORD}" ]; then
+		SYS_PASSWORD=$(docker logs ${CONTAINER_NAME} | grep -F PASSWORD | cut -d':' -f 2 | sed 's/^ *//g')
+	fi
+
 	echo "${1}"
 
 	mkdir -p ${LIFERAY_HOME}/oracle
@@ -25,17 +29,24 @@ grant imp_full_database to lportal;"
 
 	local FILENAME=$(docker exec -i ${CONTAINER_NAME} ls -1 ${BACKUP_FOLDER_NAME} | grep -F '.dmp')
 
-	docker exec -e ORACLE_SID=ORCLCDB -i ${CONTAINER_NAME} impdp \"/ AS SYSDBA\" dumpfile=${FILENAME} directory=export_lportal logfile=import_log.txt sqlfile=ddl_dump.txt
+	docker exec -e ORACLE_SID=ORCLCDB -i ${CONTAINER_NAME} \
+		impdp \"/ AS SYSDBA\" \
+			dumpfile=${FILENAME} \
+			directory=export_lportal \
+			logfile=import_log.txt \
+			sqlfile=ddl_dump.txt
 
 	local OLD_SCHEMA=$(docker exec -i ${CONTAINER_NAME} grep -o 'CREATE USER ".*"' ${BACKUP_FOLDER_NAME}/ddl_dump.txt | cut -d'"' -f 2)
 	local OLD_TABLESPACE=$(docker exec -i ${CONTAINER_NAME} grep -o 'TABLESPACE ".*"' ${BACKUP_FOLDER_NAME}/ddl_dump.txt | cut -d'"' -f 2 | sort -u)
 
-	docker exec -e ORACLE_SID=ORCLCDB -i ${CONTAINER_NAME} impdp lportal/lportal directory=export_lportal \
-	    dumpfile=${FILENAME} \
-	    remap_schema=${OLD_SCHEMA}:lportal \
-	    tablespaces=$(echo $OLD_TABLESPACE | tr ' ' ',') \
-	    $(echo "$OLD_TABLESPACE" | awk '{print "remap_tablespace=" $1 ":lportal"}' | tr '\n' ' ') \
-	    exclude=INDEX table_exists_action=TRUNCATE version=${ORACLE_COMPAT_VERSION}
+	docker exec -e ORACLE_SID=ORCLCDB -i ${CONTAINER_NAME} \
+		impdp lportal/lportal \
+			directory=export_lportal \
+			dumpfile=${FILENAME} \
+			remap_schema=${OLD_SCHEMA}:lportal \
+			tablespaces=$(echo $OLD_TABLESPACE | tr ' ' ',') \
+			$(echo "$OLD_TABLESPACE" | awk '{print "remap_tablespace=" $1 ":lportal"}' | tr '\n' ' ') \
+			exclude=INDEX table_exists_action=TRUNCATE version=${ORACLE_COMPAT_VERSION}
 
 	execute_script "
 revoke imp_full_database from lportal;"
@@ -55,14 +66,17 @@ startdatabase() {
 	fi
 
 	docker run --name ${CONTAINER_NAME} \
+		-e 'ORACLE_CHARACTERSET=AL32UTF8' \
 		-e 'ORACLE_PDB=orcl' \
 		--detach --expose 1521 ${ORACLE_VERSION}
 
 	waitfor_database
 
-	SYS_PASSWORD=$(docker logs ${CONTAINER_NAME} | grep -F PASSWORD | cut -d':' -f 2 | sed 's/^ *//g')
-
 	execute_script "
+SELECT value FROM NLS_DATABASE_PARAMETERS WHERE parameter = 'NLS_CHARACTERSET';
+
+ALTER PROFILE DEFAULT LIMIT PASSWORD_LIFE_TIME UNLIMITED;
+
 CREATE TABLESPACE lportal DATAFILE 'lportal.dbf' SIZE 64m AUTOEXTEND ON NEXT 32m MAXSIZE UNLIMITED;
 
 CREATE USER lportal IDENTIFIED BY lportal DEFAULT TABLESPACE lportal;
