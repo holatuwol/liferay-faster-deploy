@@ -21,7 +21,7 @@ grant createin, alterin, dropin on schema ${SCHEMA_NAME} to lportal;
 	fi
 
 	docker cp privileges.sql ${CONTAINER_NAME}:/home/db2inst1/
-	docker exec ${CONTAINER_NAME} chown db2inst1:db2inst1 /home/db2inst1/privileges.sql
+	docker exec ${CONTAINER_NAME} chown ${CONTAINER_USER_NAME} /home/db2inst1/privileges.sql
 	docker exec -u db2inst1 ${CONTAINER_NAME} /home/db2inst1/sqllib/bin/db2 -tvmf /home/db2inst1/privileges.sql
 }
 
@@ -50,7 +50,7 @@ update database configuration for lportal using LOGSECOND 248;
 	' > setup.sql
 
 	docker cp setup.sql ${CONTAINER_NAME}:/home/db2inst1/
-	docker exec ${CONTAINER_NAME} chown db2inst1:db2inst1 /home/db2inst1/setup.sql
+	docker exec ${CONTAINER_NAME} chown ${CONTAINER_USER_NAME} /home/db2inst1/setup.sql
 	docker exec -u db2inst1 ${CONTAINER_NAME} /home/db2inst1/sqllib/bin/db2 -tvmf /home/db2inst1/setup.sql
 
 	docker exec ${CONTAINER_NAME} yum install -y unzip zip
@@ -95,7 +95,7 @@ if [ "" == "${DB2_VERSION}" ]; then
 	DB2_VERSION='10.5.0.5-3.10.0'
 fi
 
-CONTAINER_USER_NAME='db2inst1'
+CONTAINER_USER_NAME='db2inst1:db2inst1'
 BACKUP_FOLDER_NAME='/home/db2inst1/backup'
 
 runcontainer $@
