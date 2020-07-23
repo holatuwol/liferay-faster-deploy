@@ -30,7 +30,7 @@ grant imp_full_database to lportal;"
 	local OLD_SCHEMA=$(docker exec -i ${CONTAINER_NAME} grep -o 'CREATE USER ".*"' ${BACKUP_FOLDER_NAME}/ddl_dump.txt | cut -d'"' -f 2)
 	local OLD_TABLESPACE=$(docker exec -i ${CONTAINER_NAME} grep -o 'TABLESPACE ".*"' ${BACKUP_FOLDER_NAME}/ddl_dump.txt | cut -d'"' -f 2 | sort -u)
 
-	docker exec -i ${CONTAINER_NAME} impdp lportal/lportal directory=export_lportal \
+	docker exec -e ORACLE_SID=ORCLCDB -i ${CONTAINER_NAME} impdp lportal/lportal directory=export_lportal \
 	    dumpfile=${FILENAME} \
 	    remap_schema=${OLD_SCHEMA}:lportal \
 	    tablespaces=$(echo $OLD_TABLESPACE | tr ' ' ',') \
