@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        11.6
+// @version        11.7
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -953,6 +953,32 @@ function createKnowledgeCaptureContainer(ticketId, ticketInfo, conversation) {
     return knowledgeCaptureContainer;
 }
 /**
+ * Sometimes CSEs post a dummy comment, which basically says "see comment above this one"
+ * in order to preserve formatting when creating child tickets.
+ */
+function isDummyComment(ticketInfo, comment) {
+    var isChildTicket = false;
+    var customFields = ticketInfo.ticket.custom_fields;
+    for (var i = 0; i < customFields.length; i++) {
+        if ((customFields[i].id == 360013377052) && (customFields[i].value.indexOf('child_of:') != -1)) {
+            isChildTicket = true;
+        }
+    }
+    if (!isChildTicket) {
+        return false;
+    }
+    var innerHTML = comment.innerHTML;
+    if (innerHTML != comment.textContent) {
+        return false;
+    }
+    if ((innerHTML.indexOf('(to maintain formatting)') != -1) ||
+        (innerHTML.indexOf('(to retain formatting)') != -1) ||
+        (innerHTML.indexOf('formatted comment'))) {
+        return true;
+    }
+    return false;
+}
+/**
  * Add a ticket description and a complete list of attachments to the top of the page.
  */
 function addTicketDescription(ticketId, ticketInfo, conversation) {
@@ -985,7 +1011,7 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
         return;
     }
     var lastComment = comments[comments.length - 1];
-    if (lastComment.innerHTML == lastComment.textContent && (lastComment.innerHTML.indexOf('(to maintain formatting)') != -1 || lastComment.innerHTML.indexOf('(to retain formatting)') != -1)) {
+    if (isDummyComment(ticketInfo, lastComment)) {
         lastComment = comments[comments.length - 2];
     }
     var description = document.createElement('div');
