@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        11.7
+// @version        11.8
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -960,7 +960,11 @@ function isDummyComment(ticketInfo, comment) {
     var isChildTicket = false;
     var customFields = ticketInfo.ticket.custom_fields;
     for (var i = 0; i < customFields.length; i++) {
-        if ((customFields[i].id == 360013377052) && (customFields[i].value.indexOf('child_of:') != -1)) {
+        var customField = customFields[i];
+        if (customField.id != 360013377052) {
+            continue;
+        }
+        if (customField.value && (customField.value.indexOf('child_of:') != -1)) {
             isChildTicket = true;
         }
     }
