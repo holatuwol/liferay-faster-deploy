@@ -1,0 +1,95 @@
+#!/bin/bash
+# Taken from https://gist.github.com/drewbrokke/35b2f5fcb424d908b25760a3237b5bb1
+
+# Requires 'fzf'
+# check_dependency fzf git || exit 1
+
+HELP_TEXT="
+git fuzzy-checkout
+Check out branches quickly with the power of \`fzf\`.
+Default view is local branches (HEADS).
+Usage:
+    git fuzzy-checkout [OPTIONS] <QUERY>
+OPTIONS:
+    -a : Show branches from heads and remotes
+    -r : Show branches from remotes
+    -t : Show branches from tags
+    -h : Show help
+QUERY:
+    An optional query to immediately filter the ref list.
+    This is passed to \`fzf\` as the initial query, and can be changed.
+Examples
+    git fuzzy-checkout             # Show branches from heads (local)
+    git fuzzy-checkout LPS-12345   # Show branches that match the query 'LPS-12345':
+    git fuzzy-checkout -r          # Show branches from remotes
+    git fuzzy-checkout -a          # Show branches from heads and remotes
+    git fuzzy-checkout -t          # Show branches from tags
+"
+
+### Determine whether to search local, remotes, or all
+
+COMMAND_ALL="git for-each-ref refs/heads refs/remotes refs/tags"
+COMMAND_HEADS="git for-each-ref refs/heads"
+COMMAND_REMOTES="git for-each-ref refs/remotes"
+COMMAND_TAGS="git for-each-ref refs/tags"
+
+COMMAND="${COMMAND_HEADS}"
+
+while getopts "ahrt" FLAGS; do
+	case $FLAGS in
+		a) COMMAND="${COMMAND_ALL}" ;;
+		h) echo "$HELP_TEXT" && exit 0 ;;
+		r) COMMAND="${COMMAND_REMOTES}" ;;
+		t) COMMAND="${COMMAND_TAGS}" ;;
+		*) exit 1 ;;
+	esac
+done
+
+shift $((OPTIND - 1))
+
+### Set up display
+
+DELIMITER=" :: "
+
+FZF_HEADER="""
+enter:            check out branch
+ctrl-space:       toggle preview window (shows 'git log' of the selected branch)
+ctrl-d:           delete branch
+ctrl-y:           copy branch name to clipboard
+ctrl-[a h r t]:   show [ALL HEADS REMOTES TAGS]
+"""
+GIT_BRANCH_DISPLAY_FORMAT="%(committerdate:short)${DELIMITER}%(color:yellow)%(refname:short)%(color:reset)"
+RELOAD_SUFFIX="--color=always --format='${GIT_BRANCH_DISPLAY_FORMAT}' --sort=-committerdate"
+
+### Go
+
+${COMMAND} \
+	--color=always \
+	--format="${GIT_BRANCH_DISPLAY_FORMAT}" \
+	--sort=-committerdate \
+	|
+fzf \
+	--ansi \
+	\
+	--bind="ctrl-space:toggle-preview" \
+	--bind="enter:execute(git checkout {2})+accept" \
+	--bind="ctrl-d:execute-silent(git branch -D {+2})+reload:${COMMAND} ${RELOAD_SUFFIX}" \
+	--bind="ctrl-y:execute(printf {+2} | pbcopy)" \
+	\
+	--bind="ctrl-a:reload:${COMMAND_ALL} ${RELOAD_SUFFIX}" \
+	--bind="ctrl-h:reload:${COMMAND_HEADS} ${RELOAD_SUFFIX}" \
+	--bind="ctrl-r:reload:${COMMAND_REMOTES} ${RELOAD_SUFFIX}" \
+	--bind="ctrl-t:reload:${COMMAND_TAGS} ${RELOAD_SUFFIX}" \
+	\
+	--delimiter="${DELIMITER}" \
+	--exact \
+	--header="${FZF_HEADER}" \
+	--info="inline" \
+	--multi \
+	--nth=2 \
+	--no-sort \
+	--preview-window="down:70%:hidden" \
+	--preview="git log -100 --color=always {2}" \
+	--query "$*" \
+	--reverse \
+	;

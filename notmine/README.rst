@@ -10,6 +10,18 @@ CDS
 
 	. ${MCD_RD_CLONE_PATH}/notmine/cds
 
+GCO
+===
+
+* Wrapper: ``gco``
+* Repository: `drewbrokke/gist <https://gist.github.com/drewbrokke/35b2f5fcb424d908b25760a3237b5bb1>`__
+
+.. code-block:: bash
+
+	gco() {
+		${MCD_RD_CLONE_PATH}/notmine/gco $@
+	}
+
 GM
 ==
 
