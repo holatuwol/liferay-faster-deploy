@@ -88,7 +88,7 @@ fzf \
 	--multi \
 	--nth=2 \
 	--no-sort \
-	--preview-window="down:70%:hidden" \
+	--preview-window="down:70%" \
 	--preview="git log -100 --color=always {2}" \
 	--query "$*" \
 	--reverse \
