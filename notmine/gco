@@ -55,10 +55,9 @@ FZF_HEADER="""
 enter:            check out branch
 ctrl-space:       toggle preview window (shows 'git log' of the selected branch)
 ctrl-d:           delete branch
-ctrl-y:           copy branch name to clipboard
 ctrl-[a h r t]:   show [ALL HEADS REMOTES TAGS]
 """
-GIT_BRANCH_DISPLAY_FORMAT="%(committerdate:short)${DELIMITER}%(color:yellow)%(refname:short)%(color:reset)"
+GIT_BRANCH_DISPLAY_FORMAT="%(committerdate:short)${DELIMITER}%(color:yellow)%(refname)%(color:reset)"
 RELOAD_SUFFIX="--color=always --format='${GIT_BRANCH_DISPLAY_FORMAT}' --sort=-committerdate"
 
 ### Go
@@ -73,8 +72,12 @@ fzf \
 	\
 	--bind="ctrl-space:toggle-preview" \
 	--bind="enter:execute(git checkout {2})+accept" \
-	--bind="ctrl-d:execute-silent(git branch -D {+2})+reload:${COMMAND} ${RELOAD_SUFFIX}" \
-	--bind="ctrl-y:execute(printf {+2} | pbcopy)" \
+	--bind='ctrl-d:execute-silent(
+	if [[ {2} == refs/heads/* ]]; then
+		git branch -D $(echo {2} | cut -d"/" -f 3-);
+	else
+		git push $(echo {2} | cut -d"/" -f 3) :$(echo {2} | cut -d"/" -f 4-);
+	fi)+reload:${COMMAND} ${RELOAD_SUFFIX}' \
 	\
 	--bind="ctrl-a:reload:${COMMAND_ALL} ${RELOAD_SUFFIX}" \
 	--bind="ctrl-h:reload:${COMMAND_HEADS} ${RELOAD_SUFFIX}" \
