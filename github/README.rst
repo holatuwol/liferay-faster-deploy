@@ -21,6 +21,10 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 		${MCD_RD_CLONE_PATH}/github/backport $1
 	}
 
+	fixtags() {
+		${MCD_RD_CLONE_PATH}/github/fixtags
+	}
+
 	github() {
 		${MCD_RD_CLONE_PATH}/github/github $@
 	}
@@ -46,6 +50,25 @@ Attempt to Backport LPS Tickets
 ===============================
 
 This script generates ``.patch`` files (which you get from ``git format-patch``) to the current branch and replaces any paths that appear to have changed between the base branch and the current branch, based on the path to the folder containing a ``bnd.bnd``.
+
+.. code-block:: bash
+
+	backport LPS-0 upstream-ce/master
+
+Fix liferay-portal-ee tags
+==========================
+
+Pulls down tags from ``liferay-portal-ee`` that are (probably) GA release tags, fix pack release tags, or marketplace plugin release tags, and delete any extra tags that do not satisfy those criteria.
+
+.. code-block:: bash
+
+	fixtags
+
+If you want to delete all tags on your ``liferay-portal-ee`` remote, you can use the following command:
+
+.. code-block:: bash
+
+	git ls-remote -t ${1} | awk '{ print ":" $2 }' | xargs -r git push ${1}
 
 Open GitHub In Web Browser
 ==========================

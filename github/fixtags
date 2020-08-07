@@ -1,0 +1,29 @@
+#!/bin/bash
+
+check_tags() {
+	for tag in $(grep -e "$1" tags_upstream.txt | sort -t'-' -nk4 | cut -d'/' -f 3); do
+		if [ "" == "$(grep "^${tag}$" tags_local.txt)" ]; then
+			git fetch --no-tags git@github.com:liferay/liferay-portal-ee.git tags/${tag}:refs/tags/${tag}
+		fi
+	done
+}
+
+git tag > tags_local.txt
+
+git ls-remote -t git@github.com:liferay/liferay-portal-ee.git | \
+	awk '{ print $2 }' > tags_upstream.txt
+
+check_tags '/[0-9]*.[0-9]*.[0-9]*-ga[0-9]*$'
+check_tags '/fix-pack-base-[0-9]*\(-private\)*$'
+check_tags '/fix-pack-\(de\|dxp\)-[0-9]*-[0-9]*\(-private\)*$'
+check_tags '/marketplace-.*-[0-9]*\(-private\)*$'
+
+git tag | \
+	grep -v '^[0-9].[0-9].[0-9]*-ga[0-9]$' | \
+	grep -v '^fix-pack-base-[0-9]*\(-private\)*' | \
+	grep -v '^fix-pack-\(de\|dxp\)-[0-9]*-[0-9]*\(-private\)*$' | \
+	grep -v '^marketplace-.*-[0-9]*\(-private\)*$' | \
+	xargs -r git tag -d
+
+rm tags_local.txt
+rm tags_upstream.txt
