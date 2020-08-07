@@ -72,7 +72,7 @@ fzf \
 	\
 	--bind="ctrl-space:toggle-preview" \
 	--bind="enter:execute(git checkout {2})+accept" \
-	--bind='ctrl-d:execute-silent(
+	--bind='ctrl-d:execute(
 	if [[ {2} == refs/heads/* ]]; then
 		git branch -D $(echo {2} | cut -d"/" -f 3-);
 	else
