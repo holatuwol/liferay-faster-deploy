@@ -85,6 +85,20 @@ pmdreport() {
 	$(dirname "${BASH_SOURCE[0]}")/pmdreport
 }
 
+resetbasebranch() {
+	reviewer_remote=$(git config --get remote.${upstream_remote}.url | sed "s@:[^/]*/@:${reviewer}/@")
+
+	git fetch --no-tags ${upstream_remote} $BASE_BRANCH
+	git branch -D reviewer-tmp-rebase
+	git fetch --no-tags ${reviewer_remote} ${BASE_BRANCH}:reviewer-tmp-rebase
+
+	NEW_BASELINE='reviewer-tmp-rebase'
+
+	. $(dirname "${BASH_SOURCE[0]}")/../rebasebranch
+
+	return $?
+}
+
 sendpull() {
 	if [ "" == "$1" ]; then
 		echo Please specify a reviewer
@@ -138,31 +152,9 @@ sendpull() {
 		return 1
 	fi
 
-	git fetch --no-tags ${upstream_remote} $BASE_BRANCH
+	resetbasebranch
 
-	HAS_CHANGES=$(git status -s | grep -vF '??')
-
-	if [ "" != "$HAS_CHANGES" ]; then
-		git stash
-	fi
-
-	git rebase ${upstream_remote}/${BASE_BRANCH}
-
-	local EXIT_CODE=$?
-
-	if [[ 0 -ne $EXIT_CODE ]]; then
-		if [ "" != "$HAS_CHANGES" ]; then
-			git rebase --abort
-			git stash pop
-		fi
-
-		return 1
-	elif [ "" != "$HAS_CHANGES" ]; then
-		git stash pop
-		EXIT_CODE=$?
-	fi
-
-	if [[ 0 -ne $EXIT_CODE ]]; then
+	if [[ 0 -ne $? ]]; then
 		return 1
 	fi
 
@@ -178,16 +170,12 @@ sendpull() {
 
 		checkrepomode
 
-		EXIT_CODE=$?
-
-		if [[ 0 -eq $EXIT_CODE ]]; then
+		if [[ 0 -eq $? ]]; then
 			if [ "" != "$(grep setup-libs build.xml)" ]; then
 				ant setup-sdk
 			fi
 
 			fixdeps && baseline && formatsource && pmdreport
-
-			EXIT_CODE=$?
 		fi
 
 		popd > /dev/null
