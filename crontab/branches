@@ -81,17 +81,17 @@ branches() {
 
 	for folder in $REBUILD; do
 		if [ "master" == "$folder" ]; then
-			branch master-private master-private
+			branch master master-private
 			branch master master 60
 		elif [ "72x" == "$folder" ]; then
 			branch 7.2.x 72x 72x
-			branch 7.2.x-private 72x-private 72
+			branch 7.2.x 72x-private 72
 		elif [ "71x" == "$folder" ]; then
 			branch 7.1.x 71x 71x
-			branch 7.1.x-private 71x-private 71
+			branch 7.1.x 71x-private 71
 		elif [ "70x" == "$folder" ]; then
 			branch 7.0.x 70x 70x
-			branch 7.0.x-private 70x-private 70
+			branch 7.0.x 70x-private 70
 		elif [ "62x" == "$folder" ]; then
 			branch ee-6.2.x 62x 62
 		elif [ "61x" == "$folder" ]; then

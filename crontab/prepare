@@ -34,10 +34,6 @@ compile() {
 	echo "$GIT_HASH" | tee -a "${LIFERAY_HOME}.log"
 	echo '' | tee -a "${LIFERAY_HOME}.log"
 
-	if [ -f working.dir.properties ] && [ -f build-working-dir.xml ]; then
-		ant -f build-working-dir.xml
-	fi
-
 	fixdefaults
 
 	if [ -f modules/build.gradle ]; then
@@ -52,6 +48,10 @@ compile() {
 	if [ "ee-6.1.x" == "${BASE_BRANCH}" ] || [ "ee-6.2.x" == "${BASE_BRANCH}" ]; then
 		ant start deploy |& tee -a "${LIFERAY_HOME}.log"
 	else
+		if [[ $1 == *-private ]]; then
+			ant setup-profile-dxp |& tee -a "${LIFERAY_HOME}.log"
+		fi
+
 		ant compile deploy |& tee -a "${LIFERAY_HOME}.log"
 	fi
 
