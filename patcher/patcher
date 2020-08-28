@@ -5,7 +5,10 @@ fix_dependencies() {
 		sed -i.bak "/${2}/s/version: \"[1-9][^\"]*\"/version: \"default\"/g" ${1}
 	else
 		local project=$(git ls-files | grep -F bnd.bnd | xargs grep -l ": ${2}$" | sed 's@/bnd\.bnd$@@g' | sed 's@^modules@@g' | tr '/' ':')
-		sed -i.bak "/${2}/s/group:.*$/project(\"${project}\")/g" ${1}
+
+		if [ "" != "${project}" ]; then
+			sed -i.bak "/${2}/s/group:.*$/project(\"${project}\")/g" ${1}
+		fi
 	fi
 
 	git add ${1}
@@ -76,8 +79,8 @@ checkcommonerrors() {
 	local PORTAL_BOOTSTRAP=$(git ls-files modules/core | grep -F portal-bootstrap/build.gradle)
 
 	for file in $CHANGED_GRADLE; do
-		if [ "" != "$(git diff $BASE_TAG..HEAD -- $file | grep -F '+' | grep -F 'version: ')" ]; then
-			for bundle in $(git diff $BASE_TAG..HEAD -- $file | grep -F '+' | grep -F 'version: ' | grep -o 'name: "[^"]*"' | cut -d'"' -f 2); do
+		if [ "" != "$(git diff $BASE_TAG..HEAD -- $file | grep -F '+' | grep -F 'group: "com.liferay' | grep -F 'version: ')" ]; then
+			for bundle in $(git diff $BASE_TAG..HEAD -- $file | grep -F '+' | grep -F 'group: "com.liferay' | grep -F 'version: ' | grep -o 'name: "[^"]*"' | cut -d'"' -f 2); do
 				fix_dependencies "${file}" "${bundle}"
 				fix_dependencies "${PORTAL_BOOTSTRAP}" "${bundle}"
 			done
