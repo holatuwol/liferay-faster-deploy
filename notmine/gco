@@ -77,7 +77,7 @@ fzf \
 		git branch -D $(echo {2} | cut -d"/" -f 3-);
 	else
 		git push $(echo {2} | cut -d"/" -f 3) :$(echo {2} | cut -d"/" -f 4-);
-	fi)+reload:${COMMAND} ${RELOAD_SUFFIX}' \
+	fi)+'"reload:${COMMAND} ${RELOAD_SUFFIX}" \
 	\
 	--bind="ctrl-a:reload:${COMMAND_ALL} ${RELOAD_SUFFIX}" \
 	--bind="ctrl-h:reload:${COMMAND_HEADS} ${RELOAD_SUFFIX}" \
