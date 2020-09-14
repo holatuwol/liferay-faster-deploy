@@ -1,3 +1,24 @@
+var style = document.createElement('style');
+
+style.textContent = `
+#work-times th, #work-times td {
+	border: 1px solid;
+	padding: 0.2em;
+	width: 5em;
+}
+#work-times td.work-time {
+	background-color: #039ae5;
+}
+#work-times td .today {
+	background-color: #ea4335;
+	border-radius: 50%;
+	height: 1em;
+	width: 1em;
+}
+`;
+
+document.head.appendChild(style);
+
 function adjustWorkTimes(gmtOffset) {
 	var workTimesSets = workTimes.map(x => new Set(x[1]));
 	var offset = workTimesGMTOffset - gmtOffset;
@@ -38,11 +59,30 @@ function createTableElement(tagName, text, fillIn) {
 function renderWorkTimes(gmtOffset) {
 	var adjustedWorkTimes = adjustWorkTimes(gmtOffset);
 
-	var workTable = adjustedWorkTimes.map((row) => {
+	var now = new Date();
+
+	var localOffset = 0 - (now.getTimezoneOffset() / 60);
+	var offset = gmtOffset - localOffset;
+
+	var gmtOffsetNow = new Date(now.getTime() + (offset * 3600 * 1000));
+	var gmtOffsetHours = gmtOffsetNow.getHours();
+	var gmtOffsetDay = (gmtOffsetNow.getDay() + 6) % 7;
+
+	var workTable = adjustedWorkTimes.map((row, dayOfWeek) => {
 		return [
 			createTableElement('th', row[0])
 		].concat(
-			row[1].map((fillIn) => createTableElement('td', ' ', fillIn))
+			row[1].map((fillIn, hourOfDay) => {
+				var hourContent = ' ';
+
+				if (hourOfDay == gmtOffsetHours && dayOfWeek == gmtOffsetDay) {
+					hourContent = document.createElement('div');
+					hourContent.textContent = ' ';
+					hourContent.classList.add('today');
+				}
+
+				return createTableElement('td', hourContent, fillIn);
+			})
 		)
 	})
 
