@@ -1,14 +1,3 @@
-var workTimes = [
-	["Mon", [10,11,12,21,22,23]],
-	["Tue", [10,11,12,14,15,16,20,22,23]],
-	["Wed", [10,11,12,21,22,23]],
-	["Thu", [10,11,12,14,15,16,22,23]],
-	["Fri", [10,11,12,14,15,16,17,18]],
-	["Sat", []],
-	["Sun", [22]]
-];
-var workTimesGMTOffset = -7;
-
 function adjustWorkTimes(gmtOffset) {
 	var workTimesSets = workTimes.map(x => new Set(x[1]));
 	var offset = workTimesGMTOffset - gmtOffset;
