@@ -7,10 +7,10 @@ style.textContent = `
 	width: 5em;
 }
 #work-times td.work-time {
-	background-color: #039ae5;
+	background-color: #ccc;
 }
 #work-times td .today {
-	background-color: #ea4335;
+	background-color: #000;
 	border-radius: 50%;
 	height: 1em;
 	width: 1em;
