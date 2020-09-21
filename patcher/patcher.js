@@ -1,3 +1,10 @@
+// ==UserScript==
+// @name           Generate patcher.json from Patcher Create Fix
+// @namespace      holatuwol
+// @match          https://patcher.liferay.com/group/guest/patching/-/osb_patcher/fixes/create?_1_WAR_osbpatcherportlet_patcherProductVersionId=0
+// @grant          unsafeWindow
+// ==/UserScript==
+
 /**
  * Switch the product versions so that we can peek inside each of the drop downs.
  */
@@ -74,6 +81,22 @@ function setProjectVersions7(accumulator, next) {
 };
 
 /**
+ * Add product versions based on the giant JSON object on the page.
+ */
+
+function setProjectVersionsFromMap(accumulator, next) {
+  var key = next.committish;
+
+  if ((key == '') || (key.indexOf('marketplace') != -1)) {
+    return accumulator;
+  }
+
+  accumulator[key] = next.patcherProjectVersionId;
+
+  return accumulator;
+}
+
+/**
  * Parses the major/minor/patch version from the name of the fix pack.
  */
 
@@ -144,20 +167,55 @@ function compareLiferayVersions(a, b) {
   return a > b ? 1 : a < b ? -1 : 0;
 };
 
+function getProjectVersionIdsFromScript(script) {
+  var scriptContent = script.innerHTML;
+
+  var x = scriptContent.indexOf('{', scriptContent.indexOf('Liferay.Patcher.populateProjectVersionField'));
+  var y = scriptContent.indexOf(')', x);
+
+  var data = eval('data = ' + scriptContent.substring(x, y));
+
+  var projectVersionIds = {
+    'ee-6.1.x': 101625503,
+    'ee-6.2.x': 101625503,
+    'ee-7.0.x': 101625504,
+    '7.0.x': 101625504,
+    '7.0.x-private': 101625504,
+    '7.1.x': 102311424,
+    '7.1.x-private': 102311424,
+    '7.2.x': 130051253,
+    '7.2.x-private': 130051253,
+  };
+
+  for (projectVersionId in data) {
+    data[projectVersionId].reduce(setProjectVersionsFromMap, projectVersionIds);
+  }
+
+  return projectVersionIds;
+}
+
+function getProjectVersionIdsFromSelects() {
+  var productVersionOptions = document.querySelectorAll('#_1_WAR_osbpatcherportlet_patcherProductVersionId option');
+
+  var projectVersionIds = {
+    'ee-6.1.x': 101625503,
+    'ee-6.2.x': 101625503,
+    'ee-7.0.x': 101625504,
+  };
+
+  Array.from(productVersionOptions).reduce(setProductVersions, projectVersionIds);
+
+  return projectVersionIds;
+}
+
 /**
  * Generate the patcher.json file whenever the projects are ready.
  */
 
 function generatePatcherJSON() {
-  var productVersionOptions = document.querySelectorAll('#_1_WAR_osbpatcherportlet_patcherProductVersionId option');
+  var scripts = Array.from(document.querySelectorAll('script')).filter(x => x.innerHTML.indexOf('Liferay.Patcher.populateProjectVersionField') != -1);
 
-  var projectVersionIds = {
-      'ee-6.1.x': 101625503,
-      'ee-6.2.x': 101625503,
-      'ee-7.0.x': 101625504
-  }
-
-  Array.from(productVersionOptions).reduce(setProductVersions, projectVersionIds);
+  var projectVersionIds = scripts.length == 1 ? getProjectVersionIdsFromScript(scripts[0]) : getProjectVersionIdsFromSelects();
 
   delete projectVersionIds['fix-pack-base-6210-sp18'];
 
@@ -169,3 +227,5 @@ function generatePatcherJSON() {
 
   console.log(jsonString.replace(/    /g, '\t'));
 }
+
+unsafeWindow.generatePatcherJSON = generatePatcherJSON;
