@@ -1,0 +1,60 @@
+<html><head>
+<title>Module Version Changes Since DXP Release, Marketplace Edition</title>
+
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+<!-- Optional theme -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+
+<!-- Latest compiled and minified JavaScript -->
+<script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
+</head>
+
+<body>
+
+<div class="container" role="main">
+
+<h1>Module Version Changes Since DXP Release, Marketplace Edition</h1>
+
+<p><strong>Warning</strong>: This is NOT an official Liferay tool, nor is it supported by Liferay in any way. This does a source code analysis of the code that exists at the tag for the specified release.</p>
+
+<h2>Perform a Comparison</h2>
+
+<p>Compare <select id="includeFilter" name="includeFilter"><option value="commerce">Commerce</option></select> modules</p>
+
+<p><strong>Note</strong>: Entries with a gray background indicate a version change. Version 0.0.0 means that the module does not exist in that version of the marketplace application.</p>
+
+<table class="table">
+<thead>
+<th colspan=2 style="width: 100%">
+<input id="nameFilter" name="nameFilter" type="text" placeholder="filter by group or artifact name" style="width: 100%" />
+</th>
+<th>
+<select id="sourceVersion" name="sourceVersion">
+</select>
+</th>
+<th>
+<select id="targetVersion" name="targetVersion">
+</select>
+</th>
+</thead>
+
+<tbody id="summary">
+</tbody>
+</table>
+
+</div>
+
+</body>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js" integrity="sha384-FZY+KSLVXVyc1qAlqH9oCx1JEOlQh6iXfw3o2n3Iy32qGjXmUPWT9I0Z9e9wxYe3" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.5/jszip.min.js" integrity="sha384-6M0rZuK8mRhdpnt5f7OV2x+2kGHdPMTeq8E4qSbS5S4Ohq+Mcq1ZmSWQV3FdawvW" crossorigin="anonymous"></script>
+<script src="mpmodules.js"></script>
+<!--
+<script src="https://s3-us-west-2.amazonaws.com/mdang.grow/dxpmodules.js"></script>
+-->
+
+</html>

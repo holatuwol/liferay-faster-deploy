@@ -36,42 +36,21 @@ class SourceTrie:
 
 		# Load information from bnd.bnd
 
-		_, artifact_version = self.extract_version(path, 'modules/.releng/%s.properties' % path)
+		artifact_group, artifact_name, artifact_version = self.extract_version(
+			path, 'modules/.releng/%s.properties' % path)
 
-		build_xml = '%s/build.xml' % path
-
-		if artifact_version is None:
-			if os.path.isfile(build_xml):
-				self.add(path, None, None, None)
-
-			return
-
-		# Load the artifact name from build.xml
-
-		with open(build_xml, 'r') as f:
-			lines = [line for line in f.readlines() if line.find('"manifest.bundle.symbolic.name"') > 0]
-
-		if len(lines) != 1:
-			return
-
-		x = lines[0].find('value="')+7
-		y = lines[0].find(';', x)
-
-		if y < 0:
-			y = lines[0].find('"', x)
-
-		artifact_name = lines[0][x:y]
-		self.add(path, 'com.liferay.portal', artifact_name, artifact_version)
+		self.add(path, artifact_group, artifact_name, artifact_version)
 
 	def add_gradle(self, path):
-		artifact_name, artifact_version = self.extract_version(path, 'modules/.releng/%s/artifact.properties' % path[8:])
-		self.add(path, 'com.liferay', artifact_name, artifact_version)
+		artifact_group, artifact_name, artifact_version = self.extract_version(
+			path, 'modules/.releng/%s/artifact.properties' % path[8:])
+		self.add(path, artifact_group, artifact_name, artifact_version)
 
 	def extract_version(self, module_path, releng_path):
 		bnd_bnd = '%s/bnd.bnd' % module_path
 
 		if not os.path.exists(bnd_bnd):
-			return None, None
+			return None, None, None
 
 		with open(bnd_bnd, 'r') as f:
 			lines = [line for line in f.readlines()]
@@ -88,18 +67,29 @@ class SourceTrie:
 			artifact_url_lines = []
 
 		if len(name_lines) != 1 or len(version_lines) != 1:
-			return None, None
+			return None, None, None
 
 		artifact_name = name_lines[0][20:].strip()
 
 		if len(artifact_url_lines) > 0:
 			artifact_url = artifact_url_lines[0][13:]
-			version_pos = artifact_url.find('/' + artifact_name + '/') + len(artifact_name) + 2
+
+			if artifact_name == '${manifest.bundle.symbolic.name}':
+				version_pos = artifact_url.rfind('/', 0, artifact_url.rfind('/') - 1) + 1
+				name_pos = artifact_url.rfind('/', 0, version_pos - 1) + 1
+				artifact_name = artifact_url[name_pos:version_pos - 1]
+
+			name_pos = artifact_url.find('/' + artifact_name + '/')
+			group_pos = artifact_url.rfind('/com/', 0, name_pos) + 1
+			artifact_group = artifact_url[group_pos:name_pos].replace('/', '.')
+
+			version_pos = name_pos + len(artifact_name) + 2
 			artifact_version = artifact_url[version_pos:artifact_url.find('/', version_pos)]
 		else:
+			artifact_group = 'com.liferay'
 			artifact_version = version_lines[0][15:].strip() + '-SNAPSHOT'
 
-		return artifact_name, artifact_version
+		return artifact_group, artifact_name, artifact_version
 
 	def find_leaf(self, path):
 		result = self

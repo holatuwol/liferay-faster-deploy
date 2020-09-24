@@ -29,7 +29,7 @@ PORTAL_SOURCE_ROOT=${PORTAL_SOURCE_ROOT_70} ${SCRIPT_FOLDER}/jsversions > dxpjsl
 # Upload the files to the designated bucket
 
 if [ "" != "${S3_BUCKET}" ]; then
-	for file in dxppackages dxpmodules dxpschemas dxpjslibrary; do
+	for file in dxppackages dxpmodules dxpschemas dxpjslibrary mpmodules; do
 		s3upload ${file}.json
 
 		pushd $(dirname ${BASH_SOURCE[0]}) > /dev/null

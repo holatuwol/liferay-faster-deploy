@@ -1,7 +1,7 @@
 #!/bin/bash
 
 bootstrap() {
-	if [[ $1 == *-private ]]; then
+	if [[ $1 == marketplace-* ]] || [[ $1 == *-private ]]; then
 		return 0
 	fi
 
@@ -39,25 +39,27 @@ bundleinfo() {
 
 	echo "Generating bundle info for $1"
 
-	for folder in $(ls -1 . | sort -u); do
-		if [ -f "$folder/bnd.bnd" ]; then
-			local BUNDLE_NAME="com.liferay.$(echo $folder | tr '-' '.')"
+	if [ "modules" == "${MARKETPLACE_FOLDER}" ]; then
+		for folder in $(ls -1 . | sort -u); do
+			if [ -f "$folder/bnd.bnd" ]; then
+				local BUNDLE_NAME="com.liferay.$(echo $folder | tr '-' '.')"
 
-			local BUNDLE_VERSION="$(grep '^Bundle-Version' $folder/bnd.bnd | cut -d' ' -f 2-)-SNAPSHOT"
-			local RELENG_PATH="modules/.releng/${folder}.properties"
+				local BUNDLE_VERSION="$(grep '^Bundle-Version' $folder/bnd.bnd | cut -d' ' -f 2-)-SNAPSHOT"
+				local RELENG_PATH="modules/.releng/${folder}.properties"
 
-			if [ -f ${RELENG_PATH} ]; then
-				BUNDLE_VERSION=$(grep 'artifact.url' modules/.releng/${folder}.properties | cut -d'=' -f 2 | grep -o "/${BUNDLE_NAME}/[^/]*" | cut -d'/' -f 3)
-			else
-				RELENG_PATH=
+				if [ -f ${RELENG_PATH} ]; then
+					BUNDLE_VERSION=$(grep 'artifact.url' modules/.releng/${folder}.properties | cut -d'=' -f 2 | grep -o "/${BUNDLE_NAME}/[^/]*" | cut -d'/' -f 3)
+				else
+					RELENG_PATH=
+				fi
+
+				echo "com.liferay.portal,${BUNDLE_NAME},${BUNDLE_VERSION},public,${folder},${RELENG_PATH},jar" >> ${OUTPUT_FILE}
 			fi
+		done
+	fi
 
-			echo "com.liferay.portal,${BUNDLE_NAME},${BUNDLE_VERSION},public,${folder},${RELENG_PATH},jar" >> ${OUTPUT_FILE}
-		fi
-	done
-
-	if [ "" != "$(git ls-files modules | grep -F '/.lfrbuild-portal')" ]; then
-		git ls-files modules | grep -F '/.lfrbuild-portal' | \
+	if [ "" != "$(git ls-files ${SCAN_FOLDER} | grep -F '/.lfrbuild-portal')" ]; then
+		git ls-files ${SCAN_FOLDER} | grep -F '/.lfrbuild-portal' | \
 			grep -v '^modules/aspectj/' | \
 			grep -vF -- '-compat/' | \
 			grep -v '^modules/post-upgrade-fix/' | \
@@ -67,7 +69,7 @@ bundleinfo() {
 			grep -v '^modules/util/' | \
 			dirnames | sort -u > ${GIT_ROOT}/.redeploy/bundleinfo.txt
 	else
-		git ls-files modules | grep '/\(build.gradle\|apps/foundation/frontend-theme/.*/gulpfile.js\)$' | \
+		git ls-files ${SCAN_FOLDER} | grep '/\(build.gradle\|apps/foundation/frontend-theme/.*/gulpfile.js\)$' | \
 			grep -vF -- '-test/build.gradle' | \
 			grep -v '^modules/apps/asset-tags-validator/' | \
 			grep -v 'modules/apps/forms-and-workflow/portal-rules-engine/portal-rules-engine-sample-web/' | \
@@ -152,9 +154,19 @@ bundleinfo() {
 }
 
 checkfile() {
+	SCAN_FOLDER=
+
+	if [[ $1 == marketplace-* ]]; then
+		SCAN_FOLDER=$(find . -type d -wholename "*$(echo "$1" | sed 's@^[^-]*-\(.*\)-[0-9]*\.[0-9]*\.[0-9]*-[0-9]*$@apps/\1@g')" | grep -vF .releng)
+	else
+		SCAN_FOLDER=modules
+	fi
+
 	OUTPUT_FILE=
 
-	if [[ $1 == fix-pack-base-* ]]; then
+	if [[ $1 == marketplace-* ]]; then
+		OUTPUT_FILE=${OUTPUT_FOLDER}/$2-$1.txt
+	elif [[ $1 == fix-pack-base-* ]]; then
 		OUTPUT_FILE=${OUTPUT_FOLDER}/$2-$(echo $1 | cut -d'-' -f 4)-base.txt
 	elif [[ $1 == fix-pack-* ]]; then
 		OUTPUT_FILE=${OUTPUT_FOLDER}/$2-$(echo "$1" | cut -d'-' -f 5)-$(echo "$1" | cut -d'-' -f 3,4,6).txt
@@ -172,7 +184,7 @@ checkfile() {
 	fi
 
 	if [ "" == "$(git tag | grep -F "$1")" ]; then
-		if [[ $1 == fix-pack-* ]]; then
+		if [[ $1 == fix-pack-* ]] || [[ $1 == marketplace-* ]]; then
 			git fetch --no-tags git@github.com:liferay/liferay-portal-ee.git tags/$1:refs/tags/$1
 		else
 			git fetch --no-tags git@github.com:liferay/liferay-portal.git tags/$1:refs/tags/$1
@@ -214,6 +226,12 @@ changelog() {
 		for ticket in $(git log --pretty='%s' -1 ${COMMIT_RSYNC_72} | grep -o 'LPS-[1-9][0-9]*' | grep -vF 'LPS-100337' | sort -u -n -t'-' -k2); do
 			changelog_ticket ${COMMIT_RSYNC_MASTER} 7.2.0-ga1 ${ticket} >> ${OUTPUT_FILE}
 		done
+	elif [[ $1 == marketplace-* ]]; then
+		SCAN_FOLDER=$(find . -wholename "*$(echo "$1" | sed 's@^[^-]*-\(.*\)-[0-9]*\.[0-9]*\.[0-9]*-[0-9]*$@apps/\1/@g')" | grep -vF .releng)
+
+		for ticket in $(git log --pretty='%s' ${2}..${1} -- ${SCAN_FOLDER} | grep -o '[A-Z]*-[1-9][0-9]*' | sort -u -n -t'-' -k2); do
+			changelog_ticket ${1} ${2} ${ticket} >> ${OUTPUT_FILE}
+		done
 	else
 		for ticket in $(git log --pretty='%s' ${2}..${1} | grep -o 'LPS-[1-9][0-9]*' | sort -u -n -t'-' -k2); do
 			changelog_ticket ${1} ${2} ${ticket} >> ${OUTPUT_FILE}
@@ -252,7 +270,7 @@ changelog_ticket() {
 }
 
 dependencies() {
-	if [[ $1 == *-private ]]; then
+	if [[ $1 == marketplace-* ]] || [[ $1 == *-private ]]; then
 		return 0
 	fi
 
@@ -317,21 +335,25 @@ packageinfo() {
 
 	# Handle root projects, which might not have packageinfo files
 
-	for folder in $(ls -1 . | sort -u); do
-		if [ -f $folder/bnd.bnd ]; then
-			find "$folder/src" -type f -printf '%h\n' | sort -u >> ${GIT_ROOT}/.redeploy/packageinfo.txt
-		fi
-	done
+	if [[ $1 != marketplace-* ]]; then
+		for folder in $(ls -1 . | sort -u); do
+			if [ -f $folder/bnd.bnd ]; then
+				find "$folder/src" -type f -printf '%h\n' | sort -u >> ${GIT_ROOT}/.redeploy/packageinfo.txt
+			fi
+		done
+	fi
 
 	# Handle modules, which always have packageinfo files
 
-	git ls-files modules | grep -F '/packageinfo' | grep -v '^modules/sdk/' | grep -v '^modules/test/' | grep -v '^modules/util/' | dirnames | sort >> ${GIT_ROOT}/.redeploy/packageinfo.txt
+	git ls-files ${SCAN_FOLDER} | grep -F '/packageinfo' | grep -v '^modules/sdk/' | grep -v '^modules/test/' | grep -v '^modules/util/' | dirnames | sort >> ${GIT_ROOT}/.redeploy/packageinfo.txt
 
 	python $(dirname $0)/packageinfo.py $OUTPUT_FILE
 
 	# Handle portal-compat modules
 
-	packageinfo_compat
+	if [[ $1 != marketplace-* ]]; then
+		packageinfo_compat
+	fi
 }
 
 packageinfo_compat() {
@@ -410,6 +432,10 @@ packageinfo_release() {
 			packageinfo_tag ${tag_id} ${OLD_TAG_ID}
 			OLD_TAG_ID=${tag_id}
 		done
+
+		for tag_id in $(grep '^marketplace-.*$' $OUTPUT_FOLDER/marketplace.txt); do
+			packageinfo_tag ${tag_id}
+		done
 	else
 		if [ "" == "${OUTPUT_FOLDER}" ]; then
 			NEW_OUTPUT_FOLDER=/tmp
@@ -457,9 +483,9 @@ requireschema() {
 	echo "Generating require schema versions for $1"
 
 	if [ "$1" == "7.0.0-ga1" ]; then
-		git ls-files modules | grep -F -- '-service/bnd.bnd' | grep -v '^modules/sdk/' | grep -v '^modules/test/' | grep -v '^modules/util/' | dirnames | sort -u > ${GIT_ROOT}/.redeploy/requireschema.txt
+		git ls-files ${SCAN_FOLDER} | grep -F -- '-service/bnd.bnd' | grep -v '^modules/sdk/' | grep -v '^modules/test/' | grep -v '^modules/util/' | dirnames | sort -u > ${GIT_ROOT}/.redeploy/requireschema.txt
 	else
-		git ls-files modules | grep -F -- '-service/.lfrbuild-portal' | grep -v '^modules/sdk/' | grep -v '^modules/test/' | grep -v '^modules/util/' | dirnames | sort -u > ${GIT_ROOT}/.redeploy/requireschema.txt
+		git ls-files ${SCAN_FOLDER} | grep -F -- '-service/.lfrbuild-portal' | grep -v '^modules/sdk/' | grep -v '^modules/test/' | grep -v '^modules/util/' | dirnames | sort -u > ${GIT_ROOT}/.redeploy/requireschema.txt
 	fi
 
 	for folder in $(cat ${GIT_ROOT}/.redeploy/requireschema.txt); do
@@ -492,6 +518,10 @@ savetags() {
 	git ls-remote -t git@github.com:liferay/liferay-portal-ee.git | \
 		awk '{ print $2 }' | grep "/fix-pack-.*-${2}10$" | \
 		sort -t'-' -nk4,5 | cut -d'/' -f 3 | tee -a $OUTPUT_FOLDER/tags.txt
+
+	git ls-remote -t git@github.com:liferay/liferay-portal-ee.git | \
+		awk '{ print $2 }' | grep "/marketplace-commerce-.*-${2}10$" | \
+		sort | cut -d'/' -f 3 | tee -a $OUTPUT_FOLDER/marketplace.txt
 }
 
 if [ "" == "${1}" ]; then

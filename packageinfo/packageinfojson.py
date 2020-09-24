@@ -7,9 +7,7 @@ import json
 import os
 import sys
 
-def get_release_tuple(release_tuple):
-	release_id = release_tuple[1]
-
+def get_dxp_release_tuple(release_id):
 	x = release_id.find('-')
 
 	release_number = release_id[0:x]
@@ -22,34 +20,20 @@ def get_release_tuple(release_tuple):
 	elif patch_level.find('dxp-') == 0:
 		patch_level = patch_level[4:]
 
-	private = False
-
 	if patch_level == 'base':
 		patch_level = '0'
 
-	return (release_number, int(patch_level), private)
+	return (None, release_number, int(patch_level))
 
-file_metadata = sorted(
-	set(
-		[
-			(folder, f[f.find('-')+1:-4])
-				for folder in sys.argv[1:]
-					for f in os.listdir('%s/metadata' % folder)
-						if f != 'tags.txt' and f.find('-private') == -1
-		]
-	),
-	key=get_release_tuple
-)
+def get_marketplace_release_tuple(release_id):
+	product_pos = len('marketplace-')
+	version_pos = release_id.rfind('-', 0, release_id.rfind('-')) + 1
 
-folders = [metadata[0] for metadata in file_metadata]
-file_suffixes = [metadata[1] for metadata in file_metadata]
+	product = release_id[product_pos:version_pos-1]
+	release_number = release_id[-4:]
+	patch_level = release_id[version_pos:-5]
 
-bundle_file_names = ['bundleinfo-%s.txt' % suffix for suffix in file_suffixes]
-dependencies_file_names = ['dependencies-%s.txt' % suffix for suffix in file_suffixes]
-package_file_names = ['packageinfo-%s.txt' % suffix for suffix in file_suffixes]
-bootstrap_file_names = ['bootstrap-%s.txt' % suffix for suffix in file_suffixes]
-
-json_suffixes = [suffix if suffix[5:7] != 'de' and suffix[5:8] != 'dxp' else suffix[0:8] + suffix[8:].zfill(2) for suffix in file_suffixes]
+	return (product, release_number, patch_level)
 
 # Read the CSV file
 
@@ -90,7 +74,12 @@ def read_bundle_file(folder, file_name):
 def read_bootstrap_file(folder, file_name):
 	result = {}
 
-	with open('%s/metadata/%s' % (folder, file_name), 'r') as f:
+	full_path = '%s/metadata/%s' % (folder, file_name)
+
+	if not os.path.exists(full_path):
+		return {}
+
+	with open(full_path, 'r') as f:
 		reader = csv.reader(f)
 		result = {
 			row[1]: {
@@ -164,15 +153,15 @@ def read_package_file(folder, file_name):
 
 # Add another entry
 
-def add_bundle_file(bundles, folder, file_name, suffix):
+def add_bundle_file(bundles, folder, application_name, file_name, suffix):
 	for key, row in read_bundle_file(folder, file_name).items():
 		if key not in bundles:
 			bundles[key] = {
+				'application': application_name,
 				'group': row['group'],
 				'name': row['name'],
 				'repository': row['repository'],
 				'sourceFolder': row['sourceFolder'],
-				'version': '0.0.0',
 				'packaging': row['packaging']
 			}
 
@@ -181,13 +170,13 @@ def add_bundle_file(bundles, folder, file_name, suffix):
 
 	return bundles
 
-def add_bootstrap_file(bundles, folder, file_name, suffix):
+def add_bootstrap_file(bundles, folder, application_name, file_name, suffix):
 	for key, row in read_bootstrap_file(folder, file_name).items():
 		if key not in bundles:
 			bundles[key] = {
+				'application': application_name,
 				'group': row['group'],
 				'name': row['name'],
-				'version': '0.0.0',
 				'repository': 'public',
 				'sourceFolder': None,
 				'packaging': 'jar'
@@ -197,15 +186,15 @@ def add_bootstrap_file(bundles, folder, file_name, suffix):
 
 	return bundles
 
-def add_dependencies_file(bundles, folder, file_name, suffix):
+def add_dependencies_file(bundles, folder, application_name, file_name, suffix):
 	for key, row in read_dependencies_file(folder, file_name).items():
 		if key not in bundles:
 			bundles[key] = {
+				'application': application_name,
 				'group': row['group'],
 				'name': row['name'],
 				'repository': row['repository'],
 				'sourceFolder': None,
-				'version': '0.0.0',
 				'packaging': row['packaging']
 			}
 
@@ -214,10 +203,15 @@ def add_dependencies_file(bundles, folder, file_name, suffix):
 
 	return bundles
 
-def add_package_file(packages, folder, file_name, suffix):
+def add_package_file(packages, folder, application_name, file_name, suffix):
 	for key, row in read_package_file(folder, file_name).items():
 		if key not in packages:
-			packages[key] = { 'group': row['group'], 'name': row['name'], 'package': key, 'packageVersion': '0.0.0' }
+			packages[key] = {
+				'application': application_name,
+				'group': row['group'],
+				'name': row['name'],
+				'package': key
+			}
 
 		packages[key][suffix] = True
 		packages[key]['packageVersion_%s' % suffix] = row['packageVersion']
@@ -226,55 +220,96 @@ def add_package_file(packages, folder, file_name, suffix):
 
 # Load data files
 
-packages = {}
+def generate_metadata_files(file_metadata, modules_file_name, packages_file_name):
+	folders = [metadata[0] for metadata in file_metadata]
+	file_suffixes = [metadata[1] for metadata in file_metadata]
+	json_suffixes = [metadata[2] for metadata in file_metadata]
+	application_names = [metadata[3][0] for metadata in file_metadata]
 
-for folder, file_name, suffix in zip(folders, package_file_names, json_suffixes):
-	packages = add_package_file(packages, folder, file_name, suffix)
+	bundle_file_names = ['bundleinfo-%s.txt' % suffix for suffix in file_suffixes]
+	dependencies_file_names = ['dependencies-%s.txt' % suffix for suffix in file_suffixes]
+	package_file_names = ['packageinfo-%s.txt' % suffix for suffix in file_suffixes]
+	bootstrap_file_names = ['bootstrap-%s.txt' % suffix for suffix in file_suffixes]
 
-bundles = {}
+	packages = {}
 
-for folder, bundle_file_name, dependencies_file_name, bootstrap_file_name, suffix in \
-	zip(folders, bundle_file_names, dependencies_file_names, bootstrap_file_names, json_suffixes):
+	for folder, application_name, file_name, suffix in zip(folders, application_names, package_file_names, json_suffixes):
+		packages = add_package_file(packages, folder, application_name, file_name, suffix)
 
-	bundles = add_bundle_file(bundles, folder, bundle_file_name, suffix)
-	bundles = add_dependencies_file(bundles, folder, dependencies_file_name, suffix)
-	bundles = add_bootstrap_file(bundles, folder, bootstrap_file_name, suffix)
+	bundles = {}
 
-# Fill in missing values
+	for folder, application_name, bundle_file_name, dependencies_file_name, bootstrap_file_name, suffix in \
+		zip(folders, application_names, bundle_file_names, dependencies_file_names, bootstrap_file_names, json_suffixes):
 
-for row in bundles.values():
-	for suffix in json_suffixes:
-		if suffix not in row:
-			row['version_%s' % suffix] = '0.0.0'
-		else:
-			del row[suffix]
+		bundles = add_bundle_file(bundles, folder, application_name, bundle_file_name, suffix)
+		bundles = add_dependencies_file(bundles, folder, application_name, dependencies_file_name, suffix)
+		bundles = add_bootstrap_file(bundles, folder, application_name, bootstrap_file_name, suffix)
 
-for row in packages.values():
-	for suffix in json_suffixes:
-		if suffix not in row:
-			row['packageVersion_%s' % suffix] = '0.0.0'
-		else:
-			del row[suffix]
+	# Fill in missing values
 
-# Identify module changes
+	for row in bundles.values():
+		for suffix in json_suffixes:
+			if suffix not in row:
+				row['version_%s' % suffix] = '0.0.0'
+			else:
+				del row[suffix]
 
-columns = ['group', 'name', 'version', 'repository', 'sourceFolder', 'packaging']
-columns += ['version_%s' % suffix for suffix in json_suffixes]
+	for row in packages.values():
+		for suffix in json_suffixes:
+			if suffix not in row:
+				row['packageVersion_%s' % suffix] = '0.0.0'
+			else:
+				del row[suffix]
 
-unique_modules = {(row['group'], row['name']): row for row in bundles.values()}
-module_changes = [{ column: row[column] for column in columns } for row in unique_modules.values()]
-module_changes = sorted(module_changes, key = lambda x: (x['group'], x['name']))
+	# Identify module changes
 
-with open('dxpmodules.json', 'w') as f:
-	json.dump(module_changes, f, sort_keys=True, separators=(',', ':'))
+	columns = ['application', 'group', 'name', 'repository', 'sourceFolder', 'packaging']
+	columns += ['version_%s' % suffix for suffix in json_suffixes]
 
-# Identify package changes
+	unique_modules = {(row['group'], row['name']): row for row in bundles.values()}
+	module_changes = [{ column: row[column] for column in columns } for row in unique_modules.values()]
+	module_changes = sorted(module_changes, key = lambda x: (x['group'], x['name']))
 
-columns = ['name', 'package', 'packageVersion']
-columns += ['packageVersion_%s' % suffix for suffix in json_suffixes]
+	with open(modules_file_name, 'w') as f:
+		json.dump(module_changes, f, sort_keys=True, separators=(',', ':'))
 
-package_changes = [{ column: row[column] for column in columns } for row in packages.values()]
-package_changes = sorted(package_changes, key = lambda x: (x['name'], x['package']))
+	# Identify package changes
 
-with open('dxppackages.json', 'w') as f:
-	json.dump(package_changes, f, sort_keys=True, separators=(',', ':'))
+	columns = ['application', 'name', 'package']
+	columns += ['packageVersion_%s' % suffix for suffix in json_suffixes]
+
+	package_changes = [{ column: row[column] for column in columns } for row in packages.values()]
+	package_changes = sorted(package_changes, key = lambda x: (x['name'], x['package']))
+
+	with open(packages_file_name, 'w') as f:
+		json.dump(package_changes, f, sort_keys=True, separators=(',', ':'))
+
+def get_dxp_json_suffix(suffix):
+	return suffix if suffix[5:7] != 'de' and suffix[5:8] != 'dxp' else suffix[0:8] + suffix[8:].zfill(2)
+
+dxp_file_metadata = sorted(
+	set([
+		(folder, f[f.find('-')+1:-4], get_dxp_json_suffix(f[f.find('-')+1:-4]), get_dxp_release_tuple(f[f.find('-')+1:-4]))
+			for folder in sys.argv[1:]
+				for f in os.listdir('%s/metadata' % folder)
+					if f != 'tags.txt' and f.find('-private') == -1 and f.find('marketplace-') == -1
+	]),
+	key=lambda x: x[2]
+)
+
+generate_metadata_files(dxp_file_metadata, 'dxpmodules.json', 'dxppackages.json')
+
+def get_marketplace_json_suffix(suffix):
+	return suffix[suffix.rfind('-', 0, len(suffix) - 5)+1:-5]
+
+marketplace_file_metadata = sorted(
+	set([
+		(folder, f[f.find('-')+1:-4], get_marketplace_json_suffix(f[f.find('-')+1:-4]), get_marketplace_release_tuple(f[f.find('-')+1:-4]))
+			for folder in sys.argv[1:]
+				for f in os.listdir('%s/metadata' % folder)
+					if f.find('-marketplace-') != -1
+	]),
+	key=lambda x: x[2]
+)
+
+generate_metadata_files(marketplace_file_metadata, 'mpmodules.json', 'mppackages.json')
