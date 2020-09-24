@@ -432,10 +432,6 @@ packageinfo_release() {
 			packageinfo_tag ${tag_id} ${OLD_TAG_ID}
 			OLD_TAG_ID=${tag_id}
 		done
-
-		for tag_id in $(grep '^marketplace-.*$' $OUTPUT_FOLDER/marketplace.txt); do
-			packageinfo_tag ${tag_id}
-		done
 	else
 		if [ "" == "${OUTPUT_FOLDER}" ]; then
 			NEW_OUTPUT_FOLDER=/tmp
@@ -518,10 +514,6 @@ savetags() {
 	git ls-remote -t git@github.com:liferay/liferay-portal-ee.git | \
 		awk '{ print $2 }' | grep "/fix-pack-.*-${2}10$" | \
 		sort -t'-' -nk4,5 | cut -d'/' -f 3 | tee -a $OUTPUT_FOLDER/tags.txt
-
-	git ls-remote -t git@github.com:liferay/liferay-portal-ee.git | \
-		awk '{ print $2 }' | grep "/marketplace-commerce-.*-${2}10$" | \
-		sort | cut -d'/' -f 3 | tee -a $OUTPUT_FOLDER/marketplace.txt
 }
 
 if [ "" == "${1}" ]; then

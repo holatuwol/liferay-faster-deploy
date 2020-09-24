@@ -293,7 +293,7 @@ dxp_file_metadata = sorted(
 		(folder, f[f.find('-')+1:-4], get_dxp_json_suffix(f[f.find('-')+1:-4]), get_dxp_release_tuple(f[f.find('-')+1:-4]))
 			for folder in sys.argv[1:]
 				for f in os.listdir('%s/metadata' % folder)
-					if f != 'tags.txt' and f.find('-private') == -1 and f.find('marketplace-') == -1
+					if f != 'tags.txt' and f != 'marketplace.txt' and f.find('-private') == -1 and f.find('marketplace-') == -1
 	]),
 	key=lambda x: x[2]
 )
