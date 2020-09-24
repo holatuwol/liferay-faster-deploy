@@ -7,9 +7,7 @@ import json
 import os
 import sys
 
-def get_release_tuple(release_tuple):
-	release_id = release_tuple[1]
-
+def get_dxp_release_tuple(release_id):
 	x = release_id.find('-')
 
 	release_number = release_id[0:x]
@@ -22,30 +20,20 @@ def get_release_tuple(release_tuple):
 	elif patch_level.find('dxp-') == 0:
 		patch_level = patch_level[4:]
 
-	private = False
-
 	if patch_level == 'base':
 		patch_level = '0'
 
-	return (release_number, int(patch_level), private)
+	return (None, release_number, int(patch_level))
 
-file_metadata = sorted(
-	set(
-		[
-			(folder, f[f.find('-')+1:-4])
-				for folder in sys.argv[1:]
-					for f in os.listdir('%s/metadata' % folder)
-						if f != 'tags.txt' and f.find('-private') == -1
-		]
-	),
-	key=get_release_tuple
-)
+def get_marketplace_release_tuple(release_id):
+	product_pos = len('marketplace-')
+	version_pos = release_id.rfind('-', 0, release_id.rfind('-')) + 1
 
-folders = [metadata[0] for metadata in file_metadata]
-file_suffixes = [metadata[1] for metadata in file_metadata]
+	product = release_id[product_pos:version_pos-1]
+	release_number = release_id[-4:]
+	patch_level = release_id[version_pos:-5]
 
-file_names = ['requireschema-%s.txt' % suffix for suffix in file_suffixes]
-suffixes = [suffix if suffix[5:7] != 'de' and suffix[5:8] != 'dxp' else suffix[0:8] + suffix[8:].zfill(2) for suffix in file_suffixes]
+	return (product, release_number, patch_level)
 
 # Read the CSV file
 
@@ -68,10 +56,13 @@ def read_file(folder, file_name):
 
 # Add another entry
 
-def add_file(schemas, folder, file_name, suffix):
+def add_file(schemas, folder, application_name, file_name, suffix):
 	for key, row in read_file(folder, file_name).items():
 		if key not in schemas:
-			schemas[key] = { 'name': key, 'requireSchemaVersion': '0.0.0' }
+			schemas[key] = {
+				'application': application_name,
+				'name': key
+			}
 
 		schemas[key][suffix] = True
 		schemas[key]['requireSchemaVersion_%s' % suffix] = row['requireSchemaVersion']
@@ -80,27 +71,66 @@ def add_file(schemas, folder, file_name, suffix):
 
 # Load data file_names
 
-schemas = read_file(folders[0], file_names[0])
+def generate_metadata_files(file_metadata, schemas_file_name, fill_empty):
+	folders = [metadata[0] for metadata in file_metadata]
+	file_suffixes = [metadata[1] for metadata in file_metadata]
+	json_suffixes = [metadata[2] for metadata in file_metadata]
+	application_names = [metadata[3][0] for metadata in file_metadata]
 
-for folder, file_name, suffix in zip(folders, file_names, suffixes):
-	schemas = add_file(schemas, folder, file_name, suffix)
+	file_names = ['requireschema-%s.txt' % suffix for suffix in file_suffixes]
 
-# Fill in missing values
+	schemas = {}
 
-for row in schemas.values():
-	for suffix in suffixes:
-		if suffix not in row:
-			row['requireSchemaVersion_%s' % suffix] = '0.0.0'
-		else:
-			del row[suffix]
+	for folder, application_name, file_name, suffix in zip(folders, application_names, file_names, json_suffixes):
+		schemas = add_file(schemas, folder, application_name, file_name, suffix)
 
-# Identify package changes
+	# Fill in missing values
 
-columns = ['name', 'requireSchemaVersion']
-columns += ['requireSchemaVersion_%s' % suffix for suffix in suffixes]
+	if fill_empty:
+		for row in schemas.values():
+			for suffix in json_suffixes:
+				if suffix not in row:
+					row['requireSchemaVersion_%s' % suffix] = '0.0.0'
+				else:
+					del row[suffix]
 
-schema_changes = [{ column: row[column] for column in columns } for row in schemas.values()]
-schema_changes = sorted(schema_changes, key = lambda x: (x['name']))
+	# Identify package changes
 
-with open('dxpschemas.json', 'w') as f:
-	json.dump(schema_changes, f, sort_keys=True, separators=(',', ':'))
+	columns = ['application', 'name']
+	columns += ['requireSchemaVersion_%s' % suffix for suffix in json_suffixes]
+
+	schema_changes = [{ column: row[column] for column in columns if column in row } for row in schemas.values()]
+	schema_changes = sorted(schema_changes, key = lambda x: (x['name']))
+
+	with open(schemas_file_name, 'w') as f:
+		json.dump(schema_changes, f, sort_keys=True, separators=(',', ':'))
+
+def get_dxp_json_suffix(suffix):
+	return suffix if suffix[5:7] != 'de' and suffix[5:8] != 'dxp' else suffix[0:8] + suffix[8:].zfill(2)
+
+dxp_file_metadata = sorted(
+	set([
+		(folder, f[f.find('-')+1:-4], get_dxp_json_suffix(f[f.find('-')+1:-4]), get_dxp_release_tuple(f[f.find('-')+1:-4]))
+			for folder in sys.argv[1:]
+				for f in os.listdir('%s/metadata' % folder)
+					if f != 'tags.txt' and f.find('-private') == -1 and f.find('marketplace-') == -1
+	]),
+	key=lambda x: x[2]
+)
+
+generate_metadata_files(dxp_file_metadata, 'dxpschemas.json', True)
+
+def get_marketplace_json_suffix(suffix):
+	return suffix[suffix.rfind('-', 0, len(suffix) - 5)+1:-5]
+
+marketplace_file_metadata = sorted(
+	set([
+		(folder, f[f.find('-')+1:-4], get_marketplace_json_suffix(f[f.find('-')+1:-4]), get_marketplace_release_tuple(f[f.find('-')+1:-4]))
+			for folder in sys.argv[1:]
+				for f in os.listdir('%s/metadata' % folder)
+					if f.find('-marketplace-') != -1
+	]),
+	key=lambda x: x[2]
+)
+
+generate_metadata_files(marketplace_file_metadata, 'mpschemas.json', False)

@@ -220,7 +220,7 @@ def add_package_file(packages, folder, application_name, file_name, suffix):
 
 # Load data files
 
-def generate_metadata_files(file_metadata, modules_file_name, packages_file_name):
+def generate_metadata_files(file_metadata, modules_file_name, packages_file_name, fill_empty):
 	folders = [metadata[0] for metadata in file_metadata]
 	file_suffixes = [metadata[1] for metadata in file_metadata]
 	json_suffixes = [metadata[2] for metadata in file_metadata]
@@ -247,19 +247,20 @@ def generate_metadata_files(file_metadata, modules_file_name, packages_file_name
 
 	# Fill in missing values
 
-	for row in bundles.values():
-		for suffix in json_suffixes:
-			if suffix not in row:
-				row['version_%s' % suffix] = '0.0.0'
-			else:
-				del row[suffix]
+	if fill_empty:
+		for row in bundles.values():
+			for suffix in json_suffixes:
+				if suffix not in row:
+					row['version_%s' % suffix] = '0.0.0'
+				else:
+					del row[suffix]
 
-	for row in packages.values():
-		for suffix in json_suffixes:
-			if suffix not in row:
-				row['packageVersion_%s' % suffix] = '0.0.0'
-			else:
-				del row[suffix]
+		for row in packages.values():
+			for suffix in json_suffixes:
+				if suffix not in row:
+					row['packageVersion_%s' % suffix] = '0.0.0'
+				else:
+					del row[suffix]
 
 	# Identify module changes
 
@@ -267,7 +268,7 @@ def generate_metadata_files(file_metadata, modules_file_name, packages_file_name
 	columns += ['version_%s' % suffix for suffix in json_suffixes]
 
 	unique_modules = {(row['group'], row['name']): row for row in bundles.values()}
-	module_changes = [{ column: row[column] for column in columns } for row in unique_modules.values()]
+	module_changes = [{ column: row[column] for column in columns if column in row } for row in unique_modules.values()]
 	module_changes = sorted(module_changes, key = lambda x: (x['group'], x['name']))
 
 	with open(modules_file_name, 'w') as f:
@@ -278,7 +279,7 @@ def generate_metadata_files(file_metadata, modules_file_name, packages_file_name
 	columns = ['application', 'name', 'package']
 	columns += ['packageVersion_%s' % suffix for suffix in json_suffixes]
 
-	package_changes = [{ column: row[column] for column in columns } for row in packages.values()]
+	package_changes = [{ column: row[column] for column in columns if column in row } for row in packages.values()]
 	package_changes = sorted(package_changes, key = lambda x: (x['name'], x['package']))
 
 	with open(packages_file_name, 'w') as f:
@@ -297,7 +298,7 @@ dxp_file_metadata = sorted(
 	key=lambda x: x[2]
 )
 
-generate_metadata_files(dxp_file_metadata, 'dxpmodules.json', 'dxppackages.json')
+generate_metadata_files(dxp_file_metadata, 'dxpmodules.json', 'dxppackages.json', True)
 
 def get_marketplace_json_suffix(suffix):
 	return suffix[suffix.rfind('-', 0, len(suffix) - 5)+1:-5]
@@ -312,4 +313,4 @@ marketplace_file_metadata = sorted(
 	key=lambda x: x[2]
 )
 
-generate_metadata_files(marketplace_file_metadata, 'mpmodules.json', 'mppackages.json')
+generate_metadata_files(marketplace_file_metadata, 'mpmodules.json', 'mppackages.json', False)
