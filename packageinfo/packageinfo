@@ -170,8 +170,10 @@ checkfile() {
 		OUTPUT_FILE=${OUTPUT_FOLDER}/$2-$(echo $1 | cut -d'-' -f 4)-base.txt
 	elif [[ $1 == fix-pack-* ]]; then
 		OUTPUT_FILE=${OUTPUT_FOLDER}/$2-$(echo "$1" | cut -d'-' -f 5)-$(echo "$1" | cut -d'-' -f 3,4,6).txt
-	else
+	elif [[ $1 == *ga* ]]; then
 		OUTPUT_FILE=${OUTPUT_FOLDER}/$2-$(echo "$1" | cut -d'-' -f 1 | sed 's/\.\([0-9]\)$/\.0\1/g' | tr -d '.')-$(echo "$1" | cut -d'-' -f 2-).txt
+	else
+		OUTPUT_FILE=${OUTPUT_FOLDER}/$2-$1.txt
 	fi
 
 	if [ -f $OUTPUT_FILE ]; then
@@ -183,7 +185,7 @@ checkfile() {
 		return 0
 	fi
 
-	if [ "" == "$(git tag | grep -F "$1")" ]; then
+	if [ "" == "$(git for-each-ref refs/tags/$1)" ] && [ "" == "$(git for-each-ref refs/heads/$1)" ]; then
 		if [[ $1 == fix-pack-* ]] || [[ $1 == marketplace-* ]]; then
 			git fetch --no-tags git@github.com:liferay/liferay-portal-ee.git tags/$1:refs/tags/$1
 		else
@@ -463,12 +465,51 @@ packageinfo_release() {
 }
 
 packageinfo_tag() {
+	releng ${1}
 	bundleinfo ${1}
 	packageinfo ${1}
 	requireschema ${1}
 	dependencies ${1}
 	bootstrap ${1}
 	changelog ${1} ${2}
+}
+
+releng() {
+	if ! checkfile $1 releng; then
+		return 0
+	fi
+
+	echo "Generating releng metadata for $1"
+
+	git ls-files ${SCAN_FOLDER} | grep '/app\.bnd$' | xargs grep -Fl 'Liferay-Releng-Fix-Delivery-Method: core' | \
+		dirnames | sort -u > ${GIT_ROOT}/.redeploy/releng.txt
+
+	if [[ 0 -eq $(wc -l ${GIT_ROOT}/.redeploy/releng.txt | cut -d' ' -f 1) ]]; then
+		git ls-files ${SCAN_FOLDER} | grep '/app\.bnd$' | xargs grep -Fl 'Liferay-Releng-Bundle: true' | \
+			dirnames | sort -u > ${GIT_ROOT}/.redeploy/releng.txt
+	fi
+
+	for folder in $(cat ${GIT_ROOT}/.redeploy/releng.txt); do
+		local RELENG_APP_PROPERTIES=$(echo "${folder}" | sed 's@^modules@modules/.releng@g')/app.properties
+
+		if [ ! -f ${RELENG_APP_PROPERTIES} ]; then
+			continue
+		fi
+
+		local RELENG_SUITE=$(grep '^Liferay-Releng-Suite:' ${folder}/app.bnd | cut -d':' -f 2 | sed 's/^ *//g')
+		local RELENG_TITLE=$(grep '^Liferay-Releng-App-Title:' ${folder}/app.bnd | cut -d':' -f 2 | sed 's/\${[^}]*}//g' | sed 's/^ *//g')
+		local RELENG_VERSION=$(grep app.marketplace.version ${RELENG_APP_PROPERTIES} | cut -d'=' -f 2)
+
+		if [ "" == "${RELENG_SUITE}" ]; then
+			if [ "modules/apps/static" == "${folder}" ]; then
+				RELENG_SUITE='static'
+			else
+				continue
+			fi
+		fi
+
+		echo "${folder},${RELENG_SUITE},${RELENG_TITLE},${RELENG_VERSION}" >> ${OUTPUT_FILE}
+	done
 }
 
 requireschema() {

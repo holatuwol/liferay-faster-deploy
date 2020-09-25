@@ -10,6 +10,9 @@ import sys
 def get_dxp_release_tuple(release_id):
 	x = release_id.find('-')
 
+	if x == -1:
+		return (None, '9999', 0)
+
 	release_number = release_id[0:x]
 	patch_level = release_id[x+1:]
 
