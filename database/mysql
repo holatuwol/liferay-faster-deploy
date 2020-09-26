@@ -39,6 +39,17 @@ collation-server      = utf8mb4_unicode_ci
 	rm runtime.cnf
 
 	docker restart ${CONTAINER_NAME}
+
+	waitfor_database
+
+	echo "create schema lportal;" | \
+		docker exec -i ${CONTAINER_NAME} /bin/bash -c 'mysql'
+
+	echo "create user lportal identified by 'lportal';" | \
+		docker exec -i ${CONTAINER_NAME} /bin/bash -c 'mysql'
+
+	echo "grant all on lportal.* to 'lportal'@'%';" | \
+		docker exec -i ${CONTAINER_NAME} /bin/bash -c 'mysql'
 }
 
 updateprops() {
