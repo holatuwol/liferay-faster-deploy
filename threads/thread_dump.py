@@ -82,7 +82,7 @@ class ThreadDump:
 			file.write(str(self))
 
 	def thread_names(self, substring):
-		thread_names = set()
+		thread_names = []
 
 		for stack_trace in self.stack_traces:
 			if not stack_trace.is_visible():
@@ -91,9 +91,9 @@ class ThreadDump:
 			thread_name = stack_trace.get_thread_name()
 
 			if substring is None or thread_name.find(substring) != -1:
-				thread_names.add(thread_name)
+				thread_names.append(thread_name)
 
-		return thread_names
+		return sorted(thread_names)
 
 	def get_timestamp(self):
 		return self.header_lines[0]
