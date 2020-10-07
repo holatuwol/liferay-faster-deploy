@@ -50,7 +50,7 @@ class MultiThreadDump:
 		return sorted(thread_names)
 
 	def thread_names_plot(thread_name = ''):
-		df = pd.DataFrame([
+		df = DataFrame([
 			{
 				'file': key,
 				'count': len(value.thread_names(thread_name))
