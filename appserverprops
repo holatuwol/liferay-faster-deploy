@@ -37,6 +37,10 @@ buildprops() {
 			echo -e '\nbaseline.jar.report.level=off' >> $GIT_ROOT/build.${USER}.properties
 		fi
 
+		if [ "" == "$(grep -F org.gradle.daemon $GIT_ROOT/build.${USER}.properties)" ]; then
+			echo 'org.gradle.daemon=false' >> $GIT_ROOT/build.${USER}.properties
+		fi
+
 		repopass
 
 		return 0
