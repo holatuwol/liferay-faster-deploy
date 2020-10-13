@@ -88,7 +88,10 @@ def sublist_generate(start, end):
         commit_tag = git.tag('--points-at', commit_hash)
 
         if commit_tag.find('\n') != -1:
-            commit_tag = [x for x in commit_tag.split('\n') if x.find('fix-pack-') == 0][0]
+            candidate_tags = [x for x in commit_tag.split('\n') if x.find('fix-pack-') == 0]
+
+            if len(candidate_tags) > 0:
+                commit_tag = candidate_tags[0]
 
         if commit_tag.find('fix-pack-') != 0:
             continue
