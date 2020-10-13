@@ -481,8 +481,7 @@ releng() {
 
 	echo "Generating releng metadata for $1"
 
-	git ls-files ${SCAN_FOLDER} | grep '/app\.bnd$' | xargs grep -Fl 'Liferay-Releng-Fix-Delivery-Method: core' | \
-		dirnames | sort -u > ${GIT_ROOT}/.redeploy/releng.txt
+	git ls-files ${SCAN_FOLDER} | grep '/app\.bnd$' | dirnames | sort -u > ${GIT_ROOT}/.redeploy/releng.txt
 
 	if [[ 0 -eq $(wc -l ${GIT_ROOT}/.redeploy/releng.txt | cut -d' ' -f 1) ]]; then
 		git ls-files ${SCAN_FOLDER} | grep '/app\.bnd$' | xargs grep -Fl 'Liferay-Releng-Bundle: true' | \
@@ -500,12 +499,8 @@ releng() {
 		local RELENG_TITLE=$(grep '^Liferay-Releng-App-Title:' ${folder}/app.bnd | cut -d':' -f 2 | sed 's/\${[^}]*}//g' | sed 's/^ *//g')
 		local RELENG_VERSION=$(grep app.marketplace.version ${RELENG_APP_PROPERTIES} | cut -d'=' -f 2)
 
-		if [ "" == "${RELENG_SUITE}" ]; then
-			if [ "modules/apps/static" == "${folder}" ]; then
-				RELENG_SUITE='static'
-			else
-				continue
-			fi
+		if [ "" == "${RELENG_SUITE}" ] && [ "modules/apps/static" == "${folder}" ]; then
+			RELENG_SUITE='static'
 		fi
 
 		echo "${folder},${RELENG_SUITE},${RELENG_TITLE},${RELENG_VERSION}" >> ${OUTPUT_FILE}
