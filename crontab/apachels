@@ -5,7 +5,7 @@ if [ -d /var/www/html/$1 ]; then
 
 	echo '<html>
 	<head>
-	<title>Index of /' /var/www/html/$1/index.html
+	<title>Index of /' > /var/www/html/$1/index.html
 
 	echo $1 >> /var/www/html/$1/index.html
 
