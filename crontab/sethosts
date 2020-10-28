@@ -55,7 +55,7 @@ if [ ! -d $HOME/master ]; then
 	echo -e "\n\n.master {\n\tdisplay: none;\n}" >> index.css
 fi
 
-for folder in 72x 71x 70x; do
+for folder in 73x 72x 71x 70x; do
 	if [ ! -d $HOME/$folder-private ]; then
 		echo -e "\n\n.ee-$folder {\n\tdisplay: none;\n}" >> index.css
 	fi

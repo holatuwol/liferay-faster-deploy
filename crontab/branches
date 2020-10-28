@@ -83,6 +83,9 @@ branches() {
 		if [ "master" == "$folder" ]; then
 			branch master master-private
 			branch master master 60
+		elif [ "73x" == "$folder" ]; then
+			branch 7.3.x 73x 73x
+			branch 7.3.x 73x-private 73
 		elif [ "72x" == "$folder" ]; then
 			branch 7.2.x 72x 72x
 			branch 7.2.x 72x-private 72
@@ -252,7 +255,7 @@ fi
 REBUILD="$@"
 
 if [ "" == "$REBUILD" ]; then
-	REBUILD="master 72x 71x 70x 62x 61x"
+	REBUILD="master 73x 72x 71x 70x 62x 61x"
 fi
 
 for cache in liferay-binaries-cache-2017 liferay-binaries-cache-2020; do
