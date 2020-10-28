@@ -112,3 +112,6 @@ fi
 rm -rf /tmp/yarn*
 
 rm $BUILD_FOLDER_PREFIX/.build
+
+${SCRIPT_FOLDER}/apachels builds/branches
+${SCRIPT_FOLDER}/apachels builds/fixpacks

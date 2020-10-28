@@ -1,0 +1,38 @@
+#!/bin/bash
+
+if [ -d /var/www/html/$1 ]; then
+	rm /var/www/html/$1/index.html
+
+	echo '<html>
+	<head>
+	<title>Index of /' /var/www/html/$1/index.html
+
+	echo $1 >> /var/www/html/$1/index.html
+
+	echo '</title>
+	</head>
+	<body>
+	<h1>Index of ' >> /var/www/html/$1/index.html
+
+	echo $1 >> /var/www/html/$1/index.html
+
+	echo '</h1>
+	<table>
+	<tr><th>Name</th><th>Last modified</th><th>Size</th><th>Description</th></tr>
+	<tr><th colspan="4"><hr></th></tr>
+	<tr><td><a href="/builds/">Parent Directory</a></td><td>&nbsp;</td><td align="right">  - </td><td>&nbsp;</td></tr>
+	' >> /var/www/html/$1/index.html
+
+	ls -l -h --time-style="+%Y-%m-%d" /var/www/html/$1 | grep -vF index.html | tail -n +2 | cut -d' ' -f 5- | awk '{ print "<tr><td><a href=\"" $3 "\">" $3 "</a></td><td align=\"right\">" $2 "</td><td align=\"right\">" $1 "</td><td>&nbsp;</td></tr>" }' >> /var/www/html/$1/index.html
+
+	echo '
+	<tr><th colspan="4"><hr></th></tr>
+	</table>
+	<address>Apache/2.2.15 (CentOS) Server at ' >> /var/www/html/$1/index.html
+
+	hostname -s >> /var/www/html/$1/index.html
+
+	echo '</address>
+	</body></html>
+	' >> /var/www/html/$1/index.html
+fi
