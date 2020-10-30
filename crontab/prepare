@@ -52,6 +52,13 @@ compile() {
 			ant setup-profile-dxp |& tee -a "${LIFERAY_HOME}.log"
 		fi
 
+		local SCHEMA_VERSION=$(grep "_VERSION =" portal-kernel/src/com/liferay/portal/kernel/util/ReleaseInfo.java | cut -d'"' -f 2)
+		local BUILD_NUMBER=$(grep "_BUILD =" portal-kernel/src/com/liferay/portal/kernel/util/ReleaseInfo.java | cut -d'"' -f 2)
+
+		echo -n 'insert into Release_ ' > sql/portal-data-release.sql
+		echo -n '(releaseId, createDate, modifiedDate, servletContextName, schemaVersion, buildNumber, verified) ' >> sql/portal-data-release.sql
+		echo -n "values (1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'portal', '${SCHEMA_VERSION}', ${BUILD_NUMBER}, FALSE);" >> sql/portal-data-release.sql
+
 		ant compile deploy |& tee -a "${LIFERAY_HOME}.log"
 	fi
 
