@@ -143,11 +143,27 @@ def list_generate(bad, good):
             notable_hashes = notable_hashes + sublist_generate('cc57347219da4911d30b154188a99c6a628f6079', end)
             notable_hashes = notable_hashes + sublist_generate(start + '~1', 'fix-pack-de-27-7010')
         else:
-            start = bad if git.is_ancestor(bad, good) else good
-            end = bad if start == good else good
+            bad_first = git.is_ancestor(bad, good)
+            good_first = git.is_ancestor(good, bad)
+
+            if bad_first and not good_first:
+                start = bad
+                end = good
+            elif good_first and not bad_first:
+                start = good
+                end = bad
+            else:
+                common_ancestor = git.merge_base(bad, good).strip()
+
+                bad_first = len(git.log('--pretty=%H', '%s..%s' % (common_ancestor, bad)).split('\n'))
+                good_first = len(git.log('--pretty=%H', '%s..%s' % (common_ancestor, good)).split('\n'))
+
+                start = common_ancestor
+                end = bad if bad_first > good_first else good
+
             notable_hashes = sublist_generate(start + '~1', end)
 
-    if start == bad:
+    if end == good:
         notable_hashes[0]['status'] = 'good'
         notable_hashes[-1]['status'] = 'bad'
     else:
