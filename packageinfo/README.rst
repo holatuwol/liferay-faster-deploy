@@ -26,7 +26,7 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 	}
 
 	trackprop() {
-		${MCD_RD_CLONE_PATH}/packageinfo/trackprop
+		${MCD_RD_CLONE_PATH}/packageinfo/trackprop $@
 	}
 
 Extract Import/Export Package from Manifest
