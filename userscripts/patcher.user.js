@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        6.3
+// @version        6.4
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -179,13 +179,23 @@ function addBaselineToBuildTemplate() {
  * ends with '/consoleText' to take you directly to the build log.
  */
 function replaceJenkinsLinks() {
-    var links = document.querySelectorAll('a[href*="/job/fixpack-builder"]:not([href*="consoleText"])');
+    var consolePath = 'consoleText';
+    var statusLabel = document.querySelector('label[for="_1_WAR_osbpatcherportlet_status"]');
+    if (statusLabel) {
+        var statusLabelSibling = statusLabel.nextSibling;
+        if (statusLabelSibling) {
+            if ('Compiling' == (statusLabelSibling.textContent || '').trim()) {
+                consolePath = 'console';
+            }
+        }
+    }
+    var links = document.querySelectorAll('a[href*="/job/fixpack-builder"]:not([href*="' + consolePath + '"])');
     for (var i = 0; i < links.length; i++) {
         var href = links[i].getAttribute('href');
         if (href.charAt(href.length - 1) != '/') {
             href += '/';
         }
-        links[i].setAttribute('href', href + 'consoleText');
+        links[i].setAttribute('href', href + consolePath);
     }
     links = document.querySelectorAll('a[href*="//test-5-2/"]');
     for (var i = 0; i < links.length; i++) {
