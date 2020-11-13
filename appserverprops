@@ -33,7 +33,7 @@ buildprops() {
 		fi
 
 		if [ "" == "$(grep -F mirrors.hostname $GIT_ROOT/build.${USER}.properties)" ]; then
-			echo 'mirrors.hostname=' >> $GIT_ROOT/build.${USER}.properties
+			echo -e '\nmirrors.hostname=' >> $GIT_ROOT/build.${USER}.properties
 		fi
 
 		if [ "" == "$(grep -F baseline.jar.report.level $GIT_ROOT/build.${USER}.properties)" ]; then
@@ -41,7 +41,13 @@ buildprops() {
 		fi
 
 		if [ "" == "$(grep -F org.gradle.daemon $GIT_ROOT/build.${USER}.properties)" ]; then
-			echo 'org.gradle.daemon=false' >> $GIT_ROOT/build.${USER}.properties
+			echo -e '\norg.gradle.daemon=false' >> $GIT_ROOT/build.${USER}.properties
+		fi
+
+		if [ "" == "$(grep -F build.binaries.cache.url $GIT_ROOT/build.${USER}.properties)" ]; then
+			if [ "" != "$(grep -F build.binaries.cache.repository.name $GIT_ROOT/build.properties)" ]; then
+				echo -e '\nbuild.binaries.cache.url=git@github.com:liferay/${build.binaries.cache.repository.name}.git' >> $GIT_ROOT/build.${USER}.properties
+			fi
 		fi
 
 		repopass
