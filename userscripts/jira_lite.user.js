@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           JIRA When javascript.enabled=false
 // @namespace      holatuwol
-// @version        2.6
+// @version        2.7
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_lite.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_lite.user.js
 // @match          https://issues.redhat.com/*
@@ -16,7 +16,7 @@
  * https://github.com/holatuwol/liferay-issues-userscript
  */ 
 var styleElement = document.createElement('style');
-styleElement.textContent = "\nhtml body {\n  overflow-y: auto;\n}\n\n.aui-header-primary .aui-nav {\n  width: auto;\n}\n\n.ajs-multi-select-placeholder,\n.wiki-button-bar {\n  display: none;\n}\n\n#assign-to-me-trigger,\n#show-more-links {\n  visibility: hidden;\n}\n\n#documentation-web-panel,\n#greenhopper-agile-issue-web-panel,\n#packages-issue-panel,\n#slack-viewissue-panel,\n#issue-panel {\n  display: none;\n}\n\n#activitymodule {\n  width: 90vw;\n}\n";
+styleElement.textContent = "\nhtml body {\n  overflow-y: auto;\n}\n\n.aui-header-primary .aui-nav {\n  width: auto;\n}\n\n.ajs-multi-select-placeholder,\n.wiki-button-bar {\n  display: none;\n}\n\n#assign-to-me-trigger,\n#show-more-links {\n  visibility: hidden;\n}\n\n#documentation-web-panel,\n#greenhopper-agile-issue-web-panel,\n#packages-issue-panel,\n#slack-viewissue-panel,\n#issue-panel {\n  display: none;\n}\n\n#activitymodule {\n  width: 90vw;\n}\n\nform.aui:not(.aui-legacy-forms) .checkbox input[type=\"checkbox\"] {\n  position: static;\n}\n";
 document.head.appendChild(styleElement);
 function getTicketName() {
     var ticketElement = document.querySelector('.aui-page-header-main a[data-issue-key]');
