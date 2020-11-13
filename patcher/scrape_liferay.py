@@ -91,11 +91,31 @@ def saml_request(response_url, response_body):
     else:
         saml_response(r.url, r.text)
 
+def get_function_end(json_text, start):
+    count = 0
+
+    for i, ch in enumerate(json_text[start:]):
+        if ch == '{':
+            count = count + 1
+        elif ch == '}':
+            count = count - 1
+            if count == 0:
+                return start + i
+
 def login_okta(response_text):
     start = response_text.find('{"redirectUri":')
     end = response_text.find('};', start) + 1
 
-    okta_data = json.loads(response_text[start:end].replace('\\x', '\\u00'))
+    json_text = response_text[start:end].replace('\\x', '\\u00')
+
+    function_start = json_text.find('function(')
+
+    while function_start != -1:
+        function_end = get_function_end(json_text, function_start)
+        json_text = json_text[0:function_start] + '""' + json_text[function_end+1:]
+        function_start = json_text.find('function(')
+
+    okta_data = json.loads(json_text)
 
     # Check the state token
 
