@@ -55,6 +55,7 @@ updatesnapshots() {
 			local artifact_folder=${repository_root}/com/liferay/portal/${artifact}/${artifact_version}
 
 			if [ -f ${artifact_folder}/${artifact}-${artifact_version}.jar ]; then
+				echo "Found snapshot for $artifact (${artifact_version})"
 				continue
 			fi
 
