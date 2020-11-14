@@ -26,7 +26,7 @@ buildprops() {
 			perl -pi -e 's/\r\n|\n|\r/\n/g' "$GIT_ROOT/build.${USER}.properties"
 		fi
 
-		if [ "" != "$(grep -F javac.compiler build.properties | grep -F 'modern' | grep -F '#')" ]; then
+		if [ "" != "$(grep -F javac.compiler $GIT_ROOT/build.properties | grep -F 'modern' | grep -F '#')" ]; then
 			if [ "" == "$(grep -F javac.compiler $GIT_ROOT/build.${USER}.properties)" ]; then
 				echo -e '\njavac.compiler=modern' >> $GIT_ROOT/build.${USER}.properties
 			fi
