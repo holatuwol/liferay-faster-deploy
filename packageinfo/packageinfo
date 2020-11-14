@@ -551,25 +551,3 @@ savetags() {
 		awk '{ print $2 }' | grep "/fix-pack-.*-${2}10$" | \
 		sort -t'-' -nk4,5 | cut -d'/' -f 3 | tee -a $OUTPUT_FOLDER/tags.txt
 }
-
-if [ "" == "${1}" ]; then
-	if [ ! -z ${PORTAL_SOURCE_ROOT_70} ]; then
-		packageinfo_release ${PORTAL_SOURCE_ROOT_70} 7.0 70
-	fi
-
-	if [ ! -z ${PORTAL_SOURCE_ROOT_71} ]; then
-		packageinfo_release ${PORTAL_SOURCE_ROOT_71} 7.1 71
-	fi
-
-	if [ ! -z ${PORTAL_SOURCE_ROOT_72} ]; then
-		packageinfo_release ${PORTAL_SOURCE_ROOT_72} 7.2 72
-	fi
-
-	if [ ! -z ${PORTAL_SOURCE_ROOT_73} ]; then
-		packageinfo_release ${PORTAL_SOURCE_ROOT_73} 7.3 73
-	fi
-else
-	. $(dirname ${BASH_SOURCE[0]})/../setopts
-
-	packageinfo_tag $@
-fi
