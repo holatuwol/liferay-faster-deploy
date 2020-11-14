@@ -46,7 +46,9 @@ buildprops() {
 
 		if [ "" == "$(grep -F build.binaries.cache.url $GIT_ROOT/build.${USER}.properties)" ]; then
 			if [ "" != "$(grep -F build.binaries.cache.repository.name $GIT_ROOT/build.properties)" ]; then
-				echo -e '\nbuild.binaries.cache.url=git@github.com:liferay/${build.binaries.cache.repository.name}.git' >> $GIT_ROOT/build.${USER}.properties
+				echo '' >> $GIT_ROOT/build.${USER}.properties
+				grep -F build.binaries.cache.repository.name $GIT_ROOT/build.properties >> $GIT_ROOT/build.${USER}.properties
+				echo 'build.binaries.cache.url=git@github.com:liferay/${build.binaries.cache.repository.name}.git' >> $GIT_ROOT/build.${USER}.properties
 			fi
 		fi
 
