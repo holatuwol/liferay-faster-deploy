@@ -67,12 +67,6 @@ findreviewer() {
 	. $(dirname "${BASH_SOURCE[0]}")/findreviewer "$*"
 }
 
-fixdeps() {
-	echo "Fixing dependencies"
-
-	. $(dirname "${BASH_SOURCE[0]}")/../packageinfo/fixdeps
-}
-
 formatsource() {
 	echo "Running source formatter"
 
@@ -175,7 +169,7 @@ sendpull() {
 				ant setup-sdk
 			fi
 
-			fixdeps && baseline && formatsource && pmdreport
+			baseline && formatsource && pmdreport
 		fi
 
 		popd > /dev/null
