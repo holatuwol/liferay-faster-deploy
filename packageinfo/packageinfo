@@ -9,7 +9,7 @@ bootstrap() {
 		return 0
 	fi
 
-	echo "Generating bootstrap info for $1"
+	echo "Generating bootstrap info for $1: ${OUTPUT_FILE}"
 
 	for line in $(grep -F 'group: "com.liferay"' $(git ls-files modules | grep -F '/portal-bootstrap/build.gradle')); do
 		local ARTIFACT_NAME=$(echo "${line}" | grep -o 'name: "[^"]*"' | cut -d'"' -f 2)
@@ -37,26 +37,24 @@ bundleinfo() {
 		return 0
 	fi
 
-	echo "Generating bundle info for $1"
+	echo "Generating bundle info for $1: ${OUTPUT_FILE}"
 
-	if [ "modules" == "${MARKETPLACE_FOLDER}" ]; then
-		for folder in $(ls -1 . | sort -u); do
-			if [ -f "$folder/bnd.bnd" ]; then
-				local BUNDLE_NAME="com.liferay.$(echo $folder | tr '-' '.')"
+	for folder in $(ls -1 . | sort -u); do
+		if [ -f "$folder/bnd.bnd" ]; then
+			local BUNDLE_NAME="com.liferay.$(echo $folder | tr '-' '.')"
 
-				local BUNDLE_VERSION="$(grep '^Bundle-Version' $folder/bnd.bnd | cut -d' ' -f 2-)-SNAPSHOT"
-				local RELENG_PATH="modules/.releng/${folder}.properties"
+			local BUNDLE_VERSION="$(grep '^Bundle-Version' $folder/bnd.bnd | cut -d' ' -f 2-)-SNAPSHOT"
+			local RELENG_PATH="modules/.releng/${folder}.properties"
 
-				if [ -f ${RELENG_PATH} ]; then
-					BUNDLE_VERSION=$(grep 'artifact.url' modules/.releng/${folder}.properties | cut -d'=' -f 2 | grep -o "/${BUNDLE_NAME}/[^/]*" | cut -d'/' -f 3)
-				else
-					RELENG_PATH=
-				fi
-
-				echo "com.liferay.portal,${BUNDLE_NAME},${BUNDLE_VERSION},public,${folder},${RELENG_PATH},jar" >> ${OUTPUT_FILE}
+			if [ -f ${RELENG_PATH} ]; then
+				BUNDLE_VERSION=$(grep 'artifact.url' modules/.releng/${folder}.properties | cut -d'=' -f 2 | grep -o "/${BUNDLE_NAME}/[^/]*" | cut -d'/' -f 3)
+			else
+				RELENG_PATH=
 			fi
-		done
-	fi
+
+			echo "com.liferay.portal,${BUNDLE_NAME},${BUNDLE_VERSION},public,${folder},${RELENG_PATH},jar" >> ${OUTPUT_FILE}
+		fi
+	done
 
 	if [ "" != "$(git ls-files ${SCAN_FOLDER} | grep -F '/.lfrbuild-portal')" ]; then
 		git ls-files ${SCAN_FOLDER} | grep -F '/.lfrbuild-portal' | \
@@ -218,7 +216,7 @@ changelog() {
 		return 0
 	fi
 
-	echo "Generating changelog info for $1"
+	echo "Generating changelog info for $1: ${OUTPUT_FILE}"
 
 	if [ "fix-pack-dxp-2-7210" == "${1}" ]; then
 		for ticket in $(git log --pretty='%s' ${2}..${1} | grep -vF LPS-100337 | grep -o 'LPS-[1-9][0-9]*' | sort -u -n -t'-' -k2); do
@@ -292,7 +290,7 @@ dependencies() {
 		return 0
 	fi
 
-	echo "Generating dependencies info for $1"
+	echo "Generating dependencies info for $1: ${OUTPUT_FILE}"
 
 	for library in jsp-api mail servlet-api; do
 		grep "^${library}=" lib/development/dependencies.properties | sed 's@^\([^=]*\)=\([^:]*\):\([^:]*\):@lib/development/\1.jar,\2,\3,@g' >> ${OUTPUT_FILE}
@@ -331,7 +329,7 @@ packageinfo() {
 		return 0
 	fi
 
-	echo "Generating bundle packageinfo for $1"
+	echo "Generating bundle packageinfo for $1: ${OUTPUT_FILE}"
 
 	cat /dev/null > ${GIT_ROOT}/.redeploy/packageinfo.txt
 
@@ -479,7 +477,7 @@ releng() {
 		return 0
 	fi
 
-	echo "Generating releng metadata for $1"
+	echo "Generating releng metadata for $1: ${OUTPUT_FILE}"
 
 	git ls-files ${SCAN_FOLDER} | grep '/app\.bnd$' | dirnames | sort -u > ${GIT_ROOT}/.redeploy/releng.txt
 
@@ -512,7 +510,7 @@ requireschema() {
 		return 0
 	fi
 
-	echo "Generating require schema versions for $1"
+	echo "Generating require schema versions for $1: ${OUTPUT_FILE}"
 
 	if [ "$1" == "7.0.0-ga1" ]; then
 		git ls-files ${SCAN_FOLDER} | grep -F -- '-service/bnd.bnd' | grep -v '^modules/sdk/' | grep -v '^modules/test/' | grep -v '^modules/util/' | dirnames | sort -u > ${GIT_ROOT}/.redeploy/requireschema.txt

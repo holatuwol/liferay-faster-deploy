@@ -16,6 +16,7 @@ fi
 # Make sure the packageinfo files are up to date
 
 if [ "update" == "${1}" ]; then
+	. $(dirname ${BASH_SOURCE[0]})/../setopts
 	. ${SCRIPT_FOLDER}/packageinfo
 
 	if [ "" == "${2}" ]; then
@@ -24,7 +25,6 @@ if [ "update" == "${1}" ]; then
 		packageinfo_release ${PORTAL_SOURCE_ROOT_72} 7.2 72
 		packageinfo_release ${PORTAL_SOURCE_ROOT_73} 7.3 73
 	else
-		. $(dirname ${BASH_SOURCE[0]})/../setopts
 		packageinfo_tag $2
 	fi
 fi
