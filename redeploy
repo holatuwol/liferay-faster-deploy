@@ -55,6 +55,11 @@ applychanges() {
 		fi
 	fi
 
+	# Make sure that we have registry-api and anything else that is
+	# part of the portal-pre profile
+
+	checksnapshots
+
 	# Check to see if there is anything we need to deploy with ant
 
 	if [[ 0 -ne $(cat ${GIT_ROOT}/.redeploy/changes_gradle_1.txt | grep -c '^') ]] || [[ 0 -ne $(cat ${GIT_ROOT}/.redeploy/changes_ant.txt | grep -c '^') ]]; then
@@ -115,13 +120,6 @@ checksnapshots() {
 }
 
 deployant() {
-	# Make sure that we have registry-api and anything else that is
-	# part of the portal-pre profile
-
-	checksnapshots
-
-	# Finally, iterate over the folders that are listed for deployment
-
 	for folder in $(cat ${GIT_ROOT}/.redeploy/changes_ant.txt); do
 		if [ "" == "$(grep -F deploy $folder/build.xml)" ]; then
 			continue
