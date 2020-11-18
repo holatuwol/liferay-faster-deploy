@@ -34,7 +34,7 @@ project_to_library ${PWD}
 if [ "" == "$(grep -F .jsp ${GIT_ROOT}/status.txt)" ]; then
 	${SCRIPT_FOLDER}/gw -x compileJSP deploy
 else
-	${SCRIPT_FOLDER}/gw -x deploy
+	${SCRIPT_FOLDER}/gw deploy
 fi
 
 rm ${GIT_ROOT}/status.txt
