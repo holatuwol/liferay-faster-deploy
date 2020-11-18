@@ -28,6 +28,13 @@ project_to_library() {
 	done
 }
 
+rm -f ${GIT_ROOT}/status.txt
 project_to_library ${PWD}
+
+if [ "" == "$(grep -F .jsp ${GIT_ROOT}/status.txt)" ]; then
+	${SCRIPT_FOLDER}/gw -x compileJSP deploy
+else
+	${SCRIPT_FOLDER}/gw -x deploy
+fi
+
 rm ${GIT_ROOT}/status.txt
-${SCRIPT_FOLDER}/gw -x compileJSP deploy
