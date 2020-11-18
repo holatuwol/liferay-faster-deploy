@@ -18,6 +18,7 @@ project_to_library() {
 
 		if [ "" != "$(grep "modules${ARTIFACT_PATH}/src/main/java/" ${GIT_ROOT}/status.txt)" ]; then
 			project_to_library ${GIT_ROOT}/modules${ARTIFACT_PATH}
+			continue
 		fi
 
 		local ARTIFACT_NAME="$(grep Bundle-SymbolicName ${GIT_ROOT}/modules${ARTIFACT_PATH}/bnd.bnd | cut -d' ' -f 2-)"
