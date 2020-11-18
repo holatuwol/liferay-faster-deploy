@@ -2,6 +2,8 @@
 
 SCRIPT_FOLDER=$(dirname "${BASH_SOURCE[0]}")
 
+. ${SCRIPT_FOLDER}/setopts
+
 project_to_library() {
 	if [ ! -f ${1}/build.gradle ]; then
 		return 0
