@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        11.9
+// @version        12.0
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -87,6 +87,15 @@ function downloadBlob(fileName, blob) {
     document.body.appendChild(downloadLink);
     downloadLink.click();
     document.body.removeChild(downloadLink);
+}
+/**
+ * Create a link to the JIRA linked issues.
+ */
+function getJiraSearchLink(text, ticketId) {
+    var query = ("\n\"Customer Ticket Permalink\" = \"https://" + document.location.host + document.location.pathname + "\" OR\n\"Zendesk Ticket IDs\" ~ " + ticketId + " OR\n\"Customer Ticket\" = \"https://" + document.location.host + document.location.pathname + "\"\n  ").trim();
+    var encodedQuery = encodeURIComponent(query);
+    var jiraSearchLinkHREF = 'https://issues.liferay.com/issues/?jql=' + encodedQuery;
+    return createAnchorTag(text, jiraSearchLinkHREF);
 }
 var accountCodeCache = {};
 var organizationCache = {};
@@ -447,14 +456,9 @@ function addPatcherPortalField(propertyBox, ticketId, ticketInfo) {
  * the relevant JIRA tickets.
  */
 function addJIRASearchField(propertyBox, ticketId) {
-    var query = ("\n\"Customer Ticket Permalink\" = \"https://" + document.location.host + document.location.pathname + "\" OR\n\"Zendesk Ticket IDs\" ~ " + ticketId + " OR\n\"Customer Ticket\" = \"https://" + document.location.host + document.location.pathname + "\"\n  ").trim();
-    var encodedQuery = encodeURIComponent(query);
-    var jiraSearchItems = [];
-    var jiraSearchLinkHREF = 'https://issues.liferay.com/issues/?jql=' + encodedQuery;
     var jiraSearchLinkContainer = document.createElement('div');
-    var jiraSearchLink = createAnchorTag("Linked Issues", jiraSearchLinkHREF);
-    jiraSearchLinkContainer.appendChild(jiraSearchLink);
-    jiraSearchItems.push(jiraSearchLinkContainer);
+    jiraSearchLinkContainer.appendChild(getJiraSearchLink('Linked Issues', ticketId));
+    var jiraSearchItems = [jiraSearchLinkContainer];
     generateFormField(propertyBox, 'lesa-ui-jirasearch', 'JIRA Search', jiraSearchItems);
 }
 function hideSidebarSelectOption(hiddenMenuItemTexts) {
@@ -1026,6 +1030,20 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
     var descriptionAncestor0 = document.createElement('div');
     descriptionAncestor0.classList.add('event');
     descriptionAncestor0.classList.add('is-public');
+    var tags = (ticketInfo && ticketInfo.ticket && ticketInfo.ticket.tags) || [];
+    var tagSet = new Set(tags);
+    if (tagSet.has('partner_first_line_support')) {
+        var flsContainer = document.createElement('div');
+        flsContainer.classList.add('event');
+        var flsReminder = document.createElement('div');
+        flsReminder.classList.add('comment');
+        flsReminder.appendChild(document.createTextNode('REMINDER: '));
+        flsReminder.appendChild(document.createTextNode('Additional description, error logs, etc. collected by the partner are available in '));
+        flsReminder.appendChild(getJiraSearchLink('the linked FLS ticket', ticketId));
+        flsReminder.appendChild(document.createTextNode('.'));
+        flsContainer.appendChild(flsReminder);
+        descriptionAncestor0.appendChild(flsContainer);
+    }
     descriptionAncestor0.appendChild(description);
     var descriptionAncestor1 = document.createElement('div');
     descriptionAncestor1.classList.add('lesa-ui-description');
