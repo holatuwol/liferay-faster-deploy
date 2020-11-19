@@ -102,7 +102,7 @@ branches() {
 		fi
 	done
 
-	for branch in master-private master 72x-private 72x 71x-private 71x 70x-private 70x 62x 61x; do
+	for branch in master-private master 73x-private 73x 72x-private 72x 71x-private 71x 70x-private 70x 62x 61x; do
 		local ACTIVE_BUILD=
 
 		for LOG_ID in $(ls -1 "/var/www/html/builds/branches/" | grep -e "$branch-[0-9]*.log" | sort); do
