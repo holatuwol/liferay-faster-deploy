@@ -113,4 +113,10 @@ switchport() {
 
 	sed -i.bak "s/JPDA_ADDRESS=${1}/JPDA_ADDRESS=${2}/g" $CATALINA_HOME/bin/setenv.sh
 	sed -i.bak "s/JPDA_ADDRESS=${1}/JPDA_ADDRESS=${2}/g" $CATALINA_HOME/bin/setenv.bat
+
+	local ELASTICSEARCH_JAR=$(find ${CATALINA_HOME}/../osgi -name '*elasticsearch*api.jar')
+	local ELASTICSEARCH_FILE=$(unzip -l ${ELASTICSEARCH_JAR} | grep ElasticsearchConfiguration.class | awk '{ print $4 }' | sed 's/.class$/.config/g' | tr '/' '.')
+
+	echo 'embeddedHttpPort="'$2'40"' > ${CATALINA_HOME}/../osgi/configs/${ELASTICSEARCH_FILE}
+	echo 'sidecarHttpPort="'$2'40"' >> ${CATALINA_HOME}/../osgi/configs/${ELASTICSEARCH_FILE}
 }
