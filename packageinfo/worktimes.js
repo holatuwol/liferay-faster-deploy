@@ -1,15 +1,20 @@
 var style = document.createElement('style');
 
 style.textContent = `
-#work-times th, #work-times td {
+.tab-pane {
+	margin-top: 1em;
+}
+
+.work-times th,
+.work-times td {
 	border: 1px solid;
 	padding: 0.2em;
 	width: 5em;
 }
-#work-times td.work-time {
+.work-times td.work-time {
 	background-color: #ccc;
 }
-#work-times td .today {
+.work-times td .today {
 	background-color: #000;
 	border-radius: 50%;
 	height: 1em;
@@ -19,9 +24,9 @@ style.textContent = `
 
 document.head.appendChild(style);
 
-function adjustWorkTimes(gmtOffset) {
+function adjustWorkTimes(workTimes, workGMTOffset, displayGMTOffset) {
 	var workTimesSets = workTimes.map(x => new Set(x[1]));
-	var offset = workTimesGMTOffset - gmtOffset;
+	var offset = workGMTOffset - displayGMTOffset;
 
 	var flattenedWorkTimes = new Array(24 * 7).fill(false).map((x, hourOfWeek) => {
 		var newHourOfWeek = (hourOfWeek + offset + 24 * 7) % (24 * 7);
@@ -56,17 +61,17 @@ function createTableElement(tagName, text, fillIn) {
 	return element;
 }
 
-function renderWorkTimes(gmtOffset) {
-	var adjustedWorkTimes = adjustWorkTimes(gmtOffset);
+function renderWorkTimes(table, workTimes, workGMTOffset, displayGMTOffset) {
+	var adjustedWorkTimes = adjustWorkTimes(workTimes, workGMTOffset, displayGMTOffset);
 
 	var now = new Date();
 
 	var localOffset = 0 - (now.getTimezoneOffset() / 60);
-	var offset = gmtOffset - localOffset;
+	var offset = displayGMTOffset - localOffset;
 
-	var gmtOffsetNow = new Date(now.getTime() + (offset * 3600 * 1000));
-	var gmtOffsetHours = gmtOffsetNow.getHours();
-	var gmtOffsetDay = (gmtOffsetNow.getDay() + 6) % 7;
+	var displayGMTOffsetNow = new Date(now.getTime() + (offset * 3600 * 1000));
+	var displayGMTOffsetHours = displayGMTOffsetNow.getHours();
+	var displayGMTOffsetDay = (displayGMTOffsetNow.getDay() + 6) % 7;
 
 	var workTable = adjustedWorkTimes.map((row, dayOfWeek) => {
 		return [
@@ -75,7 +80,7 @@ function renderWorkTimes(gmtOffset) {
 			row[1].map((fillIn, hourOfDay) => {
 				var hourContent = ' ';
 
-				if (hourOfDay == gmtOffsetHours && dayOfWeek == gmtOffsetDay) {
+				if (hourOfDay == displayGMTOffsetHours && dayOfWeek == displayGMTOffsetDay) {
 					hourContent = document.createElement('div');
 					hourContent.textContent = ' ';
 					hourContent.classList.add('today');
@@ -92,12 +97,12 @@ function renderWorkTimes(gmtOffset) {
 		var option = document.createElement('option');
 		option.textContent = 'GMT' + ((i == 0) ? '' : ((i > 0) ? ('+' + i) : i));
 		option.value = i;
-		option.selected = (i == gmtOffset);
+		option.selected = (i == displayGMTOffset);
 		select.appendChild(option);
 	}
 
 	select.onchange = function() {
-		renderWorkTimes(this.options[this.selectedIndex].value);
+		renderWorkTimes(table, workTimes, this.options[this.selectedIndex].value);
 	};
 
 	var getHourContent = i => (i == 0) ? select : ((i < 11 ? ('0' + (i-1)) : (i-1)) + ':00');
@@ -109,7 +114,6 @@ function renderWorkTimes(gmtOffset) {
 
 	var renderedTable = transpose([hours].concat(workTable));
 
-	var table = document.getElementById('work-times');
 	table.innerHTML = '';
 
 	for (var i = 0; i < renderedTable.length; i++) {
@@ -121,4 +125,60 @@ function renderWorkTimes(gmtOffset) {
 	}
 }
 
-renderWorkTimes(0 - parseInt(new Date().getTimezoneOffset() / 60));
+function createWorkTimeTable(key, active) {
+	var anchorItem = document.createElement('a');
+	anchorItem.setAttribute('data-toggle', 'tab');
+	anchorItem.setAttribute('href', '#' + key);
+	anchorItem.textContent = 'Week of ' + key;
+
+	var listItem = document.createElement('li');
+	listItem.appendChild(anchorItem);
+
+	if (active) {
+		listItem.classList.add('active');
+	}
+
+	var listContainer = document.getElementById('work-times-tabs');
+	listContainer.appendChild(listItem);
+
+	var table = document.createElement('table');
+	table.classList.add('work-times');
+
+	var tableHolder = document.createElement('div');
+	tableHolder.classList.add('tab-pane');
+	tableHolder.setAttribute('id', key);
+	tableHolder.appendChild(table);
+
+	if (active) {
+		tableHolder.classList.add('active');
+	}
+
+	var tableContainer = document.getElementById('work-times-content');
+	tableContainer.appendChild(tableHolder);
+
+	return table;
+}
+
+var request = new XMLHttpRequest();
+var requestURL = 'https://s3-us-west-2.amazonaws.com/mdang.grow/worktimes.json';
+
+request.onreadystatechange = function() {
+	if (this.readyState == 4 && this.status == 200) {
+		var workTimeInfo = JSON.parse(this.responseText);
+
+		var workGMTOffset = workTimeInfo['gmtOffset'];
+		var displayGMTOffset = 0 - parseInt(new Date().getTimezoneOffset() / 60);
+
+		var workTimes = workTimeInfo['times']
+		var keys = Object.keys(workTimes).sort();
+
+		for (var i = 0; i < keys.length; i++) {
+			var key = keys[i];
+			var table = createWorkTimeTable(key, i == 0);
+			renderWorkTimes(table, workTimes[key], workGMTOffset, displayGMTOffset);
+		}
+	}
+};
+
+request.open('GET', requestURL, true);
+request.send();
