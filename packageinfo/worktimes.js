@@ -102,7 +102,7 @@ function renderWorkTimes(table, workTimes, workGMTOffset, displayGMTOffset) {
 	}
 
 	select.onchange = function() {
-		renderWorkTimes(table, workTimes, this.options[this.selectedIndex].value);
+		renderWorkTimes(table, workTimes, workGMTOffset, this.options[this.selectedIndex].value);
 	};
 
 	var getHourContent = i => (i == 0) ? select : ((i < 11 ? ('0' + (i-1)) : (i-1)) + ':00');
