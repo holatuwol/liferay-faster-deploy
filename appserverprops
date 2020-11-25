@@ -220,7 +220,7 @@ gradleprops() {
 	local GRADLE_LIFERAY_HOME=
 
 	if [ -f "$GRADLE_HOME/.gradle/gradle.properties" ]; then
-		GRADLE_LIFERAY_HOME=$(grep -F liferay.home= $GRADLE_HOME/.gradle/gradle.properties | cut -d'=' -f 2 | sed 's@'${GIT_ROOT}'/@@ig')
+		GRADLE_LIFERAY_HOME=$(grep -F liferay.home= $GRADLE_HOME/.gradle/gradle.properties | cut -d'=' -f 2 | perl -C -Mutf8 -pe 's@'${GIT_ROOT}'/@@i')
 	elif [ -f "$GIT_ROOT/gradle.properties" ]; then
 		GRADLE_LIFERAY_HOME=$(grep -F 'liferay.home=' "$GIT_ROOT/gradle.properties" | grep -vF '#' | cut -d'=' -f 2)
 
@@ -263,7 +263,10 @@ gradleprops() {
 		ANT_LIFERAY_HOME=$GRADLE_LIFERAY_HOME
 	fi
 
-	if [ "${ANT_LIFERAY_HOME,,}" != "${GRADLE_LIFERAY_HOME,,}" ] && [ -f $GIT_ROOT/build.xml ] && [ "" != "$(grep -F setup-sdk $GIT_ROOT/build.xml)" ]; then
+	local LOWER_ANT_LIFERAY_HOME=$(echo ${ANT_LIFERAY_HOME} | tr '[:upper:]' '[:lower:]')
+	local LOWER_GRADLE_LIFERAY_HOME=$(echo ${GRADLE_LIFERAY_HOME} | tr '[:upper:]' '[:lower:]')
+
+	if [ "${LOWER_ANT_LIFERAY_HOME}" != "${LOWER_GRADLE_LIFERAY_HOME}" ] && [ -f $GIT_ROOT/build.xml ] && [ "" != "$(grep -F setup-sdk $GIT_ROOT/build.xml)" ]; then
 		if [ "" == "$GRADLE_LIFERAY_HOME" ]; then
 			echo "Missing .gradle/gradle.properties, generating via ant setup-sdk"
 		else
