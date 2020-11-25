@@ -17,13 +17,13 @@ start_container() {
 
 fix_sql_builder_deps() {
 	for dependency in $(grep 'group: "com.liferay", ' modules/util/portal-tools-sample-sql-builder/build.gradle | grep -o 'name: "[^"]*"' | cut -d'"' -f 2); do
-		local folder=$(git ls-files modules/ | grep -F bnd.bnd | xargs grep -l "^Bundle-SymbolicName: ${dependency}$" | xargs -r dirname)
+		local file=$(git ls-files modules/ | grep -F bnd.bnd | xargs grep -l "^Bundle-SymbolicName: ${dependency}$")
 
-		if [ "" == "${folder}" ] || [[ ${folder} == modules/third-party/* ]]; then
+		if [ "" == "${file}" ] || [[ ${file} == modules/third-party/* ]]; then
 			continue
 		fi
 
-		local module=:$(echo ${folder} | cut -d'/' -f 2- | sed 's@/@:@g')
+		local module=$(dirname ${file} | cut -d'/' -f 2- | sed 's@/@:@g')
 
 		sed -i.bak '/'${dependency}'/s@group: .*$@project("'${module}'")@g' modules/util/portal-tools-sample-sql-builder/build.gradle
 	done

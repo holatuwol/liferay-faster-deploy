@@ -122,12 +122,12 @@ formatbranch() {
 		if [ -d ${GIT_ROOT}/modules ]; then
 			cd ${GIT_ROOT}/modules
 
-			cat $GIT_ROOT/.redeploy/format.txt | xargs -r $(dirname "${BASH_SOURCE[0]}")/../gw -x packageRunFormat | tee $GIT_ROOT/.redeploy/formatsource.txt
+			cat $GIT_ROOT/.redeploy/format.txt | xargs $(dirname "${BASH_SOURCE[0]}")/../gw -x packageRunFormat | tee $GIT_ROOT/.redeploy/formatsource.txt
 			EXIT_CODE=$?
 
 			cd -
 		else
-			cat $GIT_ROOT/.redeploy/format.txt | xargs -r $(dirname "${BASH_SOURCE[0]}")/../gw -x packageRunFormat | tee $GIT_ROOT/.redeploy/formatsource.txt
+			cat $GIT_ROOT/.redeploy/format.txt | xargs $(dirname "${BASH_SOURCE[0]}")/../gw -x packageRunFormat | tee $GIT_ROOT/.redeploy/formatsource.txt
 			EXIT_CODE=$?
 		fi
 
@@ -176,7 +176,11 @@ if [ -d "$GIT_ROOT/modules" ]; then
 	checksnapshots
 
 	pushd $GIT_ROOT/modules > /dev/null
-	ls -1 util/ | grep 'formatter$' | awk '{ print ":util:" $1 ":deploy" }' | xargs -r $(dirname "${BASH_SOURCE[0]}")/../gw -x packageRunFormat
+
+	if [ "" != "$(ls -1 util/ | grep 'formatter$')" ]; then
+		ls -1 util/ | grep 'formatter$' | awk '{ print ":util:" $1 ":deploy" }' | xargs $(dirname "${BASH_SOURCE[0]}")/../gw -x packageRunFormat
+	fi
+
 	popd > /dev/null
 fi
 

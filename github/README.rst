@@ -68,7 +68,7 @@ If you want to delete all tags on your ``liferay-portal-ee`` remote, you can use
 
 .. code-block:: bash
 
-	git ls-remote -t ${1} | awk '{ print ":" $2 }' | xargs -r git push ${1}
+	git ls-remote -t ${1} | awk '{ print ":" $2 }' | xargs git push ${1}
 
 Open GitHub In Web Browser
 ==========================

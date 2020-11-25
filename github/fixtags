@@ -18,12 +18,15 @@ check_tags '/fix-pack-base-[0-9]*\(-private\)*$'
 check_tags '/fix-pack-\(de\|dxp\)-[0-9]*-[0-9]*\(-private\)*$'
 check_tags '/marketplace-.*-[0-9]*\(-private\)*$'
 
-git tag | \
+cat tags_local.txt | \
 	grep -v '^[0-9].[0-9].[0-9]*-ga[0-9]$' | \
 	grep -v '^fix-pack-base-[0-9]*\(-private\)*' | \
 	grep -v '^fix-pack-\(de\|dxp\)-[0-9]*-[0-9]*\(-private\)*$' | \
-	grep -v '^marketplace-.*-[0-9]*\(-private\)*$' | \
-	xargs -r git tag -d
+	grep -v '^marketplace-.*-[0-9]*\(-private\)*$' > tags_delete.txt
 
-rm tags_local.txt
+if [ "" != "$(cat tags_delete.txt)" ]; then
+	cat tags_delete.txt | xargs git tag -d
+fi
+
+rm tags_delete.txt tags_local.txt
 rm tags_upstream.txt

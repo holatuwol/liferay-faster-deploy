@@ -160,7 +160,9 @@ gw() {
 
 	# avoid using the CDN, because it's not reliable
 
-	git ls-files | grep '\.gradle$' | xargs grep -Fl cdn.lfrs.sl | xargs -r sed -i.bak 's@cdn.lfrs.sl/repository@repository-cdn@g'
+	if [ "" != "$(git ls-files | grep '\.gradle$' | xargs grep -Fl cdn.lfrs.sl)" ]; then
+		git ls-files | grep '\.gradle$' | xargs grep -Fl cdn.lfrs.sl | xargs sed -i.bak 's@cdn.lfrs.sl/repository@repository-cdn@g'
+	fi
 
 	local GRADLE_ARGS="--stacktrace -Drepository.url=https://repository-cdn.liferay.com/nexus/content/groups/public"
 
