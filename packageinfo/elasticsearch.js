@@ -1,9 +1,10 @@
 var compatibility = null;
 
 var fixPacks = {
-	"Liferay 7.0": 90,
-	"Liferay 7.1": 17,
-	"Liferay 7.2": 4
+	"Liferay 7.0": 96,
+	"Liferay 7.1": 19,
+	"Liferay 7.2": 8,
+	"Liferay 7.3": 0
 };
 
 var servicePacks = {
@@ -20,20 +21,24 @@ var servicePacks = {
 	'7.0.10.fp80': 11,
 	'7.0.10.fp87': 12,
 	'7.0.10.fp90': 13,
+	'7.0.10.fp93': 14,
+	'7.0.10.fp96': 15,
 	'7.1.10.fp5': 1,
 	'7.1.10.fp10': 2,
 	'7.1.10.fp15': 3,
 	'7.1.10.fp17': 4,
-	'7.2.10.fp2': 1
+	'7.2.10.fp2': 1,
+	'7.2.10.fp5': 2,
+	'7.2.10.fp8': 3
 };
 
 var compatibility = {
 	"1.0": {
 		"2.2.x": {
 			"plugins": [
-				"Shield 2.2",
-				"Marvel 2.2",
-				"Kibana 4.4"
+				"Shield 2.2.x",
+				"Marvel 2.2.x",
+				"Kibana 4.4.x"
 			],
 			"liferay": {
 				"7.0.10": {
@@ -49,9 +54,9 @@ var compatibility = {
 		},
 		"2.4.x": {
 			"plugins": [
-				"Shield 2.4",
-				"Marvel 2.4",
-				"Kibana 4.6"
+				"Shield 2.4.x",
+				"Marvel 2.4.x",
+				"Kibana 4.6.x"
 			],
 			"liferay": {
 				"7.0.10.fp22": {
@@ -69,15 +74,15 @@ var compatibility = {
 	"2.0": {
 		"6.1.x - 6.8.x": {
 			"plugins": [
-				"X-Pack 6.1 - 6.8",
-				"Kibana 6.1 - 6.8"
+				"X-Pack 6.1.x - 6.8.x",
+				"Kibana 6.1.x - 6.8.x"
 			],
 			"liferay": {
 				"7.0.10.fp79": {
 					"connectors": {
 						"Liferay Connector to Elasticsearch 6 (1.1.x)": "https://web.liferay.com/marketplace/-/mp/application/106004266",
-						"Liferay Connector to X-Pack Monitoring [Elastic Stack 6.x] (1.0.x)": "https://web.liferay.com/marketplace/-/mp/application/106163750",
-						"Liferay Connector to X-Pack Security [Elastic Stack 6.x] (1.0.x)": "https://web.liferay.com/marketplace/-/mp/application/106163963"
+						"Liferay Enterprise Search Monitoring (1.x)": "https://web.liferay.com/marketplace/-/mp/application/106163750",
+						"Liferay Enterprise Search Security (1.x)": "https://web.liferay.com/marketplace/-/mp/application/106163963",
 					},
 					"jdk": [
 						"Oracle JDK 8"
@@ -85,9 +90,9 @@ var compatibility = {
 				},
 				"7.1.10.fp5": {
 					"connectors": {
-						"Liferay Connector to Elasticsearch 6 (2.0.x, bundled with 7.1)": null,
-						"Liferay Connector to X-Pack Monitoring [Elastic Stack 6.x] (2.0.x)": "https://web.liferay.com/marketplace/-/mp/application/106163750",
-						"Liferay Connector to X-Pack Security [Elastic Stack 6.x] (2.0.x)": "https://web.liferay.com/marketplace/-/mp/application/106163963"
+						"Liferay Connector to Elasticsearch 6 (bundled with 7.1)": null,
+						"Liferay Enterprise Search Monitoring (2.x)": "https://web.liferay.com/marketplace/-/mp/application/106163750",
+						"Liferay Enterprise Search Security (2.x)": "https://web.liferay.com/marketplace/-/mp/application/106163963",
 					},
 					"jdk": [
 						"Oracle JDK 8",
@@ -97,18 +102,18 @@ var compatibility = {
 				}
 			}
 		},
-		"6.2.x - 6.8.x": {
+		"6.5.x - 6.8.x": {
 			"plugins": [
-				"X-Pack 6.2 - 6.8",
-				"Kibana 6.2 - 6.8"
+				"X-Pack 6.5.x - 6.8.x",
+				"Kibana 6.5.x - 6.8.x"
 			],
 			"liferay": {
 				"7.2.10": {
 					"connectors": {
-						"Liferay Connector to Elasticsearch 6 (3.0.x, bundled with 7.2)": null,
-						"Liferay Connector to X-Pack Monitoring [Elastic Stack 6.x] (3.0.x)": "https://web.liferay.com/marketplace/-/mp/application/106163750",
-						"Liferay Connector to X-Pack Security [Elastic Stack 6.x] (3.0.x)": "https://web.liferay.com/marketplace/-/mp/application/106163963",
-						"Liferay Connector to Elasticsearch Learning to Rank (2.0.x)": "https://web.liferay.com/marketplace/-/mp/application/170666298"
+						"Liferay Connector to Elasticsearch 6 (bundled with 7.2)": null,
+						"Liferay Enterprise Search Monitoring (3.x)": "https://web.liferay.com/marketplace/-/mp/application/106163750",
+						"Liferay Enterprise Search Security (3.x)": "https://web.liferay.com/marketplace/-/mp/application/106163963",
+						"Liferay Connector to Elasticsearch Learning to Rank (2.x)": "https://web.liferay.com/marketplace/-/mp/application/170666298"
 					},
 					"jdk": [
 						"Oracle JDK 8",
@@ -120,23 +125,40 @@ var compatibility = {
 		}
 	},
 	"3.0": {
-		"7.3.x - 7.4.x": {
+		"7.3.x - 7.9.x": {
 			"plugins": [
-				"X-Pack 7.3 - 7.4",
-				"Kibana 7.3 - 7.4",
-				"Elasticsearch Learning to Rank 7.3.x"
+				"Kibana 7.3.x - 7.9.x",
+				"Elasticsearch Learning to Rank 7.3.x - 7.9.x"
 			],
 			"liferay": {
 				"7.2.10.fp2": {
 					"connectors": {
-						"Liferay Connector to Elasticsearch 7 (3.0.x)": "https://web.liferay.com/marketplace/-/mp/application/106004266",
-						"Liferay Connector to X-Pack Monitoring [Elastic Stack 6.x] (3.0.x)": "https://web.liferay.com/marketplace/-/mp/application/106163750",
-						"Liferay Connector to Elasticsearch Learning to Rank (2.0.x)": "https://web.liferay.com/marketplace/-/mp/application/170666298"
+						"Liferay Connector to Elasticsearch 7 (3.x)": "https://web.liferay.com/marketplace/-/mp/application/106004266",
+						"Liferay Enterprise Search Monitoring (3.x)": "https://web.liferay.com/marketplace/-/mp/application/106163750",
+						"Liferay Connector to Elasticsearch Learning to Rank (2.x)": "https://web.liferay.com/marketplace/-/mp/application/170666298"
 					},
 					"jdk": [
 						"Oracle JDK 8",
 						"Oracle JDK 11",
 						"All Java TCK compliant builds of Java 8 and Java 11"
+					]
+				}
+			}
+		},
+		"7.9.x": {
+			"plugins": [
+				"Kibana 7.9.x",
+				"Elasticsearch Learning to Rank 7.9.x"
+			],
+			"liferay": {
+				"7.3.10": {
+					"connectors": {
+						"Liferay Connector to Elasticsearch 7 (bundled with 7.3)": "https://web.liferay.com/marketplace/-/mp/application/106004266",
+						"Liferay Enterprise Search Monitoring (4.x)": "https://web.liferay.com/marketplace/-/mp/application/106163750",
+						"Liferay Connector to Elasticsearch Learning to Rank (3.x)": "https://web.liferay.com/marketplace/-/mp/application/170666298"
+					},
+					"jdk": [
+						"See <a href=\"https://www.elastic.co/support/matrix#matrix_jvm\">Elasticsearch and JVM Support Matrix</a>"
 					]
 				}
 			}
@@ -226,6 +248,10 @@ function getReadableLiferayVersion(fixPackVersion) {
 	return readableVersion;
 }
 
+function createParagraph(x) {
+	return '<p>' + x + '</p>';
+}
+
 function addCompatibilityRow(tbody, lesVersion, elasticVersion, fixPackVersion) {
 	var row = document.createElement('tr');
 
@@ -238,7 +264,7 @@ function addCompatibilityRow(tbody, lesVersion, elasticVersion, fixPackVersion) 
 	row.appendChild(cell);
 
 	cell = document.createElement('td');
-	cell.innerHTML = compatibility[lesVersion][elasticVersion]['plugins'].join('<br/>');
+	cell.innerHTML = compatibility[lesVersion][elasticVersion]['plugins'].map(createParagraph).join('');
 	row.appendChild(cell);
 
 	cell = document.createElement('td');
@@ -250,23 +276,25 @@ function addCompatibilityRow(tbody, lesVersion, elasticVersion, fixPackVersion) 
 	var connectors = compatibility[lesVersion][elasticVersion]['liferay'][fixPackVersion]['connectors'];
 
 	for (connector in connectors) {
+		var paragraph = document.createElement('p');
+
 		if (connectors[connector]) {
 			var link = document.createElement('a');
 			link.textContent = connector;
 			link.href = connectors[connector];
-			cell.appendChild(link);
+			paragraph.appendChild(link);
 		}
 		else {
-			cell.appendChild(document.createTextNode(connector));
+			paragraph.innerHTML = connector;
 		}
 
-		cell.appendChild(document.createElement('br'));
+		cell.appendChild(paragraph);
 	}
 
 	row.appendChild(cell);
 
 	cell = document.createElement('td');
-	cell.innerHTML = compatibility[lesVersion][elasticVersion]['liferay'][fixPackVersion]['jdk'].join('<br/>');
+	cell.innerHTML = compatibility[lesVersion][elasticVersion]['liferay'][fixPackVersion]['jdk'].map(createParagraph).join('');
 	row.appendChild(cell);
 
 	tbody.appendChild(row);
