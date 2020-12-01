@@ -5,6 +5,11 @@ print_version_gradle() {
 	echo '    "'${2}'": "'${VERSION}'",'
 }
 
+print_version_package() {
+	local VERSION=$(git show ${1}:${3}/package.json | jq '.dependencies["'${4}'"]' | cut -d'"' -f 2)
+	echo '    "'${2}'": "'${VERSION}'",'
+}
+
 print_version_packagelock() {
 	local VERSION=$(git show ${1}:${3}/package-lock.json | jq '.dependencies["'${4}'"].version' | cut -d'"' -f 2)
 	echo '    "'${2}'": "'${VERSION}'",'
@@ -16,7 +21,7 @@ print_version_shrinkwrap() {
 }
 
 print_version_yarnlock() {
-	local VERSION=$(git show ${1}:modules/yarn.lock | grep -F '/'${3}'/' | grep resolved | grep -o '/'${3}'-[0-9]*\.[0-9]*\.[^\.]*\.tgz' | grep -o '[0-9]*\.[0-9]*\.[^\.]*')
+	local VERSION=$(git show ${1}:modules/yarn.lock | grep 'https://[^/]*/'${3}'/' | grep resolved | grep -o '/'${3}'-[0-9]*\.[0-9]*\.[^\.]*\.tgz' | grep -o '[0-9]*\.[0-9]*\.[^\.]*')
 	echo '    "'${2}'": "'${VERSION}'",'
 }
 
@@ -240,6 +245,43 @@ echo '  },'
 
 	for i in $(seq 1 ${MAX_73_EE}); do
 		print_version_yarnlock fix-pack-dxp-${i}-7310 7310-dxp-$(printf "%02d\n" ${i}) clay-css
+	done
+) | sed '$s/,//g'
+
+echo '  },'
+
+(
+	echo '  {'
+	echo '    "name": "react",'
+	echo '    "github": "https://github.com/facebook/react",'
+	echo '    "tag": "v${1}",'
+
+	# Liferay 7.1
+
+	for i in $(seq 16 ${MAX_71_EE}); do
+		print_version_package fix-pack-dxp-${i}-7110 7110-dxp-$(printf "%02d\n" ${i}) modules/apps/frontend-js/frontend-js-react-web react
+	done
+
+	# Liferay 7.2
+
+	for i in $(seq 2 ${MAX_72_CE}); do
+		print_version_package 7.2.$((i - 1))-ga${i} 720$((i - 1))-ga${i} modules/apps/frontend-js/frontend-js-react-web react
+	done
+
+	for i in $(seq 1 ${MAX_72_EE}); do
+		print_version_package fix-pack-dxp-${i}-7210 7210-dxp-$(printf "%02d\n" ${i}) modules/apps/frontend-js/frontend-js-react-web react
+	done
+
+	# Liferay 7.3
+
+	for i in $(seq 1 ${MAX_73_CE}); do
+		print_version_package 7.3.$((i - 1))-ga${i} 730$((i - 1))-ga${i} modules/apps/frontend-js/frontend-js-react-web react
+	done
+
+	print_version_package fix-pack-base-7310 7310-base modules/apps/frontend-js/frontend-js-react-web react
+
+	for i in $(seq 1 ${MAX_73_EE}); do
+		print_version_package fix-pack-dxp-${i}-7310 7310-dxp-$(printf "%02d\n" ${i}) modules/apps/frontend-js/frontend-js-react-web react
 	done
 ) | sed '$s/,//g'
 
