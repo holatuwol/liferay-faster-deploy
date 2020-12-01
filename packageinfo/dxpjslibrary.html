@@ -24,18 +24,22 @@
 	.table.ce-70 tbody tr,
 	.table.ce-71 tbody tr,
 	.table.ce-72 tbody tr,
+	.table.ce-73 tbody tr,
 	.table.dxp-70 tbody tr,
 	.table.dxp-71 tbody tr,
-	.table.dxp-72 tbody tr {
+	.table.dxp-72 tbody tr,
+	.table.dxp-73 tbody tr {
 		display: none;
 	}
 
 	.table.ce-70 tbody tr.ce-70,
 	.table.ce-71 tbody tr.ce-71,
 	.table.ce-72 tbody tr.ce-72,
+	.table.ce-73 tbody tr.ce-73,
 	.table.dxp-70 tbody tr.dxp-70,
 	.table.dxp-71 tbody tr.dxp-71,
-	.table.dxp-72 tbody tr.dxp-72 {
+	.table.dxp-72 tbody tr.dxp-72,
+	.table.dxp-73 tbody tr.dxp-73 {
 		display: table-row;
 	}
 </style>
@@ -85,6 +89,13 @@
 			<li>For 7.2.0 GA1 up until the latest 7.3.x, this information is found at <a href="https://github.com/liferay/liferay-portal/blob/7.2.0-ga1/modules/yarn.lock#L3474">modules/yarn.lock</a></li>
 		</ul>
 	</li>
+	<li>
+		<code>react</code>:
+		<ul>
+			<li>For the latest 7.1.x, this information is found at <a href="https://github.com/liferay/liferay-portal/blob/589c13f7c3bd2ec1b0d87840e585197eeced66c4/modules/apps/frontend-js/frontend-js-react-web/package.json#L7">/modules/apps/frontend-js/frontend-js-react-web/package.json</a></li>
+			<li>For 7.2.1 GA2 up until the latest 7.3.x, this information is found at <a href="https://github.com/liferay/liferay-portal/blob/7.2.1-ga2/modules/apps/frontend-js/frontend-js-react-web/package.json#L7">/modules/apps/frontend-js/frontend-js-react-web/package.json</a></li>
+		</ul>
+	</li>
 </ul>
 
 <p><strong>Warning</strong>: This is NOT an official Liferay tool, nor is it supported by Liferay in any way. This does a source code analysis of the code that exists at the tag for the specified release.</p>
@@ -126,10 +137,12 @@
 				<option value="ce-70">7.0 CE Only</option>
 				<option value="ce-71">7.1 CE Only</option>
 				<option value="ce-72">7.2 CE Only</option>
+				<option value="ce-73">7.3 CE Only</option>
 				<option value="dxp">DXP Only</option>
 				<option value="dxp-70">7.0 DXP Only</option>
 				<option value="dxp-71">7.1 DXP Only</option>
 				<option value="dxp-72">7.2 DXP Only</option>
+				<option value="dxp-73">7.3 DXP Only</option>
 			</select>
 		</td>
 	</tr>
