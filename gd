@@ -21,8 +21,15 @@ project_to_library() {
 			continue
 		fi
 
-		local ARTIFACT_NAME="$(grep Bundle-SymbolicName ${GIT_ROOT}/modules${ARTIFACT_PATH}/bnd.bnd | cut -d' ' -f 2-)"
 		local ARTIFACT_PROPERTIES="${GIT_ROOT}/modules/.releng${ARTIFACT_PATH}/artifact.properties"
+		local LAST_PUBLISH_HASH=$(git log -1 --pretty='%H' ${ARTIFACT_PROPERTIES})
+
+		if [ "" != "$(git diff --name-only ${LAST_PUBLISH_HASH}..HEAD -- ${GIT_ROOT}/modules${ARTIFACT_PATH}/src/main/java)" ]; then
+			project_to_library ${GIT_ROOT}/modules${ARTIFACT_PATH}
+			continue
+		fi
+
+		local ARTIFACT_NAME="$(grep Bundle-SymbolicName ${GIT_ROOT}/modules${ARTIFACT_PATH}/bnd.bnd | cut -d' ' -f 2-)"
 		local ARTIFACT_VERSION=$(grep 'artifact.url' ${ARTIFACT_PROPERTIES} | cut -d'=' -f 2 | grep -o "/${ARTIFACT_NAME}/[^/]*" | cut -d'/' -f 3)
 
 		sed -i 's@'${project}'@group: "com.liferay", name: "'${ARTIFACT_NAME}'", version: "'${ARTIFACT_VERSION}'"@g' ${1}/build.gradle
