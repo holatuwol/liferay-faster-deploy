@@ -79,8 +79,10 @@ catalinastart() {
 
 	javahome 8
 
-	if [[ $RELEASE_ID -lt 7000 ]]; then
+	if [[ $RELEASE_ID -lt 6210 ]]; then
 		javahome 6
+	elif [[ $RELEASE_ID -lt 7000 ]]; then
+		javahome 7
 	else
 		javahome 8
 	fi
