@@ -2,8 +2,8 @@ var compatibility = null;
 
 var fixPacks = {
 	"Liferay 7.0": 96,
-	"Liferay 7.1": 19,
-	"Liferay 7.2": 8,
+	"Liferay 7.1": 20,
+	"Liferay 7.2": 9,
 	"Liferay 7.3": 0
 };
 
@@ -27,6 +27,7 @@ var servicePacks = {
 	'7.1.10.fp10': 2,
 	'7.1.10.fp15': 3,
 	'7.1.10.fp17': 4,
+	'7.1.10.fp20': 5,
 	'7.2.10.fp2': 1,
 	'7.2.10.fp5': 2,
 	'7.2.10.fp8': 3
