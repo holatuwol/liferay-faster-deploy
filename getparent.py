@@ -31,7 +31,7 @@ def getparent(check_tags):
 
 	de_branches = ['7.0.x', '7.0.x-private', 'ee-7.0.x']
 
-	dxp_branches = ['7.2.x', '7.1.x']
+	dxp_branches = ['7.3.x', '7.2.x', '7.1.x']
 	dxp_branches = dxp_branches + ['%s-private' % branch for branch in dxp_branches]
 
 	if current_branch == 'master' or current_branch in ee_branches + de_branches + dxp_branches:

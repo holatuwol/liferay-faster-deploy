@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           JIRA When javascript.enabled=false
 // @namespace      holatuwol
-// @version        2.7
+// @version        2.8
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_lite.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_lite.user.js
 // @match          https://issues.redhat.com/*
@@ -297,6 +297,9 @@ function getProductVersionName(version) {
     if (!version) {
         return '';
     }
+    if (version.indexOf('7.3') == 0) {
+        return '7.3';
+    }
     if (version.indexOf('7.2') == 0) {
         return '7.2';
     }
@@ -315,6 +318,9 @@ function getProductVersionName(version) {
     return '';
 }
 function getProductVersionId(version) {
+    if (version == '7.3') {
+        return '175004848';
+    }
     if (version == '7.2') {
         return '130051253';
     }

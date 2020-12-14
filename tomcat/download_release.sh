@@ -16,6 +16,8 @@ checkservicepack() {
 		RELEASE_ID=7.1.10
 	elif [[ ${PATCH_ID} == *-7210 ]] || [[ ${PATCH_ID} == *-7210.zip ]]; then
 		RELEASE_ID=7.2.10
+	elif [[ ${PATCH_ID} == *-7310 ]] || [[ ${PATCH_ID} == *-7310.zip ]]; then
+		RELEASE_ID=7.3.10
 	fi
 
 	if [[ ${PATCH_ID} == *hotfix* ]]; then
@@ -61,15 +63,22 @@ checkservicepack() {
 	SERVICE_PACKS[de-80]=7.0.10.11
 	SERVICE_PACKS[de-87]=7.0.10.12
 	SERVICE_PACKS[de-90]=7.0.10.13
+	SERVICE_PACKS[de-93]=7.0.10.14
+	SERVICE_PACKS[de-96]=7.0.10.15
 
 	SERVICE_PACKS[dxp-0-7110]=7.1.10
 	SERVICE_PACKS[dxp-5-7110]=7.1.10.1
 	SERVICE_PACKS[dxp-10-7110]=7.1.10.2
 	SERVICE_PACKS[dxp-15-7110]=7.1.10.3
 	SERVICE_PACKS[dxp-17-7110]=7.1.10.4
+	SERVICE_PACKS[dxp-20-7110]=7.1.10.5
 
 	SERVICE_PACKS[dxp-0-7210]=7.2.10
 	SERVICE_PACKS[dxp-2-7210]=7.2.10.1
+	SERVICE_PACKS[dxp-5-7210]=7.2.10.2
+	SERVICE_PACKS[dxp-8-7210]=7.2.10.3
+
+	SERVICE_PACKS[dxp-0-7310]=7.3.10
 
 	closestservicepack ${PATCH_ID}
 }
