@@ -451,11 +451,11 @@ function checkVersionInfo() {
 	table.innerHTML = '';
 
 	var getRowBackgroundAlpha = function(version1, version2) {
-		return (version1 != version2) ? 0.1 : 0.0;
+		return (version1.children[0].textContent != version2.children[0].textContent) ? 0.1 : 0.0;
 	};
 
 	var getRowForegroundAlpha = function(version1, version2) {
-		return (version1 != version2) ? 0.9 : 0.4;
+		return (version1.children[0].textContent != version2.children[0].textContent) ? 0.9 : 0.4;
 	};
 
 	var addRow = function(rowData) {
@@ -468,7 +468,13 @@ function checkVersionInfo() {
 
 		for (var i = 0; i < rowData.length; i++) {
 			var cell = document.createElement('td');
-			cell.innerHTML = rowData[i];
+
+			if ((typeof rowData[i]) == 'string') {
+				cell.innerHTML = rowData[i];
+			}
+			else {
+				cell.appendChild(rowData[i]);
+			}
 
 			if ((rowData.length == 3) && (i == 2)) {
 				cell.setAttribute('colspan', 2);
@@ -505,8 +511,15 @@ function checkVersionInfo() {
 
 		var version = versionInfo[name];
 
+		var artifactHolder = document.createElement('span');
+
 		if ((version == '0.0.0') || (version.indexOf('-SNAPSHOT') != -1)) {
-			return versionInfo[name];
+			var artifactLink = document.createElement('a');
+			artifactLink.textContent = version;
+
+			artifactHolder.appendChild(artifactLink);
+
+			return artifactHolder;
 		}
 
 		var dependencyClassifier = null;
@@ -517,31 +530,42 @@ function checkVersionInfo() {
 			version = version.substring(0, classifierSeparator);
 		}
 
-		var artifactLink = [
-			'<a href="',
+		var artifactHREF = [
 			repositoryURLs[versionInfo['repository']],
 			versionInfo['group'].replace(/\./g, '/'), '/',
 			versionInfo['name'], '/',
 			version, '/',
 			versionInfo['name'], '-', version,
 			dependencyClassifier ? '-' + dependencyClassifier : '',
-			'.', versionInfo['packaging'],
-			'">', versionInfo[name], '</a>'
-		];
+			'.', versionInfo['packaging']
+		].join('');
+
+		var artifactLink = document.createElement('a');
+		artifactLink.setAttribute('href', artifactHREF);
+		artifactLink.textContent = versionInfo[name];
+
+		artifactHolder.appendChild(artifactLink);
 
 		if (versionInfo['sourceFolder']) {
-			artifactLink = artifactLink.concat([
-				' (<a href="https://github.com/liferay/',
+			var commitHREF = [
+				'https://github.com/liferay/',
 				tagName.indexOf('fix-pack-') == 0 ? 'liferay-portal-ee' : 'liferay-portal',
 				'/commits/',
 				tagName,
 				'/',
-				versionInfo['sourceFolder'],
-				'">commits</a>)'
-			]);
+				versionInfo['sourceFolder']
+			].join('');
+
+			var commitLink = document.createElement('a');
+			commitLink.setAttribute('href', commitHREF);
+			commitLink.textContent = 'commits';
+
+			artifactHolder.appendChild(document.createTextNode(' ('));
+			artifactHolder.appendChild(commitLink);
+			artifactHolder.appendChild(document.createTextNode(')'));
 		}
 
-		return artifactLink.join('');
+		return artifactHolder;
 	};
 
 	var getRowData = function(versionInfo) {
