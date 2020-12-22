@@ -94,13 +94,9 @@ if [ "clean" == "$1" ]; then
 	git clean -xdf
 	cd -
 
-	for folder in master 73x-private 72x-private 71x-private 70x-private 62x 61x; do
-		if [ -d $BUILD_FOLDER_PREFIX/$folder ]; then
-			cr $folder
-		fi
-	done
+	crall
 
-	for folder in master-private 72x 71x 70x; do
+	for folder in master-private 73x 72x 71x 70x; do
 		if [ -d $BUILD_FOLDER_PREFIX/$folder ]; then
 			rm -rf $folder/*
 		fi

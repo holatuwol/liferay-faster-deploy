@@ -72,6 +72,14 @@ cr() {
 	$CATALINA_HOME/bin/startup.sh
 }
 
+crall() {
+	for folder in $(cat $BUILD_FOLDER_PREFIX/run.txt); do
+		if [ -d $BUILD_FOLDER_PREFIX/$folder ]; then
+			cr ${folder}
+		fi
+	done
+}
+
 cs() {
 	cr $@
 }
