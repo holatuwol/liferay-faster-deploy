@@ -70,10 +70,14 @@ def getparent(check_tags):
 		if isfile(join(git_root, 'build.properties')):
 			base_branch = get_file_property(join(git_root, 'build.properties'), 'git.working.branch.name')
 
-		if base_branch is None and isfile(join(git_root, 'git-commit-portal')):
-			with open(join(git_root, 'git-commit-portal'), 'r') as file:
-				commit = file.readlines()[0].strip()
-				base_branch = get_git_file_property(commit, 'build.properties', 'git.working.branch.name')
+		if base_branch is None:
+			if isfile(join(git_root, 'git-commit-portal')):
+				with open(join(git_root, 'git-commit-portal'), 'r') as file:
+					commit = file.readlines()[0].strip()
+					base_branch = get_git_file_property(commit, 'build.properties', 'git.working.branch.name')
+		elif base_branch == 'master':
+			if git.for_each_ref('refs/heads/%s.x' % short_version) is not None:
+				base_branch = '%s.x' % short_version
 
 		if base_branch is None:
 			base_branch = current_branch if current_branch != 'HEAD' else '7.0.x'
