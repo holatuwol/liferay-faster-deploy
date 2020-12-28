@@ -181,6 +181,7 @@ downloadbranchmirror() {
 				echo "Failed to reach releases mirror, switching to releases server"
 			fi
 
+			FILES_CREDENTIALS="-u ${FILES_USERNAME}:${FILES_PASSWORD}"
 			REQUEST_URL="https://releases.liferay.com/portal/snapshot-$BASE_BRANCH/"
 		fi
 
