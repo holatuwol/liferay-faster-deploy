@@ -11,5 +11,5 @@ rm source.tar
 for folder in source liferay-binaries-cache-2017 liferay-binaries-cache-2020; do
 	cd ${HOME}/${folder}
 	git checkout .
-	git gc
+	git gc --no-prune
 done

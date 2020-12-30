@@ -16,7 +16,7 @@ clone_repo() {
 	if [ -d ${target_folder}/.git ]; then
 		cd ${target_folder}
 		git clean -xdf
-		git gc
+		git gc --no-prune
 		cd -
 		return 0
 	fi
