@@ -66,6 +66,11 @@ docker_cp_chown() {
 liferayhome() {
 	if [ "${PWD}" != "${HOME}" ] && [ -f portal-ext.properties ]; then
 		LIFERAY_HOME=${PWD}
+
+		if [ -d ${PWD}/tomcat-* ]; then
+			CATALINA_HOME=${PWD}/tomcat-*
+		fi
+
 		return 0
 	fi
 

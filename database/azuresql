@@ -24,7 +24,7 @@ startdatabase() {
 	local VOLUME=
 
 	if [ "" != "${1}" ]; then
-		VOLUME="-v ${1}:${BACKUP_FOLDER_NAME}/lportal.bacpac -e MSSQL_PACKAGE=${BACKUP_FOLDER_NAME}/"
+		VOLUME="-v $(realpath ${1}):${BACKUP_FOLDER_NAME}/lportal.bacpac -e MSSQL_PACKAGE=${BACKUP_FOLDER_NAME}/"
 	fi
 
 	docker run --name ${CONTAINER_NAME} \
