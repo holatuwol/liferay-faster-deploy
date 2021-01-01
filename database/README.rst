@@ -69,14 +69,14 @@ Run the Liferay Sample SQL builder, with the specified number of users.
 Start a Database in a Docker Container
 --------------------------------------
 
-All of the other scripts in this folder are used to run Docker containers for various Liferay-supported databases. The scripts require that either you set the `LIFERAY_HOME` environment variable to the location of a Tomcat bundle, or your current working directory is one of the following locations (which will allow it to automatically detect a `LIFERAY_HOME`):
+All of the other scripts in this folder are used to run Docker containers for various Liferay-supported databases. The scripts require that either you set the ``LIFERAY_HOME`` environment variable to the location of a Tomcat bundle, or your current working directory is one of the following locations (which will allow it to automatically detect a ``LIFERAY_HOME``):
 
-* the root folder of a Tomcat bundle with a `portal-ext.properties` file (really obvious `LIFERAY_HOME`)
-* the root folder of a clone of the `liferay-portal` repository (tries to auto-detect from `app.server.properties`)
-* the root folder of a clone of the `liferay-portal-ee` repository (tries to auto-detect from `app.server.properties`)
+* the root folder of a Tomcat bundle with a ``portal-ext.properties`` file (really obvious ``LIFERAY_HOME``)
+* the root folder of a clone of the `liferay-portal <https://github.com/liferay/liferay-portal>`__ repository (tries to auto-detect from ``app.server.properties``)
+* the root folder of a clone of the `liferay-portal-ee <https://github.com/liferay/liferay-portal-ee>`__ repository (tries to auto-detect from ``app.server.properties``)
 
 Some of the databases allow you to specify the location of a database backup (for these, just add the path to the database backup as an argument to the script), and the scripts will automatically run scripts or mount volumes to allow for the database initialization to complete.
 
-* `azuresql`
-* `db2`
-* `oracle`
+* ``azuresql``
+* ``db2``
+* ``oracle``
