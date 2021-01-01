@@ -84,7 +84,7 @@ random_password() {
 }
 
 runcontainer() {
-	containername && startdatabase && updateprops && copydriver && waitfor_database && docker_cp_chown $@ && restorebackup $@
+	containername && startdatabase $@ && updateprops && copydriver && waitfor_database && docker_cp_chown $@ && restorebackup $@
 }
 
 liferayhome
