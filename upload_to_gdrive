@@ -1,0 +1,54 @@
+#!/bin/bash
+
+if [ "" == "$(which gdrive)" ]; then
+	echo 'Please set up the gdrive script'
+	echo 'https://shouts.dev/mount-google-drive-using-gdrive-on-linux-server-with-own-oauth-credentials'
+	exit 1
+fi
+
+SCRIPT_FOLDER="$(dirname $BASH_SOURCE[0])"
+
+if [ "" == "${1}" ]; then
+	echo -n "URL: "
+	read remote_file
+else
+	remote_file="${1}"
+fi
+
+get_file_id() {
+	file_id=$(gdrive list --no-header --query "name = '${target_file}' and parents in '${folder_id}'" | awk '{ print $1 }' | head -1)
+}
+
+get_folder_id() {
+	folder_id=$(gdrive list --no-header --query "name = 'Large Attachments'" | awk '{ print $1 }')
+}
+
+echo 'Downloading file...'
+local_file=$(python ${SCRIPT_FOLDER}/patcher/scrape_liferay.py "${remote_file}")
+
+get_folder_id
+
+if [ "" == "${folder_id}" ]; then
+	gdrive mkdir "Large Attachments"
+	get_folder_id
+fi
+
+target_file="${local_file}"
+
+get_file_id
+
+suffix=0
+
+while [ "" != "${file_id}" ]; do
+	suffix=$((suffix + 1))
+	target_file="${local_file} (${suffix})"
+	get_file_id
+done
+
+echo 'Uploading file...'
+gdrive upload --name "${target_file}" --delete --parent "${folder_id}" "${local_file}"
+
+get_file_id
+
+gdrive share --type domain --domain liferay.com "${file_id}"
+gdrive info "${file_id}" | grep '^DownloadUrl:'
