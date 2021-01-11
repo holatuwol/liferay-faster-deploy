@@ -6,6 +6,7 @@ import inspect
 import json
 import os
 from os.path import abspath, dirname, isdir, isfile, join, relpath
+import re
 import requests
 import sys
 
@@ -37,11 +38,16 @@ def authenticate(base_url, get_params=None):
         url_params = parse.parse_qs(parse.urlparse(r.url).query)
         login_portlet(r.url, url_params, r.text)
 
-def get_liferay_file(base_url, target_file, params=None, method='get'):
+def get_liferay_file(base_url, target_file=None, params=None, method='get'):
     r = make_liferay_request(base_url, params, method)
+
+    if target_file is None:
+        target_file = re.findall('filename="([^"]*)"', r.headers['content-disposition'])[0]
 
     with open(target_file, 'wb') as f:
         f.write(r.content)
+
+    return target_file
 
 def get_liferay_content(base_url, params=None, method='get'):
     r = make_liferay_request(base_url, params, method)
@@ -241,4 +247,4 @@ def get_json_auth_token(base_url):
     return json_auth_token[base_url]
 
 if __name__ == '__main__':
-    get_liferay_file(sys.argv[1], sys.argv[2])
+    print(get_liferay_file(sys.argv[1]))
