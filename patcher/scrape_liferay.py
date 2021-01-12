@@ -9,6 +9,7 @@ from os.path import abspath, dirname, isdir, isfile, join, relpath
 import re
 import requests
 import sys
+from tqdm import tqdm
 
 try:
     from urllib import parse
@@ -40,12 +41,20 @@ def authenticate(base_url, get_params=None):
 
 def get_liferay_file(base_url, target_file=None, params=None, method='get'):
     r = make_liferay_request(base_url, params, method, True)
+    total = int(r.headers.get('content-length', 0))
+    progress_bar = tqdm(total=total, unit='iB', unit_scale=True)
 
     if target_file is None:
-        target_file = re.findall('filename="([^"]*)"', r.headers['content-disposition'])[0]
+        filenames = re.findall('filename="([^"]*)"', r.headers.get('content-disposition', ''))
+
+        if len(filenames) == 0:
+            target_file = 'untitled'
+        else:
+            target_file = filenames[0]
 
     with open(target_file, 'wb') as f:
         for chunk in r.iter_content(chunk_size=8192):
+            progress_bar.update(len(chunk))
             f.write(chunk)
 
     return target_file
