@@ -26,6 +26,11 @@ get_folder_id() {
 echo 'Downloading file...'
 local_file=$(python ${SCRIPT_FOLDER}/patcher/scrape_liferay.py "${remote_file}")
 
+if [[ ${local_file} != *.zip ]] && [[ ${local_file} != *.gz ]]; then
+	gzip -9 ${local_file}
+	local_file="${local_file}.gz"
+fi
+
 get_folder_id
 
 if [ "" == "${folder_id}" ]; then
