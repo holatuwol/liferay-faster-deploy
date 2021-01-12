@@ -39,13 +39,14 @@ def authenticate(base_url, get_params=None):
         login_portlet(r.url, url_params, r.text)
 
 def get_liferay_file(base_url, target_file=None, params=None, method='get'):
-    r = make_liferay_request(base_url, params, method)
+    r = make_liferay_request(base_url, params, method, True)
 
     if target_file is None:
         target_file = re.findall('filename="([^"]*)"', r.headers['content-disposition'])[0]
 
     with open(target_file, 'wb') as f:
-        f.write(r.content)
+        for chunk in r.iter_content(chunk_size=8192):
+            f.write(chunk)
 
     return target_file
 
@@ -54,7 +55,7 @@ def get_liferay_content(base_url, params=None, method='get'):
 
     return r.text
 
-def make_liferay_request(base_url, params, method):
+def make_liferay_request(base_url, params, method, stream=False):
     pos = base_url.find('/api/jsonws/')
 
     if pos != -1:
@@ -73,7 +74,7 @@ def make_liferay_request(base_url, params, method):
             else:
                 full_url = '%s&%s' % (base_url, query_string)
 
-        r = session.get(full_url, data=params)
+        r = session.get(full_url, data=params, stream=stream)
     else:
         r = session.post(base_url, data=params)
 
