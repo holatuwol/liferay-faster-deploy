@@ -19,28 +19,32 @@ gethotfix() {
 		FIX_NAME="liferay-hotfix-$1-$2"
 	fi
 
-	if [ -f $FIX_NAME.zip ]; then
+	if [ -f ${FIX_NAME}.zip ]; then
 		return 0
 	fi
 
 	local FILE_URL=
 
 	if [ "" == "${FILES_EE_FOLDER}" ]; then
-		FILE_URL=$FILES_MIRROR/private/ee/fix-packs/$VERSION/hotfix/$FIX_NAME.zip
+		FILE_URL=${FILES_MIRROR}/private/ee/fix-packs/$VERSION/hotfix/${FIX_NAME}.zip
 	else
-		FILE_URL=$FILES_MIRROR/${FILES_EE_FOLDER}/fix-packs/$VERSION/hotfix/$FIX_NAME.zip
+		FILE_URL=${FILES_MIRROR}/${FILES_EE_FOLDER}/fix-packs/$VERSION/hotfix/${FIX_NAME}.zip
 	fi
 
-	echo "Downloading $FIX_NAME to check fixpack_documentation.xml"
-	echo $FILE_URL
+	echo "Downloading ${FIX_NAME} to check fixpack_documentation.xml"
+	echo ${FILE_URL}
 	echo
-	curl -f -s -O "$FILE_URL"
+	curl -f -s -O "${FILE_URL}"
 }
 
 findbuildurl() {
 	gethotfix $@
 
-	local BUILD_ID=$(unzip -p $FIX_NAME.zip fixpack_documentation.xml | grep -F '<build-id>' | cut -d'>' -f 2 | cut -d'<' -f 1)
+	local BUILD_ID=$(unzip -p ${FIX_NAME}.zip fixpack_documentation.xml 2>/dev/null | grep -F '<build-id>' | cut -d'>' -f 2 | cut -d'<' -f 1)
+
+	if [ "" == "${BUILD_ID}" ]; then
+		BUILD_ID=$(unzip -p ${FIX_NAME}.zip fixpack_documentation.json 2>/dev/null | jq '.build.id' | cut -d'"' -f 2)
+	fi
 
 	if [ "" == "${BUILD_ID}" ]; then
 		return 1
