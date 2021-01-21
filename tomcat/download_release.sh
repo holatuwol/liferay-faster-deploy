@@ -70,7 +70,7 @@ copyextras() {
 		cd -
 
 		cd "${LIFERAY_HOME}/patching-tool"
-		echo 'patching.mode=binary' > default.properties
+		rm -f default.properties
 
 		if [ -h ../tomcat ]; then
 			mv ../tomcat /tmp
