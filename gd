@@ -22,6 +22,12 @@ project_to_library() {
 		fi
 
 		local ARTIFACT_PROPERTIES="${GIT_ROOT}/modules/.releng${ARTIFACT_PATH}/artifact.properties"
+
+		if [ ! -f ${ARTIFACT_PROPERTIES} ]; then
+			project_to_library ${GIT_ROOT}/modules${ARTIFACT_PATH}
+			continue
+		fi
+
 		local LAST_PUBLISH_HASH=$(git log -1 --pretty='%H' ${ARTIFACT_PROPERTIES})
 
 		if [ "" != "$(git diff --name-only ${LAST_PUBLISH_HASH}..HEAD -- ${GIT_ROOT}/modules${ARTIFACT_PATH}/src/main/java)" ]; then
