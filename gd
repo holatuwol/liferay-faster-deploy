@@ -5,6 +5,10 @@ SCRIPT_FOLDER=$(dirname "${BASH_SOURCE[0]}")
 . ${SCRIPT_FOLDER}/setopts
 
 project_to_library() {
+	if [ "portal-bootstrap" == "$(basename ${1})" ]; then
+		return 0
+	fi
+
 	if [ ! -f ${1}/build.gradle ]; then
 		return 0
 	fi
