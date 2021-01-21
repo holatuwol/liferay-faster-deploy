@@ -7,8 +7,24 @@ addhost() {
 		return 0
 	fi
 
-	local HOSTNAME=$(echo $1 | grep -o '//[^/]*/' | cut -d'/' -f 3)
-	local IP_ADDRESS=$(ping -c 1 ${HOSTNAME} | grep -o '[1-9][0-9]*\.[1-9][0-9]*\.[1-9][0-9]*\.[1-9][0-9]*' | head -1)
+	local HOSTNAME=$(echo ${1} | grep -o '//[^/]*/' | cut -d'/' -f 3)
+
+	if [ "" == "${HOSTNAME}" ]; then
+		HOSTNAME=$(echo ${1} | grep -o '//[^/]*$' | cut -d'/' -f 3)
+	fi
+
+	if [ "" == "${HOSTNAME}" ]; then
+		echo "Unable to extract host name from ${1}"
+		return 0
+	fi
+
+	local IP_ADDRESS=$(ping -c 1 ${HOSTNAME} | grep -o '[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*' | head -1)
+
+	if [ "${HOSTNAME}" == "${IP_ADDRESS}" ]; then
+		return 0
+	fi
+
+	echo "Mapping ${HOSTNAME} to ${IP_ADDRESS}"
 
 	if [ "" != "${IP_ADDRESS}" ]; then
 		ADD_HOST="${ADD_HOST} --add-host=${HOSTNAME}:${IP_ADDRESS}"
@@ -50,33 +66,6 @@ create_network() {
 	fi
 
 	NETWORK_METADATA="--network ${NETWORK_NAME} --network-alias ${CONTAINER_NAME} -e IS_CLUSTER=true"
-}
-
-get_hotfix_url() {
-	if [ "" == "$1" ]; then
-		if [ -d patches ]; then
-			HOTFIX_URL=$(ls patches/*.zip | tail -1 | cut -d'/' -f 2)
-		fi
-
-		return 0
-	fi
-
-	if [[ $1 != https://patcher.liferay.com/* ]]; then
-		HOTFIX_URL=$1
-		return 0
-	fi
-
-	if [ "" == "$(git config files.username)" ] || [ "" == "$(git config files.password)" ]; then
-		echo "Cannot decode $1 unless files.username and files.password are set with git config --global"
-		return 1
-	fi
-
-	HOTFIX_URL=$("$(dirname "${SCRIPT_FOLDER}")/patcher/findhotfix" "$1")
-
-	if [ "" == "${HOTFIX_URL}" ]; then
-		echo "Unable to decode $1 into a hotfix name"
-		return 1
-	fi
 }
 
 notify_finish() {
@@ -285,12 +274,12 @@ start_liferay() {
 	local MIRRORS=
 
 	if [ "" != "${BRANCH_ARCHIVE_MIRROR}" ]; then
-		addhost ${BRANCH_ARCHIVE_MIRROR}
+		addhost "${BRANCH_ARCHIVE_MIRROR}"
 		MIRRORS="${MIRRORS} -e BRANCH_ARCHIVE_MIRROR=${BRANCH_ARCHIVE_MIRROR}"
 	fi
 
 	if [ "" != "${LIFERAY_FILES_MIRROR}" ]; then
-		addhost ${LIFERAY_FILES_MIRROR}
+		addhost "${LIFERAY_FILES_MIRROR}"
 		MIRRORS="${MIRRORS} -e LIFERAY_FILES_MIRROR=${LIFERAY_FILES_MIRROR}"
 
 		if [ "" != "${LIFERAY_FILES_EE_FOLDER}" ]; then
@@ -299,36 +288,38 @@ start_liferay() {
 	fi
 
 	if [ "" != "${LIFERAY_RELEASES_MIRROR}" ]; then
-		addhost ${LIFERAY_RELEASES_MIRROR}
+		addhost "${LIFERAY_RELEASES_MIRROR}"
 		MIRRORS="${MIRRORS} -e LIFERAY_RELEASES_MIRROR=${LIFERAY_RELEASES_MIRROR}"
 	fi
 
 	if [ "" != "${LICENSE_MIRROR}" ]; then
-		addhost ${LICENSE_MIRROR}
+		addhost "${LICENSE_MIRROR}"
 		MIRRORS="${MIRRORS} -e LICENSE_MIRROR=${LICENSE_MIRROR}"
 	fi
 
 	START_TIME=$(date '+%s')
 
-	if get_hotfix_url $1; then
+	if [ "" != "${1}" ]; then
 		echo "${ADD_HOST}"
 
-		docker run ${GLOBAL_BIND} ${LOCAL_BIND} ${EXPOSE_ONLY} \
-			${LIFERAY_HOME_MOUNT} ${LIFERAY_RDBUILD_MOUNT} ${LIFERAY_RELEASE_MOUNT} ${DOCLIB_MOUNT} ${LIFERAY_LICENSE_MOUNT} \
-			-e RELEASE_ID=${RELEASE_ID} \
-			-e LIFERAY_PASSWORD=${LIFERAY_PASSWORD} \
-			-e IS_UPGRADE=${IS_UPGRADE} \
-			-e JVM_HEAP_SIZE=${JVM_HEAP_SIZE} \
-			${MIRRORS} ${NETWORK_METADATA} ${ADD_HOST} ${EXTRA_ARGS} --name ${CONTAINER_NAME} \
-			--detach ${IMAGE_NAME} ${HOTFIX_URL}
+		pushd ${LIFERAY_HOME}
+		. ${SCRIPT_FOLDER}/hotfix ${1}
+		popd
+	fi
 
-		notify_finish &
+	docker run ${GLOBAL_BIND} ${LOCAL_BIND} ${EXPOSE_ONLY} \
+		${LIFERAY_HOME_MOUNT} ${LIFERAY_RDBUILD_MOUNT} ${LIFERAY_RELEASE_MOUNT} ${DOCLIB_MOUNT} ${LIFERAY_LICENSE_MOUNT} \
+		-e RELEASE_ID=${RELEASE_ID} \
+		-e LIFERAY_PASSWORD=${LIFERAY_PASSWORD} \
+		-e IS_UPGRADE=${IS_UPGRADE} \
+		-e JVM_HEAP_SIZE=${JVM_HEAP_SIZE} \
+		${MIRRORS} ${NETWORK_METADATA} ${ADD_HOST} ${EXTRA_ARGS} --name ${CONTAINER_NAME} \
+		--detach ${IMAGE_NAME} ${HOTFIX_URL}
 
-		if [ "no" != "${ATTACH_LOG}" ]; then
-			docker logs -f --since="${START_TIME}" ${CONTAINER_NAME}
-		fi
-	else
-		return 1
+	notify_finish &
+
+	if [ "no" != "${ATTACH_LOG}" ]; then
+		docker logs -f --since="${START_TIME}" ${CONTAINER_NAME}
 	fi
 }
 
