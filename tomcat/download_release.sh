@@ -34,121 +34,7 @@ checkservicepack() {
 	fi
 
 	echo "Checking service pack for ${PATCH_ID}"
-
-	declare -A SERVICE_PACKS
-
-	SERVICE_PACKS[portal-0]=6.2.10
-	SERVICE_PACKS[portal-45]=6.2.10.12
-	SERVICE_PACKS[portal-63]=6.2.10.13
-	SERVICE_PACKS[portal-69]=6.2.10.14
-	SERVICE_PACKS[portal-77]=6.2.10.15
-	SERVICE_PACKS[portal-114]=6.2.10.16
-	SERVICE_PACKS[portal-121]=6.2.10.17
-	SERVICE_PACKS[portal-128]=6.2.10.18
-	SERVICE_PACKS[portal-138]=6.2.10.19
-	SERVICE_PACKS[portal-148]=6.2.10.20
-	SERVICE_PACKS[portal-154]=6.2.10.21
-
-	SERVICE_PACKS[de-0]=7.0.10
-	SERVICE_PACKS[de-7]=7.0.10.1
-	SERVICE_PACKS[de-12]=7.0.10.2
-	SERVICE_PACKS[de-14]=7.0.10.3
-	SERVICE_PACKS[de-22]=7.0.10.4
-	SERVICE_PACKS[de-30]=7.0.10.5
-	SERVICE_PACKS[de-32]=7.0.10.6
-	SERVICE_PACKS[de-40]=7.0.10.7
-	SERVICE_PACKS[de-50]=7.0.10.8
-	SERVICE_PACKS[de-60]=7.0.10.9
-	SERVICE_PACKS[de-70]=7.0.10.10
-	SERVICE_PACKS[de-80]=7.0.10.11
-	SERVICE_PACKS[de-87]=7.0.10.12
-	SERVICE_PACKS[de-90]=7.0.10.13
-	SERVICE_PACKS[de-93]=7.0.10.14
-	SERVICE_PACKS[de-96]=7.0.10.15
-
-	SERVICE_PACKS[dxp-0-7110]=7.1.10
-	SERVICE_PACKS[dxp-5-7110]=7.1.10.1
-	SERVICE_PACKS[dxp-10-7110]=7.1.10.2
-	SERVICE_PACKS[dxp-15-7110]=7.1.10.3
-	SERVICE_PACKS[dxp-17-7110]=7.1.10.4
-	SERVICE_PACKS[dxp-20-7110]=7.1.10.5
-
-	SERVICE_PACKS[dxp-0-7210]=7.2.10
-	SERVICE_PACKS[dxp-2-7210]=7.2.10.1
-	SERVICE_PACKS[dxp-5-7210]=7.2.10.2
-	SERVICE_PACKS[dxp-8-7210]=7.2.10.3
-
-	SERVICE_PACKS[dxp-0-7310]=7.3.10
-
-	closestservicepack ${PATCH_ID}
-}
-
-closestservicepack() {
-	RELEASE_ID=${SERVICE_PACKS[${1}]}
-
-	if [ "" != "${RELEASE_ID}" ]; then
-		echo "Exactly matches service pack ${RELEASE_ID}"
-		return 0
-	fi
-
-	if [[ "${1}" == portal-* ]]; then
-		for id in $(seq 0 $(echo "${1}" | cut -d'-' -f 2) | tac); do
-			RELEASE_ID=${SERVICE_PACKS[portal-${id}]}
-
-			if [ "" != "${RELEASE_ID}" ]; then
-				echo "${1} is closest to service pack ${RELEASE_ID}"
-				return 0
-			fi
-		done
-	fi
-
-	if [[ "${1}" == de-* ]]; then
-		for id in $(seq 0 $(echo "${1}" | cut -d'-' -f 2) | tac); do
-			RELEASE_ID=${SERVICE_PACKS[de-${id}]}
-
-			if [ "" != "${RELEASE_ID}" ]; then
-				echo "${1} is closest to service pack ${RELEASE_ID}"
-				return 0
-			fi
-		done
-	fi
-
-	if [[ "${1}" == dxp-* ]]; then
-		local RELEASE_VERSION=$(echo "${1}" | cut -d'-' -f 3)
-
-		for id in $(seq 0 $(echo "${1}" | cut -d'-' -f 2) | tac); do
-			RELEASE_ID=${SERVICE_PACKS[dxp-${id}-${RELEASE_VERSION}]}
-
-			if [ "" != "${RELEASE_ID}" ]; then
-				echo "${1} is closest to service pack ${RELEASE_ID}"
-				return 0
-			fi
-		done
-	fi
-
-	if [[ "${1}" == *-7110 ]]; then
-		RELEASE_ID=7.1.10
-		echo "Failed to guess the service pack for ${1}, assuming ${RELEASE_ID}"
-		return 0
-	fi
-
-	if [[ "${1}" == *-7010 ]]; then
-		RELEASE_ID=7.0.10
-		echo "Failed to guess the service pack for ${1}, assuming ${RELEASE_ID}"
-		return 0
-	fi
-
-	if [[ "${1}" == *-6210 ]]; then
-		RELEASE_ID=6.2.10
-		echo "Failed to guess the service pack for ${1}, assuming ${RELEASE_ID}"
-		return 0
-	fi
-
-	if [[ "${1}" == *-6130 ]]; then
-		RELEASE_ID=6.1.30
-		echo "Failed to guess the service pack for ${1}, assuming ${RELEASE_ID}"
-		return 0
-	fi
+	RELEASE_ID=$(python ${SCRIPT_FOLDER}/closest_service_pack.py ${PATCH_ID})
 }
 
 copyextras() {
@@ -173,7 +59,10 @@ copyextras() {
 
 	if [ "false" == "${UP_TO_DATE}" ]; then
 		mkdir -p ${LIFERAY_HOME}/patches
-		cp ${LIFERAY_HOME}/patching-tool/patches/* ${LIFERAY_HOME}/patches/
+
+		for file in ${LIFERAY_HOME}/patching-tool/patches/*; do
+			cp ${file} ${LIFERAY_HOME}/patches/
+		done
 
 		cd "${LIFERAY_HOME}"
 		rm -rf patching-tool
@@ -181,14 +70,14 @@ copyextras() {
 		cd -
 
 		cd "${LIFERAY_HOME}/patching-tool"
-		rm -f default.properties
+		cat /dev/null > default.properties
 
 		if [ -h ../tomcat ]; then
 			mv ../tomcat /tmp
-			./patching-tool.sh default auto-discovery ..
+			./patching-tool.sh auto-discovery ..
 			mv /tmp/tomcat ..
 		else
-			./patching-tool.sh default auto-discovery ..
+			./patching-tool.sh auto-discovery ..
 		fi
 
 		cd -
@@ -393,10 +282,15 @@ getpatchingtool() {
 
 	if [[ "$RELEASE_ID" == 6.1.30* ]] || [[ "$RELEASE_ID" == 6.2.10* ]]; then
 		PATCHING_TOOL_VERSION=patching-tool-$(curl ${FILES_CREDENTIALS} $REQUEST_URL/LATEST.txt)-internal.zip
-	else
+	elif [[ "$RELEASE_ID" == 7.0.10* ]] || [[ "$RELEASE_ID" == 7.1.10* ]] || [[ "$RELEASE_ID" == 7.2.10* ]]; then
 		curl ${FILES_CREDENTIALS} $REQUEST_URL/LATEST-2.0.txt
 		PATCHING_TOOL_VERSION=patching-tool-$(curl ${FILES_CREDENTIALS} $REQUEST_URL/LATEST-2.0.txt)-internal.zip
+	else
+		curl ${FILES_CREDENTIALS} $REQUEST_URL/LATEST-3.0.txt
+		PATCHING_TOOL_VERSION=patching-tool-$(curl ${FILES_CREDENTIALS} $REQUEST_URL/LATEST-3.0.txt)-internal.zip
 	fi
+
+	echo "Using patching tool ${PATCHING_TOOL_VERSION}"
 
 	if [ -f $PATCHING_TOOL_VERSION ] && [ -d patching-tool ]; then
 		return 0

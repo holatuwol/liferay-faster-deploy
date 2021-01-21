@@ -1,5 +1,7 @@
 #!/bin/bash
 
+SCRIPT_FOLDER=$(dirname "${BASH_SOURCE[0]}")
+
 check_release_info() {
 	local PORTAL_KERNEL=$(find . -name portal-kernel.jar)
 
@@ -76,7 +78,7 @@ prepare_server() {
 		BUILD_MOUNT_POINT="${HOME}/.liferay/release"
 	fi
 
-	if [ "" == "${LIFERAY_FILES_MIRROR}" ]; then
+	if [ "" == "${LIFERAY_FILES_MIRROR}" ] || [[ "${LIFERAY_FILES_MIRROR}" == https://files.liferay.com* ]]; then
 		if [ "" == "$(git config files.username)" ] || [ "" == "$(git config files.password)" ]; then
 			echo "Cannot access files.liferay.com unless files.username and files.password are set with git config --global"
 			return 1
@@ -103,7 +105,7 @@ prepare_server() {
 	rm -rf work
 }
 
-. $(dirname "${BASH_SOURCE[0]}")/download_build.sh
-. $(dirname "${BASH_SOURCE[0]}")/download_release.sh
+. ${SCRIPT_FOLDER}/download_build.sh
+. ${SCRIPT_FOLDER}/download_release.sh
 
 get_hotfix_url "${1}" && prepare_server "${HOTFIX_URL}"
