@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           GitHub Link to LPS Tickets
 // @namespace      holatuwol
-// @version        1.5
+// @version        1.6
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/github_link_lps.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/github_link_lps.user.js
 // @match          https://github.com/LiferayCloud/*
@@ -20,7 +20,7 @@ function createAnchorTag(text, href, classList) {
   link.textContent = text;
 
   link.setAttribute('data-link-replaced', 'true');
-  
+
   if (classList) {
     copyClassList(classList, link.classList);
   }
@@ -51,9 +51,9 @@ function replaceLinks(links) {
     if (dataLinkReplaced) {
       continue;
     }
-    
+
     links[i].setAttribute('data-link-replaced', 'true');
-    
+
     var text = links[i].textContent;
     var href = links[i].href;
 
@@ -65,10 +65,6 @@ function replaceLinks(links) {
     var classList = links[i].classList;
 
     while ((match = re.exec(text)) !== null) {
-      if (match.index != pos) {
-        newElement.appendChild(createAnchorTag(text.substring(pos, match.index), href, classList));
-      }
-      
       var issueKey = match[0];
       var projectKey = issueKey.substring(0, issueKey.indexOf('-'));
 
@@ -76,8 +72,12 @@ function replaceLinks(links) {
         continue;
       }
 
+      if (match.index != pos) {
+        newElement.appendChild(createAnchorTag(text.substring(pos, match.index), href, classList));
+      }
+
       var projectDomain = projects[projectKey];
-      
+
       newElement.appendChild(createAnchorTag(issueKey, 'https://' + projectDomain + '/browse/' + issueKey, classList));
 
       pos = match.index + issueKey.length;
@@ -108,7 +108,7 @@ function replaceLinks(links) {
 function addJiraLink(element, debug) {
   if (element.nodeType == Node.TEXT_NODE) {
     var newHTML = element.textContent;
-    
+
     var projectKeys = Object.keys(projects);
 
     for (var i = 0; i < projectKeys.length; i++) {
@@ -120,7 +120,7 @@ function addJiraLink(element, debug) {
       newHTML = newHTML.replace(new RegExp("([^\"])(https:\/\/" + projectDomain + "\/browse\/)(" + projectKey + "-[0-9]+)", "g"), '$1<a href="$2$3" target="_blank" data-link-replaced="true">$2$3</a>');
       newHTML = newHTML.replace(new RegExp("^(https:\/\/" + projectDomain + "\/browse\/)(" + projectKey + "-[0-9]+)", "g"), '<a href="$1$2" target="_blank" data-link-replaced="true">$1$2</a>');
     }
-    
+
     if (element.textContent != newHTML) {
       var newElement = document.createElement('span');
       newElement.setAttribute('data-link-replaced', 'true');
@@ -148,7 +148,7 @@ function addJiraLinks(elements) {
 function checkCurrentURL() {
   var textSelectors = ['a[data-hovercard-type="commit"]'];
   var projectKeys = Array.from(Object.keys(projects));
-  
+
   var projectSelectors = projectKeys.map(x => 'a[title^="' + x + '"],a[aria-label^="' + x + '"]')
   var selector = textSelectors.concat(projectSelectors);
   var selectorString = selector.map(x => x + ':not([data-link-replaced="true"])').join(',');
