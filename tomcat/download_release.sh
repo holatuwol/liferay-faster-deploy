@@ -71,6 +71,7 @@ copyextras() {
 
 		cd "${LIFERAY_HOME}/patching-tool"
 		rm -f default.properties
+		chmod u+x patching-tool.sh
 
 		if [ -h ../tomcat ]; then
 			mv ../tomcat /tmp

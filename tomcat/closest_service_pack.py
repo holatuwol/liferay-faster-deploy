@@ -65,7 +65,7 @@ def get_closest_service_pack(patch_id):
 		release_version = patch_id.split('-')[2]
 
 		for id in range(int(patch_id.split('-')[1]), -1, -1):
-			candidate_id = 'dxp-%d-%s' % (id, release_id)
+			candidate_id = 'dxp-%d-%s' % (id, release_version)
 
 			if candidate_id in service_packs:
 				return service_packs[candidate_id]
