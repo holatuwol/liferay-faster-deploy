@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           GitHub Link to LPS Tickets
 // @namespace      holatuwol
-// @version        1.6
+// @version        1.7
 // @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/github_link_lps.user.js
 // @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/github_link_lps.user.js
 // @match          https://github.com/LiferayCloud/*
@@ -37,6 +37,7 @@ function copyClassList(source, target) {
 var projects = {
   'BPR': 'issues.liferay.com',
   'CLDSVCS': 'issues.liferay.com',
+  'COMMERCE': 'issues.liferay.com',
   'LCP': 'services.liferay.com',
   'LPP': 'issues.liferay.com',
   'LPS': 'issues.liferay.com',
