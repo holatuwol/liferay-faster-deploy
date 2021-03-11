@@ -2,9 +2,9 @@
 // @name           Liferay Help Center, LESAfied
 // @namespace      holatuwol
 // @license        0BSD
-// @version        2.0
-// @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/helpcenter.user.js
-// @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/helpcenter.user.js
+// @version        2.1
+// @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/helpcenter.user.js
+// @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/helpcenter.user.js
 // @include        /https:\/\/help\.liferay\.com\/hc\/.*\/requests\/.*/
 // @grant          none
 // ==/UserScript==

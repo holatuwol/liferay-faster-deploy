@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name           Liferay Functional Test IDE
 // @namespace      holatuwol
-// @version        1.0
-// @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/testray_ide.user.js
-// @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/testray_ide.user.js
+// @version        1.1
+// @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/testray_ide.user.js
+// @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/testray_ide.user.js
 // @match          https://testray.liferay.com/home/-/testray/case_results/*
 // @match          https://github.com/liferay/liferay-portal/blob/*.testcase*
 // @match          https://github.com/liferay/liferay-portal/blob/*.macro*

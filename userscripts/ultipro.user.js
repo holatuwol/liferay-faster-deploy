@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name           Liferay Ultipro Timesheet Link
 // @namespace      holatuwol
-// @version        1.4
-// @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/ultipro.user.js
-// @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/ultipro.user.js
+// @version        1.5
+// @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/ultipro.user.js
+// @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/ultipro.user.js
 // @match          https://wfm-toa-web2.ultipro.com/*
 // @match          https://nw12.ultipro.com/Default.aspx
 // @match          https://nw12.ultipro.com/default.aspx

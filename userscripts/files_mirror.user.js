@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name           Download from Liferay Files Mirror
 // @namespace      holatuwol
-// @version        1.1
-// @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/files_mirror.user.js
-// @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/files_mirror.user.js
+// @version        1.2
+// @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/files_mirror.user.js
+// @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/files_mirror.user.js
 // @match          https://*.liferay.com/*
 // @grant          none
 // ==/UserScript==

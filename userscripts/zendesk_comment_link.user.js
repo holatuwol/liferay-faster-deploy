@@ -2,9 +2,9 @@
 // @name           ZenDesk Comment Permalinks
 // @namespace      holatuwol
 // @license        0BSD
-// @version        1.5
-// @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk_comment_link.user.js
-// @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk_comment_link.user.js
+// @version        1.6
+// @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk_comment_link.user.js
+// @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk_comment_link.user.js
 // @match          https://*.zendesk.com/agent/*
 // @grant          none
 // ==/UserScript==

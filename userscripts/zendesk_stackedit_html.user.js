@@ -2,9 +2,9 @@
 // @name           ZenDesk Compose with Stackedit
 // @namespace      holatuwol
 // @license        0BSD
-// @version        1.2
-// @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk_stackedit_html.user.js
-// @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/zendesk_stackedit_html.user.js
+// @version        1.3
+// @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk_stackedit_html.user.js
+// @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk_stackedit_html.user.js
 // @match          https://*.zendesk.com/agent/*
 // @grant          none
 // @require        https://unpkg.com/stackedit-js@1.0.7/docs/lib/stackedit.min.js

@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name           Testray Compare Helper
 // @namespace      holatuwol
-// @version        1.1
-// @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/testray_compare.user.js
-// @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/testray_compare.user.js
+// @version        1.2
+// @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/testray_compare.user.js
+// @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/testray_compare.user.js
 // @match          https://testray.liferay.com/home/-/testray/runs/compare
 // @grant          none
 // ==/UserScript==

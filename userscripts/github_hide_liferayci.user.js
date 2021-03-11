@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name           Hide Older Liferay Continuous Integration Test Results
 // @namespace      holatuwol
-// @version        0.4
-// @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/github_hide_liferayci.user.js
-// @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/github_hide_liferayci.user.js
+// @version        0.5
+// @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/github_hide_liferayci.user.js
+// @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/github_hide_liferayci.user.js
 // @match          https://github.com/*
 // @grant          none
 // ==/UserScript==

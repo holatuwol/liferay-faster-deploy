@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name           Add JIRA Order By Dividers
 // @namespace      holatuwol
-// @version        1.7
-// @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_divider.user.js
-// @downloadURL    https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/jira_divider.user.js
+// @version        1.8
+// @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/jira_divider.user.js
+// @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/jira_divider.user.js
 // @match          https://issues.liferay.com/issues/*
 // @match          https://issues.liferay.com/secure/QuickSearch.jspa*
 // @match          https://services.liferay.com/issues/*

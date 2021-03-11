@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name           Marketplace Version Selector
 // @namespace      holatuwol
-// @version        0.2
+// @version        0.3
 // @match          https://web.liferay.com/marketplace/-/mp/application/*
-// @updateURL      https://github.com/holatuwol/liferay-faster-deploy/raw/master/userscripts/marketplace.user.js
+// @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/marketplace.user.js
 // @grant          none
 // ==/UserScript==
 
