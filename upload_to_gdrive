@@ -56,4 +56,4 @@ gdrive upload --name "${target_file}" --delete --parent "${folder_id}" "${local_
 get_file_id
 
 gdrive share --type domain --domain liferay.com "${file_id}"
-gdrive info "${file_id}" | grep '^DownloadUrl:'
+gdrive info "${file_id}" | grep '^ViewUrl:'
