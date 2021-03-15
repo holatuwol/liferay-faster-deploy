@@ -76,7 +76,7 @@ def getparent(check_tags):
 					commit = file.readlines()[0].strip()
 					base_branch = get_git_file_property(commit, 'build.properties', 'git.working.branch.name')
 		elif base_branch == 'master':
-			if git.for_each_ref('refs/heads/%s.x' % short_version) != '':
+			if git.for_each_ref('refs/remotes/upstream*/%s.x' % short_version) != '':
 				base_branch = '%s.x' % short_version
 
 		if base_branch is None:
