@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        12.3
+// @version        12.4
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -347,15 +347,29 @@ function getCustomerPortalAccountsHREF(params) {
  */
 function addOrganizationField(propertyBox, ticketId, ticketInfo) {
     var accountCode = getAccountCode(ticketId, ticketInfo, propertyBox);
+    var tags = (ticketInfo && ticketInfo.ticket && ticketInfo.ticket.tags) || [];
+    var tagSet = new Set(tags);
     var helpCenterLinkHREF = null;
-    var serviceLevel = null;
+    var serviceLevel = [];
+    if (tagSet.has('t1')) {
+        serviceLevel.push('Account Tier 1');
+    }
+    else if (tagSet.has('t2')) {
+        serviceLevel.push('Account Tier 2');
+    }
+    else if (tagSet.has('t3')) {
+        serviceLevel.push('Account Tier 3');
+    }
+    else if (tagSet.has('t4')) {
+        serviceLevel.push('Account Tier 4');
+    }
     var organizationInfo = null;
     if (accountCode) {
         organizationInfo = organizationCache[accountCode];
     }
     if (organizationInfo) {
         var organizationFields = organizationInfo.organization_fields;
-        serviceLevel = organizationFields.sla.toUpperCase();
+        serviceLevel.push(organizationFields.sla.toUpperCase());
         helpCenterLinkHREF = getCustomerPortalAccountsHREF({
             mvcRenderCommandName: '/view_account_entry',
             accountEntryId: organizationInfo.external_id
@@ -371,10 +385,12 @@ function addOrganizationField(propertyBox, ticketId, ticketInfo) {
         var helpCenterLinkContainer = document.createElement('div');
         var helpCenterLink = createAnchorTag(accountCode, helpCenterLinkHREF);
         helpCenterLinkContainer.appendChild(helpCenterLink);
-        if (serviceLevel) {
-            helpCenterLinkContainer.appendChild(document.createTextNode(' (' + serviceLevel + ')'));
-        }
         helpCenterItems.push(helpCenterLinkContainer);
+    }
+    if (serviceLevel.length > 0) {
+        var serviceLevelContainer = document.createElement('div');
+        serviceLevelContainer.appendChild(document.createTextNode(serviceLevel.join(', ')));
+        helpCenterItems.push(serviceLevelContainer);
     }
     var permalinkHREF = 'https://help.liferay.com/hc/requests/' + ticketInfo.ticket.id;
     helpCenterItems.push(createPermaLinkInputField(permalinkHREF));
