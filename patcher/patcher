@@ -1,5 +1,15 @@
 #!/bin/bash
 
+remove_text_fixes() {
+  for TEST_HASH in $(git diff --name-only ${BASE_TAG}..HEAD | grep -F 'test/src/' | xargs -r git log ${BASE_TAG}..HEAD --pretty='%H' --); do
+    GIT_SEQUENCE_EDITOR="sed -i -re '1s/^pick /e /'" git rebase -i ${TEST_HASH}~1
+    git diff --name-only HEAD~1..HEAD | grep -F 'test/src/' | xargs git reset HEAD~1 -- ${file}
+    git status -s | grep '^.M' | awk '{ print $2 }' | xargs -r git checkout
+    git commit --amend --allow-empty --no-edit
+    git rebase --continue
+  done
+}
+
 fix_dependencies() {
 	if [[ ${2} == com.liferay.portal.* ]]; then
 		sed -i.bak "/${2}/s/version: \"[1-9][^\"]*\"/version: \"default\"/g" ${1}
@@ -121,6 +131,8 @@ patcher() {
 	if ! checkcommonerrors; then
 		return 1
 	fi
+
+	remove_text_fixes
 
 	# Check if there's a pre-existing patch in patcher portal
 
