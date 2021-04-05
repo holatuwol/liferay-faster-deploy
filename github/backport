@@ -26,28 +26,7 @@ generate_patch_files() {
 
 	for commit in $(cat .redeploy/commits.txt); do
 	  commit_index=$((commit_index+1))
-	  mv $(git format-patch --binary ${commit}~1..${commit}) $(printf "${commit_format}" ${commit_index})-${commit}.patch
-	done
-
-	git ls-files modules/ | grep -F bnd.bnd | dirnames > .redeploy/folders.txt
-
-	for source_folder in $(grep -oh 'modules/[^ ]*/src/' *.patch | dirnames | dirnames | sort -u); do
-		project_name=$(basename ${source_folder})
-		target_folder=$(grep "/${project_name}$" .redeploy/folders.txt)
-
-		if [ "" == "${target_folder}" ]; then
-			echo "Unknown folder ${source_folder}"
-			error_state=1
-			continue
-		fi
-
-		if [ "${source_folder}" == "${target_folder}" ]; then
-			continue
-		fi
-
-		echo "Replacing ${source_folder}/ with ${target_folder}/"
-
-		ls *.patch | xargs sed -i.bak "s@${source_folder}/@${target_folder}/@g"
+	  mv $(git format-patch -1 --binary ${commit}) $(printf "${commit_format}" ${commit_index})-${commit}.patch
 	done
 
 	return ${error_state}
@@ -58,7 +37,9 @@ apply_patch_files() {
 }
 
 if [ "" == "$2" ]; then
+	echo "Generating patch files using commits on master"
 	generate_patch_files $1 master && apply_patch_files
 else
+	echo "Generating patch files using commits on $2"
 	generate_patch_files $1 $2 && apply_patch_files
 fi
