@@ -11,6 +11,17 @@
     overflow-y: auto;
   }
 
+  #issue-content,
+  .issue-view>.issue-container .issue-header,
+  .issue-body-content .module>.mod-header>h1,
+  .issue-body-content .module>.mod-header>h2,
+  .issue-body-content .module>.mod-header>h3,
+  .issue-body-content .module>.mod-header>h4,
+  .issue-body-content .module>.mod-header>h5,
+  .issue-body-content .module>.mod-header>h6 {
+    background-color: #fcfcfc;
+  }
+
   .aui-badge {
     background: rgba(0,0,0,0.1);
     font-size: 1em;
