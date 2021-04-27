@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        6.5
+// @version        6.6
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -521,6 +521,87 @@ function updateFromQueryString() {
         }
     }
 }
+function getBuildFix(accumulator, row) {
+    var cells = row.cells;
+    var fixName = cells[2].innerText.trim();
+    var fixVersion = cells[3].innerText.trim();
+    accumulator.set(fixName, fixVersion);
+    return accumulator;
+}
+function processBuildFixes(xhr) {
+    // https://stackoverflow.com/questions/20583396/queryselectorall-to-html-from-another-page
+    var container = document.implementation.createHTMLDocument().documentElement;
+    container.innerHTML = xhr.responseText;
+    var prefixFixRows = Array.from(container.querySelectorAll('table tbody tr')).filter(function (row) { return !row.classList.contains('lfr-template'); });
+    var previousFixes = prefixFixRows.reduce(getBuildFix, new Map());
+    var headerRow = document.querySelector('table thead tr');
+    var headerCell = document.createElement('th');
+    headerCell.textContent = 'Previous';
+    headerRow.cells[3].innerText = 'Current';
+    headerRow.cells[3].after(headerCell);
+    var tbody = document.querySelector('table tbody');
+    var currentFixRows = Array.from(tbody.querySelectorAll('tr')).filter(function (row) { return !row.classList.contains('lfr-template'); });
+    for (var i = 0; i < currentFixRows.length; i++) {
+        var row = currentFixRows[i];
+        var fixName = row.cells[2].innerText.trim();
+        var currentFixVersion = row.cells[3].innerText.trim();
+        var previousFixVersion = previousFixes.get(fixName) || '';
+        previousFixes["delete"](fixName);
+        var dataCell = document.createElement('td');
+        dataCell.innerText = previousFixVersion;
+        row.cells[3].after(dataCell);
+        if (currentFixVersion == previousFixVersion) {
+            row.cells[3].style.color = '#ccc';
+            row.cells[4].style.color = '#ccc';
+        }
+    }
+    previousFixes.forEach(function (value, key, map) {
+        var newRow = document.createElement('tr');
+        newRow.appendChild(document.createElement('td'));
+        newRow.appendChild(document.createElement('td'));
+        var fixNameCell = document.createElement('td');
+        fixNameCell.innerHTML = key.split(',').map(getTicketLink.bind(null, '')).join(', ');
+        newRow.appendChild(fixNameCell);
+        newRow.appendChild(document.createElement('td'));
+        var fixVersionCell = document.createElement('td');
+        fixVersionCell.innerText = value;
+        newRow.appendChild(fixVersionCell);
+        newRow.appendChild(document.createElement('td'));
+        newRow.appendChild(document.createElement('td'));
+        newRow.appendChild(document.createElement('td'));
+        newRow.appendChild(document.createElement('td'));
+        newRow.appendChild(document.createElement('td'));
+        tbody.appendChild(newRow);
+    });
+}
+function compareBuildFixes() {
+    if (document.location.pathname.indexOf('/builds/') == -1) {
+        return;
+    }
+    var queryString = document.location.search || '';
+    if (document.location.pathname.indexOf('/fixes') != -1) {
+        if (queryString.indexOf('?compareTo=') == 0) {
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', '/group/guest/patching/-/osb_patcher/builds/' + queryString.substring(11) + '/fixes');
+            xhr.onload = processBuildFixes.bind(null, xhr);
+            xhr.send(null);
+        }
+    }
+    else {
+        var currentBuildRow = document.querySelector('#_1_WAR_osbpatcherportlet_patcherBuildsSearchContainer tr.selected');
+        var previousBuildRow = currentBuildRow.nextElementSibling;
+        if (!previousBuildRow.classList.contains('lfr-template')) {
+            var previousBuildId = (previousBuildRow.cells[0].textContent || '').trim();
+            var buttons = document.querySelectorAll('button');
+            for (var i = 0; i < buttons.length; i++) {
+                var button = buttons[i];
+                if ((button.textContent || '').trim() == 'View Fixes') {
+                    button.onclick = window.open.bind(null, document.location.pathname + '/fixes?compareTo=' + previousBuildId, '_blank');
+                }
+            }
+        }
+    }
+}
 /**
  * Returns the HTML for a build link. If it links to the current page, then just return
  * regular text.
@@ -928,6 +1009,7 @@ var applyPatcherCustomizations = function () {
         addProductVersionFilter();
         addSecurityFixesSection();
     }
+    compareBuildFixes();
     setTimeout(updateFromQueryString, 500);
 };
 if (exportFunction) {
