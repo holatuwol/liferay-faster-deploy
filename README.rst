@@ -18,7 +18,7 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 	MCD_RD_CLONE_PATH=/path/to/clone/location
 
 	checktags() {
-		${MCD_RD_CLONE_PATH}/checktags
+		${MCD_RD_CLONE_PATH}/github/checktags
 	}
 
 	dbjar() {
