@@ -31,7 +31,13 @@ releaseinfo() {
 	# Use portal-kernel/portal-service to determine the current
 	# Liferay version in order to decide on the Java version to use
 
-	RELEASE_INFO_JAR=$CATALINA_HOME/lib/ext/portal-kernel.jar
+	RELEASE_INFO_JAR=$CATALINA_HOME/webapps/ROOT/WEB-INF/lib/portal-kernel.jar
+
+	echo "${RELEASE_INFO_JAR}"
+
+	if [ ! -f $RELEASE_INFO_JAR ]; then
+		RELEASE_INFO_JAR=$CATALINA_HOME/lib/ext/portal-kernel.jar
+	fi
 
 	if [ ! -f $RELEASE_INFO_JAR ]; then
 		RELEASE_INFO_JAR=$CATALINA_HOME/lib/ext/portal-service.jar
