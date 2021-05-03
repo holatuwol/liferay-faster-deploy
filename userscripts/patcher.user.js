@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        6.7
+// @version        6.8
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -631,6 +631,9 @@ function getChildBuildHash(mergeCompareLink, build) {
  */
 function replaceGitHashes(childBuildsMetadata) {
     var gitHashLabel = document.querySelector('label[for="' + ns + 'git-hash"]');
+    if (!gitHashLabel) {
+        return;
+    }
     var gitHashLabelParentElement = gitHashLabel.parentElement;
     var oldNode = gitHashLabelParentElement.querySelector('a');
     var mergeCompareLink = oldNode.href;
@@ -742,7 +745,6 @@ function rearrangeColumns() {
     if (document.location.pathname.indexOf('/-/osb_patcher/builds/') == -1) {
         return;
     }
-    document.querySelectorAll;
     var accountElement = querySelector('patcherBuildAccountEntryCode');
     if (!accountElement) {
         var labelElement = document.querySelector('label[for="' + ns + 'account-code"]');
@@ -754,6 +756,9 @@ function rearrangeColumns() {
     var accountParentElement = accountElement.parentElement;
     var accountGrandParentElement = accountParentElement.parentElement;
     var columns = document.querySelectorAll('.column');
+    if (columns.length < 2) {
+        return;
+    }
     var controlGroups = columns[1].querySelectorAll('.control-group');
     for (var j = 0; j < controlGroups.length; j++) {
         accountGrandParentElement.insertBefore(controlGroups[j], accountParentElement);
