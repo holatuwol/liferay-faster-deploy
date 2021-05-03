@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        6.6
+// @version        6.7
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -14,7 +14,7 @@
  * https://github.com/holatuwol/liferay-patcher-userscript
  */ 
 var styleElement = document.createElement('style');
-styleElement.textContent = "\na.included-in-baseline,\na.included-in-baseline:hover {\n  color: #ddd;\n  text-decoration: line-through;\n}\n\n.nowrap {\n  white-space: nowrap;\n}\n\n#_1_WAR_osbpatcherportlet_patcherProductVersionId,\n#_1_WAR_osbpatcherportlet_patcherProjectVersionId {\n  width: auto;\n}\n\n#_1_WAR_osbpatcherportlet_patcherProductVersionId option {\n  display: none;\n}\n\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"6.x\"] option[data-liferay-version=\"6.x\"],\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"7.0\"] option[data-liferay-version=\"7.0\"],\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"7.1\"] option[data-liferay-version=\"7.1\"],\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"7.2\"] option[data-liferay-version=\"7.2\"],\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"7.3\"] option[data-liferay-version=\"7.3\"] {\n  display: block;\n}\n\n#_1_WAR_osbpatcherportlet_patcherBuildName,\n#_1_WAR_osbpatcherportlet_patcherFixName {\n  height: 5em;\n  width: 60em;\n}\n\n.control-group.field-wrapper .table,\n.control-group.input-select-wrapper .table,\n.control-group.input-String-wrapper .table,\n.control-group.input-text-wrapper .table {\n  margin-bottom: 0.5em;\n}\n\n#security-fixes .show-details {\n  background-color: #fff;\n  font-size: x-small;\n  line-height: 0.5em;\n  text-align: right;\n}\n\n.compact .verbose,\n.verbose .compact {\n  display: none;\n}\n\nth.branch-type,\nth.branch-type a {\n  font-weight: bold;\n  width: 5em;\n}\n\n.control-group.field-wrapper,\n.control-group.input-select-wrapper,\n.control-group.input-String-wrapper,\n.control-group.input-text-wrapper {\n  display: flex;\n  margin-bottom: 0.1em;\n}\n\n#toggle_id_patcher_fix_searchadvancedBodyNode .control-group.field-wrapper,\n#toggle_id_patcher_fix_searchadvancedBodyNode .control-group.input-select-wrapper,\n#toggle_id_patcher_fix_searchadvancedBodyNode .control-group.input-String-wrapper,\n#toggle_id_patcher_fix_searchadvancedBodyNode .control-group.input-text-wrapper {\n  display: block;\n}\n\na[href*=\"https://grow.liferay.com/\"] {\n  padding-left: 0.5em;\n}\n\na[href*=\"https://test-5-2.liferay.com/\"] {\n  padding-right: 0.5em;\n}\n\na[href*=\"http://files.liferay.com/\"],\na[href*=\"https://files.liferay.com/\"] {\n  font-size: x-large;\n}\n\n.control-group.field-wrapper .control-label,\n.control-group.input-select-wrapper .control-label,\n.control-group.input-String-wrapper .control-label,\n.control-group.input-text-wrapper .control-label {\n  font-weight: bold;\n  min-width: 15em;\n  width: 15em;\n}\n\n#security-fixes dl {\n  margin-block-start: 0em;\n  margin-block-end: 0em;\n  margin-bottom: 0px;\n}\n\n/**\n * http://vrl.cs.brown.edu/color\n * 4 colors, lightness between 25 and 85, add alpha of 0.3\n */\n\ntr.qa-analysis-needed.version-6210 td {\n  background-color: rgba(79,140,157,0.3) !important;\n}\n\ntr.qa-analysis-needed.version-7010 td {\n  background-color: rgba(75,214,253,0.3) !important;\n}\n\ntr.qa-analysis-needed.version-7110 td {\n  background-color: rgba(101,52,102,0.3) !important;\n}\n\ntr.qa-analysis-needed.version-7210 td {\n  background-color: rgba(131,236,102,0.3) !important;\n}\n\ntr.qa-analysis-unneeded {\n  opacity: 0.3;\n}\n";
+styleElement.textContent = "\na.included-in-baseline,\na.included-in-baseline:hover {\n  color: #ddd;\n  text-decoration: line-through;\n}\n\n.nowrap {\n  white-space: nowrap;\n}\n\n#_1_WAR_osbpatcherportlet_patcherProductVersionId,\n#_1_WAR_osbpatcherportlet_patcherProjectVersionId {\n  width: auto;\n}\n\n#_1_WAR_osbpatcherportlet_patcherProductVersionId option {\n  display: none;\n}\n\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"6.x\"] option[data-liferay-version=\"6.x\"],\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"7.0\"] option[data-liferay-version=\"7.0\"],\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"7.1\"] option[data-liferay-version=\"7.1\"],\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"7.2\"] option[data-liferay-version=\"7.2\"],\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"7.3\"] option[data-liferay-version=\"7.3\"] {\n  display: block;\n}\n\ntextarea[inputcssclass=\"osb-patcher-input-wide\"] {\n  height: 3em;\n  width: 60em;\n}\n\n#_1_WAR_osbpatcherportlet_patcherBuildName {\n  height: 5em;\n}\n\n.control-group.field-wrapper .table,\n.control-group.input-select-wrapper .table,\n.control-group.input-String-wrapper .table,\n.control-group.input-text-wrapper .table {\n  margin-bottom: 0.5em;\n}\n\n#security-fixes .show-details,\n#ticket-suggestions .show-details {\n  background-color: #fff;\n  font-size: x-small;\n  line-height: 0.5em;\n  text-align: right;\n}\n\n.compact .verbose,\n.verbose .compact {\n  display: none !important;\n}\n\nth.branch-type,\nth.branch-type a {\n  font-weight: bold;\n  width: 5em;\n}\n\n.control-group.field-wrapper,\n.control-group.input-select-wrapper,\n.control-group.input-String-wrapper,\n.control-group.input-text-wrapper {\n  display: flex;\n  margin-bottom: 0.1em;\n}\n\n.control-group .control-group.field-wrapper,\n.control-group .control-group.input-select-wrapper,\n.control-group .control-group.input-String-wrapper,\n.control-group .control-group.input-text-wrapper {\n  display: block;\n}\n\n#toggle_id_patcher_fix_searchadvancedBodyNode .control-group.field-wrapper,\n#toggle_id_patcher_fix_searchadvancedBodyNode .control-group.input-select-wrapper,\n#toggle_id_patcher_fix_searchadvancedBodyNode .control-group.input-String-wrapper,\n#toggle_id_patcher_fix_searchadvancedBodyNode .control-group.input-text-wrapper {\n  display: block;\n}\n\na[href*=\"https://grow.liferay.com/\"] {\n  padding-left: 0.5em;\n}\n\na[href*=\"https://test-5-2.liferay.com/\"] {\n  padding-right: 0.5em;\n}\n\na[href*=\"http://files.liferay.com/\"],\na[href*=\"https://files.liferay.com/\"] {\n  font-size: x-large;\n}\n\n.control-group.field-wrapper .control-label,\n.control-group.input-select-wrapper .control-label,\n.control-group.input-String-wrapper .control-label,\n.control-group.input-text-wrapper .control-label {\n  font-weight: bold;\n  min-width: 20em;\n  width: 20em;\n}\n\n#security-fixes dl {\n  margin-block-start: 0em;\n  margin-block-end: 0em;\n  margin-bottom: 0px;\n}\n\n/**\n * http://vrl.cs.brown.edu/color\n * 4 colors, lightness between 25 and 85, add alpha of 0.3\n */\n\ntr.qa-analysis-needed.version-6210 td {\n  background-color: rgba(79,140,157,0.3) !important;\n}\n\ntr.qa-analysis-needed.version-7010 td {\n  background-color: rgba(75,214,253,0.3) !important;\n}\n\ntr.qa-analysis-needed.version-7110 td {\n  background-color: rgba(101,52,102,0.3) !important;\n}\n\ntr.qa-analysis-needed.version-7210 td {\n  background-color: rgba(131,236,102,0.3) !important;\n}\n\ntr.qa-analysis-unneeded {\n  opacity: 0.3;\n}\n";
 document.head.appendChild(styleElement);
 var AUI = unsafeWindow.AUI;
 var Liferay = unsafeWindow.Liferay;
@@ -589,6 +589,9 @@ function compareBuildFixes() {
     }
     else {
         var currentBuildRow = document.querySelector('#_1_WAR_osbpatcherportlet_patcherBuildsSearchContainer tr.selected');
+        if (!currentBuildRow) {
+            return;
+        }
         var previousBuildRow = currentBuildRow.nextElementSibling;
         if (!previousBuildRow.classList.contains('lfr-template')) {
             var previousBuildId = (previousBuildRow.cells[0].textContent || '').trim();
@@ -735,6 +738,90 @@ function replaceFixes() {
     }
     replaceNode(oldNode, oldNode.innerHTML.split(',').map(getTicketLink.bind(null, '')).join(', '));
 }
+function rearrangeColumns() {
+    if (document.location.pathname.indexOf('/-/osb_patcher/builds/') == -1) {
+        return;
+    }
+    document.querySelectorAll;
+    var accountElement = querySelector('patcherBuildAccountEntryCode');
+    if (!accountElement) {
+        var labelElement = document.querySelector('label[for="' + ns + 'account-code"]');
+        accountElement = labelElement.nextSibling;
+    }
+    if (!accountElement) {
+        return;
+    }
+    var accountParentElement = accountElement.parentElement;
+    var accountGrandParentElement = accountParentElement.parentElement;
+    var columns = document.querySelectorAll('.column');
+    var controlGroups = columns[1].querySelectorAll('.control-group');
+    for (var j = 0; j < controlGroups.length; j++) {
+        accountGrandParentElement.insertBefore(controlGroups[j], accountParentElement);
+    }
+    var tableContainer = document.createElement('span');
+    tableContainer.setAttribute('id', 'ticket-suggestions');
+    tableContainer.classList.add('compact');
+    var compactContainer = document.createElement('table');
+    compactContainer.classList.add('compact', 'table', 'table-bordered', 'table-hover');
+    tableContainer.appendChild(compactContainer);
+    for (var i = 2; i < columns.length; i++) {
+        controlGroups = columns[i].querySelectorAll('.control-group');
+        for (var j = 0; j < controlGroups.length; j++) {
+            var controlGroup = controlGroups[j];
+            controlGroup.classList.add('verbose');
+            tableContainer.appendChild(controlGroup);
+            var labelElement = controlGroup.querySelector('label');
+            var label = (labelElement.textContent || '').trim();
+            var textarea = controlGroup.querySelector('textarea');
+            var ticketCount = 0;
+            if (textarea.value) {
+                ticketCount = textarea.value.split(',').length;
+            }
+            var tableRow = document.createElement('tr');
+            compactContainer.appendChild(tableRow);
+            var tableHeader = document.createElement('th');
+            tableHeader.textContent = label.substring(0, label.indexOf(' Ticket Suggestions'));
+            tableRow.appendChild(tableHeader);
+            var tableCell = document.createElement('td');
+            tableCell.textContent = ticketCount + ((ticketCount == 1) ? ' ticket' : ' tickets');
+            tableRow.appendChild(tableCell);
+        }
+    }
+    for (var i = 2; i < columns.length; i++) {
+        columns[i].remove();
+    }
+    var container = document.createElement('div');
+    container.classList.add('control-group', 'input-text-wrapper');
+    var labelElement = document.createElement('label');
+    labelElement.classList.add('control-label');
+    labelElement.textContent = 'Ticket Suggestions';
+    container.appendChild(labelElement);
+    container.appendChild(tableContainer);
+    var showDetails = document.createElement('div');
+    showDetails.classList.add('show-details');
+    tableContainer.appendChild(showDetails);
+    var showLink = document.createElement('a');
+    showLink.textContent = '(show details)';
+    showLink.classList.add('compact');
+    showLink.onclick = function () {
+        var cl = tableContainer.classList;
+        cl.remove('compact');
+        cl.add('verbose');
+        return false;
+    };
+    showDetails.appendChild(showLink);
+    var hideLink = document.createElement('a');
+    hideLink.textContent = '(hide details)';
+    hideLink.classList.add('verbose');
+    hideLink.onclick = function () {
+        var cl = tableContainer.classList;
+        cl.add('compact');
+        cl.remove('verbose');
+        return false;
+    };
+    showDetails.appendChild(hideLink);
+    accountGrandParentElement.insertBefore(container, accountParentElement);
+}
 /**
  * Replaces the "Download" link with the name of the hotfix you're downloading
  */
@@ -869,6 +956,7 @@ function getMissingTicketList(lsvTickets) {
         buildNumber = '' + Math.floor(liferayVersion / 1000);
     }
     var buildNameNode = querySelector('patcherBuildName');
+    buildNameNode.removeAttribute('style');
     var buildName = [];
     if (buildNameNode.tagName.toLowerCase() == 'select') {
         buildName = buildNameNode.value.split(',');
@@ -960,22 +1048,20 @@ function addSecurityFixesSection() {
     if (document.location.pathname.indexOf('/-/osb_patcher/builds/') == -1) {
         return;
     }
-    var projectNode = querySelector('patcherProjectVersionId');
-    var projectParentElement = projectNode.parentElement;
     var accountElement = querySelector('patcherBuildAccountEntryCode');
     if (!accountElement) {
-        var label = document.querySelector('label[for="' + ns + 'account-code"]');
-        accountElement = label.nextSibling;
+        var labelElement = document.querySelector('label[for="' + ns + 'account-code"]');
+        accountElement = labelElement.nextSibling;
     }
     if (!accountElement) {
         return;
     }
     var container = document.createElement('div');
     container.classList.add('control-group', 'input-text-wrapper');
-    var label = document.createElement('label');
-    label.classList.add('control-label');
-    label.textContent = 'Missing Security Fixes';
-    container.appendChild(label);
+    var labelElement = document.createElement('label');
+    labelElement.classList.add('control-label');
+    labelElement.textContent = 'Missing Security Fixes';
+    container.appendChild(labelElement);
     var tableContainer = document.createElement('span');
     tableContainer.setAttribute('id', 'security-fixes');
     tableContainer.classList.add('compact');
@@ -990,6 +1076,7 @@ var applyPatcherCustomizations = function () {
     highlightAnalysisNeededBuilds();
     var activeTab = document.querySelector('.tab.active');
     if (activeTab && ((activeTab.textContent || '').trim() != 'QA Builds')) {
+        rearrangeColumns();
         replaceJenkinsLinks();
         replacePopupWindowLinks();
         addBaselineToBuildTemplate();
