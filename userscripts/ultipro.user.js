@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Liferay Ultipro Timesheet Link
 // @namespace      holatuwol
-// @version        1.5
+// @version        1.6
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/ultipro.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/ultipro.user.js
 // @match          https://wfm-toa-web2.ultipro.com/*
@@ -53,7 +53,11 @@ function setValue(name, value) {
  * Utility function to append a single quick link to the dashboard page
  */
 
-function appendQuickLink(script, key, row, insertIndex, label, cookieName, cookieValue) {
+function appendQuickLink(script, key, row, label, cookieName, cookieValue) {
+  if (document.querySelector('a[data-label="' + label + '"]')) {
+    return true;
+  }
+
   var end = 0;
   var timeInfo;
 
@@ -61,11 +65,12 @@ function appendQuickLink(script, key, row, insertIndex, label, cookieName, cooki
     var start = script.lastIndexOf('{', script.indexOf('"' + key + '"', end));
 
     if (start == -1) {
-      return;
+      console.log(script);
+      return false;
     }
 
     end = script.indexOf('}', start);
-    jsonString = script.substring(start, end + 1);
+    var jsonString = script.substring(start, end + 1);
     timeInfo = JSON.parse(jsonString);
   }
   while (!timeInfo.url);
@@ -73,20 +78,30 @@ function appendQuickLink(script, key, row, insertIndex, label, cookieName, cooki
   var path = timeInfo.url;
 
   if (!path) {
-    return insertIndex;
+    console.log('no path');
+    return false;
   }
 
-  var cell = row.insertCell(insertIndex);
-  cell.className = 'miscLinkContainer';
-  cell.innerHTML = '<span><a class="miscItem" href="https://nw12.ultipro.com/' + path + '" target="_blank">' + label + '</a></span>';
+  var cell = row.insertCell(0);
+  cell.classList.add('miscLinkContainer');
+
+  var span = document.createElement('span');
+  cell.appendChild(span);
+
+  var link = document.createElement('a');
+  span.appendChild(link);
+
+  link.classList.add('miscItem', cookieName);
+  link.setAttribute('href', 'https://nw12.ultipro.com/' + path);
+  link.setAttribute('target', '_blank');
+  link.setAttribute('data-label', label);
+  link.textContent = label;
 
   if (cookieName) {
     cell.onclick = function() {
       setValue(cookieName, cookieValue);
     };
   }
-
-  return insertIndex + 1;
 }
 
 /**
@@ -105,27 +120,23 @@ function appendQuickLinks() {
 
     var row = document.querySelector('#miscLinksInnerContainer table tr');
 
-    var insertIndex = 1;
-
-    if (row.innerText.indexOf('Timesheet') != -1) {
-      if (++successCount == 3) {
-        clearInterval(appendLinkInterval);
-      }
-
-      return;
-    }
-
-    successCount = 0;
+    var insertIndex = 0;
 
     var scripts = document.getElementsByTagName('script');
+
+    var success = true;
 
     for (var i = 0; i < scripts.length; i++) {
       var script = scripts[i].innerHTML;
       if (script.indexOf('"headerLinks"') != -1) {
-        insertIndex = appendQuickLink(script, 'Time', row, insertIndex, 'Timesheet', 'timeSheetCookie', 'timeSheetCookie');
-        insertIndex = appendQuickLink(script, 'Time Off', row, insertIndex, 'PTO', 'timeOffAllowance', 'PTO');
-        insertIndex = appendQuickLink(script, 'Time Off', row, insertIndex, 'EVP', 'timeOffAllowance', 'EVP');
+        success &= appendQuickLink(script, 'Time Off', row, 'EVP', 'timeOffAllowance', 'EVP');
+        success &= appendQuickLink(script, 'Time Off', row, 'PTO', 'timeOffAllowance', 'PTO');
+        success &= appendQuickLink(script, 'Time Classic', row, 'Timesheet', 'timeSheetCookie', 'timeSheetCookie');
       }
+    }
+
+    if (success) {
+      clearInterval(appendLinkInterval);
     }
   }, 1000);
 }
