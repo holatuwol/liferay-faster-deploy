@@ -34,7 +34,15 @@ gethotfix() {
 	echo "Downloading ${FIX_NAME} to check fixpack_documentation.xml"
 	echo ${FILE_URL}
 	echo
-	curl -f -s -O "${FILE_URL}"
+
+	if [ "${FILES_MIRROR}" == "https://files.liferay.com" ]; then
+		local FILES_USERNAME=$(git config --global files.username)
+		local FILES_PASSWORD=$(git config --global files.password)
+
+		curl -u "${FILES_USERNAME}:${FILES_PASSWORD}" -f -O "${FILE_URL}"
+	else
+		curl -f -O "${FILE_URL}"
+	fi
 }
 
 findbuildurl() {
