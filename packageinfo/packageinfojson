@@ -27,8 +27,10 @@ fi
 
 # Generate the JSON files
 
-python ${SCRIPT_FOLDER}/packageinfojson.py $(echo ${AVAILABLE_VERSIONS} | awk '{ print "'${PACKAGEINFO_ROOT}'/" $1 ".x" }')
-python ${SCRIPT_FOLDER}/requireschemajson.py $(echo ${AVAILABLE_VERSIONS} | awk '{ print "'${PACKAGEINFO_ROOT}'/" $1 ".x" }')
+if [ "" != "${PACKAGEINFO_ROOT}" ]; then
+	echo ${AVAILABLE_VERSIONS} | awk '{ print "'${PACKAGEINFO_ROOT}'/" $1 ".x" }' | xargs python ${SCRIPT_FOLDER}/packageinfojson.py
+	echo ${AVAILABLE_VERSIONS} | awk '{ print "'${PACKAGEINFO_ROOT}'/" $1 ".x" }' | xargs python ${SCRIPT_FOLDER}/requireschemajson.py
+fi
 
 PORTAL_SOURCE_ROOT=${PACKAGEINFO_ROOT}/7.0.x/portal ${SCRIPT_FOLDER}/jsversions > dxpjslibrary.json
 
