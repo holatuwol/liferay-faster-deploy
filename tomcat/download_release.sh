@@ -272,6 +272,12 @@ getpatch() {
 		else
 			PATCH_ID=dxp-${NEEDED_PATCH_ID}-7210
 		fi
+	elif [[ "${PATCH_FILE}" == liferay-hotfix-*-7310.zip ]]; then
+		PATCH_ID=$(unzip -cq ${PATCH_LOCATION} fixpack_documentation.json | jq .patch.requirements | cut -d'"' -f 2)
+
+		if [ "" == "${PATCH_ID}" ]; then
+			PATCH_ID=dxp-0-7310
+		fi
 	fi
 }
 
@@ -370,9 +376,9 @@ setpatchfile() {
 	elif [[ "$1" == dxp-* ]]; then
 		PATCH_FOLDER=dxp
 
-		if [[ "$1" == *-7110.zip ]] || [[ "$1" == *-7210.zip ]]; then
+		if [[ "$1" == *-7110.zip ]] || [[ "$1" == *-7210.zip ]] || [[ "$1" == *-7310.zip ]]; then
 			PATCH_FILE=liferay-fix-pack-$1
-		elif [[ "$1" == *-7110 ]] || [[ "$1" == *-7210 ]]; then
+		elif [[ "$1" == *-7110 ]] || [[ "$1" == *-7210 ]] || [[ "$1" == *-7310 ]]; then
 			PATCH_FILE=liferay-fix-pack-$1.zip
 		else
 			echo "$1 did not specify a version, assuming 7.1.10"
