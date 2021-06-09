@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        12.4
+// @version        12.5
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -854,6 +854,9 @@ function getSupportRegions(assigneeText) {
     }
     return new Set(supportRegions.map(function (x) { return x.toLowerCase(); }));
 }
+var middleEastCountries = new Set([
+    'Saudi Arabia', 'United Arab Emirates', 'Qatar', 'Kuwait', 'Bahrein', 'Oman', 'Jordan', 'Iraq', 'Lebanon'
+]);
 /**
  * Add a marker to show the LESA priority on the ticket.
  */
@@ -888,15 +891,24 @@ function addPriorityMarker(header, conversation, ticketId, ticketInfo) {
             priorityElement.appendChild(criticalElement);
         }
     }
-    if ((ticketInfo.ticket.status != 'closed') && (ticketInfo.organizations.length > 0)) {
-        var customerRegion = ticketInfo.organizations[0].organization_fields.support_region;
-        var assigneeText = (assigneeElement.textContent || '').trim();
-        var assigneeRegions = getSupportRegions(assigneeText);
-        if (!assigneeRegions.has(customerRegion)) {
-            var customerRegionElement = document.createElement('span');
-            customerRegionElement.classList.add('lesa-ui-priority-major');
-            customerRegionElement.textContent = 'customer region: ' + customerRegion;
-            priorityElement.appendChild(customerRegionElement);
+    if (ticketInfo.organizations.length > 0) {
+        var organizationFields = ticketInfo.organizations[0].organization_fields;
+        if (middleEastCountries.has(organizationFields.country)) {
+            var customerCountryElement = document.createElement('span');
+            customerCountryElement.classList.add('lesa-ui-priority-minor');
+            customerCountryElement.textContent = 'country: middle east';
+            priorityElement.appendChild(customerCountryElement);
+        }
+        if (ticketInfo.ticket.status != 'closed') {
+            var customerRegion = organizationFields.support_region;
+            var assigneeText = (assigneeElement.textContent || '').trim();
+            var assigneeRegions = getSupportRegions(assigneeText);
+            if (!assigneeRegions.has(customerRegion)) {
+                var customerRegionElement = document.createElement('span');
+                customerRegionElement.classList.add('lesa-ui-priority-major');
+                customerRegionElement.textContent = 'customer region: ' + customerRegion;
+                priorityElement.appendChild(customerRegionElement);
+            }
         }
     }
     var emojiContainer = getEmojiAnchorTags(tags);
