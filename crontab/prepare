@@ -178,6 +178,10 @@ finish() {
 		fi
 	done
 
+	if [ -f ${TOMCAT_FOLDER}/webapps/ROOT/WEB-INF/lib/support-tomcat.jar ]; then
+		mv ${TOMCAT_FOLDER}/webapps/ROOT/WEB-INF/lib/support-tomcat.jar ${TOMCAT_FOLDER}/lib/
+	fi
+
 	local BOTTOM_EXT_JSP=$TOMCAT_FOLDER/webapps/ROOT/html/common/themes/bottom-ext.jsp
 
 	cp ${SCRIPT_FOLDER}/bottom-ext.jsp ${BOTTOM_EXT_JSP}

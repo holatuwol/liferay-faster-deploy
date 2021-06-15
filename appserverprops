@@ -169,10 +169,12 @@ cleanappserver() {
 
 	# setup catalina.properties
 
-	if [ "7" -lt "$TOMCAT_MAJOR_VERSION" ]; then
-		sed -i 's#common.loader=#common.loader="${catalina.base}/lib/ext/*.jar",#g' $TOMCAT_FOLDER/conf/catalina.properties
-	else
-		sed -i 's#common.loader=#common.loader=${catalina.base}/lib/ext/*.jar,#g' $TOMCAT_FOLDER/conf/catalina.properties
+	if [ -d $TOMCAT_FOLDER/lib/ext ]; then
+		if [ "7" -lt "$TOMCAT_MAJOR_VERSION" ]; then
+			sed -i 's#common.loader=#common.loader="${catalina.base}/lib/ext/*.jar",#g' $TOMCAT_FOLDER/conf/catalina.properties
+		else
+			sed -i 's#common.loader=#common.loader=${catalina.base}/lib/ext/*.jar,#g' $TOMCAT_FOLDER/conf/catalina.properties
+		fi
 	fi
 
 	popd > /dev/null
