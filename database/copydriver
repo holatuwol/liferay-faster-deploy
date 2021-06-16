@@ -40,15 +40,17 @@ copydriver() {
 
 	if [ -f ${CATALINA_HOME}/lib/ext/${DRIVER} ]; then
 		echo "Using existing ${DRIVER} in ${CATALINA_HOME}/lib/ext"
+	elif [ -f ${CATALINA_HOME}/lib/${DRIVER} ]; then
+		echo "Using existing ${DRIVER} in ${CATALINA_HOME}/lib"
 	elif [ "" == "${DRIVERS_FOLDER}" ]; then
 		echo "DRIVERS_FOLDER environment variable not set"
-		echo "Hopefully driver is already in ${CATALINA_HOME}/lib/ext"
+		echo "Hopefully driver is already in ${CATALINA_HOME}/lib"
 	elif [ ! -f ${DRIVERS_FOLDER}/${DRIVER} ]; then
 		echo "${DRIVER} not found. Please download it and copy it to ${DRIVERS_FOLDER}"
 	else
-		echo "Copying ${DRIVER} from ${DRIVERS_FOLDER} to ${CATALINA_HOME}/lib/ext"
-		mkdir -p ${CATALINA_HOME}/lib/ext
-		cp ${DRIVERS_FOLDER}/${DRIVER} ${CATALINA_HOME}/lib/ext
+		echo "Copying ${DRIVER} from ${DRIVERS_FOLDER} to ${CATALINA_HOME}/lib"
+		mkdir -p ${CATALINA_HOME}/lib
+		cp ${DRIVERS_FOLDER}/${DRIVER} ${CATALINA_HOME}/lib
 	fi
 }
 
