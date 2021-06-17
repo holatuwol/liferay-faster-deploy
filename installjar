@@ -26,8 +26,6 @@ install_jar() {
 		return 0
 	fi
 
-	echo "Attempting to determine private branch for ${BASE_BRANCH}"
-
 	local PRIVATE_REMOTE=$(git remote -v | grep -F "liferay/liferay-portal-ee" | cut -f 1 | head -1)
 	local PRIVATE_BRANCH=${BASE_BRANCH}
 
@@ -39,33 +37,33 @@ install_jar() {
 	local REFERENCE_HASH_PRIVATE=${BASE_TAG}
 
 	if [ "" == "${BASE_TAG}" ]; then
-		REFERENCE_HASH=${BASE_BRANCH}
-		REFERENCE_HASH_PRIVATE=${BASE_BRANCH}
+		REFERENCE_HASH=${PRIVATE_REMOTE}/${BASE_BRANCH}
+		REFERENCE_HASH_PRIVATE=${PRIVATE_REMOTE}/${BASE_BRANCH}
 	fi
 
 	if [ "master" == "${BASE_BRANCH}" ]; then
-		REFERENCE_HASH=$(grep -F lp.version= release.properties | cut -d'=' -f 2 | sed 's/.[0-9]*$//g').x
-		REFERENCE_HASH_PRIVATE=${REFERENCE_HASH}-private
-		PRIVATE_BRANCH=${REFERENCE_HASH_PRIVATE}
+		PRIVATE_BRANCH=$(grep -F lp.version= release.properties | cut -d'=' -f 2 | sed 's/.[0-9]*$//g').x
+		REFERENCE_HASH=${PRIVATE_REMOTE}/${PRIVATE_BRANCH}
+		REFERENCE_HASH_PRIVATE=${PRIVATE_REMOTE}/${PRIVATE_BRANCH}-private
 	fi
 
 	if [[ ${REFERENCE_HASH_PRIVATE} != ee-* ]] && [[ ${REFERENCE_HASH_PRIVATE} != *-private ]]; then
 		REFERENCE_HASH_PRIVATE=${REFERENCE_HASH_PRIVATE}-private
 	fi
 
-	local ARTIFACT_PROPERTIES=$(git ls-tree -r --name-only ${PRIVATE_REMOTE}/${REFERENCE_HASH} modules/.releng | grep -F "/$3/" | grep -F artifact.properties)
+	local ARTIFACT_PROPERTIES=$(git ls-tree -r --name-only ${REFERENCE_HASH} modules/.releng | grep -F "/$3/" | grep -F artifact.properties)
 	local ARTIFACT_URL=
 
 	if [ "" != "${ARTIFACT_PROPERTIES}" ]; then
-		ARTIFACT_URL=$(git show ${PRIVATE_REMOTE}/${REFERENCE_HASH}:${ARTIFACT_PROPERTIES} | grep -F artifact.url | cut -d'=' -f 2)
+		ARTIFACT_URL=$(git show ${REFERENCE_HASH}:${ARTIFACT_PROPERTIES} | grep -F artifact.url | cut -d'=' -f 2)
 	else
-		ARTIFACT_PROPERTIES=$(git ls-tree -r --name-only ${PRIVATE_REMOTE}/${REFERENCE_HASH_PRIVATE} modules/.releng | grep -F "/$3/" | grep -F artifact.properties)
+		ARTIFACT_PROPERTIES=$(git ls-tree -r --name-only ${REFERENCE_HASH_PRIVATE} modules/.releng | grep -F "/$3/" | grep -F artifact.properties)
 
 		if [ "" == "${ARTIFACT_PROPERTIES}" ]; then
 			return 1
 		fi
 
-		ARTIFACT_URL=$(git show ${PRIVATE_REMOTE}/${REFERENCE_HASH_PRIVATE}:${ARTIFACT_PROPERTIES} | grep -F artifact.url | cut -d'=' -f 2)
+		ARTIFACT_URL=$(git show ${REFERENCE_HASH_PRIVATE}:${ARTIFACT_PROPERTIES} | grep -F artifact.url | cut -d'=' -f 2)
 	fi
 
 	echo "${ARTIFACT_URL}"
