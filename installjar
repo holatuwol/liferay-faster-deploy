@@ -16,9 +16,17 @@ install_jar() {
 		done <<< "$(find ${LIFERAY_HOME}/osgi/marketplace -name '*.lpkg')"
 	fi
 
-	if [ "" == "${GIT_ROOT}" ] || [ "" == "${BASE_BRANCH}" ]; then
+	if [ "" == "${GIT_ROOT}" ]; then
+		echo "Unable to find artifacts due to not knowing git root"
 		return 0
 	fi
+
+	if [ "" == "${BASE_BRANCH}" ]; then
+		echo "Unable to find artifacts due to not knowing base branch"
+		return 0
+	fi
+
+	echo "Attempting to determine private branch for ${BASE_BRANCH}"
 
 	local PRIVATE_REMOTE=$(git remote -v | grep -F "liferay/liferay-portal-ee" | cut -f 1 | head -1)
 	local PRIVATE_BRANCH=${BASE_BRANCH}
@@ -36,29 +44,31 @@ install_jar() {
 	fi
 
 	if [ "master" == "${BASE_BRANCH}" ]; then
-		PRIVATE_BRANCH=7.2.x-private
-		REFERENCE_HASH=7.2.x
-		REFERENCE_HASH_PRIVATE=7.2.x-private
+		REFERENCE_HASH=$(grep -F lp.version= release.properties | cut -d'=' -f 2 | sed 's/.[0-9]*$//g').x
+		REFERENCE_HASH_PRIVATE=${REFERENCE_HASH}-private
+		PRIVATE_BRANCH=${REFERENCE_HASH_PRIVATE}
 	fi
 
 	if [[ ${REFERENCE_HASH_PRIVATE} != ee-* ]] && [[ ${REFERENCE_HASH_PRIVATE} != *-private ]]; then
 		REFERENCE_HASH_PRIVATE=${REFERENCE_HASH_PRIVATE}-private
 	fi
 
-	local ARTIFACT_PROPERTIES=$(git ls-tree -r --name-only ${REFERENCE_HASH} modules/.releng | grep -F "/$3/" | grep -F artifact.properties)
+	local ARTIFACT_PROPERTIES=$(git ls-tree -r --name-only ${PRIVATE_REMOTE}/${REFERENCE_HASH} modules/.releng | grep -F "/$3/" | grep -F artifact.properties)
 	local ARTIFACT_URL=
 
 	if [ "" != "${ARTIFACT_PROPERTIES}" ]; then
-		ARTIFACT_URL=$(git show ${REFERENCE_HASH}:${ARTIFACT_PROPERTIES} | grep -F artifact.url | cut -d'=' -f 2)
+		ARTIFACT_URL=$(git show ${PRIVATE_REMOTE}/${REFERENCE_HASH}:${ARTIFACT_PROPERTIES} | grep -F artifact.url | cut -d'=' -f 2)
 	else
-		ARTIFACT_PROPERTIES=$(git ls-tree -r --name-only ${REFERENCE_HASH_PRIVATE} modules/.releng | grep -F "/$3/" | grep -F artifact.properties)
+		ARTIFACT_PROPERTIES=$(git ls-tree -r --name-only ${PRIVATE_REMOTE}/${REFERENCE_HASH_PRIVATE} modules/.releng | grep -F "/$3/" | grep -F artifact.properties)
 
 		if [ "" == "${ARTIFACT_PROPERTIES}" ]; then
 			return 1
 		fi
 
-		ARTIFACT_URL=$(git show ${REFERENCE_HASH_PRIVATE}:${ARTIFACT_PROPERTIES} | grep -F artifact.url | cut -d'=' -f 2)
+		ARTIFACT_URL=$(git show ${PRIVATE_REMOTE}/${REFERENCE_HASH_PRIVATE}:${ARTIFACT_PROPERTIES} | grep -F artifact.url | cut -d'=' -f 2)
 	fi
+
+	echo "${ARTIFACT_URL}"
 
 	if [[ ${ARTIFACT_URL} == */liferay-private-releases/* ]]; then
 		ARTIFACT_URL=$(echo ${ARTIFACT_URL} | sed 's/repository-cdn/repository/g')

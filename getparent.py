@@ -31,7 +31,7 @@ def getparent(check_tags):
 
 	de_branches = ['7.0.x', '7.0.x-private', 'ee-7.0.x']
 
-	dxp_branches = ['7.3.x', '7.2.x', '7.1.x']
+	dxp_branches = ['7.4.x', '7.3.x', '7.2.x', '7.1.x']
 	dxp_branches = dxp_branches + ['%s-private' % branch for branch in dxp_branches]
 
 	if current_branch == 'master' or current_branch in ee_branches + de_branches + dxp_branches:
@@ -75,9 +75,6 @@ def getparent(check_tags):
 				with open(join(git_root, 'git-commit-portal'), 'r') as file:
 					commit = file.readlines()[0].strip()
 					base_branch = get_git_file_property(commit, 'build.properties', 'git.working.branch.name')
-		elif base_branch == 'master':
-			if git.for_each_ref('refs/remotes/upstream*/%s.x' % short_version) != '':
-				base_branch = '%s.x' % short_version
 
 		if base_branch is None:
 			base_branch = current_branch if current_branch != 'HEAD' else '7.0.x'
