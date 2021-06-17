@@ -131,9 +131,17 @@ waitfor_database() {
 }
 
 DB_TYPE='oracle'
-ORACLE_VERSION='oracle/database:12.2.0.1-se2'
+
+if [ "" == "${ORACLE_VERSION}" ]; then
+	ORACLE_VERSION='oracle/database:12.2.0.1-se2'
+fi
+
 CONTAINER_USER_NAME='oracle:dba'
-ORACLE_COMPAT_VERSION=12.2
+
+if [ "" == "${ORACLE_COMPAT_VERSION}" ]; then
+	ORACLE_COMPAT_VERSION=$(echo "${ORACLE_VERSION}" | cut -d':' -f 2 | cut -d'-' -f 1 | cut -d'.' -f 1,2,3)
+fi
+
 BACKUP_FOLDER_NAME='/home/oracle/backup'
 
 runcontainer $@
