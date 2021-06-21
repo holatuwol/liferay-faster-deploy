@@ -1,54 +1,54 @@
 #!/bin/bash
 
 appserveruserprops() {
-	if [ ! -f "$GIT_ROOT/app.server.properties" ]; then
+	if [ ! -f "${GIT_ROOT}/app.server.properties" ]; then
 		return 0
 	fi
 
-	touch "$GIT_ROOT/app.server.${USER}.properties"
+	touch "${GIT_ROOT}/app.server.${USER}.properties"
 
-	if [[ 0 -ne $(egrep -o $'\r\n'\$ "$GIT_ROOT/app.server.${USER}.properties" | wc -c ) ]]; then
-		perl -pi -e 's/\r\n|\n|\r/\n/g' "$GIT_ROOT/app.server.${USER}.properties"
+	if [[ 0 -ne $(egrep -o $'\r\n'\$ "${GIT_ROOT}/app.server.${USER}.properties" | wc -c ) ]]; then
+		perl -pi -e 's/\r\n|\n|\r/\n/g' "${GIT_ROOT}/app.server.${USER}.properties"
 	fi
 
 	return 0
 }
 
 buildprops() {
-	if [ ! -f $GIT_ROOT/build.xml ]; then
+	if [ ! -f ${GIT_ROOT}/build.xml ]; then
 		return 0
 	fi
 
-	if [ -f $GIT_ROOT/build.${USER}.properties ]; then
+	if [ -f ${GIT_ROOT}/build.${USER}.properties ]; then
 		set_sdk_version
 
-		if [[ 0 -ne $(egrep -o $'\r\n'\$ "$GIT_ROOT/build.${USER}.properties" | wc -c ) ]]; then
-			perl -pi -e 's/\r\n|\n|\r/\n/g' "$GIT_ROOT/build.${USER}.properties"
+		if [[ 0 -ne $(egrep -o $'\r\n'\$ "${GIT_ROOT}/build.${USER}.properties" | wc -c ) ]]; then
+			perl -pi -e 's/\r\n|\n|\r/\n/g' "${GIT_ROOT}/build.${USER}.properties"
 		fi
 
-		if [ "" != "$(grep -F javac.compiler $GIT_ROOT/build.properties | grep -F 'modern' | grep -F '#')" ]; then
-			if [ "" == "$(grep -F javac.compiler $GIT_ROOT/build.${USER}.properties)" ]; then
-				echo -e '\njavac.compiler=modern' >> $GIT_ROOT/build.${USER}.properties
+		if [ "" != "$(grep -F javac.compiler ${GIT_ROOT}/build.properties | grep -F 'modern' | grep -F '#')" ]; then
+			if [ "" == "$(grep -F javac.compiler ${GIT_ROOT}/build.${USER}.properties)" ]; then
+				echo -e '\njavac.compiler=modern' >> ${GIT_ROOT}/build.${USER}.properties
 			fi
 		fi
 
-		if [ "" == "$(grep -F mirrors.hostname $GIT_ROOT/build.${USER}.properties)" ]; then
-			echo -e '\nmirrors.hostname=' >> $GIT_ROOT/build.${USER}.properties
+		if [ "" == "$(grep -F mirrors.hostname ${GIT_ROOT}/build.${USER}.properties)" ]; then
+			echo -e '\nmirrors.hostname=' >> ${GIT_ROOT}/build.${USER}.properties
 		fi
 
-		if [ "" == "$(grep -F baseline.jar.report.level $GIT_ROOT/build.${USER}.properties)" ]; then
-			echo -e '\nbaseline.jar.report.level=off' >> $GIT_ROOT/build.${USER}.properties
+		if [ "" == "$(grep -F baseline.jar.report.level ${GIT_ROOT}/build.${USER}.properties)" ]; then
+			echo -e '\nbaseline.jar.report.level=off' >> ${GIT_ROOT}/build.${USER}.properties
 		fi
 
-		if [ "" == "$(grep -F org.gradle.daemon $GIT_ROOT/build.${USER}.properties)" ]; then
-			echo -e '\norg.gradle.daemon=false' >> $GIT_ROOT/build.${USER}.properties
+		if [ "" == "$(grep -F org.gradle.daemon ${GIT_ROOT}/build.${USER}.properties)" ]; then
+			echo -e '\norg.gradle.daemon=false' >> ${GIT_ROOT}/build.${USER}.properties
 		fi
 
-		if [ "" == "$(grep -F build.binaries.cache.url $GIT_ROOT/build.${USER}.properties)" ]; then
-			if [ "" != "$(grep -F build.binaries.cache.repository.name $GIT_ROOT/build.properties)" ]; then
-				echo '' >> $GIT_ROOT/build.${USER}.properties
-				grep -F build.binaries.cache.repository.name $GIT_ROOT/build.properties >> $GIT_ROOT/build.${USER}.properties
-				echo 'build.binaries.cache.url=git@github.com:liferay/${build.binaries.cache.repository.name}.git' >> $GIT_ROOT/build.${USER}.properties
+		if [ "" == "$(grep -F build.binaries.cache.url ${GIT_ROOT}/build.${USER}.properties)" ]; then
+			if [ "" != "$(grep -F build.binaries.cache.repository.name ${GIT_ROOT}/build.properties)" ]; then
+				echo '' >> ${GIT_ROOT}/build.${USER}.properties
+				grep -F build.binaries.cache.repository.name ${GIT_ROOT}/build.properties >> ${GIT_ROOT}/build.${USER}.properties
+				echo 'build.binaries.cache.url=git@github.com:liferay/${build.binaries.cache.repository.name}.git' >> ${GIT_ROOT}/build.${USER}.properties
 			fi
 		fi
 
@@ -57,22 +57,22 @@ buildprops() {
 		return 0
 	fi
 
-	cat /dev/null > $GIT_ROOT/build.${USER}.properties
+	cat /dev/null > ${GIT_ROOT}/build.${USER}.properties
 
 	# If we're on an older CentOS server, we can't use the node.js SASS compiler
 
 	if [ "" != "$(which rpm 2> /dev/null)" ] && [ ! -f modules/yarn.lock ]; then
-		echo 'sass.compiler.class.name=ruby' >> $GIT_ROOT/build.${USER}.properties
+		echo 'sass.compiler.class.name=ruby' >> ${GIT_ROOT}/build.${USER}.properties
 	fi
 
 	# Avoid using ECJ for compilation
 
-	echo 'javac.compiler=modern' >> $GIT_ROOT/build.${USER}.properties
+	echo 'javac.compiler=modern' >> ${GIT_ROOT}/build.${USER}.properties
 
 	# Make sure baseline report is turned off
 
 	if [ "" == "$(grep -F baseline.jar.report.level build.${USER}.properties)" ]; then
-		echo -e '\nbaseline.jar.report.level=off' >> $GIT_ROOT/build.${USER}.properties
+		echo -e '\nbaseline.jar.report.level=off' >> ${GIT_ROOT}/build.${USER}.properties
 	fi
 
 	# Ensure we have an up-to-date repository password for private repositories
@@ -97,7 +97,7 @@ checkliferayhome() {
 }
 
 cleanappserver() {
-	if [ ! -f $GIT_ROOT/app.server.properties ]; then
+	if [ ! -f ${GIT_ROOT}/app.server.properties ]; then
 		return 0
 	fi
 
@@ -106,15 +106,15 @@ cleanappserver() {
 	TOMCAT_FOLDER=
 	CATALINA_HOME=
 
-	if [ -f $GIT_ROOT/app.server.${USER}.properties ]; then
-		TOMCAT_VERSION=$(grep -F app.server.tomcat.version= $GIT_ROOT/app.server.${USER}.properties | cut -d'=' -f 2)
+	if [ -f ${GIT_ROOT}/app.server.${USER}.properties ]; then
+		TOMCAT_VERSION=$(grep -F app.server.tomcat.version= ${GIT_ROOT}/app.server.${USER}.properties | cut -d'=' -f 2)
 	fi
 
-	if [ "" == "$TOMCAT_VERSION" ]; then
-		TOMCAT_VERSION=$(grep -F app.server.tomcat.version= $GIT_ROOT/app.server.properties | cut -d'=' -f 2)
+	if [ "" == "${TOMCAT_VERSION}" ]; then
+		TOMCAT_VERSION=$(grep -F app.server.tomcat.version= ${GIT_ROOT}/app.server.properties | cut -d'=' -f 2)
 	fi
 
-	if [ "" != "$TOMCAT_VERSION" ]; then
+	if [ "" != "${TOMCAT_VERSION}" ]; then
 		TOMCAT_FOLDER=tomcat-${TOMCAT_VERSION}
 		CATALINA_HOME=${LIFERAY_HOME}/${TOMCAT_FOLDER}
 	fi
@@ -129,68 +129,64 @@ cleanappserver() {
 		return 1
 	fi
 
-	if [ "" != "$CURRENT_HASH" ]; then
-		return 0
-	fi
+	if [ "" == "${CURRENT_HASH}" ]; then
+		if [ ! -d ${CATALINA_HOME} ]; then
+			echo "Missing ${CATALINA_HOME}"
+			ant -f build-dist.xml unzip-tomcat
+		fi
 
-	if [ ! -d ${CATALINA_HOME} ]; then
-		echo "Missing ${CATALINA_HOME}"
-		ant -f build-dist.xml unzip-tomcat
-	fi
+		if [ "" != "${ARCHIVE_HOME}" ]; then
+			mkdir -p ${ARCHIVE_HOME}
 
-	if [ "" == "$ARCHIVE_HOME" ]; then
-		return 0
-	fi
+			local TOMCAT_MAJOR_VERSION=$(echo ${TOMCAT_VERSION} | cut -d'.' -f 1)
 
-	mkdir -p $ARCHIVE_HOME
+			# make sure we have an archive file
 
-	local TOMCAT_MAJOR_VERSION=$(echo $TOMCAT_VERSION | cut -d'.' -f 1)
+			ARCHIVE_FILE=${ARCHIVE_HOME}/apache-tomcat-${TOMCAT_VERSION}.zip
 
-	# make sure we have an archive file
+			if [ ! -f "${ARCHIVE_FILE}" ]; then
+				pushd ${ARCHIVE_HOME} > /dev/null
+				curl -O "http://archive.apache.org/dist/tomcat/tomcat-${TOMCAT_MAJOR_VERSION}/v${TOMCAT_VERSION}/bin/apache-tomcat-${TOMCAT_VERSION}.zip"
+				popd > /dev/null
+			fi
 
-	ARCHIVE_FILE=${ARCHIVE_HOME}/apache-tomcat-${TOMCAT_VERSION}.zip
+			# cleanup the existing folder so that we can have a clean slate
 
-	if [ ! -f "$ARCHIVE_FILE" ]; then
-		pushd $ARCHIVE_HOME > /dev/null
-		curl -O "http://archive.apache.org/dist/tomcat/tomcat-${TOMCAT_MAJOR_VERSION}/v${TOMCAT_VERSION}/bin/apache-tomcat-${TOMCAT_VERSION}.zip"
-		popd > /dev/null
-	fi
+			rm -rf "${CATALINA_HOME}"
+			mkdir -p "${LIFERAY_HOME}"
 
-	# cleanup the existing folder so that we can have a clean slate
+			pushd "${LIFERAY_HOME}" > /dev/null
 
-	rm -rf "${CATALINA_HOME}"
-	mkdir -p "$LIFERAY_HOME"
+			unzip "${ARCHIVE_FILE}"
+			mv apache-tomcat-${TOMCAT_VERSION} ${TOMCAT_FOLDER}
+			rm -rf ${TOMCAT_FOLDER}/webapps/*
 
-	pushd "$LIFERAY_HOME" > /dev/null
-
-	unzip "$ARCHIVE_FILE"
-	mv apache-tomcat-${TOMCAT_VERSION} $TOMCAT_FOLDER
-	rm -rf $TOMCAT_FOLDER/webapps/*
-
-	# setup catalina.properties
-
-	if [ -d $TOMCAT_FOLDER/lib/ext ]; then
-		if [ "7" -lt "$TOMCAT_MAJOR_VERSION" ]; then
-			sed -i 's#common.loader=#common.loader="${catalina.base}/lib/ext/*.jar",#g' $TOMCAT_FOLDER/conf/catalina.properties
-		else
-			sed -i 's#common.loader=#common.loader=${catalina.base}/lib/ext/*.jar,#g' $TOMCAT_FOLDER/conf/catalina.properties
+			popd > /dev/null
 		fi
 	fi
 
-	popd > /dev/null
+	# setup catalina.properties
+
+	if [ "" == "$(grep -F /ext/ ${LIFERAY_HOME}/${TOMCAT_FOLDER}/conf/catalina.properties)" ]; then
+		if [ "" != "$(grep -F 'common.loader="' ${LIFERAY_HOME}/${TOMCAT_FOLDER}/conf/catalina.properties)" ]; then
+			sed -i 's#common.loader=#common.loader="${catalina.base}/lib/ext/*.jar",#g' ${LIFERAY_HOME}/${TOMCAT_FOLDER}/conf/catalina.properties
+		else
+			sed -i 's#common.loader=#common.loader=${catalina.base}/lib/ext/*.jar,#g' ${LIFERAY_HOME}/${TOMCAT_FOLDER}/conf/catalina.properties
+		fi
+	fi
 }
 
 gradleprops() {
 	local ANT_LIFERAY_HOME=
 	local GRADLE_LIFERAY_HOME=
 
-	if [ -f "$GIT_ROOT/app.server.properties" ]; then
-		if [ -f "$GIT_ROOT/app.server.${USER}.properties" ]; then
-			ANT_LIFERAY_HOME=$(grep -F 'app.server.parent.dir=' "$GIT_ROOT/app.server.${USER}.properties" | grep -vF '#' | cut -d'=' -f 2)
+	if [ -f "${GIT_ROOT}/app.server.properties" ]; then
+		if [ -f "${GIT_ROOT}/app.server.${USER}.properties" ]; then
+			ANT_LIFERAY_HOME=$(grep -F 'app.server.parent.dir=' "${GIT_ROOT}/app.server.${USER}.properties" | grep -vF '#' | cut -d'=' -f 2)
 		fi
 
 		if [ "" == "${ANT_LIFERAY_HOME}" ]; then
-			ANT_LIFERAY_HOME=$(grep -F 'app.server.parent.dir=' "$GIT_ROOT/app.server.properties" | grep -vF '#' | cut -d'=' -f 2)
+			ANT_LIFERAY_HOME=$(grep -F 'app.server.parent.dir=' "${GIT_ROOT}/app.server.properties" | grep -vF '#' | cut -d'=' -f 2)
 			echo -e "\napp.server.parent.dir=${ANT_LIFERAY_HOME}" >> app.server.${USER}.properties
 
 			LIFERAY_HOME="$(echo ${ANT_LIFERAY_HOME} | sed 's@${project.dir}/@'${GIT_ROOT}'/@g')"
@@ -207,13 +203,13 @@ gradleprops() {
 
 	GRADLE_HOME=$PWD
 
-	while [ ! -e $GRADLE_HOME/gradlew ] && [ "/" != "$GRADLE_HOME" ]; do
-		GRADLE_HOME=$(dirname $GRADLE_HOME)
+	while [ ! -e ${GRADLE_HOME}/gradlew ] && [ "/" != "${GRADLE_HOME}" ]; do
+		GRADLE_HOME=$(dirname ${GRADLE_HOME})
 	done
 
 	# If this is a blade workspace, don't do anything
 
-	if [ "/" != "$GRADLE_HOME" ] && [ -f $GRADLE_HOME/build.gradle ]; then
+	if [ "/" != "${GRADLE_HOME}" ] && [ -f ${GRADLE_HOME}/build.gradle ]; then
 		return 0
 	fi
 
@@ -221,61 +217,61 @@ gradleprops() {
 
 	local GRADLE_LIFERAY_HOME=
 
-	if [ -f "$GRADLE_HOME/.gradle/gradle.properties" ]; then
-		GRADLE_LIFERAY_HOME=$(grep -F liferay.home= $GRADLE_HOME/.gradle/gradle.properties | cut -d'=' -f 2 | perl -C -Mutf8 -pe 's@'${GIT_ROOT}'/@@i')
-	elif [ -f "$GIT_ROOT/gradle.properties" ]; then
-		GRADLE_LIFERAY_HOME=$(grep -F 'liferay.home=' "$GIT_ROOT/gradle.properties" | grep -vF '#' | cut -d'=' -f 2)
+	if [ -f "${GRADLE_HOME}/.gradle/gradle.properties" ]; then
+		GRADLE_LIFERAY_HOME=$(grep -F liferay.home= ${GRADLE_HOME}/.gradle/gradle.properties | cut -d'=' -f 2 | perl -C -Mutf8 -pe 's@'${GIT_ROOT}'/@@i')
+	elif [ -f "${GIT_ROOT}/gradle.properties" ]; then
+		GRADLE_LIFERAY_HOME=$(grep -F 'liferay.home=' "${GIT_ROOT}/gradle.properties" | grep -vF '#' | cut -d'=' -f 2)
 
-		if [ "" == "$GRADLE_USER_HOME" ] && [ -f $HOME/.gradle/gradle.properties ]; then
+		if [ "" == "${GRADLE_USER_HOME}" ] && [ -f $HOME/.gradle/gradle.properties ]; then
 			GRADLE_USER_HOME=$HOME/.gradle
 		fi
 
-		if [ "" == "$GRADLE_LIFERAY_HOME" ] && [ -f $GRADLE_USER_HOME/gradle.properties ]; then
-			GRADLE_LIFERAY_HOME=$(grep -F 'liferay.home=' "$GRADLE_USER_HOME/gradle.properties" | grep -vF '#' | cut -d'=' -f 2)
+		if [ "" == "${GRADLE_LIFERAY_HOME}" ] && [ -f ${GRADLE_USER_HOME}/gradle.properties ]; then
+			GRADLE_LIFERAY_HOME=$(grep -F 'liferay.home=' "${GRADLE_USER_HOME}/gradle.properties" | grep -vF '#' | cut -d'=' -f 2)
 		fi
 
-		local TOMCAT_FOLDER=$(grep -F 'app.server.parent.dir=' "$GIT_ROOT/gradle.properties" | grep -vF '#' | cut -d'=' -f 2)
+		local TOMCAT_FOLDER=$(grep -F 'app.server.parent.dir=' "${GIT_ROOT}/gradle.properties" | grep -vF '#' | cut -d'=' -f 2)
 
-		if [ "" == "$TOMCAT_FOLDER" ] && [ -f $GRADLE_USER_HOME/gradle.properties ]; then
-			TOMCAT_FOLDER=$(grep -F 'app.server.parent.dir=' "$GRADLE_USER_HOME/gradle.properties" | grep -vF '#' | cut -d'=' -f 2)
+		if [ "" == "${TOMCAT_FOLDER}" ] && [ -f ${GRADLE_USER_HOME}/gradle.properties ]; then
+			TOMCAT_FOLDER=$(grep -F 'app.server.parent.dir=' "${GRADLE_USER_HOME}/gradle.properties" | grep -vF '#' | cut -d'=' -f 2)
 		fi
 
-		if [ "" == "$GRADLE_LIFERAY_HOME" ] && [ "" == "$TOMCAT_FOLDER" ]; then
+		if [ "" == "${GRADLE_LIFERAY_HOME}" ] && [ "" == "${TOMCAT_FOLDER}" ]; then
 			echo "Missing liferay.home and app.server.parent.dir in gradle.properties"
 			return 1
-		elif [ "" == "$GRADLE_LIFERAY_HOME" ]; then
+		elif [ "" == "${GRADLE_LIFERAY_HOME}" ]; then
 			echo "Missing liferay.home in gradle.properties"
 			return 1
-		elif [ "" == "$TOMCAT_FOLDER" ]; then
+		elif [ "" == "${TOMCAT_FOLDER}" ]; then
 			echo "Missing app.server.parent.dir in gradle.properties"
 			return 1
 		fi
 	fi
 
 	if [ "" == "$ANT_LIFERAY_HOME" ]; then
-		if [ "" == "$GRADLE_LIFERAY_HOME" ]; then
+		if [ "" == "${GRADLE_LIFERAY_HOME}" ]; then
 			echo "Missing app.server.${USER}.properties and gradle.properties"
 			return 1
 		fi
 
-		if [ ! -f "$GIT_ROOT/gradle.properties" ]; then
-			echo -e "\napp.server.parent.dir=$GRADLE_LIFERAY_HOME" >> $GIT_ROOT/app.server.${USER}.properties
+		if [ ! -f "${GIT_ROOT}/gradle.properties" ]; then
+			echo -e "\napp.server.parent.dir=${GRADLE_LIFERAY_HOME}" >> ${GIT_ROOT}/app.server.${USER}.properties
 		fi
 
-		ANT_LIFERAY_HOME=$GRADLE_LIFERAY_HOME
+		ANT_LIFERAY_HOME=${GRADLE_LIFERAY_HOME}
 	fi
 
 	local LOWER_ANT_LIFERAY_HOME=$(echo ${ANT_LIFERAY_HOME} | tr '[:upper:]' '[:lower:]')
 	local LOWER_GRADLE_LIFERAY_HOME=$(echo ${GRADLE_LIFERAY_HOME} | tr '[:upper:]' '[:lower:]')
 
-	if [ "${LOWER_ANT_LIFERAY_HOME}" != "${LOWER_GRADLE_LIFERAY_HOME}" ] && [ -f $GIT_ROOT/build.xml ] && [ "" != "$(grep -F setup-sdk $GIT_ROOT/build.xml)" ]; then
-		if [ "" == "$GRADLE_LIFERAY_HOME" ]; then
+	if [ "${LOWER_ANT_LIFERAY_HOME}" != "${LOWER_GRADLE_LIFERAY_HOME}" ] && [ -f ${GIT_ROOT}/build.xml ] && [ "" != "$(grep -F setup-sdk ${GIT_ROOT}/build.xml)" ]; then
+		if [ "" == "${GRADLE_LIFERAY_HOME}" ]; then
 			echo "Missing .gradle/gradle.properties, generating via ant setup-sdk"
 		else
 			echo "Fixing mismatch between app.server.${USER}.properties (${ANT_LIFERAY_HOME}) and .gradle/gradle.properties (${GRADLE_LIFERAY_HOME}) via ant setup-sdk"
 		fi
 
-		pushd $GIT_ROOT > /dev/null
+		pushd ${GIT_ROOT} > /dev/null
 
 #		ant setup-sdk
 		GRADLE_LIFERAY_HOME=$ANT_LIFERAY_HOME
