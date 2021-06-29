@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        12.6
+// @version        12.7
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -861,7 +861,7 @@ var middleEastCountries = new Set([
  */
 function addPriorityMarker(header, conversation, ticketId, ticketInfo) {
     var ticketContainer = header.closest('.main_panes');
-    var assigneeElement = ticketContainer.querySelector('.js-zero-state-ticket-tutorial-assignee-field > div');
+    var assigneeElement = ticketContainer.querySelector('.js-zero-state-ticket-tutorial-assignee-field > div > div');
     if (!assigneeElement) {
         return;
     }
@@ -889,6 +889,26 @@ function addPriorityMarker(header, conversation, ticketId, ticketInfo) {
             criticalElement.textContent = tagSet.has('platinum') ? 'platinum critical' : 'critical';
             priorityElement.appendChild(criticalElement);
         }
+    }
+    if (tagSet.has('service_solution')) {
+        var solutionElement = document.createElement('span');
+        solutionElement.classList.add('lesa-ui-priority-minor');
+        var solutionLink = document.createElement('a');
+        solutionLink.textContent = 'Service Portal Customer';
+        var query = 'tags:service_solution';
+        solutionLink.href = 'https://' + document.location.host + '/agent/search/1?type=organization&q=' + encodeURIComponent(query);
+        solutionElement.appendChild(solutionLink);
+        priorityElement.appendChild(solutionElement);
+    }
+    if (tagSet.has('commerce_solution')) {
+        var solutionElement = document.createElement('span');
+        solutionElement.classList.add('lesa-ui-priority-minor');
+        var solutionLink = document.createElement('a');
+        solutionLink.textContent = 'Commerce Portal Customer';
+        var query = 'tags:commerce_solution';
+        solutionLink.href = 'https://' + document.location.host + '/agent/search/1?type=organization&q=' + encodeURIComponent(query);
+        solutionElement.appendChild(solutionLink);
+        priorityElement.appendChild(solutionElement);
     }
     if (ticketInfo.organizations.length > 0) {
         var organizationFields = ticketInfo.organizations[0].organization_fields;
