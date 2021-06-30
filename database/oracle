@@ -133,7 +133,7 @@ waitfor_database() {
 DB_TYPE='oracle'
 
 if [ "" == "${ORACLE_VERSION}" ]; then
-	ORACLE_VERSION='oracle/database:12.2.0.1-se2'
+	ORACLE_VERSION="oracle/database:$(docker images | grep oracle/database | awk '{ print $2 }' | sort -g | tail -1)"
 fi
 
 CONTAINER_USER_NAME='oracle:dba'
