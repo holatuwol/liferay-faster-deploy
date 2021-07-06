@@ -9,6 +9,7 @@ from os.path import abspath, dirname, isdir, isfile, join, relpath
 import re
 import requests
 import sys
+import time
 from tqdm import tqdm
 
 try:
@@ -181,7 +182,36 @@ def login_okta(response_text):
 
     # Pretend we can follow the login redirect
 
-    redirect_url = r.json()['_links']['next']['href']
+    response_json = r.json()
+
+    form_params = {
+        'stateToken': response_json['stateToken']
+    }
+
+    redirect_url = None
+
+    if 'next' in response_json['_links']:
+        redirect_url = response_json['_links']['next']['href']
+    elif response_json['status'] == 'MFA_REQUIRED':
+        for factor in response_json['_embedded']['factors']:
+            if factor['factorType'] != 'push':
+                continue
+
+            links = factor['_links']
+            verify_url = links['verify']['href']
+
+            while True:
+                r = session.post(verify_url, json=form_params, headers=headers)
+                response_json = r.json()
+
+                if response_json['status'] == 'SUCCESS':
+                    break
+
+                print('Waiting for MFA challenge result...')
+                time.sleep(1)
+
+            print(response_json)
+            redirect_url = response_json['_links']['next']['href']
 
     r = session.get(redirect_url, headers=headers)
 
