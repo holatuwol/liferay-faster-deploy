@@ -1,5 +1,6 @@
 
 from bs4 import BeautifulSoup
+from getpass import getpass
 import hashlib
 import hmac
 import inspect
@@ -20,8 +21,6 @@ except:
 sys.path.insert(0, dirname(dirname(abspath(inspect.getfile(inspect.currentframe())))))
 import git
 
-username = git.config('files.username')
-password = git.config('files.password')
 json_auth_token = {}
 
 session = requests.session()
@@ -210,7 +209,6 @@ def login_okta(response_text):
                 print('Waiting for MFA challenge result...')
                 time.sleep(1)
 
-            print(response_json)
             redirect_url = response_json['_links']['next']['href']
 
     r = session.get(redirect_url, headers=headers)
@@ -287,4 +285,9 @@ def get_json_auth_token(base_url):
     return json_auth_token[base_url]
 
 if __name__ == '__main__':
+    username = input('username: ')
+    password = getpass('password: ')
     print(get_liferay_file(sys.argv[1]))
+else:
+    username = git.config('files.username')
+    password = git.config('files.password')
