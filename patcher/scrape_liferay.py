@@ -210,6 +210,10 @@ def login_okta(response_text):
                 time.sleep(1)
 
             redirect_url = response_json['_links']['next']['href']
+        if redirect_url is None:
+            sys.stderr.write('unrecognized factors: %s\n' % json.dumps(response_json['_embedded']['factors']))
+    else:
+        sys.stderr.write('unrecognized status: %s\n' % response_json['status'])
 
     r = session.get(redirect_url, headers=headers)
 
