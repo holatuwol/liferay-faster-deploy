@@ -206,7 +206,7 @@ def login_okta(response_text):
                 if response_json['status'] == 'SUCCESS':
                     break
 
-                print('Waiting for MFA challenge result...')
+                sys.stderr.write('Waiting for MFA challenge result...\n')
                 time.sleep(1)
 
             redirect_url = response_json['_links']['next']['href']
@@ -285,11 +285,16 @@ def get_json_auth_token(base_url):
     return json_auth_token[base_url]
 
 if __name__ == '__main__':
-    username = input('username: ')
-    password = getpass('password: ')
+    while True:
+        try:
+            sys.stderr.write('username: ')
+            username = input()
+            password = getpass('password: ')
 
-    print()
-    print(get_liferay_file(sys.argv[1]))
+            print(get_liferay_file(sys.argv[1]))
+            break
+        except:
+            sys.stderr.write('\nincorrect password\n')
 else:
     username = git.config('files.username')
     password = git.config('files.password')
