@@ -193,7 +193,7 @@ def login_okta(response_text):
         redirect_url = response_json['_links']['next']['href']
     elif response_json['status'] == 'MFA_REQUIRED':
         for factor in response_json['_embedded']['factors']:
-            if factor['factorType'] != 'push':
+            if factor['factorType'] != 'push' and factor['factorType'] != 'sms':
                 continue
 
             links = factor['_links']
@@ -210,6 +210,8 @@ def login_okta(response_text):
                 time.sleep(1)
 
             redirect_url = response_json['_links']['next']['href']
+            break
+
         if redirect_url is None:
             sys.stderr.write('unrecognized factors: %s\n' % json.dumps(response_json['_embedded']['factors']))
     else:
