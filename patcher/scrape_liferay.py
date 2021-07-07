@@ -5,6 +5,7 @@ import hashlib
 import hmac
 import inspect
 import json
+import math
 import os
 from os.path import abspath, dirname, isdir, isfile, join, relpath
 import re
@@ -192,25 +193,49 @@ def login_okta(response_text):
     if 'next' in response_json['_links']:
         redirect_url = response_json['_links']['next']['href']
     elif response_json['status'] == 'MFA_REQUIRED':
-        for factor in response_json['_embedded']['factors']:
-            if factor['factorType'] != 'push' and factor['factorType'] != 'sms':
-                continue
+        factors = {
+            factor['factorType']: factor
+                for factor in response_json['_embedded']['factors']
+        }
 
-            links = factor['_links']
-            verify_url = links['verify']['href']
+        factor_types = list(factors.keys())
 
-            while True:
-                r = session.post(verify_url, json=form_params, headers=headers)
-                response_json = r.json()
+        sys.stderr.write('\navailable factors:\n%s' % '\n'.join('  %s: %s' % (i, key) for i, key in enumerate(factor_types)))
+        sys.stderr.write('\nchoose a factor: ')
 
-                if response_json['status'] == 'SUCCESS':
-                    break
+        factor_type = input()
 
-                sys.stderr.write('Waiting for MFA challenge result...\n')
-                time.sleep(1)
+        if not math.isnan(int(factor_type)):
+            factor_type = factor_types[int(factor_type)]
 
-            redirect_url = response_json['_links']['next']['href']
-            break
+        factor = factors[factor_type]
+
+        links = factor['_links']
+        verify_url = links['verify']['href']
+
+        while True:
+            r = session.post(verify_url, json=form_params, headers=headers)
+            response_json = r.json()
+
+            if response_json['status'] == 'SUCCESS':
+                break
+
+            if factor_type != 'push' and response_json['status'] == 'MFA_CHALLENGE':
+                while response_json['status'] != 'SUCCESS':
+                    sys.stderr.write('passcode: ')
+                    form_params['passCode'] = input()
+
+                    r = session.post(verify_url, json=form_params, headers=headers)
+                    response_json = r.json()
+
+                    del form_params['passCode']
+
+                break
+
+            sys.stderr.write('waiting for MFA result...\n')
+            time.sleep(5)
+
+        redirect_url = response_json['_links']['next']['href']
 
         if redirect_url is None:
             sys.stderr.write('unrecognized factors: %s\n' % json.dumps(response_json['_embedded']['factors']))
