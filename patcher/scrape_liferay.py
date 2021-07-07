@@ -287,6 +287,8 @@ def get_json_auth_token(base_url):
 if __name__ == '__main__':
     username = input('username: ')
     password = getpass('password: ')
+
+    print()
     print(get_liferay_file(sys.argv[1]))
 else:
     username = git.config('files.username')
