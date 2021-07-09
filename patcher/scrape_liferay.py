@@ -198,15 +198,19 @@ def login_okta(response_text):
                 for factor in response_json['_embedded']['factors']
         }
 
-        factor_types = list(factors.keys())
+        if 'push' in factors:
+            factor_type = 'push'
+        else:
+            factor_types = list(factors.keys())
+            sys.stderr.write('\navailable factors:\n%s' % '\n'.join('  %s: %s' % (i, key) for i, key in enumerate(factor_types)))
+            sys.stderr.write('\nchoose a factor: ')
 
-        sys.stderr.write('\navailable factors:\n%s' % '\n'.join('  %s: %s' % (i, key) for i, key in enumerate(factor_types)))
-        sys.stderr.write('\nchoose a factor: ')
+            factor_type = input()
 
-        factor_type = input()
-
-        if not math.isnan(int(factor_type)):
-            factor_type = factor_types[int(factor_type)]
+            try:
+                factor_type = factor_types[int(factor_type)]
+            except:
+                pass
 
         factor = factors[factor_type]
 
@@ -214,23 +218,26 @@ def login_okta(response_text):
         verify_url = links['verify']['href']
 
         while True:
-            r = session.post(verify_url, json=form_params, headers=headers)
-            response_json = r.json()
+            try:
+                r = session.post(verify_url, json=form_params, headers=headers)
+                response_json = r.json()
 
-            if response_json['status'] == 'SUCCESS':
-                break
+                if response_json['status'] == 'SUCCESS':
+                    break
 
-            if factor_type != 'push' and response_json['status'] == 'MFA_CHALLENGE':
-                while response_json['status'] != 'SUCCESS':
-                    sys.stderr.write('passcode: ')
-                    form_params['passCode'] = input()
+                if factor_type != 'push' and response_json['status'] == 'MFA_CHALLENGE':
+                    while response_json['status'] != 'SUCCESS':
+                        sys.stderr.write('passcode: ')
+                        form_params['passCode'] = input()
 
-                    r = session.post(verify_url, json=form_params, headers=headers)
-                    response_json = r.json()
+                        r = session.post(verify_url, json=form_params, headers=headers)
+                        response_json = r.json()
 
-                    del form_params['passCode']
+                        del form_params['passCode']
 
-                break
+                    break
+            except:
+                pass
 
             sys.stderr.write('waiting for MFA result...\n')
             time.sleep(5)
