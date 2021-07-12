@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Hide Older Liferay Continuous Integration Test Results
 // @namespace      holatuwol
-// @version        0.6
+// @version        0.7
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/github_hide_liferayci.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/github_hide_liferayci.user.js
 // @match          https://github.com/*
@@ -202,14 +202,17 @@ function checkCurrentURL() {
     return;
   }
 
-  var pullNumberElement = document.querySelector('form.js-comment-update');
+  var pullNumberElement = document.querySelector('form.js-new-comment-form');
 
   if (!pullNumberElement) {
     return;
   }
 
   var pagePullURL = pullNumberElement.getAttribute('action').trim();
-  var pagePullNumber = pagePullURL.substring(pagePullURL.lastIndexOf('/') + 1);
+
+  var pos = pagePullURL.lastIndexOf('/');
+  var pagePullNumber = pagePullURL.substring(pagePullURL.lastIndexOf('/', pos - 1) + 1, pos);
+
   var urlPullNumber = lastPath.substring(lastPath.lastIndexOf('/') + 1);
 
   if (pagePullNumber != urlPullNumber) {
