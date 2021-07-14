@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        12.7
+// @version        12.8
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -1647,7 +1647,7 @@ function getSupportOffices(assigneeGroup) {
         supportOffices.push('India');
     }
     if (assigneeGroup.indexOf('- JP') != -1) {
-        supportOffices.push('APAC');
+        supportOffices.push('Japan');
     }
     if ((assigneeGroup.indexOf('Spain Pod') == 0) || (assigneeGroup.indexOf(' - ES') != -1)) {
         supportOffices.push('Spain');
@@ -1691,7 +1691,7 @@ function initJiraTicketValues(data) {
         }
     }
     function setDeliveryBaseFixPack(callback) {
-        var conversations = ticket.conversations;
+        var conversations = ticket.conversation;
         var baselines = new Set();
         for (var i = 0; i < conversations.length; i++) {
             var conversationText = conversations[i].value;
@@ -1761,7 +1761,7 @@ function detachModalWindowHandler() {
     jQuery(backdrop).unbind('click');
 }
 if (unsafeWindow.location.hostname == '24475.apps.zdusercontent.com') {
-    setTimeout(initZafClient.bind(null, attachCopyFieldsLinkListener), 1000);
+    setTimeout(initZafClient.bind(null, attachCopyFieldsLinkListener), 3000);
 }
 else {
     setInterval(detachModalWindowHandler, 1000);
