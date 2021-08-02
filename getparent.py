@@ -65,23 +65,14 @@ def getparent(check_tags):
 	elif short_version == '6.2':
 		base_branch = 'ee-6.2.x'
 	else:
-		# Determine the base version using build.properties
+		master_branches = git.for_each_ref('--format=%(refname)', 'refs/remotes/**/*master').split('\n')
 
-		if isfile(join(git_root, 'build.properties')):
-			base_branch = get_file_property(join(git_root, 'build.properties'), 'git.working.branch.name')
-
-		if base_branch is None:
-			if isfile(join(git_root, 'git-commit-portal')):
-				with open(join(git_root, 'git-commit-portal'), 'r') as file:
-					commit = file.readlines()[0].strip()
-					base_branch = get_git_file_property(commit, 'build.properties', 'git.working.branch.name')
+		for branch in master_branches:
+			if git.is_ancestor(branch, 'HEAD'):
+				base_branch = 'master'
 
 		if base_branch is None:
-			base_branch = current_branch if current_branch != 'HEAD' else '7.0.x'
-		elif base_branch == 'ee-7.0.x':
-			base_branch = '7.0.x'
-		elif isdir(join(git_root, 'modules/private')) and len(git.ls_files('build.properties').strip()) == 0 and base_branch.find('-private') == -1:
-			base_branch = '%s-private' % base_branch
+			base_branch = '%s.%s.x' % (short_version[0], short_version[2:])
 
 	# If this is master or master-private, or we've recently rebased to 7.0.x or 7.0.x-private,
 	# then use the branch instead of the tag
