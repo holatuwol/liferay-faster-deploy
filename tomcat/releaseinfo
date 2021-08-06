@@ -31,9 +31,11 @@ releaseinfo() {
 	# Use portal-kernel/portal-service to determine the current
 	# Liferay version in order to decide on the Java version to use
 
-	RELEASE_INFO_JAR=$CATALINA_HOME/webapps/ROOT/WEB-INF/lib/portal-kernel.jar
+	RELEASE_INFO_JAR=$CATALINA_HOME/webapps/ROOT/WEB-INF/shielded-container-lib/portal-kernel.jar
 
-	echo "${RELEASE_INFO_JAR}"
+	if [ ! -f $RELEASE_INFO_JAR ]; then
+		RELEASE_INFO_JAR=$CATALINA_HOME/webapps/ROOT/WEB-INF/lib/portal-kernel.jar
+	fi
 
 	if [ ! -f $RELEASE_INFO_JAR ]; then
 		RELEASE_INFO_JAR=$CATALINA_HOME/lib/ext/portal-kernel.jar
@@ -47,6 +49,8 @@ releaseinfo() {
 		echo "Unable to find portal-kernel.jar or portal-service.jar in ${CATALINA_HOME}"
 		return 1
 	fi
+
+	echo "${RELEASE_INFO_JAR}"
 
 	echo 'public class GetReleaseInfo { public static void main( String[] args ) { System.out.print( com.liferay.portal.kernel.util.ReleaseInfo.getBuildNumber() ); } }' > GetReleaseInfo.java
 	javac -classpath ".:${RELEASE_INFO_JAR}" GetReleaseInfo.java

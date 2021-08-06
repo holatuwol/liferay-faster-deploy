@@ -1,5 +1,15 @@
 #!/bin/bash
 
 if . $(dirname "${BASH_SOURCE[0]}")/appserverprops; then
-	. $(dirname "${BASH_SOURCE[0]}")/installjar ${CATALINA_HOME}/webapps/ROOT/WEB-INF/lib com.liferay.portal.dao.db portal-dao-db
+	LIFERAY_PORTAL_LIB_DIR=
+
+	if [ -d ${CATALINA_HOME}/webapps/ROOT/WEB-INF/shielded-container-lib ]; then
+		LIFERAY_PORTAL_LIB_DIR="${CATALINA_HOME}/webapps/ROOT/WEB-INF/shielded-container-lib"
+	else
+		LIFERAY_PORTAL_LIB_DIR="${CATALINA_HOME}/webapps/ROOT/WEB-INF/lib"
+	fi
+
+	echo "Copying com.liferay.portal.dao.db to ${LIFERAY_PORTAL_LIB_DIR}"
+
+	. $(dirname "${BASH_SOURCE[0]}")/installjar "${LIFERAY_PORTAL_LIB_DIR}" com.liferay.portal.dao.db portal-dao-db
 fi
