@@ -8,6 +8,7 @@ import json
 import math
 import os
 from os.path import abspath, dirname, isdir, isfile, join, relpath
+import pickle
 import re
 import requests
 import sys
@@ -24,13 +25,17 @@ import git
 
 json_auth_token = {}
 
-session = requests.session()
+if os.path.isfile('session.ser'):
+    with open('session.ser', 'rb') as f:
+        session = pickle.load(f)
+else:
+    session = requests.session()
 
 def get_namespaced_parameters(portlet_id, parameters):
     return { ('_%s_%s' % (portlet_id, key)) : value for key, value in parameters.items() }
 
 def authenticate(base_url, get_params=None):
-    r = session.get(base_url, data=get_params)
+    r = session.get(base_url, data=get_params, verify=False)
 
     if r.url.find('https://login.liferay.com/') == 0:
         login_okta(r.text)
@@ -39,6 +44,9 @@ def authenticate(base_url, get_params=None):
     elif len(r.history) > 0 and r.url.find('p_p_id=') != -1:
         url_params = parse.parse_qs(parse.urlparse(r.url).query)
         login_portlet(r.url, url_params, r.text)
+
+    with open('session.ser', 'wb') as f:
+        pickle.dump(session, f)
 
 def get_liferay_file(base_url, target_file=None, params=None, method='get'):
     r = make_liferay_request(base_url, params, method, True)
@@ -84,9 +92,9 @@ def make_liferay_request(base_url, params, method, stream=False):
             else:
                 full_url = '%s&%s' % (base_url, query_string)
 
-        r = session.get(full_url, data=params, stream=stream)
+        r = session.get(full_url, data=params, stream=stream, verify=False)
     else:
-        r = session.post(base_url, data=params)
+        r = session.post(base_url, data=params, verify=False)
 
     return r
 
@@ -249,7 +257,7 @@ def login_okta(response_text):
     else:
         sys.stderr.write('unrecognized status: %s\n' % response_json['status'])
 
-    r = session.get(redirect_url, headers=headers)
+    r = session.get(redirect_url, headers=headers, verify=False)
 
     # Process the SAML response
 
