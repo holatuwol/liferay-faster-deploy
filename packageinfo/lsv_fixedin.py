@@ -2,6 +2,7 @@
 
 from datetime import datetime
 import json
+import re
 import requests
 import subprocess
 
@@ -100,6 +101,11 @@ def expand_fix_version(issue_key, issue):
 
 		for label in fix_pack_labels:
 			if label[:len(prefix)] != prefix or label[-len(suffix):] != suffix:
+				continue
+
+			pattern = re.compile('%s[0-9]*%s' % (prefix, suffix))
+
+			if not pattern.fullmatch(label):
 				continue
 
 			fix_version[build_number] = int(label[len(prefix):-len(suffix)])
