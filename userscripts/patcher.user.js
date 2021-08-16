@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        6.8
+// @version        6.9
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -951,7 +951,7 @@ function getMissingTicketList(lsvTickets) {
     if (!fixPack) {
         return [[], [], [], []];
     }
-    var tagName = fixPack.tag;
+    var tagName = (fixPack.name.indexOf('portal-') == 0) ? fixPack.name : fixPack.tag;
     var liferayVersion = getLiferayVersion(tagName);
     var buildNumber = '';
     if (tagName.indexOf('portal-') == 0) {
