@@ -14,6 +14,10 @@ import requests
 import sys
 import time
 from tqdm import tqdm
+import urllib3
+
+# Suppress InsecureRequestWarning: Unverified HTTPS
+urllib3.disable_warnings()
 
 try:
     from urllib import parse
