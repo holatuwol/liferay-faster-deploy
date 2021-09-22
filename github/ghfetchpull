@@ -11,6 +11,10 @@ fetchpr() {
 
 	BASE_BRANCH=$(cat "$SCRATCH_FILE" | jq '.base.ref' | cut -d'"' -f 2)
 
+	if [ "null" == "${BASE_BRANCH}" ]; then
+		BASE_BRANCH=master
+	fi
+
 	local target_branch=${2}
 
 	if [ "" == "${target_branch}" ]; then
@@ -23,6 +27,7 @@ fetchpr() {
 		. $(dirname "${BASH_SOURCE[0]}")/../getparent
 		upstream_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
 	else
+		echo "${upstream_remote}"
 		upstream_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/origin[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
 	fi
 
