@@ -1,9 +1,9 @@
 #!/bin/bash
 
-remove_text_fixes() {
-  for TEST_HASH in $(git diff --name-only ${BASE_TAG}..HEAD | grep -F 'test/src/' | xargs -r git log ${BASE_TAG}..HEAD --pretty='%H' --); do
+remove_fixes() {
+  for TEST_HASH in $(git diff --name-only ${BASE_TAG}..HEAD | grep -F "${1}" | xargs -r git log ${BASE_TAG}..HEAD --pretty='%H' --); do
     GIT_SEQUENCE_EDITOR="sed -i -re '1s/^pick /e /'" git rebase -i ${TEST_HASH}~1
-    git diff --name-only HEAD~1..HEAD | grep -F 'test/src/' | xargs git reset HEAD~1 -- ${file}
+    git diff --name-only HEAD~1..HEAD | grep -F "${1}" | xargs git reset HEAD~1 -- ${file}
     git status -s | grep '^.M' | awk '{ print $2 }' | xargs -r git checkout
     git commit --amend --allow-empty --no-edit
     git rebase --continue
@@ -26,84 +26,65 @@ fix_dependencies() {
 
 checkcommonerrors() {
 	local PATCHER_JSON=$(dirname "${BASH_SOURCE[0]}")/patcher.json
-	local BASELINE_ID=$(cat $PATCHER_JSON | jq '.["'$BASE_TAG'"]')
+	local BASELINE_ID=$(cat ${PATCHER_JSON} | jq '.["'${BASE_TAG}'"]')
 
-	if [ "" == "$BASELINE_ID" ]; then
-		echo $BASE_TAG does not correspond to a known patcher portal baseline
+	if [ "" == "${BASELINE_ID}" ]; then
+		echo ${BASE_TAG} does not correspond to a known patcher portal baseline
 		return 1
 	fi
 
-	for TAG in $(cat $PATCHER_JSON | jq 'keys | .[]' | cut -d'"' -f 2 | grep -vF '.x'); do
-		if [ "" == "$(git for-each-ref --format='%(refname)' refs/tags/$TAG)" ]; then
-			git fetch --no-tags git@github.com:liferay/liferay-portal-ee.git tags/$TAG:refs/tags/$TAG
+	for TAG in $(cat ${PATCHER_JSON} | jq 'keys | .[]' | cut -d'"' -f 2 | grep -vF '.x'); do
+		if [ "" == "$(git for-each-ref --format='%(refname)' refs/tags/${TAG})" ]; then
+			git fetch --no-tags git@github.com:liferay/liferay-portal-ee.git tags/${TAG}:refs/tags/${TAG}
 		fi
 	done
 
 	# Make sure that we have not modified any packageinfo files
 
-	git diff --name-only $BASE_TAG..HEAD > $GIT_ROOT/.redeploy/patcher_diff.txt
-
-	if [ "" != "$(grep -F git-commit-portal $GIT_ROOT/.redeploy/patcher_diff.txt)" ]; then
-		echo "A fix must not change git-commit-portal*"
-		echo "$CHANGED_PACKAGEINFO"
-		return 1
-	fi
-
-	local CHANGED_PACKAGEINFO=$(grep -F '/packageinfo' $GIT_ROOT/.redeploy/patcher_diff.txt)
-
-	if [ "" != "$CHANGED_PACKAGEINFO" ]; then
-		echo ""
-		echo "A fix must not change packageinfo"
-
-		for file in $CHANGED_PACKAGEINFO; do
-			echo ""
-			echo "$file"
-			git log --pretty='   %C(yellow)%H%Creset %Cgreen%ci%Creset %s' $BASE_TAG..HEAD -- $file
-		done
-	fi
+	git diff --name-only ${BASE_TAG}..HEAD > ${GIT_ROOT}/.redeploy/patcher_diff.txt
 
 	# Make sure that we have not modified any Bundle-Version values
 
-	local CHANGED_BND=$(grep -F '/bnd.bnd' $GIT_ROOT/.redeploy/patcher_diff.txt)
+	local CHANGED_BND=$(grep -F '/bnd.bnd' ${GIT_ROOT}/.redeploy/patcher_diff.txt)
 	local MODIFIED_BUNDLE_VERSION=
 
-	for file in $CHANGED_BND; do
-		if [ "" != "$(git diff $BASE_TAG..HEAD -- $file | grep -F '+' | grep -F Bundle-Version)" ]; then
-			MODIFIED_BUNDLE_VERSION="$MODIFIED_BUNDLE_VERSION $file"
+	for file in ${CHANGED_BND}; do
+		if [ "" != "$(git diff ${BASE_TAG}..HEAD -- ${file} | grep -F '+' | grep -F Bundle-Version)" ]; then
+			MODIFIED_BUNDLE_VERSION="${MODIFIED_BUNDLE_VERSION} ${file}"
 		fi
 	done
 
-	if [ "" != "$MODIFIED_BUNDLE_VERSION" ]; then
+	if [ "" != "${MODIFIED_BUNDLE_VERSION}" ]; then
 		echo ""
-		echo "A fix must not modify a Bundle-Version: $file"
+		echo "A fix must not modify a Bundle-Version: ${file}"
 
-		for file in $CHANGED_PACKAGEINFO; do
+		for file in ${CHANGED_PACKAGEINFO}; do
 			echo ""
-			echo "$file"
-			git log --pretty='   %C(yellow)%H%Creset %Cgreen%ci%Creset %s' $BASE_TAG..HEAD -- $file
+			echo "${file}"
+			git log --pretty='   %C(yellow)%H%Creset %Cgreen%ci%Creset %s' ${BASE_TAG}..HEAD -- ${file}
 		done
 	fi
 
-	local CHANGED_GRADLE=$(grep -F '/build.gradle' $GIT_ROOT/.redeploy/patcher_diff.txt)
+	local CHANGED_GRADLE=$(grep -F '/build.gradle' ${GIT_ROOT}/.redeploy/patcher_diff.txt)
 	local MODIFIED_GRADLE_VERSION=
 	local PORTAL_BOOTSTRAP=$(git ls-files modules/core | grep -F portal-bootstrap/build.gradle)
 
-	for file in $CHANGED_GRADLE; do
-		if [ "" != "$(git diff $BASE_TAG..HEAD -- $file | grep -F '+' | grep -F 'group: "com.liferay' | grep -F 'version: ')" ]; then
-			for bundle in $(git diff $BASE_TAG..HEAD -- $file | grep -F '+' | grep -F 'group: "com.liferay' | grep -F 'version: ' | grep -o 'name: "[^"]*"' | cut -d'"' -f 2); do
+	for file in ${CHANGED_GRADLE}; do
+		if [ "" != "$(git diff ${BASE_TAG}..HEAD -- ${file} | grep -F '+' | grep -F 'group: "com.liferay' | grep -F 'version: ')" ]; then
+			for bundle in $(git diff ${BASE_TAG}..HEAD -- ${file} | grep -F '+' | grep -F 'group: "com.liferay' | grep -F 'version: ' | grep -o 'name: "[^"]*"' | cut -d'"' -f 2); do
 				fix_dependencies "${file}" "${bundle}"
 				fix_dependencies "${PORTAL_BOOTSTRAP}" "${bundle}"
 			done
 		fi
 
 		if [ "" != "$(git status | grep -F "${file}")" ]; then
-			MODIFIED_GRADLE_VERSION="$MODIFIED_GRADLE_VERSION\n$file"
+			MODIFIED_GRADLE_VERSION="${MODIFIED_GRADLE_VERSION}\n${file}"
 		fi
 	done
 
-	if [ "" != "$MODIFIED_GRADLE_VERSION" ]; then
+	if [ "" != "${MODIFIED_GRADLE_VERSION}" ]; then
 		echo ""
-		echo "A fix must not modify dependency version (switch to default or project dependency versions):"
+		echo "A fix must not modify dependency versions (switch to default or project dependency versions):"
 		echo -e "${MODIFIED_GRADLE_VERSION}"
 
 		git add ${PORTAL_BOOTSTRAP}
@@ -113,7 +94,7 @@ checkcommonerrors() {
 
 	# If any of the checks failed, abort
 
-	if [ "" != "$CHANGED_PACKAGEINFO" ] || [ "" != "$MODIFIED_BUNDLE_VERSION" ]; then
+	if [ "" != "${CHANGED_PACKAGEINFO}" ] || [ "" != "${MODIFIED_BUNDLE_VERSION}" ]; then
 		echo ""
 		return 1
 	fi
@@ -123,7 +104,7 @@ patcher() {
 	. $(dirname "${BASH_SOURCE[0]}")/../setopts
 	. $(dirname "${BASH_SOURCE[0]}")/../getparent
 
-	if [ "" == "$BASE_TAG" ]; then
+	if [ "" == "${BASE_TAG}" ]; then
 		echo Could not identify baseline.
 		return 1
 	fi
@@ -132,16 +113,18 @@ patcher() {
 		return 1
 	fi
 
-	remove_text_fixes
+	remove_fixes 'git-commit-portal'
+	remove_fixes 'test/src/'
+	remove_fixes '/packageinfo'
 
 	# Check if there's a pre-existing patch in patcher portal
 
 	local ORIGIN=$(git remote -v | grep liferay-portal-ee | grep -vF ':liferay/' | cut -f 2 | cut -d' ' -f 1 | uniq)
 
-	if [ "" == "$(git for-each-ref --format='%(refname)' refs/$ORIGIN/$BRANCH)" ]; then
-		git push $ORIGIN $BRANCH
-	elif [ "" != "$(git log --pretty='%H' $ORIGIN/$BRANCH..$BRANCH)" ]; then
-		git push -f $ORIGIN $BRANCH
+	if [ "" == "$(git for-each-ref --format='%(refname)' refs/${ORIGIN}/${BRANCH})" ]; then
+		git push ${ORIGIN} ${BRANCH}
+	elif [ "" != "$(git log --pretty='%H' ${ORIGIN}/${BRANCH}..${BRANCH})" ]; then
+		git push -f ${ORIGIN} ${BRANCH}
 	fi
 
 	python "$(dirname ${BASH_SOURCE[0]})/patcher.py" "${ORIGIN}" $@
