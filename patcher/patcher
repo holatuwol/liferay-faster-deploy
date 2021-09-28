@@ -115,6 +115,7 @@ patcher() {
 
 	remove_fixes 'git-commit-portal'
 	remove_fixes 'test/src/'
+	remove_fixes 'sample'
 	remove_fixes '/packageinfo'
 
 	# Check if there's a pre-existing patch in patcher portal
