@@ -21,13 +21,20 @@ with open(sys.argv[1]) as infile, open(sys.argv[2], 'w') as outfile:
 		# Look for the exception either in a timestamp line or a
 		# "Caused by" line
 
-		if line[0] not in string.whitespace:
+		if line[0] in string.whitespace:
+			if not skip_error:
+				skip_error = len([needle for needle in needles if line.find(needle) != -1])
+		else:
+			if skip_error:
+				if line.find('Caused by') == 0:
+					continue
+				if line[0] not in numbers and len(since_timestamp) == 0:
+					continue
+
 			skip_error = len([needle for needle in needles if line.find(needle) != -1])
 
-			if skip_error:
-				since_timestamp = []
-
 		if skip_error:
+			since_timestamp = []
 			continue
 
 		skip_error = False
