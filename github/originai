@@ -4,9 +4,11 @@ PORTAL_SOURCE=${1}
 ORIGIN_CE=${2}
 ORIGIN_EE=${3}
 
+date
+
 cd "${PORTAL_SOURCE}"
 
-for remote_name in $(git remote | grep -F upstream); do
+for remote_name in $(git remote); do
 	echo "Fetching updates from ${remote_name}"
 	git fetch -p --no-tags ${remote_name}
 	git remote set-head ${remote_name} -d
@@ -15,28 +17,28 @@ done
 for branch in master; do
 	if [ "" != "${ORIGIN_CE}" ]; then
 		echo "Updating ${branch}"
-		git push ${ORIGIN_CE} refs/remotes/upstream-ce/${branch}:refs/heads/${branch}
+		git push -f ${ORIGIN_CE} refs/remotes/upstream-ce/${branch}:refs/heads/${branch}
 	fi
 
 	if [ "" !=  "${ORIGIN_EE}" ]; then
 		echo "Updating ${branch}-private"
-		git push ${ORIGIN_EE} refs/remotes/upstream/${branch}-private:refs/heads/${branch}-private
+		git push -f ${ORIGIN_EE} refs/remotes/upstream/${branch}-private:refs/heads/${branch}-private
 	fi
 done
 
 if [ "" != "${ORIGIN_EE}" ]; then
 	for branch in 7.4.x 7.3.x 7.2.x 7.1.x 7.0.x; do
 		echo "Updating ${branch}"
-		git push ${ORIGIN_EE} refs/remotes/upstream/${branch}:refs/heads/${branch}
+		git push -f ${ORIGIN_EE} refs/remotes/upstream/${branch}:refs/heads/${branch}
 
 		echo "Updating ${branch}-private"
-		git push ${ORIGIN_EE} refs/remotes/upstream/${branch}-private:refs/heads/${branch}-private
+		git push -f ${ORIGIN_EE} refs/remotes/upstream/${branch}-private:refs/heads/${branch}-private
 	done
 fi
 
 if [ "" != "${ORIGIN_EE}" ]; then
 	for branch in ee-6.2.x; do
 		echo "Updating ${branch}"
-		git push ${ORIGIN_EE} refs/remotes/upstream/${branch}:refs/heads/${branch}
+		git push -f ${ORIGIN_EE} refs/remotes/upstream/${branch}:refs/heads/${branch}
 	done
 fi
