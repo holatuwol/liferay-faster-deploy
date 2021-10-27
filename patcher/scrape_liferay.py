@@ -181,7 +181,7 @@ def login_okta(response_text):
     # Attempt to login
 
     form_params = {
-        'username': '%s@liferay.com' % username,
+        'username': username if username.find('@') != -1 else ('%s@liferay.com' % username),
         'password': password,
         'stateToken': state_token,
         'options': {
