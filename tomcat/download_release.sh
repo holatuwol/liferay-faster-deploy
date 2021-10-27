@@ -288,14 +288,14 @@ getpatchingtool() {
 	local PATCHING_TOOL_VERSION=
 
 	if [[ "$RELEASE_ID" == 6.1.30* ]] || [[ "$RELEASE_ID" == 6.2.10* ]]; then
-		PATCHING_TOOL_VERSION=patching-tool-$(curl ${FILES_CREDENTIALS} $REQUEST_URL/LATEST.txt)-internal.zip
+		PATCHING_TOOL_VERSION="$(curl ${FILES_CREDENTIALS} $REQUEST_URL/LATEST.txt)"
 	elif [[ "$RELEASE_ID" == 7.0.10* ]] || [[ "$RELEASE_ID" == 7.1.10* ]] || [[ "$RELEASE_ID" == 7.2.10* ]]; then
-		curl ${FILES_CREDENTIALS} $REQUEST_URL/LATEST-2.0.txt
-		PATCHING_TOOL_VERSION=patching-tool-$(curl ${FILES_CREDENTIALS} $REQUEST_URL/LATEST-2.0.txt)-internal.zip
+		PATCHING_TOOL_VERSION="$(curl ${FILES_CREDENTIALS} $REQUEST_URL/LATEST-2.0.txt)"
 	else
-		curl ${FILES_CREDENTIALS} $REQUEST_URL/LATEST-3.0.txt
-		PATCHING_TOOL_VERSION=patching-tool-$(curl ${FILES_CREDENTIALS} $REQUEST_URL/LATEST-3.0.txt)-internal.zip
+		PATCHING_TOOL_VERSION="$(curl ${FILES_CREDENTIALS} $REQUEST_URL/LATEST-3.0.txt)"
 	fi
+
+	PATCHING_TOOL_VERSION=patching-tool-${PATCHING_TOOL_VERSION}-internal.zip
 
 	echo "Using patching tool ${PATCHING_TOOL_VERSION}"
 

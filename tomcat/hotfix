@@ -84,7 +84,7 @@ prepare_server() {
 			return 1
 		fi
 
-		FILES_CREDENTIALS="-u $(git config files.username):$(git config files.password)"
+		FILES_CREDENTIALS='-u '$(git config files.username)':'$(git config files.password)
 		LIFERAY_FILES_MIRROR="https://files.liferay.com"
 	fi
 
