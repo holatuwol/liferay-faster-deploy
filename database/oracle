@@ -37,6 +37,13 @@ grant imp_full_database to lportal;"
 			sqlfile=ddl_dump.txt \
 			< /dev/null
 
+	docker cp remake-user.sh ${CONTAINER_NAME}:${BACKUP_FOLDER_NAME}/
+	docker exec -u root ${CONTAINER_NAME} chown oracle:oinstall ${BACKUP_FOLDER_NAME}/remake-user.sh
+	docker exec -u root ${CONTAINER_NAME} chmod u+x ${BACKUP_FOLDER_NAME}/remake-user.sh
+
+	docker cp remake-user.sql ${CONTAINER_NAME}:${BACKUP_FOLDER_NAME}/
+	docker exec -u root ${CONTAINER_NAME} chown oracle:oinstall ${BACKUP_FOLDER_NAME}/remake-user.sql
+
 	local OLD_SCHEMA=$(docker exec -i ${CONTAINER_NAME} grep -o 'CREATE USER ".*"' ${BACKUP_FOLDER_NAME}/ddl_dump.txt | cut -d'"' -f 2)
 	local OLD_TABLESPACE=$(docker exec -i ${CONTAINER_NAME} grep -o 'TABLESPACE ".*"' ${BACKUP_FOLDER_NAME}/ddl_dump.txt | cut -d'"' -f 2 | sort -u)
 
