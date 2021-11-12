@@ -19,18 +19,8 @@ startdatabase() {
 		--detach --expose 3306 mysql:${MYSQL_VERSION} \
 		--character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
 
-	local INNODB_FILE_FORMAT='Barracuda'
-
-	if [ "5.5" == "${MYSQL_VERSION}" ]; then
-		INNODB_FILE_FORMAT='Antelope'
-	fi
-
 	echo "
 [mysqld]
-innodb-file-format    = ${INNODB_FILE_FORMAT}
-innodb-file-per-table
-innodb-large-prefix
-
 character-set-server  = utf8mb4
 collation-server      = utf8mb4_unicode_ci
 " > runtime.cnf
