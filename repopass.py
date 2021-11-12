@@ -7,10 +7,7 @@ import sys
 key_prefix = 'build.repository.private.';
 key_suffix = '[%s]' % sys.argv[1].split('/')[-1];
 
-branch = sys.argv[1]
-
-if branch.find('-private') == -1:
-	branch = branch + '-private'
+branch = 'master-private'
 
 properties_content = subprocess.check_output(['git', 'show', '%s:working.dir.properties' % branch])
 

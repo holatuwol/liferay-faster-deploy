@@ -83,11 +83,7 @@ formatbranch() {
 		local origin_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/origin[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
 		local upstream_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
 
-		local compare_branch=${BASE_BRANCH}
-
-		if [[ $(git log --pretty='%H' ${compare_branch}..HEAD | grep -c '^') -gt $(git log --pretty='%H' ${origin_remote}/${BASE_BRANCH}..HEAD | grep -c '^') ]]; then
-			compare_branch=${origin_remote}/$BASE_BRANCH
-		fi
+		local compare_branch=${origin_remote}/$BASE_BRANCH
 
 		if [[ $(git log --pretty='%H' ${compare_branch}..HEAD | grep -c '^') -gt $(git log --pretty='%H' ${upstream_remote}/${BASE_BRANCH}..HEAD | grep -c '^') ]]; then
 			compare_branch=${upstream_remote}/$BASE_BRANCH

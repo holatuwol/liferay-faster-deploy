@@ -141,12 +141,16 @@ downloadbranchmirror() {
 	local FILES_USERNAME=$(git config --global files.username)
 	local FILES_PASSWORD=$(git config --global files.password)
 
-	if [[ "$BASE_BRANCH" == ee-* ]] || [[ "$BASE_BRANCH" == *-private ]]; then
+	if [ "$BASE_BRANCH" != "master" ]; then
 		if [ "" == "$LIFERAY_FILES_MIRROR" ]; then
 			if [ "" == "${FILES_USERNAME}" ] || [ "" == "${FILES_PASSWORD}" ]; then
 				return 0
 			fi
 		else
+			if [[ "${BASE_BRANCH}" != *-private ]]; then
+				BASE_BRANCH="${BASE_BRANCH}-private"
+			fi
+
 			REQUEST_URL="$LIFERAY_FILES_MIRROR/private/ee/portal/snapshot-$BASE_BRANCH/"
 		fi
 	else
@@ -164,7 +168,7 @@ downloadbranchmirror() {
 	fi
 
 	if [ "" == "$BUILD_TIMESTAMP" ]; then
-		if [[ "$BASE_BRANCH" == ee-* ]] || [[ "$BASE_BRANCH" == *-private ]]; then
+		if [ "$BASE_BRANCH" != "master" ]; then
 			if [ "" == "${FILES_USERNAME}" ] || [ "" == "${FILES_PASSWORD}" ]; then
 				echo "Unable to identify build timestamp (maybe you forgot to connect to a VPN)"
 				return 1
@@ -172,6 +176,10 @@ downloadbranchmirror() {
 
 			if [ "" != "${REQUEST_URL}" ]; then
 				echo "Failed to reach files mirror, switching to files server"
+			fi
+
+			if [[ "${BASE_BRANCH}" != *-private ]]; then
+				BASE_BRANCH="${BASE_BRANCH}-private"
 			fi
 
 			FILES_CREDENTIALS="-u ${FILES_USERNAME}:${FILES_PASSWORD}"
