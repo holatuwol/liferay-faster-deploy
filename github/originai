@@ -1,8 +1,6 @@
 #!/bin/bash
 
 PORTAL_SOURCE=${1}
-ORIGIN_CE=${2}
-ORIGIN_EE=${3}
 
 date
 
@@ -14,31 +12,52 @@ for remote_name in $(git remote); do
 	git remote set-head ${remote_name} -d
 done
 
-for branch in master; do
-	if [ "" != "${ORIGIN_CE}" ]; then
-		echo "Updating ${branch}"
-		git push -f ${ORIGIN_CE} refs/remotes/upstream-ce/${branch}:refs/heads/${branch}
-	fi
+UPSTREAM_CE=$(git remote -v | grep -F 'liferay/liferay-portal.git' | awk '{ print $1 }' | head -1)
+UPSTREAM_EE=$(git remote -v | grep -F 'liferay/liferay-portal-ee.git' | awk '{ print $1 }' | head -1)
 
-	if [ "" !=  "${ORIGIN_EE}" ]; then
-		echo "Updating ${branch}-private"
-		git push -f ${ORIGIN_EE} refs/remotes/upstream/${branch}-private:refs/heads/${branch}-private
-	fi
-done
+if [ "" != "${UPSTREAM_CE}" ]; then
+	for remote in $@; do
+		if [ "${1}" == "${remote}" ]; then
+			continue
+		fi
 
-if [ "" != "${ORIGIN_EE}" ]; then
-	for branch in 7.4.x 7.3.x 7.2.x 7.1.x 7.0.x; do
-		echo "Updating ${branch}"
-		git push -f ${ORIGIN_EE} refs/remotes/upstream/${branch}:refs/heads/${branch}
+		if [[ "$(git remote get-url ${remote})" != */liferay-portal.git ]]; then
+			continue
+		fi
 
-		echo "Updating ${branch}-private"
-		git push -f ${ORIGIN_EE} refs/remotes/upstream/${branch}-private:refs/heads/${branch}-private
+		for branch in master; do
+			echo "Updating ${branch} on ${remote}"
+			git push -f ${remote} refs/remotes/${UPSTREAM_CE}/${branch}:refs/heads/${branch}
+		done
 	done
 fi
 
-if [ "" != "${ORIGIN_EE}" ]; then
-	for branch in ee-6.2.x; do
-		echo "Updating ${branch}"
-		git push -f ${ORIGIN_EE} refs/remotes/upstream/${branch}:refs/heads/${branch}
+if [ "" != "${UPSTREAM_EE}" ]; then
+	for remote in $@; do
+		if [ "${1}" == "${remote}" ]; then
+			continue
+		fi
+
+		if [[ "$(git remote get-url ${remote})" != */liferay-portal-ee.git ]]; then
+			continue
+		fi
+
+		for branch in master; do
+			echo "Updating ${branch} on ${remote}"
+			git push -f ${remote} refs/remotes/${UPSTREAM_EE}/${branch}-private:refs/heads/${branch}-private
+		done
+
+		for branch in 7.4.x 7.3.x 7.2.x 7.1.x 7.0.x; do
+			echo "Updating ${branch} on ${remote}"
+			git push -f ${remote} refs/remotes/${UPSTREAM_EE}/${branch}:refs/heads/${branch}
+
+			echo "Updating ${branch}-private on ${remote}"
+			git push -f ${remote} refs/remotes/${UPSTREAM_EE}/${branch}-private:refs/heads/${branch}-private
+		done
+
+		for branch in ee-6.2.x; do
+			echo "Updating ${branch} on ${remote}"
+			git push -f ${remote} refs/remotes/${UPSTREAM_EE}/${branch}:refs/heads/${branch}
+		done
 	done
 fi
