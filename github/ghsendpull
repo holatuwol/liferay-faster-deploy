@@ -3,7 +3,7 @@
 baseline() {
 	echo "Running baseline check"
 
-	$(dirname "${BASH_SOURCE[0]}")/baseline
+	$(dirname "${BASH_SOURCE[0]}")/baseline $@
 }
 
 checkrepomode() {
@@ -33,7 +33,7 @@ checkrepomode() {
 
 		pushd $subrepo_folder > /dev/null
 
-		for patch_file in $(git format-patch -o $SUBREPO_ROOT/${remote_project}/ --relative ${upstream_remote}/$BASE_BRANCH -- .); do
+		for patch_file in $(git format-patch -o $SUBREPO_ROOT/${remote_project}/ --relative ${upstream_remote}/${BASE_BRANCH} -- .); do
 			SUBREPO_CHANGES="${SUBREPO_CHANGES}    ${patch_file}\n"
 		done
 	done
@@ -46,7 +46,7 @@ checkrepomode() {
 
 	if [[ 0 -ne $(cat ${GIT_ROOT}/.redeploy/central.txt | grep -c '^') ]]; then
 		echo "* $(git remote -v | grep "^${upstream_remote}\s" | awk '{ print $2 }' | uniq)"
-		cat ${GIT_ROOT}/.redeploy/central.txt | awk '{ print "'"'"'" $1 "/'"'"'" }' | xargs git format-patch ${upstream_remote}/$BASE_BRANCH -- | awk '{ print "    ./" $1 }'
+		cat ${GIT_ROOT}/.redeploy/central.txt | awk '{ print "'"'"'" ${1} "/'"'"'" }' | xargs git format-patch ${upstream_remote}/${BASE_BRANCH} -- | awk '{ print "    ./" ${1} }'
 	fi
 
 	echo -e "$SUBREPO_CHANGES"
@@ -82,7 +82,7 @@ pmdreport() {
 resetbasebranch() {
 	reviewer_remote=$(git config --get remote.${upstream_remote}.url | sed "s@:[^/]*/@:${reviewer}/@")
 
-	git fetch --no-tags ${upstream_remote} $BASE_BRANCH
+	git fetch --no-tags ${upstream_remote} ${BASE_BRANCH}
 	git branch -D reviewer-tmp-rebase
 	git fetch --no-tags ${reviewer_remote} ${BASE_BRANCH}:reviewer-tmp-rebase
 
@@ -94,7 +94,7 @@ resetbasebranch() {
 }
 
 sendpull() {
-	if [ "" == "$1" ]; then
+	if [ "" == "${1}" ]; then
 		echo Please specify a reviewer
 		return 1
 	fi
@@ -103,7 +103,7 @@ sendpull() {
 
 	local CURRENT_BRANCH=$(git symbolic-ref --short HEAD)
 
-	if [ "" == "$CURRENT_BRANCH" ]; then
+	if [ "" == "${CURRENT_BRANCH}" ]; then
 		echo "Cannot submit a pull request from a detached head"
 		return 1
 	fi
@@ -113,16 +113,16 @@ sendpull() {
 	remote_name=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/origin[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
 
 	if [ "" == "$remote_name" ]; then
-		echo "Unable to identify origin for $BASE_BRANCH"
+		echo "Unable to identify origin for ${BASE_BRANCH}"
 		return 1
 	fi
 
-	if [ "" == "$BASE_BRANCH" ]; then
+	if [ "" == "${BASE_BRANCH}" ]; then
 		echo Unable to identify base branch
 		return 1
 	fi
 
-	if [ "master" == "$CURRENT_BRANCH" ]; then
+	if [ "master" == "${CURRENT_BRANCH}" ]; then
 		echo Attempted to submit pull request from master
 		return 1
 	fi
@@ -142,7 +142,7 @@ sendpull() {
 	upstream_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
 
 	if [ "" == "$upstream_remote" ]; then
-		echo "Unable to identify upstream equivalent of $BASE_BRANCH"
+		echo "Unable to identify upstream equivalent of ${BASE_BRANCH}"
 		return 1
 	fi
 
@@ -152,10 +152,10 @@ sendpull() {
 		return 1
 	fi
 
-	if [ -d "$GIT_ROOT/portal-impl" ]; then
-		pushd $GIT_ROOT > /dev/null
+	if [ -d "${GIT_ROOT}/portal-impl" ]; then
+		pushd ${GIT_ROOT} > /dev/null
 
-		. $(dirname "${BASH_SOURCE[0]}")/../gitchanges $(git log -1 --pretty='%H') ${upstream_remote}/$BASE_BRANCH
+		. $(dirname "${BASH_SOURCE[0]}")/../gitchanges $(git log -1 --pretty='%H') ${upstream_remote}/${BASE_BRANCH}
 
 		if [[ 0 -eq $(cat ${GIT_ROOT}/.redeploy/changes.txt | grep -c '^') ]]; then
 			echo No changes detected.
@@ -169,21 +169,21 @@ sendpull() {
 				ant setup-sdk
 			fi
 
-			baseline && formatsource && pmdreport
+			baseline ${upstream_remote}/${BASE_BRANCH} && formatsource && pmdreport
 		fi
 
 		popd > /dev/null
 
 		HAS_CHANGES=$(git status -s | grep -vF '??' | grep -vF gradle.properties)
 
-		if [ "" != "$HAS_CHANGES" ]; then
+		if [ "" != "${HAS_CHANGES}" ]; then
 			echo "Detected files modified during sanity check, please commit them before sending a pull request"
 		fi
 	fi
 
 	# Update our origin
 
-	git push -f $remote_name $CURRENT_BRANCH
+	git push -f $remote_name ${CURRENT_BRANCH}
 
 	if [[ 0 -ne $? ]]; then
 		return 1
@@ -206,7 +206,7 @@ setopts() {
 }
 
 webbrowser() {
-	python $(dirname "${BASH_SOURCE[0]}")/../webbrowser_patch.py "$1"
+	python $(dirname "${BASH_SOURCE[0]}")/../webbrowser_patch.py "${1}"
 }
 
 setopts
