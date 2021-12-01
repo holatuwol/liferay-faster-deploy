@@ -12,7 +12,6 @@ buildopts() {
 	if [[ 8 -gt $JAVA_VERSION ]]; then
 		ANT_OPTS="${ANT_OPTS} -XX:MaxPermSize=512m"
 	else
-		ANT_OPTS="${ANT_OPTS} -Dorg.gradle.workers.max=1"
 		GRADLE_OPTS="${ANT_OPTS}"
 	fi
 
