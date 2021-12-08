@@ -159,6 +159,9 @@ def login_okta(okta_url):
 
         headers, redirect_url = attempt_login_okta(state_token)
 
+        if redirect_url is None:
+            time.sleep(10*60)
+
     print(redirect_url)
 
     r = session.get(redirect_url, headers=headers, verify=False)
