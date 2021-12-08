@@ -70,7 +70,7 @@ findreviewer() {
 formatsource() {
 	echo "Running source formatter"
 
-	$(dirname "${BASH_SOURCE[0]}")/formatsource
+	$(dirname "${BASH_SOURCE[0]}")/formatsource $@
 }
 
 pmdreport() {
@@ -169,7 +169,7 @@ sendpull() {
 				ant setup-sdk
 			fi
 
-			baseline ${upstream_remote}/${BASE_BRANCH} && formatsource && pmdreport
+			baseline ${upstream_remote}/${BASE_BRANCH} && formatsource ${upstream_remote}/${BASE_BRANCH} && pmdreport
 		fi
 
 		popd > /dev/null
