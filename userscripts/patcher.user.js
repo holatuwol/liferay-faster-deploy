@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        6.9
+// @version        7.0
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -269,8 +269,11 @@ function get62FixPack(versionId) {
                 var container2 = document.implementation.createHTMLDocument().documentElement;
                 container2.innerHTML = xhr2.responseText;
                 var gitHashLabelNode = container2.querySelector('label[for="' + ns + 'git-hash"]');
-                var gitHashLabelparentElement = gitHashLabelNode.parentElement;
-                var gitHubNode = gitHashLabelparentElement.querySelector('a');
+                if (!gitHashLabelNode) {
+                    return;
+                }
+                var gitHashLabelParentElement = gitHashLabelNode.parentElement;
+                var gitHubNode = gitHashLabelParentElement.querySelector('a');
                 if (gitHubNode) {
                     var gitHubURL = gitHubNode.getAttribute('href');
                     baseTag = gitHubURL.substring(gitHubURL.indexOf('...') + 3);
@@ -280,7 +283,7 @@ function get62FixPack(versionId) {
         };
         xhr1.send(null);
     }
-    else {
+    if (!baseTag) {
         var versionLabel = document.querySelector('label[for="' + ns + 'patcherProjectVersionId"]');
         var versionHolder = versionLabel.parentElement;
         var versionNode = versionHolder.querySelector('a');
@@ -290,9 +293,13 @@ function get62FixPack(versionId) {
         }
         else {
             var versionOption = versionHolder.querySelector('option[selected]');
+            if (versionOption == null) {
+                var versionSelect = versionHolder.querySelector('select');
+                versionOption = versionSelect.querySelector('option[value="' + versionSelect.value + '"]');
+            }
             fixPackName = (versionOption.textContent || '').trim();
         }
-        baseTag = 'fix-pack-base-6210-' + fixPackName.toLowerCase().substring(fixPackName.indexOf(' ') + 1);
+        baseTag = (fixPackName.indexOf(' ') == -1) ? 'fix-pack-base-6210' : 'fix-pack-base-6210-' + fixPackName.toLowerCase().substring(fixPackName.indexOf(' ') + 1);
     }
     return {
         'tag': baseTag,
@@ -951,7 +958,7 @@ function getMissingTicketList(lsvTickets) {
     if (!fixPack) {
         return [[], [], [], []];
     }
-    var tagName = (fixPack.name.indexOf('portal-') == 0) ? fixPack.name : fixPack.tag;
+    var tagName = ((fixPack.name.indexOf('portal-') == 0) || (fixPack.name.indexOf('fix-pack-base-6210') == 0)) ? fixPack.name : fixPack.tag;
     var liferayVersion = getLiferayVersion(tagName);
     var buildNumber = '';
     if (tagName.indexOf('portal-') == 0) {
@@ -973,7 +980,7 @@ function getMissingTicketList(lsvTickets) {
     var missingTicketList = [[], [], [], []];
     var fixPackNumber = 0;
     if (buildNumber == '6210') {
-        fixPackNumber = parseInt(tagName.substring('portal-'.length));
+        fixPackNumber = (tagName.indexOf('portal-') == 0) ? parseInt(tagName.substring('portal-'.length)) : 0;
     }
     else {
         fixPackNumber = liferayVersion % 1000;
@@ -1001,15 +1008,29 @@ function getMissingTicketTableRow(lsvTickets, missingTickets, severity) {
         lsvList.push(missingTickets.map(function (x) { return getTicketLink('', x, x); }).join(', '));
         lsvList.push('</span>');
         lsvList.push('<div class="verbose" contenteditable onfocus="', 'var selection = window.getSelection();', 'var range = document.createRange();', 'range.selectNodeContents(this);', 'selection.removeAllRanges();', 'selection.addRange(range);', '"><dl>');
-        for (var i = 0; i < missingTickets.length; i++) {
-            var ticketName = missingTickets[i];
-            if (!('hc' in lsvTickets[ticketName])) {
-                continue;
+        missingTickets
+            .filter(function (ticketName) {
+            return 'lsv' in lsvTickets[ticketName] && 'hc' in lsvTickets[ticketName];
+        })
+            .sort(function (ticketName1, ticketName2) {
+            var ticket1 = lsvTickets[ticketName1];
+            var ticket2 = lsvTickets[ticketName2];
+            if (ticket1['lsv'] != ticket2['lsv']) {
+                return ticket1['lsv'] - ticket2['lsv'];
             }
+            return ticketName1 < ticketName2 ? -1 : 1;
+        })
+            .reduce(function (accumulator, ticketName, index) {
             var lsvNumber = lsvTickets[ticketName]['lsv'];
             var helpCenterNumber = lsvTickets[ticketName]['hc'];
-            lsvList.push('<dt>', 'LSV-', lsvNumber, ' / ', ticketName, '</dt><dd>', '<a href="https://help.liferay.com/hc/articles/', helpCenterNumber, '">https://help.liferay.com/hc/articles/', helpCenterNumber, '</a>', '</dd>');
-        }
+            if ((index > 0) && (lsvNumber == accumulator[accumulator.length - 10])) {
+                accumulator[accumulator.length - 8] += ', ' + ticketName;
+            }
+            else {
+                accumulator.push('<dt>', 'LSV-', lsvNumber, ' / ', ticketName, '</dt><dd>', '<a href="https://help.liferay.com/hc/articles/', helpCenterNumber, '">https://help.liferay.com/hc/articles/', helpCenterNumber, '</a>', '</dd>');
+            }
+            return accumulator;
+        }, lsvList);
         lsvList.push('</dl></div>');
     }
     else {
