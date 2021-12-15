@@ -5,6 +5,9 @@ import os
 import re
 import sys
 
+timestamp_text = '^\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d$'
+timestamp_pattern = re.compile(timestamp_text)
+
 class LogSplitter:
 
 	# Split by date
@@ -25,8 +28,6 @@ class LogSplitter:
 		thread_dump = False
 		thread_dump_file = None
 
-		timestamp_text = '^\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d$'
-		timestamp_pattern = re.compile(timestamp_text)
 		last_line_blank = False
 		counter = 0
 
@@ -106,6 +107,7 @@ class LogSplitter:
 		if not os.path.exists(foldername):
 			os.mkdir(foldername)
 
+		header_line = None
 		lines = open(filename, 'r')
 		thread_dump = False
 		counter = 0
@@ -119,6 +121,8 @@ class LogSplitter:
 				if thread_dump:
 					thread_dump_file.close()
 					thread_dump = False
+			elif timestamp_pattern.match(line):
+				header_line = line
 			elif line[0] == '"':
 				if thread_dump:
 					thread_dump_file.close()
@@ -128,6 +132,10 @@ class LogSplitter:
 				if thread_name in files:
 					thread_dump_filename = files[thread_name]
 					thread_dump_file = open(thread_dump_filename, 'a')
+
+					thread_dump_file.write('\n\n')
+					thread_dump_file.write(header_line)
+					thread_dump_file.write('\n')
 				else:
 					counter += 1
 
@@ -139,6 +147,8 @@ class LogSplitter:
 
 					files[thread_name] = thread_dump_filename
 					thread_dump_file = open(thread_dump_filename, 'w')
+					thread_dump_file.write(header_line)
+					thread_dump_file.write('\n')
 
 				thread_dump = True
 
