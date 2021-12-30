@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        12.8
+// @version        12.9
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -604,6 +604,7 @@ function extractAttachmentLinkMetadata(attachmentLink) {
     var authorElement = comment.querySelector('div.actor .name');
     var timeElement = comment.querySelector('time');
     return {
+        element: attachmentLink,
         text: attachmentFileName,
         href: attachmentLink.href,
         download: attachmentFileName,
@@ -624,6 +625,7 @@ function extractExternalLinkMetadata(externalLink) {
     // Since we're using the query string in order to determine the name (since the actual text
     // in the link has a truncated name), we need to decode the query string.
     return {
+        element: externalLink,
         text: externalLink.textContent,
         href: externalLink.href,
         download: externalLink.textContent,
@@ -668,8 +670,11 @@ function addAttachmentRow(container, attachment) {
         attachmentCheckbox.checked = true;
     }
     container.appendChild(attachmentCheckbox);
-    var attachmentLink = createAnchorTag(attachment.text, attachment.href, attachment.download);
+    var attachmentLink = createAnchorTag(attachment.text, null);
     attachmentLink.classList.add('attachment');
+    attachmentLink.onclick = function (e) {
+        attachment.element.click();
+    };
     var attachmentWrapper = document.createElement('span');
     attachmentWrapper.appendChild(attachmentLink);
     container.appendChild(attachmentWrapper);
