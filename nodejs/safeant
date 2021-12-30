@@ -175,10 +175,10 @@ safeant() {
 		$(dirname ${BASH_SOURCE[0]})/cachenpm
 
 		git update-index --assume-unchanged build-common.xml
-		sed -i.bak 's@<arg value="--no-daemon" />$@<arg value="--no-daemon" /><arg value="-Drepository.url=https://repository-cdn.liferay.com/nexus/content/groups/public" />@' build-common.xml
+		sed -i.bak 's@<arg value="--no-daemon" />$@<arg value="--no-daemon" /><arg value="-Drepository.url=https://repository.liferay.com/nexus/content/groups/public" />@' build-common.xml
 
 		if [ "" != "$(git ls-files | grep '.\(gradle\|properties\)$' | xargs grep -Fl cdn.lfrs.sl)" ]; then
-			GRADLE_ARGS="$GRADLE_ARGS --no-daemon -Drepository.url=https://repository-cdn.liferay.com/nexus/content/groups/public"
+			GRADLE_ARGS="$GRADLE_ARGS --no-daemon -Drepository.url=https://repository.liferay.com/nexus/content/groups/public"
 
 			git ls-files | grep '.\(gradle\|properties\)$' | xargs grep -Fl cdn.lfrs.sl | xargs git update-index --assume-unchanged
 			git ls-files | grep '.\(gradle\|properties\)$' | xargs grep -Fl cdn.lfrs.sl | xargs sed -i.bak 's@http://cdn.lfrs.sl/repository.liferay.com/@https://repository-cdn.liferay.com/@g'
