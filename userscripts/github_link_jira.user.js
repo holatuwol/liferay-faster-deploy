@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name           GitHub Link to LPS Tickets
 // @namespace      holatuwol
-// @version        1.8
-// @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/github_link_lps.user.js
-// @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/github_link_lps.user.js
+// @version        1.9
+// @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/github_link_jira.user.js
+// @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/github_link_jira.user.js
 // @match          https://github.com/LiferayCloud/*
 // @match          https://github.com/*/liferay-portal*
 // @grant          none
