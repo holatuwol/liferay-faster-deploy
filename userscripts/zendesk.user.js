@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        12.9
+// @version        13.0
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -1773,10 +1773,10 @@ else {
 }
 function addArticleCodeButton(toolbarContainer, tinymce) {
     // Gets the buttons toolbar
-    var toolbar = toolbarContainer.querySelector('.ssc-view-3df91d6a.ssc-group-f69f19c1');
+    var toolbar = toolbarContainer.querySelector('.ssc-view-3d4f1d68.ssc-group-f60b19bf');
     // Creates the code format container button
     var codeFormatButton = document.createElement('div');
-    codeFormatButton.classList.add('ssc-view-3df91d6a', 'src-components-EditorToolbar-ToolbarButton---button---2IfvR');
+    codeFormatButton.classList.add('ssc-view-3d4f1d68', 'src-components-EditorToolbar-ToolbarButton---button---2IfvR');
     codeFormatButton.setAttribute('tabindex', '0');
     codeFormatButton.setAttribute('role', 'button');
     codeFormatButton.setAttribute('id', 'custom-code-format-button');
@@ -1858,7 +1858,7 @@ function addArticleSubmissionListeners(tinymce) {
     }
 }
 function addArticleFormattingButtons(tinymce) {
-    var toolbarContainers = Array.from(document.querySelectorAll('div[class*="ssc-container-85be2f31 src-components-EditorToolbar-index---bar---"]'));
+    var toolbarContainers = Array.from(document.querySelectorAll('div[class*="ssc-container-84a82f2f src-components-EditorToolbar-index---bar---"]'));
     for (var i = 0; i < toolbarContainers.length; i++) {
         var toolbarContainer = toolbarContainers[i];
         if (toolbarContainer.classList.contains('lesa-ui-stackedit')) {
