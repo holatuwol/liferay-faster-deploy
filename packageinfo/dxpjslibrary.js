@@ -187,7 +187,7 @@ function updateCompleteVersionHistory(fixPackIds) {
 		var row = document.createElement('tr');
 		var baseVersion = x.substring(0, 2);
 
-		if (x.indexOf('10-') == 2) {
+		if (x.indexOf('-ga') == -1) {
 			row.classList.add('dxp');
 			row.classList.add('dxp-' + baseVersion);
 		}

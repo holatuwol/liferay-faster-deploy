@@ -248,7 +248,7 @@ function addBOMs(selectValue, zip, script) {
 	var versionIds = [];
 	var versionNumber = parseInt(selectValue.substring(0, 4));
 
-	if ((versionNumber % 100 == 10) && (selectValue.indexOf('-base') == -1)) {
+	if ((selectValue.indexOf('-ga') == -1) && (selectValue.indexOf('-base') == -1)) {
 		var fixPackVersion = selectValue.substring(selectValue.indexOf('-', 5) + 1);
 
 		var versionSuffix = '.fp' + fixPackVersion;
@@ -342,7 +342,7 @@ function checkVersionInfo() {
 		var versionId;
 		var versionNumber = parseInt(selectValue.substring(0, 4));
 
-		if (versionNumber % 100 == 10) {
+		if (selectValue.indexOf('-ga') == -1) {
 			if (selectValue.indexOf('base') == -1) {
 				var classifierPos = selectValue.indexOf('-', 5) + 1;
 				var fixPackPrefix = 'fix-pack-' + selectValue.substring(5, classifierPos);
