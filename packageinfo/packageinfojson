@@ -8,7 +8,7 @@ s3upload() {
 
 # Make sure the packageinfo files are up to date
 
-AVAILABLE_VERSIONS=$(git ls-remote -t git@github.com:liferay/liferay-portal.git | awk '{ print $2 }' | grep "/[78].*-ga[0-9]*$" | sort | cut -d'/' -f 3 | cut -d'.' -f 1,2 | sort -u)
+AVAILABLE_VERSIONS=$(git ls-remote -t git@github.com:liferay/liferay-portal.git | awk '{ print $2 }' | grep "/[0-9].*-ga[0-9]*$" | sort | cut -d'/' -f 3 | cut -d'.' -f 1,2 | sort -u)
 
 if [ "update" == "${1}" ]; then
 	. $(dirname ${BASH_SOURCE[0]})/../setopts

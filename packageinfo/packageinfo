@@ -546,6 +546,6 @@ savetags() {
 		sort | cut -d'/' -f 3 | tee $OUTPUT_FOLDER/tags.txt
 
 	git ls-remote -t git@github.com:liferay/liferay-portal-ee.git | \
-		awk '{ print $2 }' | grep "/fix-pack-.*-${2}10$" | \
+		awk '{ print $2 }' | grep "/fix-pack-.*-${2}[0-9][0-9]$" | \
 		sort -t'-' -nk4,5 | cut -d'/' -f 3 | tee -a $OUTPUT_FOLDER/tags.txt
 }
