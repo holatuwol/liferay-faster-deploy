@@ -35,6 +35,8 @@ MAX_72_CE=$(git tag | grep -o '^7.2.[0-9]-ga[0-9]$' | wc -l)
 MAX_72_EE=$(git tag | grep -o '^fix-pack-dxp-[0-9]*-7210$' | wc -l)
 MAX_73_CE=$(git tag | grep -o '^7.3.[0-9]-ga[0-9]$' | wc -l)
 MAX_73_EE=$(git tag | grep -o '^fix-pack-dxp-[0-9]*-7310$' | wc -l)
+MAX_74_CE=$(git tag | grep -o '^7.4.[0-9]-ga[0-9]$' | wc -l)
+MAX_74_EE=$(git tag | grep -o '^fix-pack-dxp-[0-9]*-7413$' | wc -l)
 
 echo '['
 
@@ -98,6 +100,18 @@ echo '['
 
 	for i in $(seq 1 ${MAX_73_EE}); do
 		print_version_gradle fix-pack-dxp-${i}-7310 7310-dxp-$(printf "%02d\n" ${i}) modules/apps/frontend-js/frontend-js-aui-web alloyUIVersion
+	done
+
+	# Liferay 7.4
+
+	for i in $(seq 1 ${MAX_74_CE}); do
+		print_version_gradle 7.4.$((i - 1))-ga${i} 740$((i - 1))-ga${i} modules/apps/frontend-js/frontend-js-aui-web alloyUIVersion
+	done
+
+	print_version_gradle fix-pack-base-7413 7413-base modules/apps/frontend-js/frontend-js-aui-web alloyUIVersion
+
+	for i in $(seq 1 ${MAX_74_EE}); do
+		print_version_gradle fix-pack-dxp-${i}-7413 7413-dxp-$(printf "%02d\n" ${i}) modules/apps/frontend-js/frontend-js-aui-web alloyUIVersion
 	done
 ) | sed '$s/,//g'
 
@@ -176,6 +190,18 @@ echo '  },'
 	for i in $(seq 1 ${MAX_73_EE}); do
 		print_version_yarnlock fix-pack-dxp-${i}-7310 7310-dxp-$(printf "%02d\n" ${i}) alloyeditor
 	done
+
+	# Liferay 7.4
+
+	for i in $(seq 1 ${MAX_74_CE}); do
+		print_version_yarnlock 7.4.$((i - 1))-ga${i} 740$((i - 1))-ga${i} alloyeditor
+	done
+
+	print_version_yarnlock fix-pack-base-7413 7413-base alloyeditor
+
+	for i in $(seq 1 ${MAX_74_EE}); do
+		print_version_yarnlock fix-pack-dxp-${i}-7413 7413-dxp-$(printf "%02d\n" ${i}) alloyeditor
+	done
 ) | sed '$s/,//g'
 
 echo '  },'
@@ -246,6 +272,18 @@ echo '  },'
 	for i in $(seq 1 ${MAX_73_EE}); do
 		print_version_yarnlock fix-pack-dxp-${i}-7310 7310-dxp-$(printf "%02d\n" ${i}) clay-css
 	done
+
+	# Liferay 7.4
+
+	for i in $(seq 1 ${MAX_74_CE}); do
+		print_version_yarnlock 7.4.$((i - 1))-ga${i} 740$((i - 1))-ga${i} clay-css
+	done
+
+	print_version_yarnlock fix-pack-base-7413 7413-base clay-css
+
+	for i in $(seq 1 ${MAX_74_EE}); do
+		print_version_yarnlock fix-pack-dxp-${i}-7413 7413-dxp-$(printf "%02d\n" ${i}) clay-css
+	done
 ) | sed '$s/,//g'
 
 echo '  },'
@@ -282,6 +320,18 @@ echo '  },'
 
 	for i in $(seq 1 ${MAX_73_EE}); do
 		print_version_package fix-pack-dxp-${i}-7310 7310-dxp-$(printf "%02d\n" ${i}) modules/apps/frontend-js/frontend-js-react-web react
+	done
+
+	# Liferay 7.4
+
+	for i in $(seq 1 ${MAX_74_CE}); do
+		print_version_package 7.4.$((i - 1))-ga${i} 740$((i - 1))-ga${i} modules/apps/frontend-js/frontend-js-react-web react
+	done
+
+	print_version_package fix-pack-base-7413 7413-base modules/apps/frontend-js/frontend-js-react-web react
+
+	for i in $(seq 1 ${MAX_74_EE}); do
+		print_version_package fix-pack-dxp-${i}-7413 7413-dxp-$(printf "%02d\n" ${i}) modules/apps/frontend-js/frontend-js-react-web react
 	done
 ) | sed '$s/,//g'
 
