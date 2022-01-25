@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        13.0
+// @version        13.1
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -427,6 +427,9 @@ function getProductVersion(propertyBox) {
  * Convert the Liferay version into the Patcher Portal product version.
  */
 function getProductVersionId(version) {
+    if (version == '7.4') {
+        return '206638675';
+    }
     if (version == '7.3') {
         return '175004848';
     }
@@ -1687,7 +1690,9 @@ function initJiraTicketValues(data) {
         var value = (productVersion.indexOf('7_0') != -1) ? '7.0.10' :
             (productVersion.indexOf('7_1') != -1) ? '7.1.10' :
                 (productVersion.indexOf('7_2') != -1) ? '7.2.10' :
-                    (productVersion.indexOf('7_3') != -1) ? '7.3.10' : null;
+                    (productVersion.indexOf('7_3') != -1) ? '7.3.10' :
+                        (productVersion.indexOf('7_4') != -1) ? '7.4.13' :
+                            null;
         if (value) {
             addReactLabelValue('versions', value, callback);
         }

@@ -186,7 +186,9 @@ function getProjectVersionIdsFromScript(script) {
     '7.2.x': 130051253,
     '7.2.x-private': 130051253,
     '7.3.x': 175004848,
-    '7.3.x-private': 175004848
+    '7.3.x-private': 175004848,
+    '7.4.x': 206638675,
+    '7.4.x-private': 206638675
   };
 
   for (projectVersionId in data) {
