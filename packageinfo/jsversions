@@ -36,7 +36,7 @@ MAX_72_EE=$(git tag | grep -o '^fix-pack-dxp-[0-9]*-7210$' | wc -l)
 MAX_73_CE=$(git tag | grep -o '^7.3.[0-9]-ga[0-9]$' | wc -l)
 MAX_73_EE=$(git tag | grep -o '^fix-pack-dxp-[0-9]*-7310$' | wc -l)
 MAX_74_CE=$(git tag | grep -o '^7.4.[0-9]-ga[0-9]$' | wc -l)
-MAX_74_EE=$(git tag | grep -o '^fix-pack-dxp-[0-9]*-7413$' | wc -l)
+MAX_74_EE=$(git tag | grep -o '^7.4.13-u[0-9]*$' | wc -l)
 
 echo '['
 
@@ -111,7 +111,7 @@ echo '['
 	print_version_gradle fix-pack-base-7413 7413-base modules/apps/frontend-js/frontend-js-aui-web alloyUIVersion
 
 	for i in $(seq 1 ${MAX_74_EE}); do
-		print_version_gradle fix-pack-dxp-${i}-7413 7413-dxp-$(printf "%02d\n" ${i}) modules/apps/frontend-js/frontend-js-aui-web alloyUIVersion
+		print_version_gradle 7.4.13-u${i} 7413-dxp-$(printf "%02d\n" ${i}) modules/apps/frontend-js/frontend-js-aui-web alloyUIVersion
 	done
 ) | sed '$s/,//g'
 
@@ -200,7 +200,7 @@ echo '  },'
 	print_version_yarnlock fix-pack-base-7413 7413-base alloyeditor
 
 	for i in $(seq 1 ${MAX_74_EE}); do
-		print_version_yarnlock fix-pack-dxp-${i}-7413 7413-dxp-$(printf "%02d\n" ${i}) alloyeditor
+		print_version_yarnlock 7.4.13-u${i} 7413-dxp-$(printf "%02d\n" ${i}) alloyeditor
 	done
 ) | sed '$s/,//g'
 
@@ -282,7 +282,7 @@ echo '  },'
 	print_version_yarnlock fix-pack-base-7413 7413-base clay-css
 
 	for i in $(seq 1 ${MAX_74_EE}); do
-		print_version_yarnlock fix-pack-dxp-${i}-7413 7413-dxp-$(printf "%02d\n" ${i}) clay-css
+		print_version_yarnlock 7.4.13-u${i} 7413-dxp-$(printf "%02d\n" ${i}) clay-css
 	done
 ) | sed '$s/,//g'
 
@@ -331,7 +331,7 @@ echo '  },'
 	print_version_package fix-pack-base-7413 7413-base modules/apps/frontend-js/frontend-js-react-web react
 
 	for i in $(seq 1 ${MAX_74_EE}); do
-		print_version_package fix-pack-dxp-${i}-7413 7413-dxp-$(printf "%02d\n" ${i}) modules/apps/frontend-js/frontend-js-react-web react
+		print_version_package 7.4.13-u${i} 7413-dxp-$(printf "%02d\n" ${i}) modules/apps/frontend-js/frontend-js-react-web react
 	done
 ) | sed '$s/,//g'
 

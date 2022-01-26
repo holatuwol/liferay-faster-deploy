@@ -170,6 +170,8 @@ checkfile() {
 		OUTPUT_FILE=${OUTPUT_FOLDER}/$2-$(echo "$1" | cut -d'-' -f 5)-$(echo "$1" | cut -d'-' -f 3,4,6).txt
 	elif [[ $1 == *ga* ]]; then
 		OUTPUT_FILE=${OUTPUT_FOLDER}/$2-$(echo "$1" | cut -d'-' -f 1 | sed 's/\.\([0-9]\)$/\.0\1/g' | tr -d '.')-$(echo "$1" | cut -d'-' -f 2-).txt
+	elif  [[ $1 == *-u* ]]; then
+		OUTPUT_FILE=${OUTPUT_FOLDER}/$2-$(echo "$1" | cut -d'-' -f 1 | sed 's/\.\([0-9]\)$/\.0\1/g' | tr -d '.')-$(echo "$1" | cut -d'-' -f 2-).txt
 	else
 		OUTPUT_FILE=${OUTPUT_FOLDER}/$2-$1.txt
 	fi
@@ -418,18 +420,23 @@ packageinfo_release() {
 
 		local OLD_TAG_ID=
 
-		for tag_id in $(grep 'ga[0-9]*$' $OUTPUT_FOLDER/tags.txt); do
+		for tag_id in $(grep 'ga[0-9]*$' ${OUTPUT_FOLDER}/tags.txt); do
 			packageinfo_tag ${tag_id} "${OLD_TAG_ID}"
 			OLD_TAG_ID=${tag_id}
 		done
 
-		for tag_id in $(grep -F fix-pack-base- $OUTPUT_FOLDER/tags.txt); do
+		for tag_id in $(grep -F fix-pack-base- ${OUTPUT_FOLDER}/tags.txt); do
 			packageinfo_tag ${tag_id} ""
 			OLD_TAG_ID=${tag_id}
 		done
 
-		for tag_id in $(grep -F 'fix-pack-d' $OUTPUT_FOLDER/tags.txt); do
+		for tag_id in $(grep -F 'fix-pack-d' ${OUTPUT_FOLDER}/tags.txt); do
 			packageinfo_tag ${tag_id} ${OLD_TAG_ID}
+			OLD_TAG_ID=${tag_id}
+		done
+
+		for tag_id in $(grep 'u[0-9]*$' ${OUTPUT_FOLDER}/tags.txt); do
+			packageinfo_tag ${tag_id} "${OLD_TAG_ID}"
 			OLD_TAG_ID=${tag_id}
 		done
 	else
@@ -440,14 +447,14 @@ packageinfo_release() {
 
 		savetags ${2} ${3}
 
-		for tag_id in $(cat $OUTPUT_FOLDER/tags.txt); do
+		for tag_id in $(cat ${OUTPUT_FOLDER}/tags.txt); do
 			echo "Checking ${tag_id}"
 
 			if [ "" != "$(git tag | grep -F "${tag_id}")" ]; then
 				continue
 			fi
 
-			if [[ ${tag_id} == fix-pack-* ]]; then
+			if [[ ${tag_id} == fix-pack-* ]] || [[ ${tag_id} == *-u* ]]; then
 				git fetch --no-tags git@github.com:liferay/liferay-portal-ee.git tags/${tag_id}:refs/tags/${tag_id}
 			else
 				git fetch --no-tags git@github.com:liferay/liferay-portal.git tags/${tag_id}:refs/tags/${tag_id}
@@ -543,9 +550,13 @@ requireschema() {
 savetags() {
 	git ls-remote -t git@github.com:liferay/liferay-portal.git | \
 		awk '{ print $2 }' | grep "/${1}.[0-9]*-ga[0-9]*$" | \
-		sort | cut -d'/' -f 3 | tee $OUTPUT_FOLDER/tags.txt
+		sort | cut -d'/' -f 3 | tee ${OUTPUT_FOLDER}/tags.txt
+
+	git ls-remote -t git@github.com:liferay/liferay-portal-ee.git | \
+		awk '{ print $2 }' | grep "/${1}.[0-9]*-u[0-9]*$" | \
+		sort | cut -d'/' -f 3 | tee -a ${OUTPUT_FOLDER}/tags.txt
 
 	git ls-remote -t git@github.com:liferay/liferay-portal-ee.git | \
 		awk '{ print $2 }' | grep "/fix-pack-.*-${2}[0-9][0-9]$" | \
-		sort -t'-' -nk4,5 | cut -d'/' -f 3 | tee -a $OUTPUT_FOLDER/tags.txt
+		sort -t'-' -nk4,5 | cut -d'/' -f 3 | tee -a ${OUTPUT_FOLDER}/tags.txt
 }
