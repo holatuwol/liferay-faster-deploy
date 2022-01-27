@@ -548,9 +548,11 @@ requireschema() {
 }
 
 savetags() {
+	cat /dev/null > ${OUTPUT_FOLDER}/tags.txt
+
 	git ls-remote -t git@github.com:liferay/liferay-portal.git | \
 		awk '{ print $2 }' | grep "/${1}.[0-9]*-ga[0-9]*$" | \
-		sort | cut -d'/' -f 3 | tee ${OUTPUT_FOLDER}/tags.txt
+		sort | cut -d'/' -f 3 | tee -a ${OUTPUT_FOLDER}/tags.txt
 
 	git ls-remote -t git@github.com:liferay/liferay-portal-ee.git | \
 		awk '{ print $2 }' | grep "/${1}.[0-9]*-u[0-9]*$" | \

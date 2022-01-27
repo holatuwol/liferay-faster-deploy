@@ -87,7 +87,8 @@ def process_patcher_search_container(base_url, parameters, container_name, colum
 def get_baseline_id():
 	with open(join(dirname(sys.argv[0]), 'patcher.json'), 'r') as file:
 		patcher_json = json.load(file)
-		return patcher_json[base_branch], patcher_json[base_tag]
+
+		return patcher_json[base_branch], patcher_json[base_tag] if base_tag in patcher_json else None
 
 def get_fix_id(typeFilter='0'):
 	base_url = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher'
@@ -212,7 +213,7 @@ def open_patcher_portal():
 
 	namespaced_parameters = get_namespaced_parameters('1_WAR_osbpatcherportlet', parameters)
 
-	query_string = '&'.join(['%s=%s' % (key, value) for key, value in namespaced_parameters.items()])
+	query_string = '&'.join(['%s=%s' % (key, value) for key, value in namespaced_parameters.items() if value is not None])
 	webbrowser.open_new_tab('%s?%s' % (base_url, query_string))
 
 if __name__ == '__main__':

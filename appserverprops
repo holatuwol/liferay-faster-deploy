@@ -130,7 +130,7 @@ cleanappserver() {
 	fi
 
 	if [ "" == "${CURRENT_HASH}" ]; then
-		if [ ! -d ${CATALINA_HOME} ]; then
+		if [ ! -d "${CATALINA_HOME}" ]; then
 			echo "Missing ${CATALINA_HOME}"
 			ant -f build-dist.xml unzip-tomcat
 		fi
@@ -167,7 +167,7 @@ cleanappserver() {
 
 	# setup catalina.properties
 
-	if [ -f ${LIFERAY_HOME}/${TOMCAT_FOLDER}/conf/catalina.properties ] && [ "" == "$(grep -F /ext/ ${LIFERAY_HOME}/${TOMCAT_FOLDER}/conf/catalina.properties)" ]; then
+	if [ -f "${LIFERAY_HOME}/${TOMCAT_FOLDER}/conf/catalina.properties" ] && [ "" == "$(grep -F /ext/ ${LIFERAY_HOME}/${TOMCAT_FOLDER}/conf/catalina.properties)" ]; then
 		if [ "" != "$(grep -F 'common.loader="' ${LIFERAY_HOME}/${TOMCAT_FOLDER}/conf/catalina.properties)" ]; then
 			sed -i 's#common.loader=#common.loader="${catalina.base}/lib/ext/*.jar",#g' ${LIFERAY_HOME}/${TOMCAT_FOLDER}/conf/catalina.properties
 		else
