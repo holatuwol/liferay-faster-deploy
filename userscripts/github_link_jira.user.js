@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name           GitHub Link to LPS Tickets
 // @namespace      holatuwol
-// @version        1.9
+// @version        2.0
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/github_link_jira.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/github_link_jira.user.js
 // @match          https://github.com/LiferayCloud/*
+// @match          https://github.com/*/liferay-learn*
 // @match          https://github.com/*/liferay-portal*
 // @grant          none
 // ==/UserScript==
@@ -42,6 +43,7 @@ var projects = {
   'LPP': 'issues.liferay.com',
   'LPS': 'issues.liferay.com',
   'LRCI': 'issues.liferay.com',
+  'LRDOCS': 'issues.liferay.com',
   'LRQA': 'issues.liferay.com'
 };
 
