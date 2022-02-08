@@ -113,7 +113,7 @@ def expand_fix_version(issue_key, issue):
 	return fix_version
 
 issues = get_issues(
-	'project = LPE AND labels = LSV AND (resolution = Fixed OR labels = sev-1) ORDER BY key',
+	'project = LPE AND labels = LSV AND (resolution in (Completed, Fixed) OR labels = sev-1) ORDER BY key',
 	['fixVersions', 'labels'])
 
 fix_versions = {}
