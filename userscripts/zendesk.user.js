@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        13.3
+// @version        13.4
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -21,10 +21,11 @@ if (window.location.hostname == '24475.apps.zdusercontent.com') {
     styleElement.textContent = "\nbody {\n  overflow-y: hidden;\n}\n";
 }
 else {
-    styleElement.textContent = "\na.downloading {\n  color: #999;\n}\n\na.downloading::after {\n  content: ' (downloading...)';\n  color: #999;\n}\n\na.generating {\n  color: #999;\n}\n\na.generating::after {\n  content: ' (generating...)';\n  color: #999;\n}\n\ndiv.lesa-ui-subtitle {\n  display: flex;\n  flex-direction: column;\n}\n\n.lesa-ui-attachments,\n.lesa-ui-knowledge-capture {\n  display: flex;\n  flex-direction: column;\n  margin-bottom: 0.5em;\n}\n\n.lesa-ui-attachment-info {\n  display: grid;\n  grid-gap: 0em 1em;\n  grid-template-columns: 1em auto;\n  margin: 0.5em;\n}\n\n.lesa-ui-attachment-info input {\n  margin-left: 0.5em;\n}\n\n.lesa-ui-attachment-info .lesa-ui-attachment-extra-info {\n  border-top: 1px solid #eee;\n  grid-column: 1 / 2 span;\n  padding: 0.2em 0.5em;\n  text-align: right;\n}\n\n.lesa-ui-attachment-info a {\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n\n.lesa-ui-attachments-bulk-download {\n  margin-top: 0.5em;\n  text-align: right;\n  text-decoration: underline;\n}\n\n.lesa-ui-attachments-label,\n.lesa-ui-knowledge-capture-label {\n  font-weight: 600;\n  margin-right: 1em;\n  white-space: nowrap;\n}\n\n.lesa-ui-knowledge-capture ul {\n  margin-left: 1em;\n}\n\n.lesa-ui-description {\n  font-weight: normal;\n}\n\n.lesa-ui-description > div {\n  margin-bottom: 2em;\n}\n\n.lesa-ui-description .zd-comment,\n.lesa-ui-description .lesa-ui-attachment-info {\n  max-height: 25em;\n  overflow-y: auto;\n}\n\n.lesa-ui-event-highlighted {\n  background-color: #eee;\n}\n\n.lesa-ui-form-field {\n  display: flex;\n  flex-direction: column;\n  margin-bottom: 0.5em;\n}\n\n.lesa-ui-permalink {\n  margin-bottom: 1em;\n}\n\n.lesa-ui-permalink > input,\n.lesa-ui-form-field.lesa-ui-helpcenter > input {\n  background-color: transparent;\n  border: 0px;\n  font-size: 12px;\n  margin: 0px;\n  padding: 0px;\n  width: 100%;\n}\n\n.lesa-ui-stackedit-icon {\n  height: 16px;\n  width: 16px;\n  padding: 4px;\n}\n\n.mast .editable .lesa-ui-subject {\n  background-color: #fff;\n  font-size: 20px;\n  font-weight: 600;\n  resize: vertical;\n  text-align: left;\n  width: 100%;\n}\n\n.header.mast > .round-avatar {\n  display: none;\n}\n\n.lesa-ui-priority:not(:empty) {\n  margin-bottom: 8px;\n}\n\n.lesa-ui-priority span {\n  color: #fff;\n  border-radius: 2px;\n  margin-right: 8px;\n  padding: 4px;\n  text-align: center;\n  text-transform: uppercase;\n  width: 6em;\n}\n\n.lesa-ui-priority a {\n  color: #fff;\n  text-decoration: none;\n}\n\n.lesa-ui-priority .lesa-ui-subject-emojis a {\n  color: #000;\n}\n\n.lesa-ui-subpriority {\n  border: 1px #eee dashed;\n  font-size: 0.8em;\n}\n\n.lesa-ui-priority-minor,\n.lesa-ui-subpriority-none,\n.lesa-ui-subpriority-low {\n  background-color: #0066cc;\n}\n\n.lesa-ui-priority-major,\n.lesa-ui-subpriority-medium {\n  background-color: #f2783b;\n}\n\n.lesa-ui-priority-critical,\n.lesa-ui-subpriority-high {\n  background-color: #bf1e2d;\n}\n\n.lesa-ui-priority .lesa-ui-subject-emojis {\n  background-color: #f8f9f9;\n}\n\n.lesa-ui-subject-emojis a {\n  font-size: 1.5em;\n  font-weight: normal;\n  margin-left: 2px;\n  margin-right: 2px;\n}\n\n.rich_text .comment_input .lesa-ui-playbook-reminder {\n  display: none;\n}\n\n.rich_text .comment_input.is-public .lesa-ui-playbook-reminder:not(:empty) {\n  background-color: #eef2fa;\n  border: 1px solid #d8dcde;\n  border-radius: 0 3px 0 0 !important;\n  color: #2e5aac;\n  display: block;\n  padding: 10px;\n}\n\n.rich_text .comment_input.is-public .lesa-ui-playbook-reminder a {\n  text-decoration: underline;\n}\n\n#modals .modal-header {\n  cursor: move;\n}\n";
+    styleElement.textContent = "\na.downloading {\n  color: #999;\n}\n\na.downloading::after {\n  content: ' (downloading...)';\n  color: #999;\n}\n\na.generating {\n  color: #999;\n}\n\na.generating::after {\n  content: ' (generating...)';\n  color: #999;\n}\n\narticle {\n  border-top: 1px solid #ebebeb;\n}\n\ndiv.lesa-ui-subtitle {\n  display: flex;\n  flex-direction: column;\n}\n\n.lesa-ui-attachments,\n.lesa-ui-knowledge-capture {\n  display: flex;\n  flex-direction: column;\n  margin-bottom: 0.5em;\n}\n\n#attachments-modal .lesa-ui-attachments,\n#description-modal .lesa-ui-description {\n  margin: 0.5em;\n}\n\n#description-modal .event {\n  border-top: 0px;\n}\n\n.lesa-ui-attachment-info {\n  display: grid;\n  grid-gap: 0em 1em;\n  grid-template-columns: 1em auto;\n  margin: 0.5em;\n}\n\n.lesa-ui-attachment-info input {\n  margin-left: 0.5em;\n}\n\n.lesa-ui-attachment-info .lesa-ui-attachment-extra-info {\n  grid-column: 1 / 2 span;\n  padding: 0.2em 0.5em;\n  text-align: right;\n}\n\n.lesa-ui-description .lesa-ui-attachment-info .lesa-ui-attachment-extra-info {\n  border-top: 1px solid #eee;\n}\n\n.lesa-ui-attachment-info a {\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n\n.lesa-ui-attachments-bulk-download {\n  margin-top: 0.5em;\n  text-align: right;\n  text-decoration: underline;\n}\n\n.lesa-ui-attachments-label,\n.lesa-ui-knowledge-capture-label {\n  font-weight: 600;\n  margin-right: 1em;\n  white-space: nowrap;\n}\n\n.lesa-ui-knowledge-capture ul {\n  margin-left: 1em;\n}\n\n.lesa-ui-description {\n  font-weight: normal;\n}\n\n.lesa-ui-description > div {\n  margin-bottom: 2em;\n}\n\n.lesa-ui-description .zd-comment,\n.lesa-ui-description .lesa-ui-attachment-info {\n  max-height: 25em;\n  overflow-y: auto;\n}\n\n.lesa-ui-event-highlighted,\narticle.lesa-ui-event-highlighted {\n  background-color: #eee;\n  scroll-margin-top: 1em;\n}\n\n.lesa-ui-form-field {\n  display: flex;\n  flex-direction: column;\n  margin-bottom: 0.5em;\n}\n\n.lesa-ui-permalink {\n  margin-bottom: 1em;\n}\n\n.lesa-ui-permalink > input,\n.lesa-ui-form-field.lesa-ui-helpcenter > input {\n  background-color: transparent;\n  border: 0px;\n  font-size: 12px;\n  margin: 0px;\n  padding: 0px;\n  width: 100%;\n}\n\n.lesa-ui-stackedit-icon {\n  height: 16px;\n  width: 16px;\n  padding: 4px;\n}\n\n.mast .editable .lesa-ui-subject {\n  background-color: #fff;\n  font-size: 20px;\n  font-weight: 600;\n  resize: vertical;\n  text-align: left;\n  width: 100%;\n}\n\n.header.mast > .round-avatar {\n  display: none;\n}\n\n.lesa-ui-priority:not(:empty) {\n  margin-top: 6px;\n  margin-bottom: 8px;\n}\n\n.lesa-ui-priority span {\n  color: #fff;\n  border-radius: 2px;\n  font-size: 10px;\n  font-weight: 600;\n  line-height: 16px;\n  margin-right: 8px;\n  padding: 2px;\n  text-align: center;\n  text-transform: uppercase;\n  width: 6em;\n}\n\n.lesa-ui-priority a {\n  color: #fff;\n  text-decoration: none;\n}\n\n.lesa-ui-priority > *:last-child {\n  margin-right: 0;\n}\n\n.lesa-ui-priority .lesa-ui-subject-emojis a {\n  color: #000;\n}\n\n.lesa-ui-subpriority {\n  border: 1px #eee dashed;\n  font-size: 0.8em;\n}\n\n.lesa-ui-priority-minor,\n.lesa-ui-subpriority-none,\n.lesa-ui-subpriority-low {\n  background-color: #0066cc;\n}\n\n.lesa-ui-priority-major,\n.lesa-ui-subpriority-medium {\n  background-color: #f2783b;\n}\n\n.lesa-ui-priority-critical,\n.lesa-ui-subpriority-high {\n  background-color: #bf1e2d;\n}\n\n.lesa-ui-priority .lesa-ui-subject-emojis {\n  background-color: #f8f9f9;\n}\n\n.lesa-ui-subject-emojis a {\n  font-size: 1.5em;\n  font-weight: normal;\n  margin-left: 2px;\n  margin-right: 2px;\n}\n\n.rich_text .comment_input .lesa-ui-playbook-reminder,\n#editor-view .lesa-ui-playbook-reminder {\n  display: none;\n}\n\n.rich_text .comment_input.is-public .lesa-ui-playbook-reminder:not(:empty),\n#editor-view .lesa-ui-playbook-reminder:not(:empty) {\n  background-color: #eef2fa;\n  border: 1px solid #d8dcde;\n  border-radius: 0 3px 0 0 !important;\n  color: #2e5aac;\n  display: block;\n  margin-bottom: 1em;\n  padding: 10px;\n}\n\n.rich_text .comment_input.is-public .lesa-ui-playbook-reminder a,\n#editor-view .lesa-ui-playbook-reminder a {\n  text-decoration: underline;\n}\n\n#modals .modal-header,\n#attachments-modal .modal-header {\n  cursor: move;\n}\n";
 }
 var head = document.querySelector('head');
 head.appendChild(styleElement);
+var isAgentWorkspace = false;
 /**
  * Generate an anchor tag with the specified text, href, and download attributes.
  * If the download attribute has an extension that looks like it will probably be
@@ -597,13 +598,13 @@ function downloadAttachment(checkbox, callback) {
  * Generate a single object representing the metadata for the attachment.
  */
 function extractAttachmentLinkMetadata(attachmentLink) {
-    var comment = attachmentLink.closest('div[data-comment-id]');
+    var comment = attachmentLink.closest(isAgentWorkspace ? 'article' : 'div[data-comment-id]');
     // Since we're using the query string in order to determine the name (since the actual text
     // in the link has a truncated name), we need to decode the query string.
     var encodedFileName = attachmentLink.href.substring(attachmentLink.href.indexOf('?') + 6);
     encodedFileName = encodedFileName.replace(/\+/g, '%20');
     var attachmentFileName = decodeURIComponent(encodedFileName);
-    var authorElement = comment.querySelector('div.actor .name');
+    var authorElement = comment.querySelector(isAgentWorkspace ? 'span[data-test-id="omni-log-item-sender"]' : 'div.actor .name');
     var timeElement = comment.querySelector('time');
     return {
         element: attachmentLink,
@@ -621,8 +622,8 @@ function extractAttachmentLinkMetadata(attachmentLink) {
  * Generate a single object representing the metadata for an external link.
  */
 function extractExternalLinkMetadata(externalLink) {
-    var comment = externalLink.closest('div[data-comment-id]');
-    var authorElement = comment.querySelector('div.actor .name');
+    var comment = externalLink.closest(isAgentWorkspace ? 'article' : 'div[data-comment-id]');
+    var authorElement = comment.querySelector(isAgentWorkspace ? 'span[data-test-id="omni-log-item-sender"]' : 'div.actor .name');
     var timeElement = comment.querySelector('time');
     // Since we're using the query string in order to determine the name (since the actual text
     // in the link has a truncated name), we need to decode the query string.
@@ -650,7 +651,7 @@ function addAttachmentDate(container, attachment, oldDate) {
     attachmentExtraInfo.appendChild(document.createTextNode(attachment.author + ' on '));
     var attachmentCommentLink = createAnchorTag(newDate, null);
     attachmentCommentLink.classList.add('attachment-comment-link');
-    attachmentCommentLink.onclick = highlightComment.bind(null, attachment.commentId);
+    attachmentCommentLink.onclick = highlightComment.bind(null, attachment.timestamp);
     attachmentExtraInfo.appendChild(attachmentCommentLink);
     container.appendChild(attachmentExtraInfo);
     return newDate;
@@ -741,17 +742,19 @@ function isLiferayLargeAttachment(anchor) {
 function createAttachmentsContainer(ticketId, ticketInfo, conversation) {
     var attachmentLinks = Array.from(conversation.querySelectorAll('a.attachment'));
     var attachmentThumbnails = Array.from(conversation.querySelectorAll('a[data-test-id="attachment-thumbnail"]'));
-    var externalLinks = Array.from(conversation.querySelectorAll('.is-public .zd-comment > a:not(.attachment)'));
+    var externalLinks = Array.from(conversation.querySelectorAll((isAgentWorkspace ? '' : '.is-public ') + '.zd-comment > a:not(.attachment)'));
     externalLinks = externalLinks.filter(isLiferayLargeAttachment);
     if (attachmentLinks.length + attachmentThumbnails.length + externalLinks.length == 0) {
         return null;
     }
     var attachmentsContainer = document.createElement('div');
     attachmentsContainer.classList.add('lesa-ui-attachments');
-    var attachmentsLabel = document.createElement('div');
-    attachmentsLabel.classList.add('lesa-ui-attachments-label');
-    attachmentsLabel.innerHTML = 'Attachments:';
-    attachmentsContainer.appendChild(attachmentsLabel);
+    if (!isAgentWorkspace) {
+        var attachmentsLabel = document.createElement('div');
+        attachmentsLabel.classList.add('lesa-ui-attachments-label');
+        attachmentsLabel.innerHTML = 'Attachments:';
+        attachmentsContainer.appendChild(attachmentsLabel);
+    }
     // Accumulate the attachments, and then sort them by date
     var attachments = attachmentLinks.map(extractAttachmentLinkMetadata).
         concat(attachmentThumbnails.map(extractAttachmentLinkMetadata)).
@@ -865,11 +868,31 @@ var middleEastCountries = new Set([
     'Saudi Arabia', 'United Arab Emirates', 'Qatar', 'Kuwait', 'Bahrein', 'Oman', 'Jordan', 'Iraq', 'Lebanon'
 ]);
 /**
+ * Add a sort button.
+ */
+function addSortButton(conversation, header) {
+    var button = document.createElement('button');
+    button.textContent = 'asc';
+    var conversationLog = conversation.querySelector('div[data-test-id="omni-log-container"]');
+    var lastChild = header.lastChild;
+    button.onclick = function () {
+        if (conversationLog.style.flexDirection == 'column') {
+            conversationLog.style.flexDirection = 'column-reverse';
+            button.textContent = 'desc';
+        }
+        else {
+            conversationLog.style.flexDirection = 'column';
+            button.textContent = 'asc';
+        }
+    };
+    lastChild.prepend(button);
+}
+/**
  * Add a marker to show the LESA priority on the ticket.
  */
 function addPriorityMarker(header, conversation, ticketId, ticketInfo) {
     var ticketContainer = header.closest('.main_panes');
-    var assigneeElement = ticketContainer.querySelector('.js-zero-state-ticket-tutorial-assignee-field > div > div');
+    var assigneeElement = ticketContainer.querySelector(isAgentWorkspace ? 'div[data-test-id="assignee-field-selected-agent-tag"] > span' : '.js-zero-state-ticket-tutorial-assignee-field > div > div');
     if (!assigneeElement) {
         return;
     }
@@ -950,7 +973,15 @@ function addPriorityMarker(header, conversation, ticketId, ticketInfo) {
     if (emojiContainer != null) {
         priorityElement.appendChild(emojiContainer);
     }
-    header.insertBefore(priorityElement, header.querySelector('.round-avatar'));
+    if (isAgentWorkspace) {
+        var dividers = header.querySelectorAll('div[class^="Divider"]');
+        var divider = dividers[dividers.length - 1];
+        divider.after(priorityElement);
+        priorityElement.after(divider.cloneNode());
+    }
+    else {
+        header.insertBefore(priorityElement, header.querySelector('.round-avatar'));
+    }
 }
 /**
  * Replaces the input field for the 'subject' with something with line wrapping
@@ -1056,13 +1087,13 @@ function isDummyComment(ticketInfo, comment) {
  * Add a ticket description and a complete list of attachments to the top of the page.
  */
 function addTicketDescription(ticketId, ticketInfo, conversation) {
-    var header = conversation.querySelector('.pane_header');
+    var header = conversation.querySelector(isAgentWorkspace ? 'div[data-test-id="ticket-call-controls-action-bar"]' : '.pane_header');
     if (!header) {
         return;
     }
-    // Add a marker indicating the LESA priority based on critical workflow rules
-    addPriorityMarker(header, conversation, ticketId, ticketInfo);
-    addSubjectTextWrap(header, ticketId, ticketInfo);
+    if (isAgentWorkspace) {
+        header = header.previousSibling;
+    }
     // Check to see if we have any descriptions that we need to remove.
     var oldDescriptions = conversation.querySelectorAll('.lesa-ui-description');
     var hasNewDescription = false;
@@ -1078,24 +1109,26 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
     if (hasNewDescription) {
         return;
     }
-    // Since comments are listed in reverse order, the last comment is the first
-    // comment (from a time perspective), and can be used as a description.
-    var comments = conversation.querySelectorAll('.event .zd-comment');
+    var comments = conversation.querySelectorAll(isAgentWorkspace ? 'article' : '.event .zd-comment');
     if (comments.length == 0) {
         return;
     }
-    var lastComment = comments[comments.length - 1];
-    if (isDummyComment(ticketInfo, lastComment)) {
-        lastComment = comments[comments.length - 2];
+    var firstComment = comments[isAgentWorkspace ? 0 : comments.length - 1];
+    if (isDummyComment(ticketInfo, firstComment)) {
+        firstComment = comments[isAgentWorkspace ? 1 : comments.length - 2];
     }
     var description = document.createElement('div');
     description.classList.add('comment');
     description.classList.add('zd-comment');
-    description.innerHTML = lastComment.innerHTML;
-    // Create the element class hierarchy so that the text in the comment renders correctly.
+    description.innerHTML = firstComment.innerHTML;
+    // Add a marker indicating the LESA priority based on critical workflow rules
+    addPriorityMarker(header, conversation, ticketId, ticketInfo);
+    addSubjectTextWrap(header, ticketId, ticketInfo);
     var descriptionAncestor0 = document.createElement('div');
-    descriptionAncestor0.classList.add('event');
     descriptionAncestor0.classList.add('is-public');
+    if (!isAgentWorkspace) {
+        descriptionAncestor0.classList.add('event');
+    }
     var tags = (ticketInfo && ticketInfo.ticket && ticketInfo.ticket.tags) || [];
     var tagSet = new Set(tags);
     if (tagSet.has('partner_first_line_support')) {
@@ -1123,9 +1156,20 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
     }
     var attachmentsContainer = createAttachmentsContainer(ticketId, ticketInfo, conversation);
     if (attachmentsContainer) {
-        descriptionAncestor1.appendChild(attachmentsContainer);
+        if (isAgentWorkspace) {
+            addHeaderLinkModal('attachments-modal', 'Attachments', header, attachmentsContainer);
+        }
+        else {
+            descriptionAncestor1.appendChild(attachmentsContainer);
+        }
     }
-    header.appendChild(descriptionAncestor1);
+    if (isAgentWorkspace) {
+        addHeaderLinkModal('description-modal', 'Description', header, descriptionAncestor1);
+        addSortButton(conversation, header);
+    }
+    else {
+        header.appendChild(descriptionAncestor1);
+    }
 }
 /**
  * Recursively scan LPS tickets and LPE tickets, and replace any
@@ -1261,7 +1305,7 @@ function addJiraLinks(ticketId, ticketInfo, conversation) {
         return;
     }
     conversation.classList.add('lesa-ui-jiralink');
-    var comments = Array.from(conversation.querySelectorAll('div[data-comment-id]'));
+    var comments = Array.from(conversation.querySelectorAll(isAgentWorkspace ? 'article' : 'div[data-comment-id]'));
     for (var i = 0; i < comments.length; i++) {
         addJiraLinksToElement(comments[i]);
     }
@@ -1270,7 +1314,7 @@ function addJiraLinks(ticketId, ticketInfo, conversation) {
  * Add a playbook reminder to the given editor.
  */
 function addPlaybookReminder(ticketId, ticketInfo, conversation) {
-    var editor = conversation.querySelector('.editor');
+    var editor = conversation.querySelector(isAgentWorkspace ? 'div[data-test-id="omnicomposer-rich-text-ckeditor"]' : '.editor');
     if (!editor) {
         return;
     }
@@ -1312,7 +1356,6 @@ function clearHighlightedComments() {
  * Scroll to a specific comment if its comment ID is included in a
  * query string parameter.
  */
-var integerRegex = /^[0-9]*$/;
 function highlightComment(commentId) {
     if (!commentId && !document.location.search) {
         clearHighlightedComments();
@@ -1325,14 +1368,14 @@ function highlightComment(commentId) {
             commentId = commentId.substring(0, pos);
         }
     }
-    if (!commentId || !integerRegex.test(commentId)) {
+    if (!commentId || (commentId.indexOf('"') != -1)) {
         return;
     }
-    var comment = document.querySelector('div[data-comment-id="' + commentId + '"]');
+    var comment = document.querySelector('time[datetime="' + commentId + '"], div[data-comment-id="' + commentId + '"]');
     if (!comment) {
         return;
     }
-    var event = comment.closest('.event');
+    var event = comment.closest(isAgentWorkspace ? 'article' : '.event');
     if (event.classList.contains('lesa-ui-event-highlighted')) {
         return;
     }
@@ -1358,14 +1401,15 @@ function createPermaLinkInputField(permalinkHREF) {
  * pseudo permalink (since this script scrolls to it).
  */
 function addPermaLinks(ticketId, ticketInfo, conversation) {
-    var permalinks = conversation.querySelectorAll('div[data-comment-id] div.lesa-ui-permalink');
+    var permalinks = conversation.querySelectorAll(isAgentWorkspace ? 'article div.lesa-ui-permalink' : 'div[data-comment-id] div.lesa-ui-permalink');
     if (permalinks.length > 0) {
         return;
     }
-    var comments = conversation.querySelectorAll('div[data-comment-id]');
-    var isPublicTab = document.querySelector('.publicConversation.is-selected');
+    var comments = conversation.querySelectorAll(isAgentWorkspace ? 'article' : 'div[data-comment-id]');
+    var isPublicTab = !isAgentWorkspace && document.querySelector('.publicConversation.is-selected');
     for (var i = 0; i < comments.length; i++) {
-        var commentId = comments[i].getAttribute('data-comment-id');
+        var timeElement = comments[i].querySelector('time');
+        var commentId = timeElement.getAttribute('datetime');
         var permalinkContainer = document.createElement('div');
         permalinkContainer.classList.add('lesa-ui-permalink');
         var permalinkHREF = 'https://' + document.location.host + document.location.pathname + '?comment=' + commentId;
@@ -1375,8 +1419,15 @@ function addPermaLinks(ticketId, ticketInfo, conversation) {
         }
         var permalink = createPermaLinkInputField(permalinkHREF);
         permalinkContainer.appendChild(permalink);
-        var commentHeader = comments[i].querySelector('.content .header');
-        commentHeader.appendChild(permalinkContainer);
+        if (isAgentWorkspace) {
+            var actionHeader = comments[i].querySelector('.omnilog-header-actions');
+            var commentHeader = actionHeader.parentElement;
+            commentHeader.after(permalinkContainer);
+        }
+        else {
+            var commentHeader = comments[i].querySelector('.content .header');
+            commentHeader.appendChild(permalinkContainer);
+        }
     }
 }
 /**
@@ -1454,7 +1505,7 @@ function fixHelpCenterLink(anchor, ticketId) {
  * a new tab (if they are an existing ticket) or auto-scroll.
  */
 function fixPermaLinkAnchors(ticketId, ticketInfo, conversation) {
-    var permalinks = conversation.querySelectorAll('div[data-comment-id] div.lesa-ui-permalink');
+    var permalinks = conversation.querySelectorAll(isAgentWorkspace ? 'article div.lesa-ui-permalink' : 'div[data-comment-id] div.lesa-ui-permalink');
     if (permalinks.length > 0) {
         return;
     }
@@ -1464,6 +1515,39 @@ function fixPermaLinkAnchors(ticketId, ticketInfo, conversation) {
         fixZenDeskLink(anchor, ticketId);
         fixHelpCenterLink(anchor, ticketId);
     }
+}
+function addHeaderLinkModal(modalId, linkText, header, content) {
+    var modal = document.createElement('div');
+    modal.setAttribute('id', modalId);
+    modal.classList.add('modal', 'modal-resizable', 'in', 'hide');
+    var iframe = document.createElement('div');
+    iframe.classList.add('iframe_app_view_wrapper');
+    var modalHeader = document.createElement('header');
+    modalHeader.classList.add('modal-header');
+    var closeLink = document.createElement('a');
+    closeLink.classList.add('close');
+    closeLink.textContent = '\u00d7';
+    closeLink.onclick = function () {
+        modal.classList.add('hide');
+    };
+    modalHeader.appendChild(closeLink);
+    var headerText = document.createElement('h3');
+    headerText.textContent = linkText;
+    modalHeader.appendChild(headerText);
+    iframe.appendChild(modalHeader);
+    content.classList.add('modal-body', 'app_view_wrapper', 'app_view', 'apps_modal');
+    iframe.appendChild(content);
+    modal.appendChild(iframe);
+    header.after(modal);
+    var openLink = document.createElement('a');
+    openLink.textContent = linkText;
+    openLink.onclick = function () {
+        modal.classList.remove('hide');
+    };
+    var dividers = header.querySelectorAll('div[class^="Divider"]');
+    var divider = dividers[dividers.length - 1];
+    divider.after(openLink);
+    openLink.after(divider.cloneNode());
 }
 function makeDraggableModals() {
     var headers = document.querySelectorAll("#modals .modal-header");
@@ -1904,11 +1988,14 @@ function checkTicketConversation(ticketId, ticketInfo) {
     updateSidebarBoxContainer(ticketId, ticketInfo);
     var conversation = document.querySelector('div[data-side-conversations-anchor-id="' + ticketId + '"]');
     if (conversation) {
-        var editor = conversation.querySelector('.editor');
+        isAgentWorkspace = conversation.querySelectorAll('article').length > 0;
+        var editor = document.querySelector(isAgentWorkspace ? 'div[data-test-id="omnicomposer-rich-text-ckeditor"]' : '.editor');
         if (!editor) {
             return;
         }
-        enablePublicConversation(ticketId, ticketInfo, conversation);
+        if (!isAgentWorkspace) {
+            enablePublicConversation(ticketId, ticketInfo, conversation);
+        }
         addReplyFormattingButtons(ticketId, ticketInfo, conversation);
         addJiraLinks(ticketId, ticketInfo, conversation);
         addPlaybookReminder(ticketId, ticketInfo, conversation);
