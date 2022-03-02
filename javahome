@@ -17,6 +17,7 @@ javahome() {
 
 	# If this is diagnostic, just report JAVA_HOME
 
+
 	if [ "" == "${JAVA_VERSION}" ]; then
 		if [ "" != "${JAVA_HOME}" ]; then
 			echo JAVA_HOME=$JAVA_HOME
@@ -47,6 +48,17 @@ javahome() {
 		ALT_ID=$BASE_JAVA/$folder
 		break
 	done
+
+	if [ "" == "$ALT_ID" ]; then
+		for folder in $(ls -1 ${BASE_JAVA} | grep -F "jdk-${JAVA_VERSION}.0" | sort -t'_' -k2nr); do
+			if [ ! -f $BASE_JAVA/$folder/bin/java ]; then
+				continue
+			fi
+
+			ALT_ID=$BASE_JAVA/$folder
+			break
+		done
+	fi
 
 	# If we couldn't find one, maybe they installed it through a package manager
 
