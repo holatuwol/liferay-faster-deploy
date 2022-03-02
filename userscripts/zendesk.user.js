@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        13.4
+// @version        13.5
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -892,10 +892,6 @@ function addSortButton(conversation, header) {
  */
 function addPriorityMarker(header, conversation, ticketId, ticketInfo) {
     var ticketContainer = header.closest('.main_panes');
-    var assigneeElement = ticketContainer.querySelector(isAgentWorkspace ? 'div[data-test-id="assignee-field-selected-agent-tag"] > span' : '.js-zero-state-ticket-tutorial-assignee-field > div > div');
-    if (!assigneeElement) {
-        return;
-    }
     var priorityElement = header.querySelector('.lesa-ui-priority');
     if (priorityElement) {
         if (priorityElement.getAttribute('data-ticket-id') == ticketId) {
@@ -953,7 +949,8 @@ function addPriorityMarker(header, conversation, ticketId, ticketInfo) {
             customerCountryElement.appendChild(customerCountryLink);
             priorityElement.appendChild(customerCountryElement);
         }
-        if (ticketInfo.ticket.status != 'closed') {
+        var assigneeElement = ticketContainer.querySelector(isAgentWorkspace ? 'div[data-test-id="assignee-field-selected-agent-tag"] > span, div[data-test-id="assignee-field-selected-group-tag"]' : '.js-zero-state-ticket-tutorial-assignee-field > div > div');
+        if (assigneeElement && (ticketInfo.ticket.status != 'closed')) {
             var customerRegion = organizationFields.support_region;
             var assigneeText = (assigneeElement.textContent || '').trim();
             var assigneeRegions = getSupportRegions(assigneeText);
