@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        13.8
+// @version        13.9
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -2015,23 +2015,34 @@ function enablePublicConversation(ticketId, ticketInfo, conversation) {
 function checkTicketConversation(ticketId, ticketInfo) {
     updateSidebarBoxContainer(ticketId, ticketInfo);
     var conversation = document.querySelector('div[data-side-conversations-anchor-id="' + ticketId + '"]');
-    if (conversation) {
-        isAgentWorkspace = conversation.querySelectorAll('article').length > 0;
-        var editor = document.querySelector(isAgentWorkspace ? 'div[data-test-id="omnicomposer-rich-text-ckeditor"]' : '.editor');
-        if (!editor) {
-            return;
-        }
-        if (!isAgentWorkspace) {
-            enablePublicConversation(ticketId, ticketInfo, conversation);
-        }
-        addReplyFormattingButtons(ticketId, ticketInfo, conversation);
-        addJiraLinks(ticketId, ticketInfo, conversation);
-        addPlaybookReminder(ticketId, ticketInfo, conversation);
-        addTicketDescription(ticketId, ticketInfo, conversation);
-        fixPermaLinkAnchors(ticketId, ticketInfo, conversation);
-        addPermaLinks(ticketId, ticketInfo, conversation);
-        updateWindowTitle(ticketId, ticketInfo);
+    if (!conversation) {
+        clearHighlightedComments();
+        return;
     }
+    var hasHeader = conversation.querySelectorAll('div[data-test-id="ticket-call-controls-action-bar"], .pane_header').length > 0;
+    if (!hasHeader) {
+        return;
+    }
+    var hasAgentWorkspaceComments = conversation.querySelectorAll('article').length > 0;
+    var hasLegacyWorkspaceComments = conversation.querySelectorAll('.event .zd-comment').length > 0;
+    if (!hasAgentWorkspaceComments && !hasLegacyWorkspaceComments) {
+        return;
+    }
+    var hasEditor = document.querySelectorAll('div[data-test-id="omnicomposer-rich-text-ckeditor"], .editor').length > 0;
+    if (!hasEditor) {
+        return;
+    }
+    isAgentWorkspace = hasAgentWorkspaceComments;
+    if (!isAgentWorkspace) {
+        enablePublicConversation(ticketId, ticketInfo, conversation);
+    }
+    addReplyFormattingButtons(ticketId, ticketInfo, conversation);
+    addJiraLinks(ticketId, ticketInfo, conversation);
+    addPlaybookReminder(ticketId, ticketInfo, conversation);
+    addTicketDescription(ticketId, ticketInfo, conversation);
+    fixPermaLinkAnchors(ticketId, ticketInfo, conversation);
+    addPermaLinks(ticketId, ticketInfo, conversation);
+    updateWindowTitle(ticketId, ticketInfo);
     highlightComment();
 }
 /**
