@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        14.2
+// @version        14.3
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -876,10 +876,11 @@ var middleEastCountries = new Set([
  */
 function addSortButton(conversation, header) {
     var button = document.createElement('button');
+    button.setAttribute('data-test-id', 'comment-sort');
     var sort = getCookieValue('_lesa-ui-comment-sort') || 'asc';
     button.textContent = sort;
     var conversationLog = conversation.querySelector('div[data-test-id="omni-log-container"]');
-    var lastChild = header.lastChild;
+    var buttons = header.children[1];
     button.onclick = function () {
         if (conversationLog.style.flexDirection == 'column') {
             conversationLog.style.flexDirection = 'column-reverse';
@@ -892,7 +893,7 @@ function addSortButton(conversation, header) {
             document.cookie = '_lesa-ui-comment-sort=asc';
         }
     };
-    lastChild.prepend(button);
+    buttons.prepend(button);
 }
 /**
  * Add a marker to show the LESA priority on the ticket.
@@ -978,7 +979,7 @@ function addPriorityMarker(header, conversation, ticketId, ticketInfo) {
         priorityElement.appendChild(emojiContainer);
     }
     if (isAgentWorkspace) {
-        var viaLabel = header.querySelector('div[data-test-id="omni-header-via-label"]');
+        var viaLabel = conversation.querySelector('div[data-test-id="omni-header-via-label"]');
         var divider = document.createElement('div');
         divider.classList.add('Divider-sc-2k6bz0-9');
         if (priorityElement.childNodes.length > 0) {
@@ -1111,12 +1112,15 @@ function isDummyComment(ticketInfo, comment) {
  * Add a ticket description and a complete list of attachments to the top of the page.
  */
 function addTicketDescription(ticketId, ticketInfo, conversation) {
-    var header = conversation.querySelector(isAgentWorkspace ? 'div[data-test-id="ticket-call-controls-action-bar"]' : '.pane_header');
+    var header = null;
+    if (isAgentWorkspace) {
+        header = conversation.querySelector('div.omni-conversation-pane > div > div');
+    }
+    else {
+        header = conversation.querySelector('.pane_header');
+    }
     if (!header) {
         return;
-    }
-    if (isAgentWorkspace) {
-        header = header.previousSibling;
     }
     // Check to see if we have any descriptions that we need to remove.
     var oldDescriptions = conversation.querySelectorAll('.lesa-ui-description');
@@ -1181,14 +1185,14 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
     var attachmentsContainer = createAttachmentsContainer(ticketId, ticketInfo, conversation);
     if (attachmentsContainer) {
         if (isAgentWorkspace) {
-            addHeaderLinkModal('attachments-modal', 'Attachments', header, attachmentsContainer);
+            addHeaderLinkModal('attachments-modal', 'Attachments', header, conversation, attachmentsContainer);
         }
         else {
             descriptionAncestor1.appendChild(attachmentsContainer);
         }
     }
     if (isAgentWorkspace) {
-        addHeaderLinkModal('description-modal', 'Description', header, descriptionAncestor1);
+        addHeaderLinkModal('description-modal', 'Description', header, conversation, descriptionAncestor1);
         addSortButton(conversation, header);
     }
     else {
@@ -1294,7 +1298,7 @@ function addReplyFormattingButtons(ticketId, ticketInfo, conversation) {
     }
     var workspaceComments = Array.from(conversation.querySelectorAll('div[data-test-id="editor-view"]'));
     for (var i = 0; i < workspaceComments.length; i++) {
-        hideReplyEditor(workspaceComments[i]);
+        hideReplyEditor(conversation, workspaceComments[i]);
     }
 }
 /**
@@ -1374,10 +1378,17 @@ function addPlaybookReminder(ticketId, ticketInfo, conversation) {
 /**
  * Hides the reply editor, and generates a start reply button
  */
-function hideReplyEditor(element) {
-    element.style.minHeight = '0px';
-    element.style.flexBasis = '0%';
-    element.style.display = 'block';
+function hideReplyEditor(conversation, element) {
+    var interval = setInterval(function () {
+        var button = conversation.querySelector('button[data-test-id="omnicomposer-collapse-button"]');
+        if (!button) {
+            return;
+        }
+        clearInterval(interval);
+        button.onclick = function () {
+            element.style.display = 'block';
+        };
+    }, 1000);
 }
 ;
 /**
@@ -1393,15 +1404,19 @@ function clearHighlightedComments() {
  * Scroll to a specific comment if its comment ID is included in a
  * query string parameter.
  */
-function highlightComment(commentId) {
+function highlightComment(conversation, ticketId, commentId) {
     if (!commentId && !document.location.search) {
-        var logContainer = document.querySelector('div[data-test-id="omni-log-container"]');
-        if (logContainer && !logContainer.getAttribute('data-scrolled-into-view')) {
+        var logContainer = conversation.querySelector('div[data-test-id="omni-log-container"]');
+        if (logContainer && logContainer.getAttribute('data-sort-ticket-id') != ticketId) {
+            var sortedComments = document.querySelectorAll('div[data-sort-ticket-id]');
+            for (var i = 0; i < sortedComments.length; i++) {
+                sortedComments[i].removeAttribute('data-sort-ticket-id');
+            }
             var sort = getCookieValue('_lesa-ui-comment-sort') || 'asc';
             logContainer.style.flexDirection = (sort == 'asc') ? 'column' : 'column-reverse';
-            var event = document.getElementById('convo_log_sentinel_1');
+            var event = conversation.querySelector('div[id^="convo_log_sentinel_"]');
             event.scrollIntoView();
-            logContainer.setAttribute('data-scrolled-into-view', 'true');
+            logContainer.setAttribute('data-sort-ticket-id', ticketId);
         }
         clearHighlightedComments();
         return;
@@ -1487,7 +1502,7 @@ function skipSinglePageApplication(href) {
  * If it's a regular ZenDesk link, fix it by making the anchor's onclick
  * event scroll to the comment (if applicable).
  */
-function fixZenDeskLink(anchor, ticketId) {
+function fixZenDeskLink(conversation, anchor, ticketId) {
     var href = anchor.href;
     var x = href.indexOf('/tickets/');
     if (x == -1) {
@@ -1500,7 +1515,7 @@ function fixZenDeskLink(anchor, ticketId) {
     anchor.removeAttribute('href');
     if (href.substring(x + '?comment='.length, y) == ticketId) {
         var commentId = href.substring(y + '?comment='.length);
-        anchor.onclick = highlightComment.bind(null, commentId);
+        anchor.onclick = highlightComment.bind(null, conversation, ticketId, commentId);
     }
     else {
         var commentURL = 'https://' + document.location.host + '/agent' + href.substring(x);
@@ -1511,7 +1526,7 @@ function fixZenDeskLink(anchor, ticketId) {
  * If it's a Liferay HelpCenter link, fix it by massaging it so that it
  * behaves like we want a ZenDesk link to behave.
  */
-function fixHelpCenterLink(anchor, ticketId) {
+function fixHelpCenterLink(conversation, anchor, ticketId) {
     var href = anchor.href;
     var x = href.indexOf('https://help.liferay.com/hc/');
     if (x != 0) {
@@ -1539,7 +1554,7 @@ function fixHelpCenterLink(anchor, ticketId) {
     anchor.removeAttribute('href');
     var linkTicketId = href.substring(y + '/requests/'.length, Math.min(href.indexOf('?'), z));
     if (linkTicketId == ticketId) {
-        anchor.onclick = highlightComment.bind(null, commentId);
+        anchor.onclick = highlightComment.bind(null, conversation, ticketId, commentId);
     }
     else {
         anchor.onclick = skipSinglePageApplication.bind(null, commentURL);
@@ -1557,11 +1572,11 @@ function fixPermaLinkAnchors(ticketId, ticketInfo, conversation) {
     var anchors = conversation.querySelectorAll('a');
     for (var i = 0; i < anchors.length; i++) {
         var anchor = anchors[i];
-        fixZenDeskLink(anchor, ticketId);
-        fixHelpCenterLink(anchor, ticketId);
+        fixZenDeskLink(conversation, anchor, ticketId);
+        fixHelpCenterLink(conversation, anchor, ticketId);
     }
 }
-function addHeaderLinkModal(modalId, linkText, header, content) {
+function addHeaderLinkModal(modalId, linkText, header, conversation, content) {
     var modal = document.createElement('div');
     modal.setAttribute('id', modalId);
     modal.classList.add('modal', 'modal-resizable', 'in', 'hide');
@@ -1589,7 +1604,7 @@ function addHeaderLinkModal(modalId, linkText, header, content) {
     openLink.onclick = function () {
         modal.classList.remove('hide');
     };
-    var viaLabel = header.querySelector('div[data-test-id="omni-header-via-label"]');
+    var viaLabel = conversation.querySelector('div[data-test-id="omni-header-via-label"]');
     var divider = document.createElement('div');
     divider.classList.add('Divider-sc-2k6bz0-9', 'fNgWaW');
     viaLabel.before(divider);
@@ -2044,11 +2059,10 @@ function checkTicketConversation(ticketId, ticketInfo) {
     if (!hasAgentWorkspaceComments && !hasLegacyWorkspaceComments) {
         return;
     }
-    var hasEditor = document.querySelectorAll('div[data-test-id="omnicomposer-rich-text-ckeditor"], .editor').length > 0;
-    if (!hasEditor) {
+    isAgentWorkspace = hasAgentWorkspaceComments;
+    if (!isAgentWorkspace && document.querySelectorAll('.editor').length == 0) {
         return;
     }
-    isAgentWorkspace = hasAgentWorkspaceComments;
     if (!isAgentWorkspace) {
         enablePublicConversation(ticketId, ticketInfo, conversation);
     }
@@ -2059,7 +2073,7 @@ function checkTicketConversation(ticketId, ticketInfo) {
     fixPermaLinkAnchors(ticketId, ticketInfo, conversation);
     addPermaLinks(ticketId, ticketInfo, conversation);
     updateWindowTitle(ticketId, ticketInfo);
-    highlightComment();
+    highlightComment(conversation, ticketId, '');
 }
 /**
  * Set the window title based on which URL you are currently visiting, so that if you
