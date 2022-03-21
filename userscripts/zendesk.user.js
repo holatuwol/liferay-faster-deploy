@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        14.0
+// @version        14.1
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -879,7 +879,6 @@ function addSortButton(conversation, header) {
     var sort = getCookieValue('_lesa-ui-comment-sort') || 'asc';
     button.textContent = sort;
     var conversationLog = conversation.querySelector('div[data-test-id="omni-log-container"]');
-    conversationLog.style.flexDirection = (sort == 'asc') ? 'column' : 'column-reverse';
     var lastChild = header.lastChild;
     button.onclick = function () {
         if (conversationLog.style.flexDirection == 'column') {
@@ -1397,7 +1396,9 @@ function clearHighlightedComments() {
 function highlightComment(commentId) {
     if (!commentId && !document.location.search) {
         var logContainer = document.querySelector('div[data-test-id="omni-log-container"]');
-        if (logContainer && logContainer.style.flexDirection == 'column-reverse') {
+        if (logContainer) {
+            var sort = getCookieValue('_lesa-ui-comment-sort') || 'asc';
+            logContainer.style.flexDirection = (sort == 'asc') ? 'column' : 'column-reverse';
             var event = document.getElementById('convo_log_sentinel_1');
             event.scrollIntoView();
         }
