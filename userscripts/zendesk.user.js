@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        14.1
+// @version        14.2
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -1396,11 +1396,12 @@ function clearHighlightedComments() {
 function highlightComment(commentId) {
     if (!commentId && !document.location.search) {
         var logContainer = document.querySelector('div[data-test-id="omni-log-container"]');
-        if (logContainer) {
+        if (logContainer && !logContainer.getAttribute('data-scrolled-into-view')) {
             var sort = getCookieValue('_lesa-ui-comment-sort') || 'asc';
             logContainer.style.flexDirection = (sort == 'asc') ? 'column' : 'column-reverse';
             var event = document.getElementById('convo_log_sentinel_1');
             event.scrollIntoView();
+            logContainer.setAttribute('data-scrolled-into-view', 'true');
         }
         clearHighlightedComments();
         return;
