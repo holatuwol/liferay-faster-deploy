@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        14.3
+// @version        14.4
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -2142,7 +2142,9 @@ function checkForConversations() {
 /**
  * Update the selected tab with the account code.
  */
-function updateSubtitle(subtitle, ticketId, ticketInfo) {
+function updateSubtitle(title, subtitle, ticketId, ticketInfo) {
+    title.textContent = ticketInfo.ticket.raw_subject;
+    title.setAttribute('title', ticketInfo.ticket.raw_subject);
     var accountCode = getAccountCode(ticketId, ticketInfo);
     if (!accountCode) {
         return;
@@ -2172,15 +2174,18 @@ function updateSubtitle(subtitle, ticketId, ticketInfo) {
  * Attempt to update the tab subtitles.
  */
 function checkForSubtitles() {
+    var tabs = Array.from(document.querySelectorAll('div[data-test-id="header-tab"]'));
     var subtitles = Array.from(document.querySelectorAll('div[data-test-id="header-tab-subtitle"]'));
-    for (var i = 0; i < subtitles.length; i++) {
-        var subtitle = subtitles[i];
+    for (var i = 0; i < tabs.length; i++) {
+        var tab = tabs[i];
+        var subtitle = tab.querySelector('div[data-test-id="header-tab-subtitle"]');
         var textContent = ((subtitle.children.length > 0 && subtitle.children[0].textContent) || '').trim();
         if (textContent[0] != '#') {
             continue;
         }
+        var title = tab.querySelector('div[data-test-id="header-tab-title"]');
         var ticketId = textContent.substring(1);
-        checkTicket(ticketId, updateSubtitle.bind(null, subtitle));
+        checkTicket(ticketId, updateSubtitle.bind(null, title, subtitle));
     }
 }
 // Since there's an SPA framework in place that I don't fully understand,
