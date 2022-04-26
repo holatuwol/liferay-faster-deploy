@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        14.6
+// @version        14.7
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -1383,7 +1383,13 @@ function shrinkReplyEditor(conversation, element) {
         if (!element.style.flexBasis) {
             return;
         }
-        element.style.flexBasis = '10%';
+        var editor = element.querySelector('div[data-test-id="ticket-rich-text-editor"]');
+        if (!editor) {
+            return;
+        }
+        if (!editor.textContent) {
+            element.style.flexBasis = '10%';
+        }
         clearInterval(interval);
     }, 1000);
 }
