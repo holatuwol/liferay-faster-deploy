@@ -96,3 +96,14 @@ def status(*args, **kwargs):
 
 def tag(*args, **kwargs):
     return _git('tag', args, **kwargs)
+
+git_root = rev_parse('--show-toplevel', stderr=DEVNULL)
+
+if git_root is None or git_root == '':
+	git_root = None
+	current_branch = None
+else:
+	try:
+		current_branch = rev_parse('--abbrev-ref', 'HEAD', stderr=DEVNULL)
+	except:
+		current_branch = 'HEAD'
