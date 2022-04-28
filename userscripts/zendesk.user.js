@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        14.7
+// @version        14.8
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -1062,7 +1062,7 @@ function createKnowledgeCaptureContainer(ticketId, ticketInfo, conversation) {
     }
     var knowledgeCaptureContainer = document.createElement('div');
     knowledgeCaptureContainer.classList.add('lesa-ui-knowledge-capture');
-    if (otherArticleList.childNodes.length > 0) {
+    if (fastTrackList.childNodes.length > 0) {
         var fastTrackLabel = document.createElement('div');
         fastTrackLabel.classList.add('lesa-ui-knowledge-capture-label');
         fastTrackLabel.innerHTML = (fastTrackList.childNodes.length == 1) ? 'Fast Track Article:' : 'Fast Track Articles:';
