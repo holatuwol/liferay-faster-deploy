@@ -198,7 +198,12 @@ sendpull() {
 		reviewer_repository=$(git remote -v | grep "^${remote_name}\s" | awk '{ print $2 }' | uniq | cut -d'/' -f 2 | sed 's/\.git$//g' | uniq)
 	fi
 
-	webbrowser "https://github.com/${reviewer}/${reviewer_repository}/compare/${BASE_BRANCH}...${current_user}:${CURRENT_BRANCH}"
+	if [ "" == "$(git status -s | grep '^M')" ]; then
+		webbrowser "https://github.com/${reviewer}/${reviewer_repository}/compare/${BASE_BRANCH}...${current_user}:${CURRENT_BRANCH}"
+	else
+		git status -s
+		echo "https://github.com/${reviewer}/${reviewer_repository}/compare/${BASE_BRANCH}...${current_user}:${CURRENT_BRANCH}"
+	fi
 }
 
 setopts() {
