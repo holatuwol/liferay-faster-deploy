@@ -24,7 +24,7 @@ def find(needle):
 	folders, files = nongit_find(git_root, needle)
 
 	if folders is not None or files is not None:
-		return (git_root_relpaths(folders), git_root_relpaths(files))
+		return (relpaths(folders), relpaths(files))
 
 	# Attempt to find the file using git ls-files
 
@@ -36,7 +36,7 @@ def find(needle):
 	folders, files = git_find(git_root, needle)
 
 	if folders is not None or files is not None:
-		return (git_root_relpaths(folders), git_root_relpaths(files))
+		return (relpaths(folders), relpaths(files))
 
 	# Attempt to find the file using git ls-files --with-tree
 
@@ -57,7 +57,7 @@ def find(needle):
 				commit = matching_properties[0].split('=')[1]
 				folders, files = git_find(git_root, needle, commit)
 
-	return (git_root_relpaths(folders), git_root_relpaths(files))
+	return (relpaths(folders), relpaths(files))
 
 def get_filtered_folders(filtered_list, needle):
 	filtered_folders = list(set([dirname(file) for file in filtered_list]))
@@ -113,12 +113,6 @@ def git_find(haystack, needle, commit=None):
 			return (get_filtered_folders(filtered_list, needle), filtered_list)
 
 	return (None, None)
-
-def git_root_relpaths(entries):
-	if entries is None:
-		return None
-
-	return relpaths([join(git_root, entry) for entry in entries])
 
 def is_project_file(needle, x):
 	return x.find(needle) != -1 and x.find('.releng') == -1 and x.find('.gradle') == -1
