@@ -85,6 +85,9 @@ def remote(*args, **kwargs):
 def reset(*args, **kwargs):
     return _git('reset', args, **kwargs)
 
+def rev_list(*args, **kwargs):
+    return _git('rev-list', args, **kwargs)
+
 def rev_parse(*args, **kwargs):
     return _git('rev-parse', args, **kwargs)
 

@@ -85,10 +85,17 @@ def getparent(check_tags):
 	base_tag = None
 
 	if base_branch in dxp_branches or base_branch in de_branches:
-		base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=marketplace-*-%s%s10' % (base_branch[0], base_branch[2]))
+		marketplace_base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=marketplace-*-%s%s10' % (base_branch[0], base_branch[2]))
+		branch_base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=fix-pack-*-%s%s10*' % (base_branch[0], base_branch[2]))
 
-		if base_tag is None or len(base_tag) == 0:
-			base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=fix-pack-*-%s%s10*' % (base_branch[0], base_branch[2]))
+		if marketplace_base_tag is None or len(marketplace_base_tag) == 0:
+			base_tag = branch_base_tag
+		elif branch_base_tag is None or len(branch_base_tag) == 0:
+			base_tag = marketplace_base_tag
+		else:
+			marketplace_count = int(git.rev_list('--count', '%s..HEAD' % marketplace_base_tag))
+			branch_count = int(git.rev_list('--count', '%s..HEAD' % branch_base_tag))
+			base_tag = branch_base_tag if branch_count < marketplace_count else marketplace_base_tag
 
 		if base_tag is None or len(base_tag) == 0:
 			base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=%s.%s.*-ga*' % (base_branch[0], base_branch[2]))
