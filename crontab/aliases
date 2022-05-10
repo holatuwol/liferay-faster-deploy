@@ -67,6 +67,8 @@ cr() {
 		return 1
 	fi
 
+	cp -f "$HOME/portal-ext.properties" "$BUILD_FOLDER_PREFIX/$1/$TIMESTAMP/"
+
 	echo "Starting latest build of $1"
 
 	$CATALINA_HOME/bin/startup.sh
