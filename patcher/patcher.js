@@ -143,6 +143,12 @@ function getLiferayVersion(version) {
 
     return parseInt(shortVersion.substring(0, pos)) * 1000 + parseInt(shortVersion.substring(pos + 3));
   }
+  else if (version.indexOf('-u') != -1) {
+    var shortVersion = /[0-9]*\.[0-9]/.exec(version)[0].replace('.', '');
+    var updateVersion = /-u([0-9]*)/.exec(version)[1];
+
+    return parseInt(shortVersion) * 100 * 1000 + updateVersion;
+  }
   else {
     var shortVersion = /[0-9]*\.[0-9]/.exec(version)[0].replace('.', '');
 

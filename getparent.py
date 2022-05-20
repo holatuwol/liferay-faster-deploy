@@ -86,7 +86,11 @@ def getparent(check_tags):
 
 	if base_branch in dxp_branches or base_branch in de_branches:
 		marketplace_base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=marketplace-*-%s%s10' % (base_branch[0], base_branch[2]))
-		branch_base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=fix-pack-*-%s%s10*' % (base_branch[0], base_branch[2]))
+
+		branch_base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=%s.%s.*-u*' % (base_branch[0], base_branch[2]))
+
+		if branch_base_tag is None or len(branch_base_tag) == 0:
+			branch_base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=fix-pack-*-%s%s10*' % (base_branch[0], base_branch[2]))
 
 		if marketplace_base_tag is None or len(marketplace_base_tag) == 0:
 			base_tag = branch_base_tag
@@ -112,7 +116,7 @@ def getparent(check_tags):
 	if base_tag is None:
 		return base_branch
 
-	if base_tag.find('marketplace-') == 0 or base_tag.find('fix-pack-base-') == 0 or base_tag.find('fix-pack-de-') == 0 or base_tag.find('fix-pack-dxp-') == 0 or base_tag.find('-ga') > -1:
+	if base_tag.find('marketplace-') == 0 or base_tag.find('fix-pack-base-') == 0 or base_tag.find('fix-pack-de-') == 0 or base_tag.find('fix-pack-dxp-') == 0 or base_tag.find('-ga') > -1 or base_tag.find('-u') > -1:
 		return base_tag
 
 	return base_branch
