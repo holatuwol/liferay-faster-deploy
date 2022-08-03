@@ -19,15 +19,19 @@ def get_bpr_fix_pack_label(issue_key, base_version):
 	elif base_version == '7.0':
 		prefix = 'liferay-fixpack-de-'
 		suffix = '-7010'
-	else:
+	elif base_version == '7.1' or base_version == '7.2' or base_version == '7.3':
 		prefix = 'liferay-fixpack-dxp-'
 		suffix = '-%s10' % ''.join(base_version.split('.', 3)[0:2])
+	elif base_version == '7.4':
+		prefix = 'liferay-update-dxp-'
+		suffix = '-%s13' % ''.join(base_version.split('.', 3)[0:2])
+	else:
+		return None
 
 	linked_issues = get_issues(
 		'project = BPR and issueFunction in linkedIssuesOf("issue in linkedIssues(%s)")' % issue_key,
 		['customfield_14424', 'customfield_19421'])
 
-	max_fix_pack = None
 	max_fix_pack_number = 0
 
 	for linked_issue in linked_issues.values():
@@ -36,25 +40,24 @@ def get_bpr_fix_pack_label(issue_key, base_version):
 				fix_pack = linked_issue['fields']['customfield_19421']
 
 				if fix_pack is None or fix_pack.find('-') == -1:
-					max_fix_pack = 9999
+					max_fix_pack_number = 9999
 					continue
 
 				fix_pack_number = int(fix_pack[fix_pack.find('-')+1:])
 
 				if fix_pack_number > max_fix_pack_number:
-					max_fix_pack = fix_pack
 					max_fix_pack_number = fix_pack_number
 			else:
-				max_fix_pack = 9999
+				max_fix_pack_number = 9999
 
-	if max_fix_pack_number == 0 or max_fix_pack == 9999:
+	if max_fix_pack_number == 0:
 		return '%s9999%s' % (prefix, suffix)
 
-	print('https://issues.liferay.com/browse/%s' % issue_key, 'liferay-fixpack-%s%s' % (max_fix_pack, suffix))
-	return 'liferay-fixpack-%s%s' % (max_fix_pack, suffix)
+	print('https://issues.liferay.com/browse/%s' % issue_key, '%s%s%s' % (prefix, max_fix_pack_number, suffix))
+	return '%s%s%s' % (prefix, max_fix_pack_number, suffix)
 
 def get_fix_pack_labels(issue_key, issue):
-	fix_pack_labels = [label for label in issue['fields']['labels'] if label.find('liferay-fixpack-') == 0]
+	fix_pack_labels = [label for label in issue['fields']['labels'] if label.find('liferay-fixpack-') == 0 or label.find('liferay-update-') == 0]
 
 	security_pending_labels = [label for label in issue['fields']['labels'] if label.find('-security-pending') == 4]
 
@@ -95,7 +98,8 @@ def expand_fix_version(issue_key, issue):
 			prefix = 'liferay-fixpack-dxp-'
 			suffix = '-%s10' % ''.join(fix_branch.split('.', 3)[0:2])
 		else:
-			continue
+			prefix = 'liferay-update-dxp-'
+			suffix = '-%s13' % ''.join(base_version.split('.', 3)[0:2])
 
 		build_number = suffix[1:]
 
@@ -112,19 +116,20 @@ def expand_fix_version(issue_key, issue):
 
 	return fix_version
 
-issues = get_issues(
-	'project = LPE AND labels = LSV AND (resolution in (Completed, Fixed) OR labels = sev-1) ORDER BY key',
-	['fixVersions', 'labels'])
-
 fix_versions = {}
 
-for issue_key, issue in issues.items():
-	fix_version = expand_fix_version(issue_key, issue)
+def update_fix_versions(query):
+	issues = get_issues(query, ['fixVersions', 'labels'])
 
-	if len(fix_version) == 0:
-		continue
+	for issue_key, issue in issues.items():
+		fix_version = expand_fix_version(issue_key, issue)
 
-	fix_versions[issue_key] = fix_version
+		if len(fix_version) == 0:
+			continue
+
+		fix_versions[issue_key] = fix_version
+
+update_fix_versions('project = LPE AND labels = LSV AND (resolution in (Completed, Fixed) OR labels = sev-1) ORDER BY key')
 
 lsv_articles = get_lsv_articles()
 
