@@ -476,7 +476,7 @@ packageinfo_tag() {
 	requireschema ${1}
 	dependencies ${1}
 	bootstrap ${1}
-	changelog ${1} ${2}
+	#changelog ${1} ${2}
 }
 
 releng() {
@@ -547,18 +547,48 @@ requireschema() {
 	done
 }
 
+fetchtag() {
+	local HAS_TAG=$(git tag | grep "^${2}$")
+
+	if [ "" != "${HAS_TAG}" ]; then
+		return
+	fi
+
+	git fetch --no-tags git@github.com:liferay/${1}.git tags/${2}:refs/tags/${2}
+}
+
 savetags() {
 	cat /dev/null > ${OUTPUT_FOLDER}/tags.txt
 
 	git ls-remote -t git@github.com:liferay/liferay-portal.git | \
 		awk '{ print $2 }' | grep "/${1}.[0-9]*-ga[0-9]*$" | \
-		sort | cut -d'/' -f 3 | tee -a ${OUTPUT_FOLDER}/tags.txt
+		sort | cut -d'/' -f 3 | tee tags_tmp.txt
 
-	git ls-remote -t git@github.com:liferay/liferay-portal-ee.git | \
-		awk '{ print $2 }' | grep "/${1}.[0-9]*-u[0-9]*$" | \
-		sort | cut -d'/' -f 3 | tee -a ${OUTPUT_FOLDER}/tags.txt
+	for tag in $(cat tags_tmp.txt); do
+		fetchtag liferay-portal ${tag}
+	done
+
+	cat tags_tmp.txt | tee -a ${OUTPUT_FOLDER}/tags.txt
 
 	git ls-remote -t git@github.com:liferay/liferay-portal-ee.git | \
 		awk '{ print $2 }' | grep "/fix-pack-.*-${2}[0-9][0-9]$" | \
-		sort -t'-' -nk4,5 | cut -d'/' -f 3 | tee -a ${OUTPUT_FOLDER}/tags.txt
+		sort -t'-' -nk4,5 | cut -d'/' -f 3 | tee tags_tmp.txt
+
+	for tag in $(cat tags_tmp.txt); do
+		fetchtag liferay-portal-ee ${tag}
+	done
+
+	cat tags_tmp.txt | tee -a ${OUTPUT_FOLDER}/tags.txt
+
+	git ls-remote -t git@github.com:liferay/liferay-portal-ee.git | \
+		awk '{ print $2 }' | grep "/${1}.[0-9]*-u[0-9]*$" | \
+		sort | cut -d'/' -f 3 | tee tags_tmp.txt
+
+	for tag in $(cat tags_tmp.txt); do
+		fetchtag liferay-portal-ee ${tag}
+	done
+
+	cat tags_tmp.txt | tee -a ${OUTPUT_FOLDER}/tags.txt
+
+	rm tags_tmp.txt
 }

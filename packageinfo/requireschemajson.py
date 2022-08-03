@@ -22,6 +22,8 @@ def get_dxp_release_tuple(release_id):
 		patch_level = patch_level[3:]
 	elif patch_level.find('dxp-') == 0:
 		patch_level = patch_level[4:]
+	elif patch_level[0] == 'u':
+		patch_level = patch_level[1:]
 
 	if patch_level == 'base':
 		patch_level = '0'

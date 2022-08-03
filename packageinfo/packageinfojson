@@ -8,7 +8,7 @@ s3upload() {
 
 # Make sure the packageinfo files are up to date
 
-AVAILABLE_VERSIONS=$(git ls-remote -t git@github.com:liferay/liferay-portal.git | awk '{ print $2 }' | grep "/[0-9].*-ga[0-9]*$" | sort | cut -d'/' -f 3 | cut -d'.' -f 1,2 | sort -u)
+AVAILABLE_VERSIONS="$(find ${PACKAGEINFO_ROOT} -mindepth 1 -maxdepth 1 -type d | sed 's@^.*/@@g' | sort | cut -d'.' -f 1,2)"
 
 if [ "update" == "${1}" ]; then
 	. $(dirname ${BASH_SOURCE[0]})/../setopts
@@ -16,6 +16,24 @@ if [ "update" == "${1}" ]; then
 
 	if [ "" == "${2}" ]; then
 		if [ "" != "${PACKAGEINFO_ROOT}" ]; then
+			pushd ${PACKAGEINFO_ROOT}
+
+			for folder in ${AVAILABLE_VERSIONS}; do
+				if [ ! -d ${folder}.x/metadata ]; then
+					metadata_zip="metadata-$(echo ${folder} | tr -d '.')x.zip"
+					cd ${folder}
+					mkdir metadata
+					cd metadata
+					aws s3 cp s3://mdang.grow/${metadata_zip} ${metadata_zip}.gz
+					gunzip ${metadata_zip}.gz
+					unzip ${metadata_zip}
+					rm ${metadata_zip}
+					cd ../..
+				fi
+			done
+
+			popd
+
 			for version in ${AVAILABLE_VERSIONS}; do
 				packageinfo_release ${PACKAGEINFO_ROOT}/${version}.x/portal ${version} $(echo ${version} | tr -d '.')
 			done
@@ -26,6 +44,8 @@ if [ "update" == "${1}" ]; then
 fi
 
 # Generate the JSON files
+
+echo 'Generating JSON files...'
 
 if [ "" != "${PACKAGEINFO_ROOT}" ]; then
 	echo "${AVAILABLE_VERSIONS}" | awk '{ print "'${PACKAGEINFO_ROOT}'/" $1 ".x" }' | xargs python ${SCRIPT_FOLDER}/packageinfojson.py
