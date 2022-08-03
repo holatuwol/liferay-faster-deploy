@@ -25,7 +25,7 @@ function gm() {
 	local MODULE_PATH
 	MODULE_PATH="$(
 		# List all files at project root
-		git -C "${PROJECT_ROOT}" ls-files -- '*.bnd' |
+		git -C "${PROJECT_ROOT}" ls-files -- '*/bnd.bnd' '*/build.gradle' |
 		# Strip the filename, leaving just the directory name.
 		# On OSX, this WAY faster than using "dirname".
 		sed -E 's,/[^/]*$,,g' |
