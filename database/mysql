@@ -89,7 +89,7 @@ waitfor_database() {
 DB_TYPE='mysql'
 
 if [ "" == "${MYSQL_VERSION}" ]; then
-	MYSQL_VERSION='5.7'
+	MYSQL_VERSION='5.7.38-oracle'
 fi
 
 runcontainer $@
