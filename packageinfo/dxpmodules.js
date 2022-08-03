@@ -622,23 +622,37 @@ request.onreadystatechange = function() {
 			select.selectedIndex = select.options.length - 1;
 		};
 
+		var getBaseVersion = function(a) {
+			return parseInt(a.substring(0, a.indexOf('-')));
+		}
+
+		var getFixPackVersion = function(a) {
+			var fixPackVersion = a.substring(a.lastIndexOf('-') + 1);
+
+			if (fixPackVersion.indexOf('ga') == 0) {
+				return parseInt(fixPackVersion.substring(2));
+			}
+
+			if (fixPackVersion.indexOf('u') == 0) {
+				return parseInt(fixPackVersion.substring(1));
+			}
+
+			return parseInt(fixPackVersion);
+		}
+
 		var fixPackIds = Object.keys(versionInfoList[0])
 			.filter(x => x.indexOf(prefix) == 0)
 			.map(x => x.substring(prefix.length))
 			.sort(function(a, b) {
-				var x1 = parseInt(a.substring(0, a.indexOf('-')));
-				var x2 = parseInt(b.substring(0, b.indexOf('-')));
+				var x1 = getBaseVersion(a);
+				var x2 = getBaseVersion(b);
 
 				if (x1 != x2) {
 					return x1 - x2;
 				}
 
-				if ((a.indexOf('-') == a.lastIndexOf('-')) || (b.indexOf('-') == b.lastIndexOf('-'))) {
-					return a > b ? 1 : a < b ? -1 : 0;
-				}
-
-				x1 = parseInt(a.substring(a.lastIndexOf('-') + 1));
-				x2 = parseInt(b.substring(b.lastIndexOf('-') + 1));
+				x1 = getFixPackVersion(a);
+				x2 = getFixPackVersion(b);
 
 				return x1 - x2;
 			});
