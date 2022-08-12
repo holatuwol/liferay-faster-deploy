@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        14.8
+// @version        14.9
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -1339,7 +1339,10 @@ function addJiraLinks(ticketId, ticketInfo, conversation) {
     conversation.classList.add('lesa-ui-jiralink');
     var comments = Array.from(conversation.querySelectorAll(isAgentWorkspace ? 'article' : 'div[data-comment-id]'));
     for (var i = 0; i < comments.length; i++) {
-        addJiraLinksToElement(comments[i]);
+        var comment = comments[i].querySelector('div[data-test-id="omni-log-message-content"]');
+        if (comment) {
+            addJiraLinksToElement(comment);
+        }
     }
 }
 /**
