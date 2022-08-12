@@ -41,7 +41,6 @@ fetchpr() {
 	fi
 
 	git fetch --no-tags ${repo_url} pull/${pull_id}/head:${target_branch}
-	git checkout ${target_branch}
 }
 
 setopts() {
