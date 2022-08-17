@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        14.9
+// @version        15.0
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -72,7 +72,12 @@ function downloadFile(href, filename, callback) {
             callback(this.response);
         }
     };
-    xhr.open('GET', href);
+    if (href.indexOf('https://help.liferay.com') == 0) {
+        xhr.open('GET', href.substring('https://help.liferay.com'.length));
+    }
+    else {
+        xhr.open('GET', href);
+    }
     xhr.send(null);
 }
 /**
@@ -1475,6 +1480,9 @@ function addPermaLinks(ticketId, ticketInfo, conversation) {
     var isPublicTab = !isAgentWorkspace && document.querySelector('.publicConversation.is-selected');
     for (var i = 0; i < comments.length; i++) {
         var timeElement = comments[i].querySelector('time');
+        if (!timeElement) {
+            continue;
+        }
         var commentId = timeElement.getAttribute('datetime');
         var permalinkContainer = document.createElement('div');
         permalinkContainer.classList.add('lesa-ui-permalink');
