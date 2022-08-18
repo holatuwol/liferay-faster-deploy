@@ -51,11 +51,11 @@ if [ ! -d $HOME/builds ]; then
 	echo -e "\n\n.debug {\n\tdisplay: none;\n}" >> index.css
 fi
 
-if [ "" == "$(grep -F master ${HOME}/run.txt)" ]; then
+if [ "" == "$(grep -F master-private ${HOME}/run.txt)" ]; then
 	echo -e "\n\n.master {\n\tdisplay: none;\n}" >> index.css
 fi
 
-for folder in 73x 72x 71x 70x; do
+for folder in 74x 73x 72x 71x 70x; do
 	if [ "" == "$(grep -F ${folder}-private ${HOME}/run.txt)" ]; then
 		echo -e "\n\n.ee-$folder {\n\tdisplay: none;\n}" >> index.css
 	fi
