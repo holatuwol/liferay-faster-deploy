@@ -44,7 +44,7 @@ branch() {
 			tar -zxf liferay-portal-tomcat-master-all.tar.gz
 		fi
 
-		rm liferay-portal-tomcat-master-all.*
+		rm rm liferay-portal-tomcat-master-all.*
 		mv liferay-portal-master-all ${TIMESTAMP}
 		cd -
 
