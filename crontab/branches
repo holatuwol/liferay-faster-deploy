@@ -30,39 +30,56 @@ branch() {
 
 	# Execute the build
 
-	local BASE_URL=
-
 	if [ "${BASE_BRANCH}" == "master" ]; then
-		BASE_URL='http://mirrors.lax.liferay.com/releases.liferay.com/portal/snapshot-master/latest'
+		cd "${BUILD_FOLDER_PREFIX}/${WORKING_DIR}"
+
+		if [ -f /usr/bin/7z ]; then
+			curl -O https://releases.liferay.com/portal/snapshot-master/latest/liferay-portal-tomcat-master-all.tar.gz
+			7z x liferay-portal-tomcat-master-all.7z
+		elif [ -f /usr/bin/7za ]; then
+			curl -O https://releases.liferay.com/portal/snapshot-master/latest/liferay-portal-tomcat-master-all.7z
+			7za x liferay-portal-tomcat-master-all.7z
+		else
+			curl -O https://releases.liferay.com/portal/snapshot-master/latest/liferay-portal-tomcat-master-all.tar.gz
+			tar -zxf liferay-portal-tomcat-master-all.tar.gz
+		fi
+
+		rm liferay-portal-tomcat-master-all.*
+		mv liferay-portal-master-all ${TIMESTAMP}
+		cd -
+
+		cd "${BUILD_FOLDER_PREFIX}/${WORKING_DIR}/${TIMESTAMP}"
+		tar -cf master-${TIMESTAMP}.tar *
+		gzip master-${TIMESTAMP}.tar
+		mv master-${TIMESTAMP}.tar.gz /var/www/html/builds/branches/
+		cd -
 	else
-		BASE_URL="http://mirrors.lax.liferay.com/files.liferay.com/private/ee/portal/snapshot-${BASE_BRANCH}/latest"
+		local upstream_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
+		checkout ${upstream_remote}/$BASE_BRANCH
+
+		echo "Executing build for ${BASE_BRANCH}"
+
+		BUILD_FOLDER_PREFIX="$BUILD_FOLDER_PREFIX" \
+			BUILD_FOLDER_SUFFIX="$TIMESTAMP" \
+			ARCHIVE_FOLDER="/var/www/html/builds/branches" \
+			TIMESTAMP="$TIMESTAMP" \
+				$SCRIPT_FOLDER/prepare $WORKING_DIR $PORT_PREFIX
 	fi
 
-	local BASE_NAME="liferay-portal-tomcat-${BASE_BRANCH}-all"
+	# Only retain last two builds
 
-	cd "${BUILD_FOLDER_PREFIX}/${WORKING_DIR}"
+	BUILD_COUNT=$(ls -1 "$BUILD_FOLDER_PREFIX/$WORKING_DIR/" | grep -vF '.log' | grep -c '^')
 
-	if [ -f /usr/bin/7z ]; then
-		curl -O "${BASE_URL}/${BASE_NAME}.7z"
-		7z x "${FILE_URL}.7z"
-	elif [ -f /usr/bin/7za ]; then
-		curl -O "${BASE_URL}/${BASE_NAME}.7z"
-		7za x "${FILE_URL}.7z"
-	else
-		curl -O "${BASE_URL}/${BASE_NAME}.tar.gz"
-		tar -zxf "${FILE_URL}.tar.gz"
+	if [[ $BUILD_COUNT -gt 2 ]]; then
+		for BUILD_ID in $(ls -1 "$BUILD_FOLDER_PREFIX/$WORKING_DIR/" | grep -vF '.log' | sort | head -$(expr $BUILD_COUNT '-' 2)); do
+			echo "Remove legacy build ${BUILD_ID}"
+			rm -rf "$BUILD_FOLDER_PREFIX/$WORKING_DIR/$BUILD_ID"
+		done
 	fi
 
-	rm "${BASE_NAME}.*"
-	mv "$(echo ${BASE_NAME} | sed 's/tomcat-all/all/g')" ${TIMESTAMP}
-	cd -
+	# Clean up old logs as well
 
-	cd "${BUILD_FOLDER_PREFIX}/${WORKING_DIR}/${TIMESTAMP}"
-	tar -cf ${BASE_BRANCH}-${TIMESTAMP}.tar *
-	gzip ${BASE_BRANCH}-${TIMESTAMP}.tar
-	rm /var/www/html/builds/branches/${BASE_BRANCH}-*.tar.gz
-	mv ${BASE_BRANCH}-${TIMESTAMP}.tar.gz /var/www/html/builds/branches/
-	cd -
+	rm -f $BUILD_FOLDER_PREFIX/$WORKING_DIR/*.log
 }
 
 branches() {
@@ -108,6 +125,20 @@ branches() {
 		elif [ "61x" == "$folder" ]; then
 			branch ee-6.1.x 61x 61
 		fi
+	done
+
+	for branch in master-private master 73x-private 73x 72x-private 72x 71x-private 71x 70x-private 70x 62x 61x; do
+		local ACTIVE_BUILD=
+
+		for LOG_ID in $(ls -1 "/var/www/html/builds/branches/" | grep -e "$branch-[0-9]*.log" | sort); do
+			BUILD_ARCHIVE=$(echo "$LOG_ID" | sed 's/\.log$/.tar.gz/g')
+
+			if [ -f "/var/www/html/builds/branches/$BUILD_ARCHIVE" ]; then
+				ACTIVE_BUILD=${BUILD_ARCHIVE}
+			elif [ "" == "$ACTIVE_BUILD" ]; then
+				rm -f /var/www/html/builds/branches/$LOG_ID
+			fi
+		done
 	done
 
 	echo Completed $(date)
