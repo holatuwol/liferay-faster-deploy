@@ -30,25 +30,16 @@ branch() {
 
 	# Execute the build
 
-	if [ "${BASE_BRANCH}" == "master" ]; then
-		cd "${BUILD_FOLDER_PREFIX}/${WORKING_DIR}"
-		curl -O https://releases.liferay.com/portal/snapshot-master/latest/liferay-portal-tomcat-master-all.7z
-		7z x liferay-portal-tomcat-master-all.7z
-		rm rm liferay-portal-tomcat-master-all.7z
-		mv liferay-portal-master-all ${TIMESTAMP}
-		cd -
-	else
-		local upstream_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
-		checkout ${upstream_remote}/$BASE_BRANCH
+	local upstream_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
+	checkout ${upstream_remote}/$BASE_BRANCH
 
-		echo "Executing build for ${BASE_BRANCH}"
+	echo "Executing build for ${BASE_BRANCH}"
 
-		BUILD_FOLDER_PREFIX="$BUILD_FOLDER_PREFIX" \
-			BUILD_FOLDER_SUFFIX="$TIMESTAMP" \
-			ARCHIVE_FOLDER="/var/www/html/builds/branches" \
-			TIMESTAMP="$TIMESTAMP" \
-				$SCRIPT_FOLDER/prepare $WORKING_DIR $PORT_PREFIX
-	fi
+	BUILD_FOLDER_PREFIX="$BUILD_FOLDER_PREFIX" \
+		BUILD_FOLDER_SUFFIX="$TIMESTAMP" \
+		ARCHIVE_FOLDER="/var/www/html/builds/branches" \
+		TIMESTAMP="$TIMESTAMP" \
+			$SCRIPT_FOLDER/prepare $WORKING_DIR $PORT_PREFIX
 
 	# Only retain last two builds
 
