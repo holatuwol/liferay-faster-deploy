@@ -32,26 +32,10 @@ branch() {
 
 	if [ "${BASE_BRANCH}" == "master" ]; then
 		cd "${BUILD_FOLDER_PREFIX}/${WORKING_DIR}"
-
-		if [ -f /usr/bin/7z ]; then
-			curl -O https://releases.liferay.com/portal/snapshot-master/latest/liferay-portal-tomcat-master-all.tar.gz
-			7z x liferay-portal-tomcat-master-all.7z
-		elif [ -f /usr/bin/7za ]; then
-			curl -O https://releases.liferay.com/portal/snapshot-master/latest/liferay-portal-tomcat-master-all.7z
-			7za x liferay-portal-tomcat-master-all.7z
-		else
-			curl -O https://releases.liferay.com/portal/snapshot-master/latest/liferay-portal-tomcat-master-all.tar.gz
-			tar -zxf liferay-portal-tomcat-master-all.tar.gz
-		fi
-
-		rm rm liferay-portal-tomcat-master-all.*
+		curl -O https://releases.liferay.com/portal/snapshot-master/latest/liferay-portal-tomcat-master-all.7z
+		7z x liferay-portal-tomcat-master-all.7z
+		rm rm liferay-portal-tomcat-master-all.7z
 		mv liferay-portal-master-all ${TIMESTAMP}
-		cd -
-
-		cd "${BUILD_FOLDER_PREFIX}/${WORKING_DIR}/${TIMESTAMP}"
-		tar -cf master-${TIMESTAMP}.tar *
-		gzip master-${TIMESTAMP}.tar
-		mv master-${TIMESTAMP}.tar.gz /var/www/html/builds/branches/
 		cd -
 	else
 		local upstream_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
