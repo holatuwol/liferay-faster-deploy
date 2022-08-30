@@ -88,7 +88,7 @@ grant imp_full_database to lportal;"
 			remap_schema=$(echo "${OLD_SCHEMA}" | awk '{print $1 ":lportal"}' | tr '\n' ',') \
 			tablespaces=$(echo ${OLD_TABLESPACE} | tr ' ' ',') \
 			$(echo "${OLD_TABLESPACE}" | awk '{print "remap_tablespace=" $1 ":lportal"}' | tr '\n' ' ') \
-			exclude=INDEX table_exists_action=TRUNCATE version=${ORACLE_COMPAT_VERSION} \
+			table_exists_action=TRUNCATE version=${ORACLE_COMPAT_VERSION} \
 			< /dev/null
 
 	execute_script "revoke imp_full_database from lportal;"
