@@ -212,8 +212,11 @@ class FolderThreadDump(MultiThreadDump):
 	def __init__(self, foldername):
 		MultiThreadDump.__init__(self)
 
-		for filename in os.listdir(foldername):
-			lines = open(foldername + '/' + filename, 'r')
+		for filename in os.listdir(os.path.expanduser(foldername)):
+			if filename == '.DS_Store' or os.path.isdir(os.path.join(foldername, filename)):
+				continue
+
+			lines = open(os.path.join(os.path.expanduser(foldername), filename), 'r')
 			self.thread_dumps[filename] = ThreadDump(lines)
 
 
@@ -222,9 +225,9 @@ class TarThreadDump(MultiThreadDump):
 		MultiThreadDump.__init__(self)
 
 		if filename[-2:] == 'gz':
-			tar_file = TarFile(filename, 'r:gz')
+			tar_file = TarFile(os.path.expanduser(filename), 'r:gz')
 		else:
-			tar_file = TarFile(filename, 'r')
+			tar_file = TarFile(os.path.expanduser(filename), 'r')
 
 		for member in tar_file.getmembers():
 			if member.isfile():
@@ -238,7 +241,7 @@ class TarThreadDump(MultiThreadDump):
 class ZipThreadDump(MultiThreadDump):
 	def __init__(self, filename):
 		MultiThreadDump.__init__(self)
-		zip_file = ZipFile(filename, 'r')
+		zip_file = ZipFile(os.path.expanduser(filename), 'r')
 
 		for child_name in zip_file.namelist():
 			lines = zip_file.open(child_name, 'r')
