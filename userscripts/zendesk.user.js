@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        15.0
+// @version        15.1
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -2043,6 +2043,15 @@ if ((unsafeWindow.location.hostname.indexOf('zendesk.com') != -1) &&
     setInterval(updateKnowledgeCenterEditor, 1000);
 }
 /**
+ * Updates all help.liferay.com/attachments links to point to the current domain.
+ */
+function fixAttachmentLinks() {
+    Array.from(document.querySelectorAll('a[href^="https://help.liferay.com/attachments/')).forEach(function (it) {
+        var href = it.getAttribute('href');
+        it.setAttribute('href', href.substring('https://help.liferay.com'.length));
+    });
+}
+/**
  * Shows the public conversation tab so that you can get help.liferay.com links to
  * share with customers.
  */
@@ -2142,6 +2151,7 @@ function checkForConversations() {
         var ticketId = document.location.pathname.substring(ticketPath.length);
         var pos = ticketId.indexOf('/');
         if (pos != -1) {
+            fixAttachmentLinks();
             revokeObjectURLs();
         }
         else {
@@ -2151,6 +2161,7 @@ function checkForConversations() {
     else {
         updateWindowTitle();
         revokeObjectURLs();
+        fixAttachmentLinks();
     }
 }
 /**
