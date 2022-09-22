@@ -1,11 +1,12 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        15.1
+// @version        15.2
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/knowledge\/.*/
+// @include        /https:\/\/24475.apps.zdusercontent.com\/24475\/assets\/.*\/issue_creator.html/
 // @grant          unsafeWindow
 // @require        https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.5/jszip.min.js
 // @require        https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js
@@ -21,7 +22,7 @@ if (window.location.hostname == '24475.apps.zdusercontent.com') {
     styleElement.textContent = "\nbody {\n  overflow-y: hidden;\n}\n";
 }
 else {
-    styleElement.textContent = "\na.downloading {\n  color: #999;\n}\n\na.downloading::after {\n  content: ' (downloading...)';\n  color: #999;\n}\n\na.generating {\n  color: #999;\n}\n\na.generating::after {\n  content: ' (generating...)';\n  color: #999;\n}\n\narticle {\n  border-top: 1px solid #ebebeb;\n}\n\ndiv.lesa-ui-subtitle {\n  display: flex;\n  flex-direction: column;\n}\n\n.lesa-ui-attachments,\n.lesa-ui-knowledge-capture {\n  display: flex;\n  flex-direction: column;\n  margin-bottom: 0.5em;\n}\n\n#attachments-modal .lesa-ui-attachments,\n#description-modal .lesa-ui-description {\n  margin: 0.5em;\n}\n\n#attachments-modal,\n#description-modal {\n  height: 60vh;\n  width: 50vw;\n}\n\n#description-modal .event {\n  border-top: 0px;\n}\n\n.lesa-ui-attachment-info {\n  display: grid;\n  grid-gap: 0em 1em;\n  grid-template-columns: 1em auto;\n  margin: 0.5em;\n}\n\n.lesa-ui-attachment-info input {\n  margin-left: 0.5em;\n}\n\n.lesa-ui-attachment-info .lesa-ui-attachment-extra-info {\n  grid-column: 1 / 2 span;\n  padding: 0.2em 0.5em;\n  text-align: right;\n}\n\n.lesa-ui-description .lesa-ui-attachment-info .lesa-ui-attachment-extra-info {\n  border-top: 1px solid #eee;\n}\n\n.lesa-ui-attachment-info a {\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n\n.lesa-ui-attachments-bulk-download {\n  margin-top: 0.5em;\n  text-align: right;\n  text-decoration: underline;\n}\n\n.lesa-ui-attachments-label,\n.lesa-ui-knowledge-capture-label {\n  font-weight: 600;\n  margin-right: 1em;\n  white-space: nowrap;\n}\n\n.lesa-ui-knowledge-capture-label:not(:first-child) {\n  margin-top: 1em;\n}\n\n.lesa-ui-knowledge-capture ul {\n  margin-left: 1em;\n}\n\n.lesa-ui-description {\n  font-weight: normal;\n}\n\n.lesa-ui-description > div {\n  margin-bottom: 2em;\n}\n\n.lesa-ui-description .zd-comment,\n.lesa-ui-description .lesa-ui-attachment-info {\n  max-height: 25em;\n  overflow-y: auto;\n}\n\n.lesa-ui-event-highlighted,\narticle.lesa-ui-event-highlighted {\n  background-color: #eee;\n  scroll-margin-top: 1em;\n}\n\n.lesa-ui-form-field {\n  display: flex;\n  flex-direction: column;\n  margin-bottom: 0.5em;\n}\n\n.lesa-ui-permalink {\n  margin-bottom: 1em;\n}\n\n.lesa-ui-permalink > input,\n.lesa-ui-form-field.lesa-ui-helpcenter > input {\n  background-color: transparent;\n  border: 0px;\n  font-size: 12px;\n  margin: 0px;\n  padding: 0px;\n  width: 100%;\n}\n\n.lesa-ui-stackedit-icon {\n  height: 16px;\n  width: 16px;\n  padding: 4px;\n}\n\n.mast .editable .lesa-ui-subject {\n  background-color: #fff;\n  font-size: 20px;\n  font-weight: 600;\n  resize: vertical;\n  text-align: left;\n  width: 100%;\n}\n\n.header.mast > .round-avatar {\n  display: none;\n}\n\n.lesa-ui-priority:not(:empty) {\n  margin-top: 6px;\n  margin-bottom: 8px;\n}\n\n.lesa-ui-priority span {\n  color: #fff;\n  border-radius: 2px;\n  font-size: 10px;\n  font-weight: 600;\n  line-height: 16px;\n  margin-right: 8px;\n  padding: 2px;\n  text-align: center;\n  text-transform: uppercase;\n  width: 6em;\n}\n\n.lesa-ui-priority a {\n  color: #fff;\n  text-decoration: none;\n}\n\n.lesa-ui-priority > *:last-child {\n  margin-right: 0;\n}\n\n.lesa-ui-priority .lesa-ui-subject-emojis a {\n  color: #000;\n}\n\n.lesa-ui-subpriority {\n  border: 1px #eee dashed;\n  font-size: 0.8em;\n}\n\n.lesa-ui-priority-minor,\n.lesa-ui-subpriority-none,\n.lesa-ui-subpriority-low {\n  background-color: #0066cc;\n}\n\n.lesa-ui-priority-major,\n.lesa-ui-subpriority-medium {\n  background-color: #f2783b;\n}\n\n.lesa-ui-priority-critical,\n.lesa-ui-subpriority-high {\n  background-color: #bf1e2d;\n}\n\n.lesa-ui-priority .lesa-ui-subject-emojis {\n  background-color: #f8f9f9;\n}\n\n.lesa-ui-subject-emojis a {\n  font-size: 1.5em;\n  font-weight: normal;\n  margin-left: 2px;\n  margin-right: 2px;\n}\n\n.rich_text .comment_input .lesa-ui-playbook-reminder,\n#editor-view .lesa-ui-playbook-reminder {\n  display: none;\n}\n\n.rich_text .comment_input.is-public .lesa-ui-playbook-reminder:not(:empty),\n#editor-view .lesa-ui-playbook-reminder:not(:empty) {\n  background-color: #eef2fa;\n  border: 1px solid #d8dcde;\n  border-radius: 0 3px 0 0 !important;\n  color: #2e5aac;\n  display: block;\n  margin-bottom: 1em;\n  padding: 10px;\n}\n\n.rich_text .comment_input.is-public .lesa-ui-playbook-reminder a,\n#editor-view .lesa-ui-playbook-reminder a {\n  text-decoration: underline;\n}\n\n#modals .modal-header,\n#attachments-modal .modal-header {\n  cursor: move;\n}\n\n.fNgWaW {\n  padding: 2px 0px;\n  height: 14px;\n  width: 1px;\n  background: rgb(194, 200, 204);\n  display: flex;\n  margin: 0px 8px;\n}\n\nbutton[data-test-id=\"omnilog-jump-button\"] {\n  display: none;\n}\n";
+    styleElement.textContent = "\na.downloading {\n  color: #999;\n}\n\na.downloading::after {\n  content: ' (downloading...)';\n  color: #999;\n}\n\na.generating {\n  color: #999;\n}\n\na.generating::after {\n  content: ' (generating...)';\n  color: #999;\n}\n\narticle {\n  border-top: 1px solid #ebebeb;\n}\n\ndiv.lesa-ui-subtitle {\n  display: flex;\n  flex-direction: column;\n}\n\n.lesa-ui-attachments,\n.lesa-ui-knowledge-capture {\n  display: flex;\n  flex-direction: column;\n  margin-bottom: 0.5em;\n}\n\n#attachments-modal .lesa-ui-attachments,\n#description-modal .lesa-ui-description {\n  margin: 0.5em;\n}\n\n#description-modal .event {\n  border-top: 0px;\n}\n\n.lesa-ui-attachment-info {\n  display: grid;\n  grid-gap: 0em 1em;\n  grid-template-columns: 1em auto;\n  margin: 0.5em;\n}\n\n.lesa-ui-attachment-info input {\n  margin-left: 0.5em;\n}\n\n.lesa-ui-attachment-info .lesa-ui-attachment-extra-info {\n  grid-column: 1 / 2 span;\n  padding: 0.2em 0.5em;\n  text-align: right;\n  margin-bottom: 0.5em;\n}\n\n.lesa-ui-attachment-info .lesa-ui-attachment-extra-info:not(:first-child) {\n  margin-top: 1em;\n  border-top: 1px solid lightgray;\n  padding-top: 0.5em;\n}\n\n.lesa-ui-description .lesa-ui-attachment-info .lesa-ui-attachment-extra-info {\n  border-top: 1px solid #eee;\n}\n\n.lesa-ui-attachment-info a {\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n\n.lesa-ui-attachments-bulk-download {\n  margin-top: 0.5em;\n  text-align: right;\n  text-decoration: underline;\n}\n\n.lesa-ui-attachments-label,\n.lesa-ui-knowledge-capture-label {\n  font-weight: 600;\n  margin-right: 1em;\n  white-space: nowrap;\n}\n\n.lesa-ui-knowledge-capture-label:not(:first-child) {\n  margin-top: 1em;\n}\n\n.lesa-ui-knowledge-capture ul {\n  margin-left: 1em;\n}\n\n.lesa-ui-description {\n  font-weight: normal;\n}\n\n.lesa-ui-description > div {\n  margin-bottom: 2em;\n}\n\n.lesa-ui-description .zd-comment,\n.lesa-ui-description .lesa-ui-attachment-info {\n  max-height: 25em;\n  overflow-y: auto;\n}\n\n.lesa-ui-event-highlighted,\narticle.lesa-ui-event-highlighted {\n  background-color: #eee;\n  scroll-margin-top: 1em;\n}\n\n.lesa-ui-form-field {\n  display: flex;\n  flex-direction: column;\n  margin-bottom: 0.5em;\n}\n\n.lesa-ui-permalink {\n  margin-bottom: 1em;\n}\n\n.lesa-ui-permalink > input,\n.lesa-ui-form-field.lesa-ui-helpcenter > input {\n  background-color: transparent;\n  border: 0px;\n  font-size: 12px;\n  margin: 0px;\n  padding: 0px;\n  width: 100%;\n}\n\n.lesa-ui-stackedit-icon {\n  height: 16px;\n  width: 16px;\n  padding: 4px;\n}\n\n.mast .editable .lesa-ui-subject {\n  background-color: #fff;\n  font-size: 20px;\n  font-weight: 600;\n  resize: vertical;\n  text-align: left;\n  width: 100%;\n}\n\n.header.mast > .round-avatar {\n  display: none;\n}\n\n.lesa-ui-priority:not(:empty) {\n  margin-top: 6px;\n  margin-bottom: 8px;\n}\n\n.lesa-ui-priority span {\n  color: #fff;\n  border-radius: 2px;\n  font-size: 10px;\n  font-weight: 600;\n  line-height: 16px;\n  margin-right: 8px;\n  padding: 2px;\n  text-align: center;\n  text-transform: uppercase;\n  width: 6em;\n}\n\n.lesa-ui-priority a {\n  color: #fff;\n  text-decoration: none;\n}\n\n.lesa-ui-priority > *:last-child {\n  margin-right: 0;\n}\n\n.lesa-ui-priority .lesa-ui-subject-emojis a {\n  color: #000;\n}\n\n.lesa-ui-subpriority {\n  border: 1px #eee dashed;\n  font-size: 0.8em;\n}\n\n.lesa-ui-priority-minor,\n.lesa-ui-subpriority-none,\n.lesa-ui-subpriority-low {\n  background-color: #0066cc;\n}\n\n.lesa-ui-priority-major,\n.lesa-ui-subpriority-medium {\n  background-color: #f2783b;\n}\n\n.lesa-ui-priority-critical,\n.lesa-ui-subpriority-high {\n  background-color: #bf1e2d;\n}\n\n.lesa-ui-priority .lesa-ui-subject-emojis {\n  background-color: #f8f9f9;\n}\n\n.lesa-ui-subject-emojis a {\n  font-size: 1.5em;\n  font-weight: normal;\n  margin-left: 2px;\n  margin-right: 2px;\n}\n\n.rich_text .comment_input .lesa-ui-playbook-reminder,\n#editor-view .lesa-ui-playbook-reminder {\n  display: none;\n}\n\n.rich_text .comment_input.is-public .lesa-ui-playbook-reminder:not(:empty),\n#editor-view .lesa-ui-playbook-reminder:not(:empty) {\n  background-color: #eef2fa;\n  border: 1px solid #d8dcde;\n  border-radius: 0 3px 0 0 !important;\n  color: #2e5aac;\n  display: block;\n  margin-bottom: 1em;\n  padding: 10px;\n}\n\n.rich_text .comment_input.is-public .lesa-ui-playbook-reminder a,\n#editor-view .lesa-ui-playbook-reminder a {\n  text-decoration: underline;\n}\n\n#modals .modal-header,\n#attachments-modal .modal-header {\n  cursor: move;\n}\n\n.fNgWaW {\n  padding: 2px 0px;\n  height: 14px;\n  width: 1px;\n  background: rgb(194, 200, 204);\n  display: flex;\n  margin: 0px 8px;\n}\n\nbutton[data-test-id=\"omnilog-jump-button\"] {\n  display: none;\n}\n";
 }
 var head = document.querySelector('head');
 head.appendChild(styleElement);
@@ -1128,19 +1129,27 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
         return;
     }
     // Check to see if we have any descriptions that we need to remove.
-    var oldDescriptions = conversation.querySelectorAll('.lesa-ui-description');
-    var hasNewDescription = false;
-    for (var i = 0; i < oldDescriptions.length; i++) {
-        if (oldDescriptions[i].getAttribute('data-ticket-id') == ticketId) {
-            hasNewDescription = true;
-        }
-        else {
-            revokeObjectURLs();
-            header.removeChild(oldDescriptions[i]);
+    if (isAgentWorkspace) {
+        var oldLinks = conversation.querySelectorAll('.lesa-ui-modal-header-link');
+        if (oldLinks.length > 0) {
+            return;
         }
     }
-    if (hasNewDescription) {
-        return;
+    else {
+        var oldDescriptions = conversation.querySelectorAll('.lesa-ui-description');
+        var hasNewDescription = false;
+        for (var i = 0; i < oldDescriptions.length; i++) {
+            if (oldDescriptions[i].getAttribute('data-ticket-id') == ticketId) {
+                hasNewDescription = true;
+            }
+            else {
+                revokeObjectURLs();
+                header.removeChild(oldDescriptions[i]);
+            }
+        }
+        if (hasNewDescription) {
+            return;
+        }
     }
     var comments = conversation.querySelectorAll(isAgentWorkspace ? 'article' : '.event .zd-comment');
     if (comments.length == 0) {
@@ -1177,30 +1186,25 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
         descriptionAncestor0.appendChild(flsContainer);
     }
     descriptionAncestor0.appendChild(description);
-    var descriptionAncestor1 = document.createElement('div');
-    descriptionAncestor1.classList.add('lesa-ui-description');
-    descriptionAncestor1.classList.add('rich_text');
-    descriptionAncestor1.setAttribute('data-ticket-id', ticketId);
-    descriptionAncestor1.appendChild(descriptionAncestor0);
     // Generate something to hold all of our attachments.
-    var knowledgeCaptureContainer = createKnowledgeCaptureContainer(ticketId, ticketInfo, conversation);
-    if (knowledgeCaptureContainer) {
-        descriptionAncestor1.appendChild(knowledgeCaptureContainer);
-    }
-    var attachmentsContainer = createAttachmentsContainer(ticketId, ticketInfo, conversation);
-    if (attachmentsContainer) {
-        if (isAgentWorkspace) {
-            addHeaderLinkModal('attachments-modal', 'Attachments', header, conversation, attachmentsContainer);
-        }
-        else {
-            descriptionAncestor1.appendChild(attachmentsContainer);
-        }
-    }
     if (isAgentWorkspace) {
-        addHeaderLinkModal('description-modal', 'Description', header, conversation, descriptionAncestor1);
+        addHeaderLinkModal('attachments-modal', 'Attachments', header, conversation, createAttachmentsContainer.bind(null, ticketId, ticketInfo, conversation));
         addSortButton(conversation, header);
     }
     else {
+        var descriptionAncestor1 = document.createElement('div');
+        descriptionAncestor1.classList.add('lesa-ui-description');
+        descriptionAncestor1.classList.add('rich_text');
+        descriptionAncestor1.setAttribute('data-ticket-id', ticketId);
+        descriptionAncestor1.appendChild(descriptionAncestor0);
+        var knowledgeCaptureContainer = createKnowledgeCaptureContainer(ticketId, ticketInfo, conversation);
+        if (knowledgeCaptureContainer) {
+            descriptionAncestor1.appendChild(knowledgeCaptureContainer);
+        }
+        var attachmentsContainer = createAttachmentsContainer(ticketId, ticketInfo, conversation);
+        if (attachmentsContainer) {
+            descriptionAncestor1.appendChild(attachmentsContainer);
+        }
         header.appendChild(descriptionAncestor1);
     }
 }
@@ -1454,7 +1458,9 @@ function highlightComment(conversation, ticketId, commentId) {
     history.pushState({ path: commentURL }, '', commentURL);
     clearHighlightedComments();
     event.classList.add('lesa-ui-event-highlighted');
-    event.scrollIntoView();
+    setTimeout(function () {
+        event.scrollIntoView();
+    }, 1000);
 }
 /**
  * Creates a self-highlighting input field.
@@ -1590,10 +1596,10 @@ function fixPermaLinkAnchors(ticketId, ticketInfo, conversation) {
         fixHelpCenterLink(conversation, anchor, ticketId);
     }
 }
-function addHeaderLinkModal(modalId, linkText, header, conversation, content) {
+function createModal(modalId, linkText, header, conversation, callback) {
     var modal = document.createElement('div');
     modal.setAttribute('id', modalId);
-    modal.classList.add('modal', 'modal-resizable', 'in', 'hide');
+    modal.classList.add('modal', 'modal-resizable', 'in');
     var iframe = document.createElement('div');
     iframe.classList.add('iframe_app_view_wrapper');
     var modalHeader = document.createElement('header');
@@ -1602,25 +1608,29 @@ function addHeaderLinkModal(modalId, linkText, header, conversation, content) {
     closeLink.classList.add('close');
     closeLink.textContent = '\u00d7';
     closeLink.onclick = function () {
-        modal.classList.add('hide');
+        modal.remove();
     };
     modalHeader.appendChild(closeLink);
     var headerText = document.createElement('h3');
     headerText.textContent = linkText;
     modalHeader.appendChild(headerText);
     iframe.appendChild(modalHeader);
-    content.classList.add('modal-body', 'app_view_wrapper', 'app_view', 'apps_modal');
-    iframe.appendChild(content);
     modal.appendChild(iframe);
     header.after(modal);
+    var contentWrapper = document.createElement('div');
+    contentWrapper.classList.add('modal-body', 'app_view_wrapper');
+    var content = callback();
+    content.classList.add('app_view', 'apps_modal');
+    contentWrapper.appendChild(content);
+    iframe.appendChild(contentWrapper);
+}
+function addHeaderLinkModal(modalId, linkText, header, conversation, callback) {
     var openLink = document.createElement('a');
     openLink.textContent = linkText;
-    openLink.onclick = function () {
-        modal.classList.remove('hide');
-    };
+    openLink.onclick = createModal.bind(null, modalId, linkText, header, conversation, callback);
     var viaLabel = conversation.querySelector('div[data-test-id="omni-header-via-label"]');
     var divider = document.createElement('div');
-    divider.classList.add('Divider-sc-2k6bz0-9', 'fNgWaW');
+    divider.classList.add('Divider-sc-2k6bz0-9', 'fNgWaW', 'lesa-ui-modal-header-link');
     viaLabel.before(divider);
     divider.before(openLink);
 }
