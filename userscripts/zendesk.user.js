@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        15.2
+// @version        15.3
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -2056,9 +2056,13 @@ if ((unsafeWindow.location.hostname.indexOf('zendesk.com') != -1) &&
  * Updates all help.liferay.com/attachments links to point to the current domain.
  */
 function fixAttachmentLinks() {
-    Array.from(document.querySelectorAll('a[href^="https://help.liferay.com/attachments/')).forEach(function (it) {
-        var href = it.getAttribute('href');
-        it.setAttribute('href', href.substring('https://help.liferay.com'.length));
+    fixAttachmentLinksHelper('a', 'href');
+    fixAttachmentLinksHelper('img', 'src');
+}
+function fixAttachmentLinksHelper(tagName, attributeName) {
+    Array.from(document.querySelectorAll(tagName + '[' + attributeName + '^="https://help.liferay.com/attachments/')).forEach(function (it) {
+        var value = it.getAttribute(attributeName);
+        it.setAttribute(attributeName, value.substring('https://help.liferay.com'.length));
     });
 }
 /**
@@ -2161,7 +2165,6 @@ function checkForConversations() {
         var ticketId = document.location.pathname.substring(ticketPath.length);
         var pos = ticketId.indexOf('/');
         if (pos != -1) {
-            fixAttachmentLinks();
             revokeObjectURLs();
         }
         else {
@@ -2171,7 +2174,6 @@ function checkForConversations() {
     else {
         updateWindowTitle();
         revokeObjectURLs();
-        fixAttachmentLinks();
     }
 }
 /**
@@ -2230,6 +2232,7 @@ if (unsafeWindow.location.hostname.indexOf('zendesk.com') != -1) {
         setInterval(checkForConversations, 1000);
         setInterval(checkForSubtitles, 1000);
         setInterval(checkSidebarTags, 1000);
+        setInterval(fixAttachmentLinks, 1000);
         setInterval(makeDraggableModals, 1000);
     }
 }
