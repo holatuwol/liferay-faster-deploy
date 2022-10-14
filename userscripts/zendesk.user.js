@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        15.3
+// @version        15.4
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -1448,6 +1448,10 @@ function highlightComment(conversation, ticketId, commentId) {
     }
     var comment = document.querySelector('time[datetime="' + commentId + '"], div[data-comment-id="' + commentId + '"]');
     if (!comment) {
+        var showMoreButton = document.querySelector('button[data-test-id="convolog-show-more-button"]');
+        if (showMoreButton) {
+            showMoreButton.click();
+        }
         return;
     }
     var event = comment.closest(isAgentWorkspace ? 'article' : '.event');
@@ -1478,16 +1482,34 @@ function createPermaLinkInputField(permalinkHREF) {
  * pseudo permalink (since this script scrolls to it).
  */
 function addPermaLinks(ticketId, ticketInfo, conversation) {
-    var permalinks = conversation.querySelectorAll(isAgentWorkspace ? 'article div.lesa-ui-permalink' : 'div[data-comment-id] div.lesa-ui-permalink');
-    if (permalinks.length > 0) {
-        return;
-    }
     var comments = conversation.querySelectorAll(isAgentWorkspace ? 'article' : 'div[data-comment-id]');
     var isPublicTab = !isAgentWorkspace && document.querySelector('.publicConversation.is-selected');
     for (var i = 0; i < comments.length; i++) {
         var timeElement = comments[i].querySelector('time');
         if (!timeElement) {
             continue;
+        }
+        var commentHeader = null;
+        if (isAgentWorkspace) {
+            var actionsElement = comments[i].querySelector('.omnilog-header-actions');
+            commentHeader = actionsElement.parentElement;
+        }
+        else {
+            commentHeader = comments[i].querySelector('.content .header');
+        }
+        if (!commentHeader) {
+            continue;
+        }
+        if (isAgentWorkspace) {
+            var parentElement = commentHeader.parentElement;
+            if (parentElement.querySelector('.lesa-ui-permalink')) {
+                continue;
+            }
+        }
+        else {
+            if (commentHeader.querySelector('.lesa-ui-permalink')) {
+                continue;
+            }
         }
         var commentId = timeElement.getAttribute('datetime');
         var permalinkContainer = document.createElement('div');
@@ -1500,12 +1522,9 @@ function addPermaLinks(ticketId, ticketInfo, conversation) {
         var permalink = createPermaLinkInputField(permalinkHREF);
         permalinkContainer.appendChild(permalink);
         if (isAgentWorkspace) {
-            var actionHeader = comments[i].querySelector('.omnilog-header-actions');
-            var commentHeader = actionHeader.parentElement;
             commentHeader.after(permalinkContainer);
         }
         else {
-            var commentHeader = comments[i].querySelector('.content .header');
             commentHeader.appendChild(permalinkContainer);
         }
     }
