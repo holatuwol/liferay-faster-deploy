@@ -43,8 +43,7 @@ def get_jira_cookie():
 
         r = requests.get(jira_base_url + '/rest/auth/1/session', cookies=jira_cookie)
 
-        if True:
-        #if r.status_code != 200:
+        if r.status_code != 200:
             jira_cookie = None
 
     if jira_cookie is not None:
@@ -92,8 +91,6 @@ def get_issues(jql, fields):
     r = requests.get(search_url, cookies=get_jira_cookie(), params=payload)
 
     issues = {}
-
-    print(r.status_code)
 
     if r.status_code != 200:
         return issues
