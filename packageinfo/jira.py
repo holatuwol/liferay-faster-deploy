@@ -41,9 +41,10 @@ def get_jira_cookie():
             jira_cookie_name: jira_cookie_value
         }
 
-        r = requests.get(jira_base_url + '/auth/1/session', cookies=jira_cookie)
+        r = requests.get(jira_base_url + '/rest/auth/1/session', cookies=jira_cookie)
 
-        if r.status_code != 200:
+        if True:
+        #if r.status_code != 200:
             jira_cookie = None
 
     if jira_cookie is not None:
@@ -64,10 +65,8 @@ def get_jira_cookie():
 
         return None
 
-    response_json = r.json()
-
-    jira_cookie_name = response_json['session']['name']
-    jira_cookie_value = response_json['session']['value']
+    jira_cookie_name = 'JSESSIONID'
+    jira_cookie_value = r.cookies[jira_cookie_name]
 
     git.config('--global', 'jira.session-cookie-name', jira_cookie_name)
     git.config('--global', 'jira.session-cookie-value', jira_cookie_value)
@@ -79,41 +78,43 @@ def get_jira_cookie():
     return jira_cookie
 
 def get_issues(jql, fields):
-	start_at = 0
+    start_at = 0
 
-	payload = {
-		'jql': jql,
-		'startAt': start_at,
-		'maxResults': 1000,
-		'fields': fields
-	}
+    payload = {
+        'jql': jql,
+        'startAt': start_at,
+        'maxResults': 1000,
+        'fields': fields
+    }
 
-	search_url = jira_base_url + '/rest/api/2/search'
+    search_url = jira_base_url + '/rest/api/2/search'
 
-	r = requests.get(search_url, cookies=get_jira_cookie(), params=payload)
+    r = requests.get(search_url, cookies=get_jira_cookie(), params=payload)
 
-	issues = {}
+    issues = {}
 
-	if r.status_code != 200:
-		return issues
+    print(r.status_code)
 
-	response_json = r.json()
+    if r.status_code != 200:
+        return issues
 
-	for issue in response_json['issues']:
-		issues[issue['key']] = issue
+    response_json = r.json()
 
-	while start_at + len(response_json['issues']) < response_json['total']:
-		start_at += len(response_json['issues'])
-		payload['startAt'] = start_at
+    for issue in response_json['issues']:
+        issues[issue['key']] = issue
 
-		r = requests.get(search_url, params=payload)
+    while start_at + len(response_json['issues']) < response_json['total']:
+        start_at += len(response_json['issues'])
+        payload['startAt'] = start_at
 
-		if r.status_code != 200:
-			return issues
+        r = requests.get(search_url, params=payload)
 
-		response_json = r.json()
+        if r.status_code != 200:
+            return issues
 
-		for issue in response_json['issues']:
-			issues[issue['key']] = issue
+        response_json = r.json()
 
-	return issues
+        for issue in response_json['issues']:
+            issues[issue['key']] = issue
+
+    return issues
