@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        15.4
+// @version        15.5
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -22,7 +22,7 @@ if (window.location.hostname == '24475.apps.zdusercontent.com') {
     styleElement.textContent = "\nbody {\n  overflow-y: hidden;\n}\n";
 }
 else {
-    styleElement.textContent = "\na.downloading {\n  color: #999;\n}\n\na.downloading::after {\n  content: ' (downloading...)';\n  color: #999;\n}\n\na.generating {\n  color: #999;\n}\n\na.generating::after {\n  content: ' (generating...)';\n  color: #999;\n}\n\narticle {\n  border-top: 1px solid #ebebeb;\n}\n\ndiv.lesa-ui-subtitle {\n  display: flex;\n  flex-direction: column;\n}\n\n.lesa-ui-attachments,\n.lesa-ui-knowledge-capture {\n  display: flex;\n  flex-direction: column;\n  margin-bottom: 0.5em;\n}\n\n#attachments-modal .lesa-ui-attachments,\n#description-modal .lesa-ui-description {\n  margin: 0.5em;\n}\n\n#description-modal .event {\n  border-top: 0px;\n}\n\n.lesa-ui-attachment-info {\n  display: grid;\n  grid-gap: 0em 1em;\n  grid-template-columns: 1em auto;\n  margin: 0.5em;\n}\n\n.lesa-ui-attachment-info input {\n  margin-left: 0.5em;\n}\n\n.lesa-ui-attachment-info .lesa-ui-attachment-extra-info {\n  grid-column: 1 / 2 span;\n  padding: 0.2em 0.5em;\n  text-align: right;\n  margin-bottom: 0.5em;\n}\n\n.lesa-ui-attachment-info .lesa-ui-attachment-extra-info:not(:first-child) {\n  margin-top: 1em;\n  border-top: 1px solid lightgray;\n  padding-top: 0.5em;\n}\n\n.lesa-ui-description .lesa-ui-attachment-info .lesa-ui-attachment-extra-info {\n  border-top: 1px solid #eee;\n}\n\n.lesa-ui-attachment-info a {\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n\n.lesa-ui-attachments-bulk-download {\n  margin-top: 0.5em;\n  text-align: right;\n  text-decoration: underline;\n}\n\n.lesa-ui-attachments-label,\n.lesa-ui-knowledge-capture-label {\n  font-weight: 600;\n  margin-right: 1em;\n  white-space: nowrap;\n}\n\n.lesa-ui-knowledge-capture-label:not(:first-child) {\n  margin-top: 1em;\n}\n\n.lesa-ui-knowledge-capture ul {\n  margin-left: 1em;\n}\n\n.lesa-ui-description {\n  font-weight: normal;\n}\n\n.lesa-ui-description > div {\n  margin-bottom: 2em;\n}\n\n.lesa-ui-description .zd-comment,\n.lesa-ui-description .lesa-ui-attachment-info {\n  max-height: 25em;\n  overflow-y: auto;\n}\n\n.lesa-ui-event-highlighted,\narticle.lesa-ui-event-highlighted {\n  background-color: #eee;\n  scroll-margin-top: 1em;\n}\n\n.lesa-ui-form-field {\n  display: flex;\n  flex-direction: column;\n  margin-bottom: 0.5em;\n}\n\n.lesa-ui-permalink {\n  margin-bottom: 1em;\n}\n\n.lesa-ui-permalink > input,\n.lesa-ui-form-field.lesa-ui-helpcenter > input {\n  background-color: transparent;\n  border: 0px;\n  font-size: 12px;\n  margin: 0px;\n  padding: 0px;\n  width: 100%;\n}\n\n.lesa-ui-stackedit-icon {\n  height: 16px;\n  width: 16px;\n  padding: 4px;\n}\n\n.mast .editable .lesa-ui-subject {\n  background-color: #fff;\n  font-size: 20px;\n  font-weight: 600;\n  resize: vertical;\n  text-align: left;\n  width: 100%;\n}\n\n.header.mast > .round-avatar {\n  display: none;\n}\n\n.lesa-ui-priority:not(:empty) {\n  margin-top: 6px;\n  margin-bottom: 8px;\n}\n\n.lesa-ui-priority span {\n  color: #fff;\n  border-radius: 2px;\n  font-size: 10px;\n  font-weight: 600;\n  line-height: 16px;\n  margin-right: 8px;\n  padding: 2px;\n  text-align: center;\n  text-transform: uppercase;\n  width: 6em;\n}\n\n.lesa-ui-priority a {\n  color: #fff;\n  text-decoration: none;\n}\n\n.lesa-ui-priority > *:last-child {\n  margin-right: 0;\n}\n\n.lesa-ui-priority .lesa-ui-subject-emojis a {\n  color: #000;\n}\n\n.lesa-ui-subpriority {\n  border: 1px #eee dashed;\n  font-size: 0.8em;\n}\n\n.lesa-ui-priority-minor,\n.lesa-ui-subpriority-none,\n.lesa-ui-subpriority-low {\n  background-color: #0066cc;\n}\n\n.lesa-ui-priority-major,\n.lesa-ui-subpriority-medium {\n  background-color: #f2783b;\n}\n\n.lesa-ui-priority-critical,\n.lesa-ui-subpriority-high {\n  background-color: #bf1e2d;\n}\n\n.lesa-ui-priority .lesa-ui-subject-emojis {\n  background-color: #f8f9f9;\n}\n\n.lesa-ui-subject-emojis a {\n  font-size: 1.5em;\n  font-weight: normal;\n  margin-left: 2px;\n  margin-right: 2px;\n}\n\n.rich_text .comment_input .lesa-ui-playbook-reminder,\n#editor-view .lesa-ui-playbook-reminder {\n  display: none;\n}\n\n.rich_text .comment_input.is-public .lesa-ui-playbook-reminder:not(:empty),\n#editor-view .lesa-ui-playbook-reminder:not(:empty) {\n  background-color: #eef2fa;\n  border: 1px solid #d8dcde;\n  border-radius: 0 3px 0 0 !important;\n  color: #2e5aac;\n  display: block;\n  margin-bottom: 1em;\n  padding: 10px;\n}\n\n.rich_text .comment_input.is-public .lesa-ui-playbook-reminder a,\n#editor-view .lesa-ui-playbook-reminder a {\n  text-decoration: underline;\n}\n\n#modals .modal-header,\n#attachments-modal .modal-header {\n  cursor: move;\n}\n\n.fNgWaW {\n  padding: 2px 0px;\n  height: 14px;\n  width: 1px;\n  background: rgb(194, 200, 204);\n  display: flex;\n  margin: 0px 8px;\n}\n\nbutton[data-test-id=\"omnilog-jump-button\"] {\n  display: none;\n}\n";
+    styleElement.textContent = "\na.downloading {\n  color: #999;\n}\n\na.downloading::after {\n  content: ' (downloading...)';\n  color: #999;\n}\n\na.generating {\n  color: #999;\n}\n\na.generating::after {\n  content: ' (generating...)';\n  color: #999;\n}\n\narticle {\n  border-top: 1px solid #ebebeb;\n}\n\ndiv.lesa-ui-subtitle {\n  display: flex;\n  flex-direction: column;\n}\n\n.lesa-ui-attachments,\n.lesa-ui-knowledge-capture {\n  display: flex;\n  flex-direction: column;\n  margin-bottom: 0.5em;\n}\n\n#attachments-modal .lesa-ui-attachments,\n#description-modal .lesa-ui-description {\n  margin: 0.5em;\n}\n\n#description-modal .event {\n  border-top: 0px;\n}\n\n.lesa-ui-attachment-info {\n  display: grid;\n  grid-gap: 0em 1em;\n  grid-template-columns: 1em auto;\n  margin: 0.5em;\n}\n\n.lesa-ui-attachment-info input {\n  margin-left: 0.5em;\n}\n\n.lesa-ui-attachment-info .lesa-ui-attachment-extra-info {\n  grid-column: 1 / 2 span;\n  padding: 0.2em 0.5em;\n  text-align: right;\n  margin-bottom: 0.5em;\n}\n\n.lesa-ui-attachment-info .lesa-ui-attachment-extra-info:not(:first-child) {\n  margin-top: 1em;\n  border-top: 1px solid lightgray;\n  padding-top: 0.5em;\n}\n\n.lesa-ui-description .lesa-ui-attachment-info .lesa-ui-attachment-extra-info {\n  border-top: 1px solid #eee;\n}\n\n.lesa-ui-attachment-info a {\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n\n.lesa-ui-attachments-bulk-download {\n  margin-top: 0.5em;\n  text-align: right;\n  text-decoration: underline;\n}\n\n.lesa-ui-attachments-label,\n.lesa-ui-knowledge-capture-label {\n  font-weight: 600;\n  margin-right: 1em;\n  white-space: nowrap;\n}\n\n.lesa-ui-knowledge-capture-label:not(:first-child) {\n  margin-top: 1em;\n}\n\n.lesa-ui-knowledge-capture ul {\n  margin-left: 1em;\n}\n\n.lesa-ui-description {\n  font-weight: normal;\n}\n\n.lesa-ui-description > div {\n  margin-bottom: 2em;\n}\n\n.lesa-ui-description .zd-comment,\n.lesa-ui-description .lesa-ui-attachment-info {\n  max-height: 25em;\n  overflow-y: auto;\n}\n\n.lesa-ui-event-highlighted,\narticle.lesa-ui-event-highlighted {\n  background-color: #eee;\n  scroll-margin-top: 1em;\n}\n\n.lesa-ui-form-field {\n  display: flex;\n  flex-direction: column;\n  margin-bottom: 0.5em;\n}\n\n.lesa-ui-permalink {\n  margin-bottom: 1em;\n}\n\n.lesa-ui-permalink > input,\n.lesa-ui-form-field.lesa-ui-helpcenter > input {\n  background-color: transparent;\n  border: 0px;\n  font-size: 12px;\n  margin: 0px;\n  padding: 0px;\n  width: 100%;\n}\n\n.lesa-ui-stackedit-icon {\n  height: 16px;\n  width: 16px;\n  padding: 4px;\n}\n\n.mast .editable .lesa-ui-subject {\n  background-color: #fff;\n  font-size: 20px;\n  font-weight: 600;\n  resize: vertical;\n  text-align: left;\n  width: 100%;\n}\n\n.header.mast > .round-avatar {\n  display: none;\n}\n\n.lesa-ui-priority:not(:empty) {\n  margin-top: 6px;\n  margin-bottom: 8px;\n}\n\n.lesa-ui-priority span {\n  color: #fff;\n  border-radius: 2px;\n  font-size: 10px;\n  font-weight: 600;\n  line-height: 16px;\n  margin-right: 8px;\n  padding: 0.5em;\n  text-align: center;\n  text-transform: uppercase;\n  width: 6em;\n}\n\n.lesa-ui-priority a {\n  color: #fff;\n  text-decoration: none;\n}\n\n.lesa-ui-priority > *:last-child {\n  margin-right: 0;\n}\n\n.lesa-ui-priority .lesa-ui-subject-emojis a {\n  color: #000;\n}\n\n.lesa-ui-subpriority {\n  border: 1px #eee dashed;\n  font-size: 0.8em;\n}\n\n.lesa-ui-priority-minor,\n.lesa-ui-subpriority-none,\n.lesa-ui-subpriority-low {\n  background-color: #0066cc;\n}\n\n.lesa-ui-priority-major,\n.lesa-ui-subpriority-medium {\n  background-color: #f2783b;\n}\n\n.lesa-ui-priority-critical,\n.lesa-ui-subpriority-high {\n  background-color: #bf1e2d;\n}\n\n.lesa-ui-priority .lesa-ui-subject-emojis {\n  background-color: #f8f9f9;\n}\n\n.lesa-ui-subject-emojis a {\n  font-size: 1.5em;\n  font-weight: normal;\n  margin-left: 2px;\n  margin-right: 2px;\n}\n\n.rich_text .comment_input .lesa-ui-playbook-reminder,\n#editor-view .lesa-ui-playbook-reminder {\n  display: none;\n}\n\n.rich_text .comment_input.is-public .lesa-ui-playbook-reminder:not(:empty),\n#editor-view .lesa-ui-playbook-reminder:not(:empty) {\n  background-color: #eef2fa;\n  border: 1px solid #d8dcde;\n  border-radius: 0 3px 0 0 !important;\n  color: #2e5aac;\n  display: block;\n  margin-bottom: 1em;\n  padding: 10px;\n}\n\n.rich_text .comment_input.is-public .lesa-ui-playbook-reminder a,\n#editor-view .lesa-ui-playbook-reminder a {\n  text-decoration: underline;\n}\n\n#modals .modal-header,\n#attachments-modal .modal-header {\n  cursor: move;\n}\n\n.fNgWaW {\n  padding: 2px 0px;\n  height: 14px;\n  width: 1px;\n  background: rgb(194, 200, 204);\n  display: flex;\n  margin: 0px 8px;\n}\n\nbutton[data-test-id=\"omnilog-jump-button\"] {\n  display: none;\n}\n";
 }
 var head = document.querySelector('head');
 head.appendChild(styleElement);
@@ -325,6 +325,232 @@ function setAccountInfo(callback) {
     xhr.open('GET', accountDetailsURL);
     xhr.send();
 }
+function addExtendedPremiumSupportMarker(priorityElement, ticketId, tags) {
+    var href = 'https://liferay.atlassian.net/wiki/spaces/SUPPORT/pages/1998783040/EOSL+Guide+For+Support';
+    for (var i = 0; i < tags.length; i++) {
+        if (tags[i].indexOf('eps') == -1) {
+            continue;
+        }
+        var premiumElement = document.createElement('span');
+        premiumElement.classList.add('lesa-ui-priority-minor');
+        var premiumLink = document.createElement('a');
+        premiumLink.textContent = 'Extended Premium Support';
+        premiumLink.href = href;
+        premiumLink.target = '_blank';
+        premiumElement.appendChild(premiumLink);
+        priorityElement.appendChild(premiumElement);
+        return;
+    }
+    var propertyBoxes = getPropertyBoxes();
+    for (var i = 0; i < propertyBoxes.length; i++) {
+        var version = getProductVersion(propertyBoxes[i]);
+        if ((version == '6.x') || (version == '7.0') || (version == '7.1')) {
+            var eoslElement = document.createElement('span');
+            eoslElement.classList.add('lesa-ui-priority-major');
+            var eoslLink = document.createElement('a');
+            eoslLink.textContent = 'End of Software Life';
+            eoslLink.href = href;
+            eoslLink.target = '_blank';
+            eoslElement.appendChild(eoslLink);
+            priorityElement.appendChild(eoslElement);
+            return;
+        }
+    }
+}
+function addCriticalMarker(priorityElement, ticketInfo, tagSet) {
+    var subpriority = ticketInfo.ticket.priority || 'none';
+    if ((subpriority != 'high') && (subpriority != 'urgent')) {
+        return;
+    }
+    var criticalMarkers = ['production', 'production_completely_shutdown', 'production_severely_impacted_inoperable'].filter(Set.prototype.has.bind(tagSet));
+    if (criticalMarkers.length >= 2) {
+        var criticalElement = document.createElement('span');
+        criticalElement.classList.add('lesa-ui-priority-critical');
+        criticalElement.textContent = tagSet.has('platinum') ? 'platinum critical' : 'critical';
+        priorityElement.appendChild(criticalElement);
+    }
+}
+function addCustomerTypeMarker(priorityElement, tagSet) {
+    if (tagSet.has('service_solution')) {
+        var solutionElement = document.createElement('span');
+        solutionElement.classList.add('lesa-ui-priority-minor');
+        var solutionLink = document.createElement('a');
+        solutionLink.textContent = 'Service Portal Customer';
+        var query = 'tags:service_solution';
+        solutionLink.href = 'https://' + document.location.host + '/agent/search/1?type=organization&q=' + encodeURIComponent(query);
+        solutionElement.appendChild(solutionLink);
+        priorityElement.appendChild(solutionElement);
+    }
+    if (tagSet.has('commerce_solution')) {
+        var solutionElement = document.createElement('span');
+        solutionElement.classList.add('lesa-ui-priority-minor');
+        var solutionLink = document.createElement('a');
+        solutionLink.textContent = 'Commerce Portal Customer';
+        var query = 'tags:commerce_solution';
+        solutionLink.href = 'https://' + document.location.host + '/agent/search/1?type=organization&q=' + encodeURIComponent(query);
+        solutionElement.appendChild(solutionLink);
+        priorityElement.appendChild(solutionElement);
+    }
+}
+/**
+ * Checks whether the assignee text corresponds to the specified support region.
+ */
+function isSupportRegion(assigneeText, regionText) {
+    if (assigneeText.indexOf('- ' + regionText) != -1) {
+        return true;
+    }
+    if (assigneeText.indexOf('/' + regionText + '/') != -1) {
+        return true;
+    }
+    return false;
+}
+/**
+ * Retrieves the support region
+ */
+function getSupportRegions(assigneeText) {
+    var supportRegions = [];
+    if (isSupportRegion(assigneeText, 'AU')) {
+        supportRegions.push('Australia');
+    }
+    if (isSupportRegion(assigneeText, 'BR')) {
+        supportRegions.push('Brazil');
+    }
+    if (isSupportRegion(assigneeText, 'CN')) {
+        supportRegions.push('China');
+    }
+    if (isSupportRegion(assigneeText, 'HU')) {
+        supportRegions.push("Hungary");
+    }
+    if (isSupportRegion(assigneeText, 'IN')) {
+        supportRegions.push('India');
+    }
+    if (isSupportRegion(assigneeText, 'JP')) {
+        supportRegions.push('Japan');
+    }
+    if ((assigneeText.indexOf('Spain Pod') == 0) || (isSupportRegion(assigneeText, 'ES'))) {
+        supportRegions.push('Spain');
+    }
+    if (isSupportRegion(assigneeText, 'US')) {
+        supportRegions.push('US');
+    }
+    return new Set(supportRegions.map(function (x) { return x.toLowerCase(); }));
+}
+var middleEastCountries = new Set([
+    'Saudi Arabia', 'United Arab Emirates', 'Qatar', 'Kuwait', 'Bahrein', 'Oman', 'Jordan', 'Iraq', 'Lebanon'
+]);
+function addRegionMarker(priorityElement, ticketInfo, ticketContainer) {
+    if (ticketInfo.organizations.length == 0) {
+        return;
+    }
+    var organizationFields = ticketInfo.organizations[0].organization_fields;
+    if (middleEastCountries.has(organizationFields.country)) {
+        var customerCountryElement = document.createElement('span');
+        customerCountryElement.classList.add('lesa-ui-priority-minor');
+        var customerCountryLink = document.createElement('a');
+        customerCountryLink.textContent = 'country: middle east';
+        var query = Array.from(middleEastCountries).map(function (x) { return 'country:"' + x + '"'; }).join(' ');
+        customerCountryLink.href = 'https://' + document.location.host + '/agent/search/1?type=organization&q=' + encodeURIComponent(query);
+        customerCountryElement.appendChild(customerCountryLink);
+        priorityElement.appendChild(customerCountryElement);
+    }
+    var assigneeElement = ticketContainer.querySelector(isAgentWorkspace ? 'div[data-test-id="assignee-field-selected-agent-tag"] > span, div[data-test-id="assignee-field-selected-group-tag"]' : '.js-zero-state-ticket-tutorial-assignee-field > div > div');
+    if (assigneeElement && (ticketInfo.ticket.status != 'closed')) {
+        var customerRegion = organizationFields.support_region;
+        var assigneeText = (assigneeElement.textContent || '').trim();
+        var assigneeRegions = getSupportRegions(assigneeText);
+        if (!assigneeRegions.has(customerRegion)) {
+            var customerRegionElement = document.createElement('span');
+            customerRegionElement.classList.add('lesa-ui-priority-major');
+            var customerRegionLink = document.createElement('a');
+            customerRegionLink.textContent = 'customer region: ' + customerRegion;
+            var query = 'support_region:' + customerRegion;
+            customerRegionLink.href = 'https://' + document.location.host + '/agent/search/1?type=organization&q=' + encodeURIComponent(query);
+            customerRegionElement.appendChild(customerRegionLink);
+            priorityElement.appendChild(customerRegionElement);
+        }
+    }
+}
+/**
+ * Generates a text string representing the emojis corresponding to the provided list of tags.
+ */
+var emojiMap = {
+    'cas_fire': '⚠️',
+    'cas_hot': '⚠️',
+    'cas_priority': '⚠️'
+};
+var isEmoji = Set.prototype.has.bind(new Set(Object.keys(emojiMap)));
+function getEmojiText(tags) {
+    return tags.filter(isEmoji).map(function (x) { return emojiMap[x]; }).join('');
+}
+/**
+ * Generates an emoji for the given tag.
+ */
+function getEmojiAnchorTag(tag) {
+    var anchor = document.createElement('a');
+    anchor.title = 'tags:' + tag;
+    anchor.textContent = emojiMap[tag];
+    anchor.href = 'https://' + document.location.host + '/agent/search/1?q=' + encodeURIComponent('tags:' + tag);
+    return anchor;
+}
+/**
+ * Converts a list of tags into a span holding a bunch of
+ * emojis with 'title' attributes.
+ */
+function getEmojiAnchorTags(tags) {
+    var matchingTags = tags.filter(isEmoji);
+    if (matchingTags.length == 0) {
+        return null;
+    }
+    var emojiContainer = document.createElement('span');
+    emojiContainer.classList.add('lesa-ui-subject-emojis');
+    var emojis = matchingTags.map(getEmojiAnchorTag);
+    for (var i = 0; i < emojis.length; i++) {
+        emojiContainer.appendChild(emojis[i]);
+    }
+    return emojiContainer;
+}
+/**
+ * Add a marker to show the LESA priority on the ticket.
+ */
+function addPriorityMarker(header, conversation, ticketId, ticketInfo) {
+    var ticketContainer = header.closest('.main_panes');
+    var priorityElement = header.querySelector('.lesa-ui-priority');
+    if (priorityElement) {
+        if (priorityElement.getAttribute('data-ticket-id') == ticketId) {
+            return;
+        }
+        var parentElement = priorityElement.parentElement;
+        parentElement.removeChild(priorityElement);
+    }
+    priorityElement = document.createElement('div');
+    priorityElement.classList.add('lesa-ui-priority');
+    priorityElement.setAttribute('data-ticket-id', ticketId);
+    // Check to see if the ticket matches the rules for a regular
+    // high priority ticket (production, severely impacted or worse)
+    var tags = (ticketInfo && ticketInfo.ticket && ticketInfo.ticket.tags) || [];
+    var tagSet = new Set(tags);
+    addExtendedPremiumSupportMarker(priorityElement, ticketId, tags);
+    addCriticalMarker(priorityElement, ticketInfo, tagSet);
+    addCustomerTypeMarker(priorityElement, tagSet);
+    addRegionMarker(priorityElement, ticketInfo, ticketContainer);
+    var emojiContainer = getEmojiAnchorTags(tags);
+    if (emojiContainer != null) {
+        priorityElement.appendChild(emojiContainer);
+    }
+    if (isAgentWorkspace) {
+        var viaLabel = conversation.querySelector('div[data-test-id="omni-header-via-label"]');
+        var divider = document.createElement('div');
+        divider.classList.add('Divider-sc-2k6bz0-9');
+        if (priorityElement.childNodes.length > 0) {
+            divider.classList.add('fNgWaW');
+        }
+        viaLabel.before(divider);
+        divider.before(priorityElement);
+    }
+    else {
+        header.insertBefore(priorityElement, header.querySelector('.round-avatar'));
+    }
+}
 /**
  * Generate a single dummy field to add to the sidebar.
  */
@@ -424,7 +650,7 @@ function getPatcherPortalAccountsHREF(path, params) {
  */
 function getProductVersion(propertyBox) {
     var parentElement = propertyBox.parentElement;
-    var productVersionField = parentElement.querySelector('.custom_field_360006076471 .zd-selectmenu-base-content');
+    var productVersionField = parentElement.querySelector('.custom_field_360006076471 div[data-garden-id="dropdowns.select"]');
     if (!productVersionField) {
         return '';
     }
@@ -497,8 +723,12 @@ function addJIRASearchField(propertyBox, ticketId) {
     var jiraSearchItems = [jiraSearchLinkContainer];
     generateFormField(propertyBox, 'lesa-ui-jirasearch', 'JIRA Search', jiraSearchItems);
 }
-function hideSidebarSelectOption(hiddenMenuItemTexts) {
-    var menu = document.querySelector('.zd-state-focus.zd-state-open ul');
+function hideSidebarSelectOption(parentElement, hiddenMenuItemTexts) {
+    var menu = parentElement.querySelector('ul[data-garden-id="dropdowns.menu"]');
+    if (menu == null) {
+        setTimeout(hideSidebarSelectOption.bind(null, parentElement, hiddenMenuItemTexts), 500);
+        return;
+    }
     var menuItems = Array.from(menu.querySelectorAll('li'));
     var menuItemCount = menuItems.length;
     for (var i = 0; i < menuItems.length; i++) {
@@ -519,7 +749,7 @@ function hideSidebarSelectOptions(propertyBox, ticketId, ticketInfo) {
     var workspaceElement = propertyBox.closest('.workspace');
     var longTermResolutionButton = workspaceElement.querySelector('.custom_field_360013378112');
     if (longTermResolutionButton) {
-        longTermResolutionButton.onclick = hideSidebarSelectOption.bind(null, new Set(['Documentation (Archived)', 'Partner Audit']));
+        longTermResolutionButton.onclick = hideSidebarSelectOption.bind(null, longTermResolutionButton, new Set(['Partner Audit']));
     }
 }
 /**
@@ -527,40 +757,32 @@ function hideSidebarSelectOptions(propertyBox, ticketId, ticketInfo) {
  * with similar tags.
  */
 function checkSidebarTags() {
-    var tags = Array.from(document.querySelectorAll('.zd-tag-item a'));
-    for (var i = 0; i < tags.length; i++) {
-        var anchor = tags[i];
-        if (anchor.href || !anchor.textContent) {
+    var spans = Array.from(document.querySelectorAll('div[data-garden-id="tags.tag_view"] span'));
+    for (var i = 0; i < spans.length; i++) {
+        var span = spans[i];
+        if (span.querySelector('a') || !span.textContent) {
             continue;
         }
-        anchor.title = 'tags:' + anchor.textContent;
-        anchor.href = 'https://' + document.location.host + '/agent/search/1?q=' + encodeURIComponent('tags:' + anchor.textContent);
-        anchor.target = '_blank';
+        var href = 'https://' + document.location.host + '/agent/search/1?q=' + encodeURIComponent('tags:' + span.textContent);
+        span.innerHTML = '<a href="' + href + '" title="tags:' + span.textContent.replace(/"/, '&quot;') + '" target="_blank">' + span.textContent + '</a>';
     }
+}
+function getPropertyBoxes(ticketId) {
+    var propertyBoxes = Array.from(document.querySelectorAll('.property_box'));
+    var visiblePropertyBoxes = propertyBoxes.filter(function (it) {
+        var workspaceElement = it.closest('.workspace');
+        return workspaceElement && workspaceElement.style.display != 'none';
+    });
+    if (ticketId) {
+        return visiblePropertyBoxes.filter(function (it) { return it.getAttribute('data-ticket-id') != ticketId; });
+    }
+    return visiblePropertyBoxes;
 }
 /**
  * Update the sidebar with any ticket details we can pull from the ZenDesk API.
  */
 function updateSidebarBoxContainer(ticketId, ticketInfo) {
-    var sidebars = document.querySelectorAll('.sidebar_box_container');
-    if (sidebars.length == 0) {
-        return;
-    }
-    var propertyBoxes = [];
-    for (var i = 0; i < sidebars.length; i++) {
-        var propertyBox = sidebars[i].querySelector('.property_box');
-        if (!propertyBox) {
-            continue;
-        }
-        var workspace = propertyBox.closest('.workspace');
-        if (workspace.style.display == 'none') {
-            continue;
-        }
-        if (propertyBox.getAttribute('data-ticket-id') != ticketId) {
-            propertyBox.setAttribute('data-ticket-id', ticketId);
-            propertyBoxes.push(propertyBox);
-        }
-    }
+    var propertyBoxes = getPropertyBoxes(ticketId);
     if (propertyBoxes.length == 0) {
         return;
     }
@@ -793,91 +1015,6 @@ function createAttachmentsContainer(ticketId, ticketInfo, conversation) {
     return attachmentsContainer;
 }
 /**
- * Generates a text string representing the emojis corresponding to the provided list of tags.
- */
-var emojiMap = {
-    'cas_fire': '⚠️',
-    'cas_hot': '⚠️',
-    'cas_priority': '⚠️'
-};
-var isEmoji = Set.prototype.has.bind(new Set(Object.keys(emojiMap)));
-function getEmojiText(tags) {
-    return tags.filter(isEmoji).map(function (x) { return emojiMap[x]; }).join('');
-}
-/**
- * Generates an emoji for the given tag.
- */
-function getEmojiAnchorTag(tag) {
-    var anchor = document.createElement('a');
-    anchor.title = 'tags:' + tag;
-    anchor.textContent = emojiMap[tag];
-    anchor.href = 'https://' + document.location.host + '/agent/search/1?q=' + encodeURIComponent('tags:' + tag);
-    return anchor;
-}
-/**
- * Converts a list of tags into a span holding a bunch of
- * emojis with 'title' attributes.
- */
-function getEmojiAnchorTags(tags) {
-    var matchingTags = tags.filter(isEmoji);
-    if (matchingTags.length == 0) {
-        return null;
-    }
-    var emojiContainer = document.createElement('span');
-    emojiContainer.classList.add('lesa-ui-subject-emojis');
-    var emojis = matchingTags.map(getEmojiAnchorTag);
-    for (var i = 0; i < emojis.length; i++) {
-        emojiContainer.appendChild(emojis[i]);
-    }
-    return emojiContainer;
-}
-/**
- * Checks whether the assignee text corresponds to the specified support region.
- */
-function isSupportRegion(assigneeText, regionText) {
-    if (assigneeText.indexOf('- ' + regionText) != -1) {
-        return true;
-    }
-    if (assigneeText.indexOf('/' + regionText + '/') != -1) {
-        return true;
-    }
-    return false;
-}
-/**
- * Retrieves the support region
- */
-function getSupportRegions(assigneeText) {
-    var supportRegions = [];
-    if (isSupportRegion(assigneeText, 'AU')) {
-        supportRegions.push('Australia');
-    }
-    if (isSupportRegion(assigneeText, 'BR')) {
-        supportRegions.push('Brazil');
-    }
-    if (isSupportRegion(assigneeText, 'CN')) {
-        supportRegions.push('China');
-    }
-    if (isSupportRegion(assigneeText, 'HU')) {
-        supportRegions.push("Hungary");
-    }
-    if (isSupportRegion(assigneeText, 'IN')) {
-        supportRegions.push('India');
-    }
-    if (isSupportRegion(assigneeText, 'JP')) {
-        supportRegions.push('Japan');
-    }
-    if ((assigneeText.indexOf('Spain Pod') == 0) || (isSupportRegion(assigneeText, 'ES'))) {
-        supportRegions.push('Spain');
-    }
-    if (isSupportRegion(assigneeText, 'US')) {
-        supportRegions.push('US');
-    }
-    return new Set(supportRegions.map(function (x) { return x.toLowerCase(); }));
-}
-var middleEastCountries = new Set([
-    'Saudi Arabia', 'United Arab Emirates', 'Qatar', 'Kuwait', 'Bahrein', 'Oman', 'Jordan', 'Iraq', 'Lebanon'
-]);
-/**
  * Add a sort button.
  */
 function addSortButton(conversation, header) {
@@ -900,103 +1037,6 @@ function addSortButton(conversation, header) {
         }
     };
     buttons.prepend(button);
-}
-/**
- * Add a marker to show the LESA priority on the ticket.
- */
-function addPriorityMarker(header, conversation, ticketId, ticketInfo) {
-    var ticketContainer = header.closest('.main_panes');
-    var priorityElement = header.querySelector('.lesa-ui-priority');
-    if (priorityElement) {
-        if (priorityElement.getAttribute('data-ticket-id') == ticketId) {
-            return;
-        }
-        var parentElement = priorityElement.parentElement;
-        parentElement.removeChild(priorityElement);
-    }
-    priorityElement = document.createElement('div');
-    priorityElement.classList.add('lesa-ui-priority');
-    priorityElement.setAttribute('data-ticket-id', ticketId);
-    // Check to see if the ticket matches the rules for a regular
-    // high priority ticket (production, severely impacted or worse)
-    var subpriority = ticketInfo.ticket.priority || 'none';
-    var tags = (ticketInfo && ticketInfo.ticket && ticketInfo.ticket.tags) || [];
-    var tagSet = new Set(tags);
-    if ((subpriority == 'high') || (subpriority == 'urgent')) {
-        var criticalMarkers = ['production', 'production_completely_shutdown', 'production_severely_impacted_inoperable'].filter(Set.prototype.has.bind(tagSet));
-        if (criticalMarkers.length >= 2) {
-            var criticalElement = document.createElement('span');
-            criticalElement.classList.add('lesa-ui-priority-critical');
-            criticalElement.textContent = tagSet.has('platinum') ? 'platinum critical' : 'critical';
-            priorityElement.appendChild(criticalElement);
-        }
-    }
-    if (tagSet.has('service_solution')) {
-        var solutionElement = document.createElement('span');
-        solutionElement.classList.add('lesa-ui-priority-minor');
-        var solutionLink = document.createElement('a');
-        solutionLink.textContent = 'Service Portal Customer';
-        var query = 'tags:service_solution';
-        solutionLink.href = 'https://' + document.location.host + '/agent/search/1?type=organization&q=' + encodeURIComponent(query);
-        solutionElement.appendChild(solutionLink);
-        priorityElement.appendChild(solutionElement);
-    }
-    if (tagSet.has('commerce_solution')) {
-        var solutionElement = document.createElement('span');
-        solutionElement.classList.add('lesa-ui-priority-minor');
-        var solutionLink = document.createElement('a');
-        solutionLink.textContent = 'Commerce Portal Customer';
-        var query = 'tags:commerce_solution';
-        solutionLink.href = 'https://' + document.location.host + '/agent/search/1?type=organization&q=' + encodeURIComponent(query);
-        solutionElement.appendChild(solutionLink);
-        priorityElement.appendChild(solutionElement);
-    }
-    if (ticketInfo.organizations.length > 0) {
-        var organizationFields = ticketInfo.organizations[0].organization_fields;
-        if (middleEastCountries.has(organizationFields.country)) {
-            var customerCountryElement = document.createElement('span');
-            customerCountryElement.classList.add('lesa-ui-priority-minor');
-            var customerCountryLink = document.createElement('a');
-            customerCountryLink.textContent = 'country: middle east';
-            var query = Array.from(middleEastCountries).map(function (x) { return 'country:"' + x + '"'; }).join(' ');
-            customerCountryLink.href = 'https://' + document.location.host + '/agent/search/1?type=organization&q=' + encodeURIComponent(query);
-            customerCountryElement.appendChild(customerCountryLink);
-            priorityElement.appendChild(customerCountryElement);
-        }
-        var assigneeElement = ticketContainer.querySelector(isAgentWorkspace ? 'div[data-test-id="assignee-field-selected-agent-tag"] > span, div[data-test-id="assignee-field-selected-group-tag"]' : '.js-zero-state-ticket-tutorial-assignee-field > div > div');
-        if (assigneeElement && (ticketInfo.ticket.status != 'closed')) {
-            var customerRegion = organizationFields.support_region;
-            var assigneeText = (assigneeElement.textContent || '').trim();
-            var assigneeRegions = getSupportRegions(assigneeText);
-            if (!assigneeRegions.has(customerRegion)) {
-                var customerRegionElement = document.createElement('span');
-                customerRegionElement.classList.add('lesa-ui-priority-major');
-                var customerRegionLink = document.createElement('a');
-                customerRegionLink.textContent = 'customer region: ' + customerRegion;
-                var query = 'support_region:' + customerRegion;
-                customerRegionLink.href = 'https://' + document.location.host + '/agent/search/1?type=organization&q=' + encodeURIComponent(query);
-                customerRegionElement.appendChild(customerRegionLink);
-                priorityElement.appendChild(customerRegionElement);
-            }
-        }
-    }
-    var emojiContainer = getEmojiAnchorTags(tags);
-    if (emojiContainer != null) {
-        priorityElement.appendChild(emojiContainer);
-    }
-    if (isAgentWorkspace) {
-        var viaLabel = conversation.querySelector('div[data-test-id="omni-header-via-label"]');
-        var divider = document.createElement('div');
-        divider.classList.add('Divider-sc-2k6bz0-9');
-        if (priorityElement.childNodes.length > 0) {
-            divider.classList.add('fNgWaW');
-        }
-        viaLabel.before(divider);
-        divider.before(priorityElement);
-    }
-    else {
-        header.insertBefore(priorityElement, header.querySelector('.round-avatar'));
-    }
 }
 /**
  * Replaces the input field for the 'subject' with something with line wrapping
