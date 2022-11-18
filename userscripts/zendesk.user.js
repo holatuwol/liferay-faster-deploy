@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        15.6
+// @version        15.7
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -325,36 +325,37 @@ function setAccountInfo(callback) {
     xhr.open('GET', accountDetailsURL);
     xhr.send();
 }
-function addExtendedPremiumSupportMarker(priorityElement, ticketId, tags) {
-    var href = 'https://liferay.atlassian.net/wiki/spaces/SUPPORT/pages/1998783040/EOSL+Guide+For+Support';
+function addServiceLifeMarker(priorityElement, ticketId, tags) {
+    var limitedSupport = false;
+    var endOfSoftwareLife = false;
+    var extendedPremiumSupport = false;
     for (var i = 0; i < tags.length; i++) {
-        if (tags[i].indexOf('eps') == -1) {
-            continue;
+        if (tags[i].indexOf('eps') != -1) {
+            extendedPremiumSupport = true;
+            break;
         }
-        var premiumElement = document.createElement('span');
-        premiumElement.classList.add('lesa-ui-priority-minor');
-        var premiumLink = document.createElement('a');
-        premiumLink.textContent = 'Extended Premium Support';
-        premiumLink.href = href;
-        premiumLink.target = '_blank';
-        premiumElement.appendChild(premiumLink);
-        priorityElement.appendChild(premiumElement);
-        return;
     }
-    var propertyBoxes = getPropertyBoxes();
-    for (var i = 0; i < propertyBoxes.length; i++) {
-        var version = getProductVersion(propertyBoxes[i]);
-        if ((version == '6.x') || (version == '7.0') || (version == '7.1')) {
-            var eoslElement = document.createElement('span');
-            eoslElement.classList.add('lesa-ui-priority-major');
-            var eoslLink = document.createElement('a');
-            eoslLink.textContent = 'End of Software Life';
-            eoslLink.href = href;
-            eoslLink.target = '_blank';
-            eoslElement.appendChild(eoslLink);
-            priorityElement.appendChild(eoslElement);
-            return;
-        }
+    var version = getProductVersion(tags);
+    if ((version == '6.x') || (version == '7.0') || (version == '7.1')) {
+        limitedSupport = true;
+        endOfSoftwareLife = true;
+    }
+    var serviceLifeLink = null;
+    var href = 'https://liferay.atlassian.net/wiki/spaces/SUPPORT/pages/1998783040/EOSL+Guide+For+Support';
+    if (extendedPremiumSupport) {
+        serviceLifeLink = createAnchorTag('Extended Premium Support', href);
+    }
+    else if (endOfSoftwareLife) {
+        serviceLifeLink = createAnchorTag('End of Software Life', href);
+    }
+    else if (limitedSupport) {
+        serviceLifeLink = createAnchorTag('Limited Support', href);
+    }
+    if (serviceLifeLink) {
+        var serviceLifeElement = document.createElement('span');
+        serviceLifeElement.classList.add('lesa-ui-priority-minor');
+        serviceLifeElement.appendChild(serviceLifeLink);
+        priorityElement.appendChild(serviceLifeElement);
     }
 }
 function addCriticalMarker(priorityElement, ticketInfo, tagSet) {
@@ -529,7 +530,7 @@ function addPriorityMarker(header, conversation, ticketId, ticketInfo) {
     // high priority ticket (production, severely impacted or worse)
     var tags = (ticketInfo && ticketInfo.ticket && ticketInfo.ticket.tags) || [];
     var tagSet = new Set(tags);
-    addExtendedPremiumSupportMarker(priorityElement, ticketId, tags);
+    addServiceLifeMarker(priorityElement, ticketId, tags);
     addCriticalMarker(priorityElement, ticketInfo, tagSet);
     addCustomerTypeMarker(priorityElement, tagSet);
     addRegionMarker(priorityElement, ticketInfo, ticketContainer);
@@ -648,18 +649,32 @@ function getPatcherPortalAccountsHREF(path, params) {
 /**
  * Retrieve the Liferay version from the sidebar.
  */
-function getProductVersion(propertyBox) {
-    var parentElement = propertyBox.parentElement;
-    var productVersionField = parentElement.querySelector('.custom_field_360006076471 div[data-garden-id="dropdowns.select"]');
-    if (!productVersionField) {
-        return '';
+function getProductVersion(tags) {
+    var propertyBoxes = getPropertyBoxes();
+    for (var i = 0; i < propertyBoxes.length; i++) {
+        var propertyBox = propertyBoxes[i];
+        var parentElement = propertyBox.parentElement;
+        var productVersionField = parentElement.querySelector('.custom_field_360006076471 div[data-garden-id="dropdowns.select"]');
+        if (productVersionField) {
+            var version = (productVersionField.textContent || '').trim();
+            if (version.indexOf('7.') == 0) {
+                return version;
+            }
+            if (version.indexOf('6.') == 0) {
+                return '6.x';
+            }
+        }
     }
-    var version = (productVersionField.textContent || '').trim();
-    if (version.indexOf('7.') == 0) {
-        return version;
-    }
-    if (version.indexOf('6.') == 0) {
-        return '6.x';
+    for (var i = 0; i < tags.length; i++) {
+        var tag = tags[i];
+        var x = tag.indexOf('7_');
+        if (x == 0) {
+            return '7.' + tag.charAt(2);
+        }
+        x = tag.indexOf('_7_');
+        if (x != -1) {
+            return '7.' + tag.charAt(x + 3);
+        }
     }
     return '';
 }
@@ -699,7 +714,7 @@ function addPatcherPortalField(propertyBox, ticketId, ticketInfo) {
             'accountEntryCode': accountCode
         });
         patcherPortalItems.push(createAnchorTag('All Builds', allBuildsLinkHREF));
-        var version = getProductVersion(propertyBox);
+        var version = getProductVersion(ticketInfo.ticket && ticketInfo.ticket.tags ? ticketInfo.ticket.tags : []);
         if (version) {
             var versionBuildsLinkHREF = getPatcherPortalAccountsHREF('/view', {
                 'patcherBuildAccountEntryCode': accountCode,
