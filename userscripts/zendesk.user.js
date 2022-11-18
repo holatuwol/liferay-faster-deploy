@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        15.5
+// @version        15.6
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -757,7 +757,7 @@ function hideSidebarSelectOptions(propertyBox, ticketId, ticketInfo) {
  * with similar tags.
  */
 function checkSidebarTags() {
-    var spans = Array.from(document.querySelectorAll('div[data-garden-id="tags.tag_view"] span'));
+    var spans = Array.from(document.querySelectorAll('.tags span'));
     for (var i = 0; i < spans.length; i++) {
         var span = spans[i];
         if (span.querySelector('a') || !span.textContent) {
