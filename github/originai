@@ -12,6 +12,14 @@ for remote_name in $(git remote); do
 	git remote set-head ${remote_name} -d
 done
 
+fixpack() {
+	echo "Checking ${1} ${2}"
+
+	if [ "" == "$(git for-each-ref refs/tags/${2})" ]; then
+		git fetch --no-tags ${1} tags/${2}:refs/tags/${2}
+	fi
+}
+
 UPSTREAM_CE=$(git remote -v | grep -F 'liferay/liferay-portal.git' | awk '{ print $1 }' | head -1)
 UPSTREAM_EE=$(git remote -v | grep -F 'liferay/liferay-portal-ee.git' | awk '{ print $1 }' | head -1)
 
@@ -29,6 +37,22 @@ if [ "" != "${UPSTREAM_CE}" ]; then
 			echo "Updating ${branch} on ${remote}"
 			git push -f ${remote} refs/remotes/${UPSTREAM_CE}/${branch}:refs/heads/${branch}
 		done
+	done
+
+	git ls-remote -t git@github.com:liferay/liferay-portal.git > /dev/shm/tags-ce.txt
+
+	for tag in $(cat /dev/shm/tags-ce.txt | \
+		awk '{ print $2 }' | grep '/[0-9]*.[0-9]*.[0-9]*-ga[0-9]*$' | \
+		cut -d'/' -f 3 | sort -t '.' -k 1,1n -k 2,2n -k 3,3n); do
+
+		fixpack git@github.com:liferay/liferay-portal.git ${tag}
+	done
+
+	for tag in $(cat /dev/shm/tags-ce.txt | \
+		awk '{ print $2 }' | grep '/[0-9]*.[0-9]*.[0-9]*.[0-9]*-ga[0-9]*$' | \
+		cut -d'/' -f 3 | sort -t '.' -k 1,1n -k 2,2n -k 3,3n -k 4,4n); do
+
+		fixpack git@github.com:liferay/liferay-portal.git ${tag}
 	done
 fi
 
@@ -59,5 +83,28 @@ if [ "" != "${UPSTREAM_EE}" ]; then
 			echo "Updating ${branch} on ${remote}"
 			git push -f ${remote} refs/remotes/${UPSTREAM_EE}/${branch}:refs/heads/${branch}
 		done
+	done
+
+	git ls-remote -t git@github.com:liferay/liferay-portal-ee.git > /dev/shm/tags-ee.txt
+
+	for tag in $(cat /dev/shm/tags-ee.txt | \
+		awk '{ print $2 }' | grep -e '/fix-pack-base-[0-9]*\(-private\)*$' | \
+		cut -d'/' -f 3 | sort -t '-' -k 4,4n); do
+
+		fixpack git@github.com:liferay/liferay-portal-ee.git ${tag}
+	done
+
+	for tag in $(cat /dev/shm/tags-ee.txt | \
+		awk '{ print $2 }' | grep -e '/fix-pack-\(de\|dxp\)-[0-9]*-[0-9]*\(-private\)*$' | \
+		cut -d'/' -f 3 | sort -t '-' -k 5,5n -k 4,4n); do
+
+		fixpack git@github.com:liferay/liferay-portal-ee.git ${tag}
+	done
+
+	for tag in $(cat /dev/shm/tags-ee.txt | \
+		awk '{ print $2 }' | grep -e '/[0-9]*.[0-9]*.[0-9]*-u[0-9]*$' | \
+		cut -d'/' -f 3 | sed 's/-u/./g' | sort -t '.' -k 1,1n -k 2,2n -k 3,3n -k 4,4n | sed 's/.\([0-9]*\)$/-u\1/g'); do
+
+		fixpack git@github.com:liferay/liferay-portal-ee.git ${tag}
 	done
 fi

@@ -192,7 +192,7 @@ fixpacks() {
 	fi
 
 	git ls-remote -t git@github.com:liferay/liferay-portal.git | \
-		awk '{ print $2 }' | grep '/[0-9]*.[0-9]*.[0-9]*-ga[0-9]*$' \
+		awk '{ print $2 }' | grep '/[0-9]*.[0-9]*.[0-9]*-ga[0-9]*$' | \
 		sort | cut -d'/' -f 3 > /var/www/html/builds/fixpacks/tags-ce.txt
 
 	for tag_id in $(cat /var/www/html/builds/fixpacks/tags-ce.txt); do
