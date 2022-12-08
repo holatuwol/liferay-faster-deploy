@@ -239,4 +239,4 @@ check_private_security_issues()
 update_help_center_links()
 
 with open('lsv_fixedin.json', 'w') as f:
-    json.dump(fix_versions, f, separators=(',', ':'))
+    json.dump(fix_versions, f, sort_keys=True, indent=2, separators=(',', ':'))
