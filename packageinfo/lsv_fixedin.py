@@ -116,10 +116,11 @@ def expand_fix_version(issue_key, issue):
 
     return fix_version
 
+fix_issues = {}
 fix_versions = {}
 
 def update_fix_versions(query):
-    issues = get_issues(query, ['fixVersions', 'labels'])
+    issues = get_issues(query, ['summary', 'fixVersions', 'labels'])
 
     for issue_key, issue in issues.items():
         fix_version = expand_fix_version(issue_key, issue)
@@ -127,11 +128,30 @@ def update_fix_versions(query):
         if len(fix_version) == 0:
             continue
 
+        fix_issues[issue_key] = issue
         fix_versions[issue_key] = fix_version
 
 def check_public_security_issues():
     update_fix_versions('project = LPE AND labels = LSV AND (resolution in (Completed, Fixed) OR labels = sev-1) ORDER BY key')
 
+def check_private_security_issues():
+    update_fix_versions('project = LPE AND labels != LSV AND component = "Security Vulnerability" AND resolution in (Completed, Fixed) ORDER BY key')
+    update_fix_versions('project = LPE AND level = Private and (summary ~ "Use of library" OR summary ~ "LSV")')
+
+    pattern = re.compile('LSV-([0-9]+)')
+
+    for issue_key, fix_version in fix_versions.items():
+        if 'lsv' in fix_version:
+            continue
+
+        summary = fix_issues[issue_key]['fields']['summary']
+
+        matcher = pattern.search(summary)
+
+        if matcher is not None:
+            fix_version['lsv'] = int(matcher[1])
+
+def update_help_center_links():
     lsv_articles = get_lsv_articles()
 
     if len(lsv_articles) > 0:
@@ -140,18 +160,16 @@ def check_public_security_issues():
                 continue
 
             lsv_ticket_name = 'LSV-%d' % fix_version['lsv']
-            sev = fix_version['sev'] if 'sev' in fix_version else 3
+            sev = 'SEV-%d' % fix_version['sev'] if 'sev' in fix_version else 'other'
 
             if lsv_ticket_name in lsv_articles:
                 fix_version['hc'] = lsv_articles[lsv_ticket_name]
-            elif sev < 3:
-                print('%s (sev-%d) is missing a security advisory' % (lsv_ticket_name, sev))
-
-def check_private_security_issues():
-    update_fix_versions('project = LPE AND labels != LSV AND component = "Security Vulnerability" AND resolution in (Completed, Fixed) ORDER BY key')
+            elif sev == 'SEV-1' or sev == 'SEV-2':
+                print('%s (%s) is missing a security advisory' % (lsv_ticket_name, sev))
 
 check_public_security_issues()
 check_private_security_issues()
+update_help_center_links()
 
 with open('lsv_fixedin.json', 'w') as f:
     json.dump(fix_versions, f, separators=(',', ':'))
