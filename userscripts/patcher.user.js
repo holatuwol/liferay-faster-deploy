@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        7.1
+// @version        7.2
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -279,8 +279,12 @@ function get62FixPack(versionId) {
                     baseTag = gitHubURL.substring(gitHubURL.indexOf('...') + 3);
                 }
             };
+            xhr2.setRequestHeader('Cache-Control', 'no-cache, no-store, max-age=0');
+            xhr2.setRequestHeader('Pragma', 'no-cache');
             xhr2.send(null);
         };
+        xhr1.setRequestHeader('Cache-Control', 'no-cache, no-store, max-age=0');
+        xhr1.setRequestHeader('Pragma', 'no-cache');
         xhr1.send(null);
     }
     if (!baseTag) {
@@ -591,6 +595,8 @@ function compareBuildFixes() {
             var xhr = new XMLHttpRequest();
             xhr.open('GET', '/group/guest/patching/-/osb_patcher/builds/' + queryString.substring(11) + '/fixes');
             xhr.onload = processBuildFixes.bind(null, xhr);
+            xhr.setRequestHeader('Cache-Control', 'no-cache, no-store, max-age=0');
+            xhr.setRequestHeader('Pragma', 'no-cache');
             xhr.send(null);
         }
     }
@@ -728,6 +734,8 @@ function replaceBuild() {
         var xhr = new XMLHttpRequest();
         xhr.open('GET', document.location.pathname + '/childBuilds');
         xhr.onload = processChildBuilds.bind(null, xhr, buildNode);
+        xhr.setRequestHeader('Cache-Control', 'no-cache, no-store, max-age=0');
+        xhr.setRequestHeader('Pragma', 'no-cache');
         xhr.send(null);
     }
     var originalBuildNode = querySelector('patcherBuildOriginalName');
@@ -977,7 +985,7 @@ function getMissingTicketList(lsvTickets) {
         buildName = buildNameNode.value.split(',');
     }
     var ticketList = new Set(buildName.map(function (x) { return x.trim(); }));
-    var missingTicketList = [[], [], [], []];
+    var missingTicketList = [[], [], [], [], []];
     var fixPackNumber = 0;
     if (buildNumber == '6210') {
         fixPackNumber = (tagName.indexOf('portal-') == 0) ? parseInt(tagName.substring('portal-'.length)) : 0;
@@ -987,7 +995,7 @@ function getMissingTicketList(lsvTickets) {
     }
     for (var ticketName in lsvTickets) {
         if (!ticketList.has(ticketName) && lsvTickets[ticketName][buildNumber] && lsvTickets[ticketName][buildNumber] > fixPackNumber) {
-            var severity = lsvTickets[ticketName]['sev'] || 3;
+            var severity = lsvTickets[ticketName]['sev'] || 4;
             missingTicketList[severity].push(ticketName);
         }
     }
@@ -998,12 +1006,12 @@ function getMissingTicketTableRow(lsvTickets, missingTickets, severity) {
         return '';
     }
     var lsvList = [
-        '<tr><th class="nowrap">SEV-', severity, '</th><td>'
+        '<tr><th class="nowrap">', severity == 4 ? 'other' : 'SEV-' + severity, '</th><td>'
     ];
+    if ((severity != 3) && (missingTickets.length == 0)) {
+        return '';
+    }
     if ((severity == 1) || (severity == 2)) {
-        if (missingTickets.length == 0) {
-            return '';
-        }
         lsvList.push('<span class="compact">');
         lsvList.push(missingTickets.map(function (x) { return getTicketLink('', x, x); }).join(', '));
         lsvList.push('</span>');
@@ -1034,7 +1042,7 @@ function getMissingTicketTableRow(lsvTickets, missingTickets, severity) {
         lsvList.push('</dl></div>');
     }
     else {
-        lsvList.push('<span class="compact">', missingTickets.length, missingTickets.length == 1 ? ' ticket' : ' tickets', '</span><span class="verbose">', missingTickets.length == 0 ? 'none' : missingTickets.map(function (x) { return getTicketLink('', x, x); }).join(', '), '</span>');
+        lsvList.push('<span class="compact">', '' + missingTickets.length, missingTickets.length == 1 ? ' ticket' : ' tickets', '</span><span class="verbose">', missingTickets.length == 0 ? 'none' : missingTickets.map(function (x) { return getTicketLink('', x, x); }).join(', '), '</span>');
     }
     lsvList.push('</td></tr>');
     return lsvList.join('');
@@ -1068,6 +1076,8 @@ function renderSecurityFixesSection() {
         projectVersionNode.addEventListener('change', updateMissingTicketTableListener);
         updateMissingTicketTableListener();
     };
+    xhr.setRequestHeader('Cache-Control', 'no-cache, no-store, max-age=0');
+    xhr.setRequestHeader('Pragma', 'no-cache');
     xhr.send(null);
 }
 function addSecurityFixesSection() {
