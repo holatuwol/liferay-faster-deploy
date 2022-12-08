@@ -51,7 +51,7 @@ def get_bpr_fix_pack_label(issue_key, base_version):
                 max_fix_pack_number = 9999
 
     if max_fix_pack_number == 0:
-        return '%s9999%s' % (prefix, suffix)
+        max_fix_pack_number = 9999
 
     print('https://issues.liferay.com/browse/%s' % issue_key, '%s%s%s' % (prefix, max_fix_pack_number, suffix))
     return '%s%s%s' % (prefix, max_fix_pack_number, suffix)
@@ -129,22 +129,29 @@ def update_fix_versions(query):
 
         fix_versions[issue_key] = fix_version
 
-update_fix_versions('project = LPE AND labels = LSV AND (resolution in (Completed, Fixed) OR labels = sev-1) ORDER BY key')
+def check_public_security_issues():
+    update_fix_versions('project = LPE AND labels = LSV AND (resolution in (Completed, Fixed) OR labels = sev-1) ORDER BY key')
 
-lsv_articles = get_lsv_articles()
+    lsv_articles = get_lsv_articles()
 
-if len(lsv_articles) > 0:
-    for fix_version in fix_versions.values():
-        if 'lsv' not in fix_version:
-            continue
+    if len(lsv_articles) > 0:
+        for fix_version in fix_versions.values():
+            if 'lsv' not in fix_version:
+                continue
 
-        lsv_ticket_name = 'LSV-%d' % fix_version['lsv']
-        sev = fix_version['sev'] if 'sev' in fix_version else 3
+            lsv_ticket_name = 'LSV-%d' % fix_version['lsv']
+            sev = fix_version['sev'] if 'sev' in fix_version else 3
 
-        if lsv_ticket_name in lsv_articles:
-            fix_version['hc'] = lsv_articles[lsv_ticket_name]
-        elif sev < 3:
-            print('%s (sev-%d) is missing a security advisory' % (lsv_ticket_name, sev))
+            if lsv_ticket_name in lsv_articles:
+                fix_version['hc'] = lsv_articles[lsv_ticket_name]
+            elif sev < 3:
+                print('%s (sev-%d) is missing a security advisory' % (lsv_ticket_name, sev))
+
+def check_private_security_issues():
+    update_fix_versions('project = LPE AND labels != LSV AND component = "Security Vulnerability" AND resolution in (Completed, Fixed) ORDER BY key')
+
+check_public_security_issues()
+check_private_security_issues()
 
 with open('lsv_fixedin.json', 'w') as f:
     json.dump(fix_versions, f, separators=(',', ':'))
