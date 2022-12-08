@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           JIRA When javascript.enabled=false
 // @namespace      holatuwol
-// @version        3.0
+// @version        3.1
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/jira_lite.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/jira_lite.user.js
 // @match          https://issues.redhat.com/*
@@ -178,6 +178,8 @@ function addComments() {
     });
     var restURL = 'https://' + document.location.host + '/rest/api/2/issue/' + getTicketId() + '/comment?expand=renderedBody';
     xhr.open('GET', restURL);
+    xhr.setRequestHeader('Cache-Control', 'no-cache, no-store, max-age=0');
+    xhr.setRequestHeader('Pragma', 'no-cache');
     xhr.send();
 }
 function hideMenus() {
@@ -237,6 +239,8 @@ function setMenuActions(e) {
         menuContainerElement.setAttribute('aria-hidden', 'false');
         menuContainerElement.style.zIndex = '3000';
     });
+    xhr.setRequestHeader('Cache-Control', 'no-cache, no-store, max-age=0');
+    xhr.setRequestHeader('Pragma', 'no-cache');
     xhr.send(null);
     e.stopPropagation();
     e.preventDefault();
@@ -529,6 +533,8 @@ function updateProjectKey(projectElement, projectKeyElement, issueTypeElement) {
     });
     var restURL = 'https://' + document.location.host + '/rest/api/2/issue/createmeta?projectKeys=' + newProjectKey + '&fields=projects.issuetypes.fields';
     xhr.open('GET', restURL);
+    xhr.setRequestHeader('Cache-Control', 'no-cache, no-store, max-age=0');
+    xhr.setRequestHeader('Pragma', 'no-cache');
     xhr.send();
 }
 function makeProjectSelectUsable() {

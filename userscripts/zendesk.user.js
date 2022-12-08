@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        15.8
+// @version        15.9
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -79,6 +79,8 @@ function downloadFile(href, filename, callback) {
     else {
         xhr.open('GET', href);
     }
+    xhr.setRequestHeader('Cache-Control', 'no-cache, no-store, max-age=0');
+    xhr.setRequestHeader('Pragma', 'no-cache');
     xhr.send(null);
 }
 /**
@@ -219,6 +221,8 @@ function checkTicketMetadata(ticketId, callback) {
         '?include=organizations'
     ].join('');
     xhr.open('GET', ticketDetailsURL);
+    xhr.setRequestHeader('Cache-Control', 'no-cache, no-store, max-age=0');
+    xhr.setRequestHeader('Pragma', 'no-cache');
     xhr.send();
 }
 /**
@@ -256,6 +260,8 @@ function checkUser(ticketId, ticketInfo, callback) {
         '?include=organizations'
     ].join('');
     xhr.open('GET', userDetailsURL);
+    xhr.setRequestHeader('Cache-Control', 'no-cache, no-store, max-age=0');
+    xhr.setRequestHeader('Pragma', 'no-cache');
     xhr.send();
 }
 /**
@@ -294,6 +300,8 @@ function checkEvents(ticketId, callback, audits, pageId) {
         pageId
     ].join('');
     xhr.open('GET', auditEventsURL);
+    xhr.setRequestHeader('Cache-Control', 'no-cache, no-store, max-age=0');
+    xhr.setRequestHeader('Pragma', 'no-cache');
     xhr.send();
 }
 /**
@@ -323,6 +331,8 @@ function setAccountInfo(callback) {
         '/api/v2/account.json'
     ].join('');
     xhr.open('GET', accountDetailsURL);
+    xhr.setRequestHeader('Cache-Control', 'no-cache, no-store, max-age=0');
+    xhr.setRequestHeader('Pragma', 'no-cache');
     xhr.send();
 }
 function addServiceLifeMarker(priorityElement, ticketId, tags) {
