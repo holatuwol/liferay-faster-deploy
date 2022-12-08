@@ -9,7 +9,10 @@ import subprocess
 from jira import get_issues
 from lsv_helpcenter import get_lsv_articles
 
-def get_bpr_fix_pack_label(issue_key, base_version):
+def get_prefix_suffix(base_version):
+    prefix = None
+    suffix = None
+
     if base_version == '6.1':
         prefix = 'liferay-fixpack-portal-'
         suffix = '-6130'
@@ -25,8 +28,11 @@ def get_bpr_fix_pack_label(issue_key, base_version):
     elif base_version == '7.4':
         prefix = 'liferay-update-dxp-'
         suffix = '-%s13' % ''.join(base_version.split('.', 3)[0:2])
-    else:
-        return None
+
+    return prefix, suffix
+
+def get_bpr_fix_pack_label(issue_key, base_version):
+    prefix, suffix = get_prefix_suffix(base_version)
 
     linked_issues = get_issues(
         'project = BPR and issueFunction in linkedIssuesOf("issue in linkedIssues(%s)")' % issue_key,
@@ -56,6 +62,59 @@ def get_bpr_fix_pack_label(issue_key, base_version):
     print('https://issues.liferay.com/browse/%s' % issue_key, '%s%s%s' % (prefix, max_fix_pack_number, suffix))
     return '%s%s%s' % (prefix, max_fix_pack_number, suffix)
 
+def get_lps_fix_pack_labels(issue_key):
+    linked_issues = get_issues('project = LPS AND key in linkedIssues(%s)' % issue_key, ['fixVersions'])
+
+    lps_labels = []
+
+    for linked_issue in linked_issues.values():
+        for fix_version in linked_issue['fields']['fixVersions']:
+            fix_version_name = fix_version['name']
+
+            for fix_branch in ['6.1', '6.2', '7.0', '7.1', '7.2', '7.3']:
+                if fix_version_name.find(fix_branch) != 0:
+                    continue
+
+                pos = fix_version_name.find('FP')
+
+                if pos == -1:
+                    continue
+
+                update = int(fix_version_name[pos+2:])
+                prefix, suffix = get_prefix_suffix(fix_branch)
+                lps_labels.append('%s%s%s' % (prefix, update, suffix))
+
+            for fix_branch in ['7.3', '7.4']:
+                if fix_version_name.find(fix_branch) != 0:
+                    continue
+
+                pos = fix_version_name.find('U')
+
+                if pos == -1:
+                    continue
+
+                update = int(fix_version_name[pos+1:])
+                prefix, suffix = get_prefix_suffix(fix_branch)
+                lps_labels.append('%s%s%s' % (prefix, update, suffix))
+
+            for fix_branch in ['7.4']:
+                if fix_version_name.find(fix_branch) != 0:
+                    continue
+
+                pos = fix_version_name.find('GA')
+
+                if pos == -1:
+                    continue
+
+                update = int(fix_version_name[pos+2:])
+                prefix, suffix = get_prefix_suffix(fix_branch)
+                lps_labels.append('%s%s%s' % (prefix, update, suffix))
+
+    if len(lps_labels) == 0:
+        print(issue_key, linked_issues)
+
+    return lps_labels
+
 def get_fix_pack_labels(issue_key, issue):
     fix_pack_labels = [label for label in issue['fields']['labels'] if label.find('liferay-fixpack-') == 0 or label.find('liferay-update-') == 0]
 
@@ -65,6 +124,9 @@ def get_fix_pack_labels(issue_key, issue):
         fix_versions = [label[:label.find('-')] for label in security_pending_labels]
         fix_branches = [version[0:-3] + '.' + version[-3:-2] for version in fix_versions]
         fix_pack_labels.extend([get_bpr_fix_pack_label(issue_key, fix_branch) for fix_branch in fix_branches])
+
+    if len(fix_pack_labels) == 0:
+        fix_pack_labels.extend(get_lps_fix_pack_labels(issue_key))
 
     return fix_pack_labels
 
@@ -81,7 +143,7 @@ def expand_fix_version(issue_key, issue):
     if len(lsv_labels) > 0:
         fix_version['lsv'] = int(lsv_labels[0][4:])
 
-    for fix_branch in ['6.1', '6.2', '7.0', '7.1', '7.2', '7.3']:
+    for fix_branch in ['6.1', '6.2', '7.0', '7.1', '7.2', '7.3', '7.4']:
         base_version = '.'.join(fix_branch.split('.', 3)[0:2])
         build_number = '';
 
@@ -120,9 +182,12 @@ fix_issues = {}
 fix_versions = {}
 
 def update_fix_versions(query):
-    issues = get_issues(query, ['summary', 'fixVersions', 'labels'])
+    issues = get_issues(query, ['summary', 'labels'])
 
     for issue_key, issue in issues.items():
+        if issue_key in fix_versions:
+            continue
+
         fix_version = expand_fix_version(issue_key, issue)
 
         if len(fix_version) == 0:
@@ -136,8 +201,9 @@ def check_public_security_issues():
 
 def check_private_security_issues():
     update_fix_versions('project = LPE AND labels != LSV AND component = "Security Vulnerability" AND resolution in (Completed, Fixed) ORDER BY key')
-    update_fix_versions('project = LPE AND level = Private and (summary ~ "Use of library" OR summary ~ "LSV")')
+    update_fix_versions('project = LPE AND level = Private and (summary ~ "Use of library" OR summary ~ "LSV*")')
 
+def update_help_center_links():
     pattern = re.compile('LSV-([0-9]+)')
 
     for issue_key, fix_version in fix_versions.items():
@@ -148,10 +214,11 @@ def check_private_security_issues():
 
         matcher = pattern.search(summary)
 
-        if matcher is not None:
-            fix_version['lsv'] = int(matcher[1])
+        if matcher is None:
+            continue
 
-def update_help_center_links():
+        fix_version['lsv'] = int(matcher[1])
+
     lsv_articles = get_lsv_articles()
 
     if len(lsv_articles) > 0:
