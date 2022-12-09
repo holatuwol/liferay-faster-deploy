@@ -171,7 +171,7 @@ class MultiThreadDump:
 		# each thread dump.
 
 		df = DataFrame(
-			rows, columns = thread_names, index = row_names)
+			rows, columns = list(thread_names), index = row_names)
 
 		return df
 
