@@ -6,57 +6,60 @@ s3upload() {
 	. ${SCRIPT_FOLDER}/s3upload $1
 }
 
-# Make sure the packageinfo files are up to date
-
-AVAILABLE_VERSIONS="$(find ${PACKAGEINFO_ROOT} -mindepth 1 -maxdepth 1 -type d | sed 's@^.*/@@g' | sort | cut -d'.' -f 1,2)"
-
-if [ "update" == "${1}" ]; then
-	. $(dirname ${BASH_SOURCE[0]})/../setopts
-	. ${SCRIPT_FOLDER}/packageinfo
-
-	if [ "" == "${2}" ]; then
-		if [ "" != "${PACKAGEINFO_ROOT}" ]; then
-			pushd ${PACKAGEINFO_ROOT}
-
-			for folder in ${AVAILABLE_VERSIONS}; do
-				if [ ! -d ${folder}.x/metadata ]; then
-					metadata_zip="metadata-$(echo ${folder} | tr -d '.')x.zip"
-					cd ${folder}
-					mkdir metadata
-					cd metadata
-					aws s3 cp s3://mdang.grow/${metadata_zip} ${metadata_zip}.gz
-					gunzip ${metadata_zip}.gz
-					unzip ${metadata_zip}
-					rm ${metadata_zip}
-					cd ../..
-				fi
-			done
-
-			popd
-
-			for version in ${AVAILABLE_VERSIONS}; do
-				packageinfo_release ${PACKAGEINFO_ROOT}/${version}.x/portal ${version} $(echo ${version} | tr -d '.')
-			done
-		fi
-	else
-		packageinfo_tag $2
+update_all() {
+	if [ "" == "${PACKAGEINFO_ROOT}" ]; then
+		return
 	fi
-fi
 
-# Generate the JSON files
+	pushd ${PACKAGEINFO_ROOT}
 
-echo 'Generating JSON files...'
+	for folder in ${AVAILABLE_VERSIONS}; do
+		if [ ! -d ${folder}.x/metadata ]; then
+			metadata_zip="metadata-$(echo ${folder} | tr -d '.')x.zip"
+			cd ${folder}.x
+			mkdir metadata
+			cd metadata
+			aws s3 cp s3://mdang.grow/${metadata_zip} ${metadata_zip}.gz
+			gunzip ${metadata_zip}.gz
+			unzip ${metadata_zip}
+			rm ${metadata_zip}
+			cd ../..
+		fi
+	done
 
-if [ "" != "${PACKAGEINFO_ROOT}" ]; then
-	echo "${AVAILABLE_VERSIONS}" | awk '{ print "'${PACKAGEINFO_ROOT}'/" $1 ".x" }' | xargs python ${SCRIPT_FOLDER}/packageinfojson.py
-	echo "${AVAILABLE_VERSIONS}" | awk '{ print "'${PACKAGEINFO_ROOT}'/" $1 ".x" }' | xargs python ${SCRIPT_FOLDER}/requireschemajson.py
-fi
+	popd
 
-PORTAL_SOURCE_ROOT=${PACKAGEINFO_ROOT}/7.0.x/portal ${SCRIPT_FOLDER}/jsversions > dxpjslibrary.json
+	for version in ${AVAILABLE_VERSIONS}; do
+		packageinfo_release ${PACKAGEINFO_ROOT}/${version}.x/portal ${version} $(echo ${version} | tr -d '.')
+	done
+}
 
-# Upload the files to the designated bucket
+update_one() {
+	if [ "" == "${PACKAGEINFO_ROOT}" ]; then
+		return
+	fi
 
-if [ "" != "${S3_BUCKET}" ]; then
+	pushd ${PACKAGEINFO_ROOT}/7.0.x/portal
+	packageinfo_tag $1
+	popd
+}
+
+generate_json() {
+	echo 'Generating JSON files...'
+
+	if [ "" != "${PACKAGEINFO_ROOT}" ]; then
+		echo "${AVAILABLE_VERSIONS}" | awk '{ print "'${PACKAGEINFO_ROOT}'/" $1 ".x" }' | xargs python ${SCRIPT_FOLDER}/packageinfojson.py
+		echo "${AVAILABLE_VERSIONS}" | awk '{ print "'${PACKAGEINFO_ROOT}'/" $1 ".x" }' | xargs python ${SCRIPT_FOLDER}/requireschemajson.py
+	fi
+
+	PORTAL_SOURCE_ROOT=${PACKAGEINFO_ROOT}/7.0.x/portal ${SCRIPT_FOLDER}/jsversions > dxpjslibrary.json
+}
+
+upload_json() {
+	if [ "" == "${S3_BUCKET}" ]; then
+		return
+	fi
+
 	for file in dxppackages dxpmodules dxpschemas dxpjslibrary mpmodules; do
 		s3upload ${file}.json
 
@@ -68,16 +71,40 @@ if [ "" != "${S3_BUCKET}" ]; then
 		popd > /dev/null
 	done
 
-	if [ "" != "${PACKAGEINFO_ROOT}" ]; then
-		pushd /tmp > /dev/null
-
-		for version in ${AVAILABLE_VERSIONS}; do
-			short_version=$(echo "${version}" | tr -d '.')
-			rm -f metadata-${short_version}x.zip
-			zip -jqqr metadata-${short_version}x.zip ${PACKAGEINFO_ROOT}/${version}.x/metadata
-			s3upload metadata-${short_version}x.zip
-		done
-
-		popd > /dev/null
+	if [ "" == "${PACKAGEINFO_ROOT}" ]; then
+		return
 	fi
+
+	pushd /tmp > /dev/null
+
+	for version in ${AVAILABLE_VERSIONS}; do
+		short_version=$(echo "${version}" | tr -d '.')
+		rm -f metadata-${short_version}x.zip
+		zip -jqqr metadata-${short_version}x.zip ${PACKAGEINFO_ROOT}/${version}.x/metadata
+		s3upload metadata-${short_version}x.zip
+	done
+
+	popd > /dev/null
+}
+
+# Make sure the packageinfo files are up to date
+
+AVAILABLE_VERSIONS="$(find ${PACKAGEINFO_ROOT} -mindepth 1 -maxdepth 1 -type d | sed 's@^.*/@@g' | sort | cut -d'.' -f 1,2)"
+
+if [ "update" == "${1}" ]; then
+	pushd ${PACKAGEINFO_ROOT}/7.0.x/portal
+	. $(dirname ${BASH_SOURCE[0]})/../setopts
+	. ${SCRIPT_FOLDER}/packageinfo
+	popd
+
+	if [ "" == "${2}" ]; then
+		update_all
+		generate_json
+		upload_json
+	else
+		update_one ${2}
+	fi
+else
+	generate_json
+	upload_json
 fi
