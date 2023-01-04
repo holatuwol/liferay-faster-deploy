@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        16.0
+// @version        16.1
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -1222,6 +1222,7 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
     // Generate something to hold all of our attachments.
     if (isAgentWorkspace) {
         addHeaderLinkModal('description-modal', 'Description', header, conversation, createDescriptionContainer.bind(null, ticketId, ticketInfo, conversation));
+        addHeaderLinkModal('description-modal', 'Fast Track', header, conversation, createKnowledgeCaptureContainer.bind(null, ticketId, ticketInfo, conversation));
         addHeaderLinkModal('attachments-modal', 'Attachments', header, conversation, createAttachmentsContainer.bind(null, ticketId, ticketInfo, conversation));
         addSortButton(conversation, header);
     }
