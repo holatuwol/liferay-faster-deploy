@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        16.1
+// @version        16.2
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -1124,7 +1124,12 @@ function createKnowledgeCaptureContainer(ticketId, ticketInfo, conversation) {
     var otherArticleList = document.createElement('ul');
     Array.from(conversation.querySelectorAll('a[href*="/hc/"]')).reduce(function (list, x) {
         var item = document.createElement('li');
-        item.appendChild(x.cloneNode(true));
+        if (x.textContent != x.getAttribute('href')) {
+            item.appendChild(document.createTextNode(x.textContent + ' - '));
+        }
+        var link = x.cloneNode(true);
+        link.textContent = link.href;
+        item.appendChild(link);
         list.appendChild(item);
         return list;
     }, otherArticleList);
@@ -1133,13 +1138,16 @@ function createKnowledgeCaptureContainer(ticketId, ticketInfo, conversation) {
     }
     var knowledgeCaptureContainer = document.createElement('div');
     knowledgeCaptureContainer.classList.add('lesa-ui-knowledge-capture');
-    if (fastTrackList.childNodes.length > 0) {
-        var fastTrackLabel = document.createElement('div');
-        fastTrackLabel.classList.add('lesa-ui-knowledge-capture-label');
-        fastTrackLabel.innerHTML = (fastTrackList.childNodes.length == 1) ? 'Fast Track Article:' : 'Fast Track Articles:';
-        knowledgeCaptureContainer.appendChild(fastTrackLabel);
-        knowledgeCaptureContainer.appendChild(fastTrackList);
+    var fastTrackLabel = document.createElement('div');
+    fastTrackLabel.classList.add('lesa-ui-knowledge-capture-label');
+    fastTrackLabel.innerHTML = (fastTrackList.childNodes.length == 1) ? 'Fast Track Article:' : 'Fast Track Articles:';
+    knowledgeCaptureContainer.appendChild(fastTrackLabel);
+    if (fastTrackList.childNodes.length == 0) {
+        var item = document.createElement('li');
+        item.textContent = 'No matching articles.';
+        fastTrackList.appendChild(item);
     }
+    knowledgeCaptureContainer.appendChild(fastTrackList);
     if (otherArticleList.childNodes.length > 0) {
         var otherArticleLabel = document.createElement('div');
         otherArticleLabel.classList.add('lesa-ui-knowledge-capture-label');
@@ -1247,14 +1255,6 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
     }
 }
 function createDescriptionContainer(ticketId, ticketInfo, conversation) {
-    var showMoreButton = document.querySelector('button[data-test-id="convolog-show-more-button"]');
-    if (showMoreButton) {
-        showMoreButton.click();
-        return null;
-    }
-    if (document.querySelector('[role="progressbar"]')) {
-        return null;
-    }
     var comments = conversation.querySelectorAll(isAgentWorkspace ? 'article' : '.event .zd-comment');
     if (comments.length == 0) {
         return null;
@@ -1700,16 +1700,26 @@ function initializeModal(conversation, contentWrapper, callback) {
     var content = callback();
     var loadingElement = contentWrapper.querySelector('.loading');
     if (content == null) {
-        if (!loadingElement) {
-            loadingElement = document.createElement('div');
-            loadingElement.classList.add('loading');
+        var showMoreButton = document.querySelector('button[data-test-id="convolog-show-more-button"]');
+        if (showMoreButton) {
+            if (!loadingElement) {
+                loadingElement = document.createElement('div');
+                loadingElement.classList.add('loading');
+                contentWrapper.appendChild(loadingElement);
+            }
+            var commentCount = conversation.querySelectorAll('article').length;
+            loadingElement.innerHTML = 'Loading older comments (' + commentCount + ' loaded so far)...';
             contentWrapper.appendChild(loadingElement);
+            showMoreButton.click();
+            setTimeout(initializeModal.bind(null, conversation, contentWrapper, callback), 500);
+            return;
         }
-        var commentCount = conversation.querySelectorAll(isAgentWorkspace ? 'article' : '.event .zd-comment').length;
-        loadingElement.innerHTML = 'Loading older comments (' + commentCount + ' loaded so far)...';
-        contentWrapper.appendChild(loadingElement);
-        setTimeout(initializeModal.bind(null, conversation, contentWrapper, callback), 500);
-        return;
+        if (document.querySelector('[role="progressbar"]')) {
+            setTimeout(initializeModal.bind(null, conversation, contentWrapper, callback), 500);
+            return;
+        }
+        content = document.createElement('div');
+        content.appendChild(document.createTextNode('No data found.'));
     }
     content.classList.add('app_view', 'apps_modal');
     if (loadingElement) {
