@@ -1,0 +1,95 @@
+<html>
+<head>
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+<!-- Optional theme -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+
+<!-- Latest compiled and minified JavaScript -->
+<script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+</head>
+<body>
+
+<div class="container" role="main">
+
+<h1>GitHub GraphQL API: Ticket Search</h1>
+
+<a href="https://docs.github.com/en/graphql/overview/explorer" target="_blank">https://docs.github.com/en/graphql/overview/explorer</a>
+
+<div class="form-group">
+
+<h2>Ticket</h2>
+<input type="text" onkeyup="updateQueryVariables();" class="form-control" name="ticket" placeholder="enter in the ticket to search for" />
+
+</div>
+
+<div class="form-group">
+
+<h2>GraphQL</h2>
+<textarea name="graphql" class="form-control" readonly rows="21" onfocus="this.select();">
+query ($query: String!) {
+  search(query: $query, type: ISSUE, last: 5) {
+    edges {
+      node {
+        ... on PullRequest {
+          author {
+            login
+          }
+          url
+        }
+      }
+    }
+  }
+  rateLimit {
+    limit
+    cost
+    remaining
+    resetAt
+  }
+}
+</textarea>
+
+<h2>Query Variables</h2>
+<textarea name="query-variables" class="form-control" readonly rows="21" onfocus="this.select();">
+{"query": ""}
+</textarea>
+
+</div>
+
+</div>
+
+</body>
+<script>
+var repoNames = [];
+var initializing = true;
+
+function updateQueryVariables() {
+	if (initializing) {
+		setTimeout(updateQueryVariables, 500);
+		return;
+	}
+
+	document.querySelector('textarea[name="query-variables"]').value = JSON.stringify({
+		query: 'is:pr ' + document.querySelector('input[name="ticket"]').value + ' ' + repoNames.join(' ')
+	});
+}
+
+var request = new XMLHttpRequest();
+var requestURL = 'https://s3-us-west-2.amazonaws.com/mdang.grow/findpulls.json';
+
+request.onreadystatechange = function() {
+	if (this.readyState == 4 && this.status == 200) {
+		var members = JSON.parse(this.responseText);
+		
+		repoNames = members.map(it => "repo:" + it + '/liferay-portal');
+
+		initializing = false;
+	}
+};
+
+request.open('GET', requestURL, true);
+request.send();
+</script>
+</html>
