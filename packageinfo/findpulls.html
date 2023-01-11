@@ -38,6 +38,7 @@ query ($query: String!) {
             login
           }
           url
+          createdAt
         }
       }
     }
@@ -83,7 +84,7 @@ request.onreadystatechange = function() {
 	if (this.readyState == 4 && this.status == 200) {
 		var members = JSON.parse(this.responseText);
 		
-		repoNames = members.map(it => "repo:" + it + '/liferay-portal');
+		repoNames = members.map(it => 'repo:' + it + '/liferay-portal repo:' + it + '/liferay-portal-ee');
 
 		initializing = false;
 	}
