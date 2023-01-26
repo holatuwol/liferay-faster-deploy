@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           JIRA with Dumb Quick Search
 // @namespace      holatuwol
-// @version        1.0
+// @version        1.1
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/jira_dumb_search.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/jira_dumb_search.user.js
 // @match          https://issues.liferay.com/*
@@ -10,24 +10,35 @@
 // @grant          none
 // ==/UserScript==
 
-var quickSearchForm = document.querySelector('form[action="/secure/QuickSearch.jspa"]');
+function fixQuickSearchForm() {
+  var inputField = document.querySelector('input[name="searchString"], input[name="jql"]');
 
-if (quickSearchForm) {
-  quickSearchForm.onsubmit = function() {
-    quickSearchForm.action = '/issues/';
+  if (!inputField) {
+    return true;
+  }
 
-    var inputField = quickSearchForm.querySelector('input[name="searchString"], input[name="jql"]');
+  inputField.setAttribute('name', 'jql');
 
-    if (inputField) {
-      inputField.name = 'jql';
+  var searchText = inputField.value;
 
-      if (inputField.value.indexOf('=') == -1 &&
-      	inputField.value.indexOf('~') == -1 &&
-      	inputField.value.indexOf('"') == -1) {
+  if (searchText.indexOf('=') != -1 ||
+    searchText.indexOf('~') != -1 ||
+    searchText.indexOf('"') != -1) {
 
-        inputField.value = 'text ~ "' + inputField.value + '"';
-        return true;
-      }
-    }
+    return true;
+  }
+
+  inputField.value = 'text ~ "' + searchText + '"';
+  return true;
+}
+
+function pollQuickSearchForm() {
+  var quickSearchForm = document.querySelector('form[action="/secure/QuickSearch.jspa"]');
+
+  if (quickSearchForm) {
+    quickSearchForm.setAttribute('action', '/issues/');
+    quickSearchForm.addEventListener('submit', fixQuickSearchForm);
   }
 }
+
+setInterval(pollQuickSearchForm, 1000);
