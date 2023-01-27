@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        16.2
+// @version        16.3
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -116,6 +116,14 @@ function getJiraSearchLink(text, ticketId) {
 var accountCodeCache = {};
 var organizationCache = {};
 var ticketInfoCache = {};
+var CUSTOM_FIELD_CHILD_OF = 360013377052;
+/**
+ * Returns the custom field value
+ */
+function getCustomFieldValue(ticketInfo, fieldId) {
+    var matchingFields = ticketInfo.ticket.custom_fields.filter(function (it) { return it.id == fieldId; });
+    return matchingFields.length == 0 ? null : matchingFields[0].value;
+}
 var accountInfo = null;
 /**
  * Retrieve the account code from the sidebar.
@@ -1162,18 +1170,8 @@ function createKnowledgeCaptureContainer(ticketId, ticketInfo, conversation) {
  * in order to preserve formatting when creating child tickets.
  */
 function isDummyComment(ticketInfo, comment) {
-    var isChildTicket = false;
-    var customFields = ticketInfo.ticket.custom_fields;
-    for (var i = 0; i < customFields.length; i++) {
-        var customField = customFields[i];
-        if (customField.id != 360013377052) {
-            continue;
-        }
-        if (customField.value && (customField.value.indexOf('child_of:') != -1)) {
-            isChildTicket = true;
-        }
-    }
-    if (!isChildTicket) {
+    var childOf = getCustomFieldValue(ticketInfo, CUSTOM_FIELD_CHILD_OF);
+    if (childOf == null || childOf.indexOf('child_of:') == -1) {
         return false;
     }
     var innerHTML = comment.innerHTML;
@@ -2072,9 +2070,7 @@ if (unsafeWindow.location.hostname == '24475.apps.zdusercontent.com') {
 else {
     setInterval(detachModalWindowHandler, 1000);
 }
-function addArticleCodeButton(toolbarContainer, tinymce) {
-    // Gets the buttons toolbar
-    var toolbar = toolbarContainer.querySelector('.ssc-view-3d4f1d68.ssc-group-f60b19bf');
+function addArticleCodeButton(toolbar, tinymce) {
     // Creates the code format container button
     var codeFormatButton = document.createElement('div');
     codeFormatButton.classList.add('ssc-view-3d4f1d68', 'src-components-EditorToolbar-ToolbarButton---button---2IfvR');
@@ -2159,14 +2155,14 @@ function addArticleSubmissionListeners(tinymce) {
     }
 }
 function addArticleFormattingButtons(tinymce) {
-    var toolbarContainers = Array.from(document.querySelectorAll('div[class*="ssc-container-84a82f2f src-components-EditorToolbar-index---bar---"]'));
-    for (var i = 0; i < toolbarContainers.length; i++) {
-        var toolbarContainer = toolbarContainers[i];
-        if (toolbarContainer.classList.contains('lesa-ui-stackedit')) {
+    var preButtons = Array.from(document.querySelectorAll('div[data-test-id="toolbarPreButton"]'));
+    for (var i = 0; i < preButtons.length; i++) {
+        var toolbar = preButtons[i].parentElement;
+        if (toolbar.classList.contains('lesa-ui-stackedit')) {
             continue;
         }
-        toolbarContainer.classList.add('lesa-ui-stackedit');
-        addArticleCodeButton(toolbarContainer, tinymce);
+        toolbar.classList.add('lesa-ui-stackedit');
+        addArticleCodeButton(toolbar, tinymce);
     }
 }
 function updateKnowledgeCenterEditor() {
