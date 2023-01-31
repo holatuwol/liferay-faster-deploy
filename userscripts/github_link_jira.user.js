@@ -42,6 +42,7 @@ var projects = {
   'LCP': 'services.liferay.com',
   'LPP': 'issues.liferay.com',
   'LPS': 'issues.liferay.com',
+  'LRAC': 'issues.liferay.com',
   'LRCI': 'issues.liferay.com',
   'LRDOCS': 'issues.liferay.com',
   'LRQA': 'issues.liferay.com'
