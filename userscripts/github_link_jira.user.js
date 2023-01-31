@@ -158,7 +158,7 @@ function checkCurrentURL() {
 
   replaceLinks(document.querySelectorAll(selectorString));
 
-  selector = ['span.js-issue-title','p.commit-title','.comment-body'];
+  selector = ['.js-issue-title','p.commit-title','.comment-body'];
   selectorString = selector.map(x => x + ':not([data-link-replaced="true"])').join(',');
 
   addJiraLinks(document.querySelectorAll(selectorString));
