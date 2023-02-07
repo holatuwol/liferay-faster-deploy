@@ -1,5 +1,6 @@
 <html>
 <head>
+<title>GitHub GraphQL API: Ticket Search</title>
 <!-- Latest compiled and minified CSS -->
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
 
@@ -73,9 +74,13 @@ function updateQueryVariables() {
 		return;
 	}
 
+	var ticketId = document.querySelector('input[name="ticket"]').value;
+
 	document.querySelector('textarea[name="query-variables"]').value = JSON.stringify({
-		query: 'is:pr "' + document.querySelector('input[name="ticket"]').value + '" ' + repoNames.join(' ')
+		query: 'is:pr "' + ticketId + '" ' + repoNames.join(' ')
 	});
+
+	window.history.replaceState(null, '', '?' + ticketId);
 }
 
 var request = new XMLHttpRequest();
