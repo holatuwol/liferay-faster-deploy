@@ -89,6 +89,11 @@ request.onreadystatechange = function() {
 
 		initializing = false;
 	}
+
+	if (document.location.search) {
+		document.querySelector('input[name="ticket"]').value = document.location.search.substring(1);
+		updateQueryVariables();
+	}
 };
 
 request.open('GET', requestURL, true);
