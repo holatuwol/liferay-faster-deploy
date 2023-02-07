@@ -37,6 +37,7 @@ query ($query: String!) {
           author {
             login
           }
+          title
           url
           createdAt
         }
@@ -73,7 +74,7 @@ function updateQueryVariables() {
 	}
 
 	document.querySelector('textarea[name="query-variables"]').value = JSON.stringify({
-		query: 'is:pr ' + document.querySelector('input[name="ticket"]').value + ' ' + repoNames.join(' ')
+		query: 'is:pr "' + document.querySelector('input[name="ticket"]').value + '" ' + repoNames.join(' ')
 	});
 }
 
