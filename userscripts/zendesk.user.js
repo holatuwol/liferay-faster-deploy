@@ -116,14 +116,6 @@ function getJiraSearchLink(text, ticketId) {
 var accountCodeCache = {};
 var organizationCache = {};
 var ticketInfoCache = {};
-var CUSTOM_FIELD_CHILD_OF = 360013377052;
-/**
- * Returns the custom field value
- */
-function getCustomFieldValue(ticketInfo, fieldId) {
-    var matchingFields = ticketInfo.ticket.custom_fields.filter(function (it) { return it.id == fieldId; });
-    return matchingFields.length == 0 ? null : matchingFields[0].value;
-}
 var accountInfo = null;
 /**
  * Retrieve the account code from the sidebar.
@@ -1047,6 +1039,7 @@ function createAttachmentsContainer(ticketId, ticketInfo, conversation) {
     }
     return attachmentsContainer;
 }
+var CUSTOM_FIELD_CHILD_OF = 360013377052;
 /**
  * Add a sort button.
  */
@@ -1184,6 +1177,13 @@ function isDummyComment(ticketInfo, comment) {
         return true;
     }
     return false;
+}
+/**
+ * Returns the custom field value
+ */
+function getCustomFieldValue(ticketInfo, fieldId) {
+    var matchingFields = ticketInfo.ticket.custom_fields.filter(function (it) { return it.id == fieldId; });
+    return matchingFields.length == 0 ? null : matchingFields[0].value;
 }
 /**
  * Add a ticket description and a complete list of attachments to the top of the page.
@@ -2158,7 +2158,7 @@ function addArticleFormattingButtons(tinymce) {
     var preButtons = Array.from(document.querySelectorAll('div[data-test-id="toolbarPreButton"]'));
     for (var i = 0; i < preButtons.length; i++) {
         var toolbar = preButtons[i].parentElement;
-        if (toolbar.classList.contains('lesa-ui-stackedit')) {
+        if (toolbar == null || toolbar.classList.contains('lesa-ui-stackedit')) {
             continue;
         }
         toolbar.classList.add('lesa-ui-stackedit');
