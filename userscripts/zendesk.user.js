@@ -2415,15 +2415,24 @@ function oldTicketStatusColumn() {
     }
 }
 function updateBadge(badge) {
-    /* Change badge colors for Open-Pending */
-    if (badge.textContent === 'Open-Pending') {
-        badge.style.setProperty("background-color", "#c782fc", "important");
+    /* Change badge colors for Open-Pending to purple */
+    if ((badge.textContent === 'Open-Pending' || badge.textContent === 'OP')) {
+        if (!badge.getAttribute('updated-open-color')) {
+            badge.style.setProperty("background-color", "#c782fc", "important");
+            badge.setAttribute('updated-open-color', "true");
+        }
+    }
+    /* Restore badge color if changing from Open-Pending to any other status */
+    else if (badge.getAttribute('updated-open-color')) {
+        badge.style.removeProperty("background-color");
+        badge.removeAttribute('updated-open-color');
     }
     /* Closed status was lost now is shown as Resolved, we can get it again from badge attributes */
-    else if ((badge.getAttribute('data-test-id') === 'status-badge-closed') || badge.classList.contains('closed')) {
+    else if (!badge.getAttribute('updated-closed-color') && ((badge.getAttribute('data-test-id') === 'status-badge-closed') || badge.classList.contains('closed'))) {
         badge.style.setProperty("background-color", "#dcdee0", "important");
         badge.style.setProperty("color", "#04363d", "important");
         badge.textContent = 'Closed';
+        badge.setAttribute('updated-closed-color', "true");
     }
 }
 function isBadgeInPopup(badge) {
