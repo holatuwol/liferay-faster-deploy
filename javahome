@@ -6,7 +6,9 @@ javahome() {
 	local BASE_JAVA=
 	local JAVA_VERSION=$1
 
-	if [ -d /usr/java ]; then
+	if [ -d /opt/java ]; then
+		BASE_JAVA=/opt/java
+	elif [ -d /usr/java ]; then
 		BASE_JAVA=/usr/java
 	elif [ -d /usr/lib/jvm ]; then
 		BASE_JAVA=/usr/lib/jvm
@@ -16,7 +18,6 @@ javahome() {
 	fi
 
 	# If this is diagnostic, just report JAVA_HOME
-
 
 	if [ "" == "${JAVA_VERSION}" ]; then
 		if [ "" != "${JAVA_HOME}" ]; then
