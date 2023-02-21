@@ -29,7 +29,7 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 		${MCD_RD_CLONE_PATH}/github/github $@
 	}
 
-	gpr() {
+	gitpr() {
 		SUBREPO_ROOT=/path/to/subrepo/root \
 			${MCD_RD_CLONE_PATH}/github/pullrequest $@
 	}
