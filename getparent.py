@@ -85,7 +85,7 @@ def getparent(check_tags):
 	base_tag = None
 
 	if base_branch in dxp_branches or base_branch in de_branches:
-		marketplace_base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=marketplace-*-%s%s10' % (base_branch[0], base_branch[2]))
+		marketplace_base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=marketplace-*-%s%s10*' % (base_branch[0], base_branch[2]))
 
 		branch_base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=%s.%s.*-u*' % (base_branch[0], base_branch[2]))
 

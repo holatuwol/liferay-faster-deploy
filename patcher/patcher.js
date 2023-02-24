@@ -9,29 +9,21 @@
  * Switch the product versions so that we can peek inside each of the drop downs.
  */
 
-var re = /^DXP ([0-9]*\.[0-9]*)$/ig
-
 function setProductVersions(accumulator, next) {
-  var textContent = next.textContent.trim();
+  next.selected = true;
+  _1_WAR_osbpatcherportlet_productVersionOnChange(next.value);
 
-  var match = re.exec(textContent);
+  var projectVersions = document.querySelectorAll('#_1_WAR_osbpatcherportlet_patcherProjectVersionId option');
 
-  if (match) {
-    if (match[1] == '7.0') {
-      accumulator['ee-7.0.x'] = parseInt(next.value);
-    }
+  Array.from(projectVersions).reduce(
+    next.innerText.trim() == 'Portal 6.x' ? setProductVersions6.bind(null, parseInt(next.value)) : setProductVersions7.bind(null, parseInt(next.value)),
+    accumulator
+  );
 
-    accumulator[match[1] + '.x'] = parseInt(next.value);
-    accumulator[match[1] + '.x-private'] = parseInt(next.value);
-  }
-  else if (textContent == 'Portal 6.x') {
-    accumulator['ee-6.1.x'] = parseInt(next.value);
-    accumulator['ee-6.2.x'] = parseInt(next.value);
-  }
-  else {
-    return accumulator;
-  }
+  return accumulator;
+};
 
+function setProjectVersions(accumulator, next) {
   next.selected = true;
   _1_WAR_osbpatcherportlet_productVersionOnChange(next.value);
 
@@ -49,6 +41,20 @@ function setProductVersions(accumulator, next) {
  * Code for extracting the 6.x product versions.
  */
 
+function setProductVersions6(version, accumulator, next) {
+  var key = next.innerText.trim();
+
+  if (key == '') {
+    return accumulator;
+  }
+
+  var key = 'fix-pack-base-' + key.replace(/ /g, '-').replace(/\./g, '').toLowerCase();
+
+  accumulator[key] = version;
+
+  return accumulator;
+}
+
 function setProjectVersions6(accumulator, next) {
   var key = next.innerText.trim();
 
@@ -64,14 +70,25 @@ function setProjectVersions6(accumulator, next) {
 };
 
 /**
- * Code for extracting the 7.x product versions, filtering out the special ones for
- * adding new hotfixes for marketplace applications.
+ * Code for extracting the 7.x product versions.
  */
+
+function setProductVersions7(version, accumulator, next) {
+  var key = next.innerText.trim();
+
+  if (key == '') {
+    return accumulator;
+  }
+
+  accumulator[key] = version;
+
+  return accumulator;
+};
 
 function setProjectVersions7(accumulator, next) {
   var key = next.innerText.trim();
 
-  if ((key == '') || (key.indexOf('marketplace') != -1)) {
+  if (key == '') {
     return accumulator;
   }
 
@@ -87,7 +104,7 @@ function setProjectVersions7(accumulator, next) {
 function setProjectVersionsFromMap(accumulator, next) {
   var key = next.committish;
 
-  if ((key == '') || (key.indexOf('marketplace') != -1)) {
+  if (key == '') {
     return accumulator;
   }
 
@@ -101,7 +118,14 @@ function setProjectVersionsFromMap(accumulator, next) {
  */
 
 function getLiferayVersion(version) {
-  if (version.indexOf('fix-pack-de-') != -1) {
+  if (version.indexOf('marketplace-') != -1) {
+    var pos = version.indexOf('-private');
+    pos = version.lastIndexOf('-', pos == -1 ? version.length : pos - 1);
+    var shortVersion = version.substring(pos + 1);
+
+    return parseInt(shortVersion) * 1000;
+  }
+  else if (version.indexOf('fix-pack-de-') != -1) {
     var pos = version.indexOf('-', 12);
     var deVersion = version.substring(12, pos);
     var shortVersion = version.substring(pos + 1);
@@ -170,7 +194,7 @@ function compareLiferayVersions(a, b) {
     return aValue - bValue;
   }
 
-  return a > b ? 1 : a < b ? -1 : 0;
+  return a > b ? 1 : a < b ? -1 : a.localeCompare(b);
 };
 
 function getProjectVersionIdsFromScript(script) {
@@ -181,21 +205,7 @@ function getProjectVersionIdsFromScript(script) {
 
   var data = eval('data = ' + scriptContent.substring(x, y));
 
-  var projectVersionIds = {
-    'ee-6.1.x': 101625503,
-    'ee-6.2.x': 101625503,
-    'ee-7.0.x': 101625504,
-    '7.0.x': 101625504,
-    '7.0.x-private': 101625504,
-    '7.1.x': 102311424,
-    '7.1.x-private': 102311424,
-    '7.2.x': 130051253,
-    '7.2.x-private': 130051253,
-    '7.3.x': 175004848,
-    '7.3.x-private': 175004848,
-    '7.4.x': 206111201,
-    '7.4.x-private': 206111201
-  };
+  var projectVersionIds = {};
 
   for (projectVersionId in data) {
     data[projectVersionId].reduce(setProjectVersionsFromMap, projectVersionIds);
@@ -204,18 +214,10 @@ function getProjectVersionIdsFromScript(script) {
   return projectVersionIds;
 }
 
-function getProjectVersionIdsFromSelects() {
-  var productVersionOptions = document.querySelectorAll('#_1_WAR_osbpatcherportlet_patcherProductVersionId option');
-
-  var projectVersionIds = {
-    'ee-6.1.x': 101625503,
-    'ee-6.2.x': 101625503,
-    'ee-7.0.x': 101625504,
-  };
-
-  Array.from(productVersionOptions).reduce(setProductVersions, projectVersionIds);
-
-  return projectVersionIds;
+function removeBadVersions(versionIds) {
+  delete versionIds['fix-pack-base-6210-sp18'];
+  delete versionIds['marketplace-portal-search-solr7-1.1.0-7110']
+  delete versionIds['marketplace-portal-search-solr8-2.0.0-7110']
 }
 
 /**
@@ -225,17 +227,33 @@ function getProjectVersionIdsFromSelects() {
 function generatePatcherJSON() {
   var scripts = Array.from(document.querySelectorAll('script')).filter(x => x.innerHTML.indexOf('Liferay.Patcher.populateProjectVersionField') != -1);
 
-  var projectVersionIds = scripts.length == 1 ? getProjectVersionIdsFromScript(scripts[0]) : getProjectVersionIdsFromSelects();
+  var productVersionOptions = document.querySelectorAll('#_1_WAR_osbpatcherportlet_patcherProductVersionId option');
 
-  delete projectVersionIds['fix-pack-base-6210-sp18'];
+  var productVersionIds = Array.from(productVersionOptions).reduce(setProductVersions, {});
+
+  removeBadVersions(productVersionIds);
 
   var jsonString = JSON.stringify(
-      projectVersionIds,
-      Object.keys(projectVersionIds).sort(compareLiferayVersions),
-      4
+    productVersionIds,
+    Object.keys(productVersionIds).sort(compareLiferayVersions),
+    4
   );
 
+  console.log('product versions');
+  console.log(jsonString.replace(/    /g, '\t'));
+
+  var projectVersionIds = (scripts.length == 1) ? getProjectVersionIdsFromScript(scripts[0]) : Array.from(productVersionOptions).reduce(setProjectVersions, {});
+
+  removeBadVersions(projectVersionIds);
+
+  jsonString = JSON.stringify(
+    projectVersionIds,
+    Object.keys(projectVersionIds).sort(compareLiferayVersions),
+    4
+  );
+
+  console.log('project versions');
   console.log(jsonString.replace(/    /g, '\t'));
 }
 
-unsafeWindow.generatePatcherJSON = generatePatcherJSON;
+//unsafeWindow.generatePatcherJSON = generatePatcherJSON;

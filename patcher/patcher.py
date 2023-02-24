@@ -85,10 +85,15 @@ def process_patcher_search_container(base_url, parameters, container_name, colum
 			callback({name: cells[index] for index, name in zip(column_indices, column_names)})
 
 def get_baseline_id():
-	with open(join(dirname(sys.argv[0]), 'patcher.json'), 'r') as file:
-		patcher_json = json.load(file)
+	with open(join(dirname(sys.argv[0]), 'patcher_products.json'), 'r') as products_file, open(join(dirname(sys.argv[0]), 'patcher_projects.json'), 'r') as projects_file:
+		products_json = json.load(products_file)
+		projects_json = json.load(projects_file)
 
-		return patcher_json[base_branch], patcher_json[base_tag] if base_tag in patcher_json else None
+		if base_tag not in products_json:
+			print(base_tag, len(products_json))
+			return None
+
+		return products_json[base_tag], projects_json[base_tag] if base_tag in projects_json else None
 
 def get_fix_id(typeFilter='0'):
 	base_url = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher'

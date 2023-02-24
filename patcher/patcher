@@ -25,7 +25,7 @@ fix_dependencies() {
 }
 
 checkcommonerrors() {
-	local PATCHER_JSON=$(dirname "${BASH_SOURCE[0]}")/patcher.json
+	local PATCHER_JSON=$(dirname "${BASH_SOURCE[0]}")/patcher_projects.json
 	local BASELINE_ID=$(cat ${PATCHER_JSON} | jq '.["'${BASE_TAG}'"]')
 
 	if [ "" == "${BASELINE_ID}" ]; then
