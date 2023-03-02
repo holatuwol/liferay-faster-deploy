@@ -169,9 +169,9 @@ cleanappserver() {
 
 	if [ -f "${LIFERAY_HOME}/${TOMCAT_FOLDER}/conf/catalina.properties" ] && [ "" == "$(grep -F /ext/ ${LIFERAY_HOME}/${TOMCAT_FOLDER}/conf/catalina.properties)" ]; then
 		if [ "" != "$(grep -F 'common.loader="' ${LIFERAY_HOME}/${TOMCAT_FOLDER}/conf/catalina.properties)" ]; then
-			sed -i 's#common.loader=#common.loader="${catalina.base}/lib/ext/*.jar",#g' ${LIFERAY_HOME}/${TOMCAT_FOLDER}/conf/catalina.properties
+			sed -i.bak 's#common.loader=#common.loader="${catalina.base}/lib/ext/*.jar",#g' ${LIFERAY_HOME}/${TOMCAT_FOLDER}/conf/catalina.properties
 		else
-			sed -i 's#common.loader=#common.loader=${catalina.base}/lib/ext/*.jar,#g' ${LIFERAY_HOME}/${TOMCAT_FOLDER}/conf/catalina.properties
+			sed -i.bak 's#common.loader=#common.loader=${catalina.base}/lib/ext/*.jar,#g' ${LIFERAY_HOME}/${TOMCAT_FOLDER}/conf/catalina.properties
 		fi
 	fi
 }
