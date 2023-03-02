@@ -3,30 +3,33 @@
 TIMESTAMP=$(date +%Y%m%d)
 
 USER=$(whoami)
-HOME=/home/$USER
+HOME=/home/${USER}
+SCRIPT_FOLDER=${HOME}/crontab
 
-# Download and uncompress master
+download_branch() {
+	rm -rf ${HOME}/${1}
+	mkdir -p ${HOME}/${1}
+	cd ${HOME}/${1}
 
-mkdir -p ${HOME}/master-private
-cd ${HOME}/master-private
+	curl -O http://mirrors.lax.liferay.com/releases.liferay.com/portal/snapshot-${2}/latest/liferay-portal-tomcat-${2}-all.${3}
 
-rm *.7z
+	if [ "7z" == "${3}" ]; then
+		7z x liferay-portal-tomcat-${2}-all.${3}
+	elif [ "zip" == "${3}" ]; then
+		unzip -qq liferay-portal-tomcat-${2}-all.${3}
+	else
+		tar -zxf liferay-portal-tomcat-${2}-all.${3}
+	fi
 
-curl -O http://mirrors.lax.liferay.com/releases.liferay.com/portal/snapshot-master/latest/liferay-portal-tomcat-master-all.7z
-7z x liferay-portal-tomcat-master-all.7z
-mv liferay-portal-master-all ${TIMESTAMP}
+	mv liferay-portal-${2}-all ${TIMESTAMP}
+}
 
-# Download and uncompress private branch snapshots
+download_branch master-private master 7z
+download_branch 73x-private 7.3.x-private 7z
+download_branch 72x-private 7.2.x-private 7z
+download_branch 71x-private 7.1.x-private 7z
+download_branch 70x-private 7.0.x-private zip
 
-for branch in 7.3.x 7.2.x 7.1.x 7.0.x; do
-	mkdir -p ${HOME}/$(echo ${branch} | sed 's/\.//g')-private
-	cd ${HOME}/$(echo ${branch} | sed 's/\.//g')-private
-
-	curl -O http://mirrors.lax.liferay.com/releases.liferay.com/portal/snapshot-${branch}-private/latest/liferay-portal-tomcat-${branch}-private-all.7z
-	7z x liferay-portal-tomcat-${branch}-private-all.7z
-	mv liferay-portal-${branch}-private-all ${TIMESTAMP}
-done
-
-source "${SCRIPT_FOLDER}/aliases"
+source "${HOME}/crontab/aliases"
 
 crall
