@@ -5,7 +5,7 @@ if [ "" == "$(which conda 2>/dev/null)" ]; then
 fi
 
 pushd $(dirname "${BASH_SOURCE[0]}") > /dev/null
-SCRIPT_FOLDER=$(pwd -P)
+SCRIPT_FOLDER=${HOME}/crontab
 popd > /dev/null
 
 if [ "" == "$BUILD_FOLDER_PREFIX" ]; then
