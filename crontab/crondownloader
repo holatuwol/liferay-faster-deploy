@@ -1,0 +1,32 @@
+#!/bin/bash
+
+TIMESTAMP=$(date +%Y%m%d)
+
+USER=$(whoami)
+HOME=/home/$USER
+
+# Download and uncompress master
+
+mkdir -p ${HOME}/master-private
+cd ${HOME}/master-private
+
+rm *.7z
+
+curl -O http://mirrors.lax.liferay.com/releases.liferay.com/portal/snapshot-master/latest/liferay-portal-tomcat-master-all.7z
+7z x liferay-portal-tomcat-master-all.7z
+mv liferay-portal-master-all ${TIMESTAMP}
+
+# Download and uncompress private branch snapshots
+
+for branch in 7.3.x 7.2.x 7.1.x 7.0.x; do
+	mkdir -p ${HOME}/${branch}-private
+	cd ${HOME}/${branch}-private
+
+	curl -O http://mirrors.lax.liferay.com/releases.liferay.com/portal/snapshot-${branch}-private/latest/liferay-portal-tomcat-${branch}-private-all.7z
+	7z x liferay-portal-tomcat-${branch}-private-all.7z
+	mv liferay-portal-${branch}-private-all ${TIMESTAMP}
+done
+
+source "${SCRIPT_FOLDER}/aliases"
+
+crall
