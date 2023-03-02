@@ -4,6 +4,8 @@ SCRIPT_FOLDER=$(dirname "${BASH_SOURCE[0]}")
 
 . ${SCRIPT_FOLDER}/setopts
 
+ARTIFACT_HASHES=()
+
 project_to_library() {
 	if [ "portal-bootstrap" == "$(basename ${1})" ]; then
 		return 0
@@ -32,7 +34,13 @@ project_to_library() {
 			continue
 		fi
 
-		local LAST_PUBLISH_HASH=$(git log -1 --pretty='%H' ${ARTIFACT_PROPERTIES})
+		local LAST_PUBLISH_HASH=$(printf '%s\0' "${ARTIFACT_HASHES[@]}" | grep -z "^${ARTIFACT_PROPERTIES};" | cut -d ";" -f 2)
+
+		if [ -z "${LAST_PUBLISH_HASH}" ]; then
+			LAST_PUBLISH_HASH=$(git log -1 --pretty='%H' ${ARTIFACT_PROPERTIES})
+
+			ARTIFACT_HASHES=("${ARTIFACT_HASHES[@]}" "${ARTIFACT_PROPERTIES};${LAST_PUBLISH_HASH}")
+		fi
 
 		if [ "" != "$(git diff --name-only ${LAST_PUBLISH_HASH}..HEAD -- ${GIT_ROOT}/modules${ARTIFACT_PATH}/src/main/java)" ]; then
 			project_to_library ${GIT_ROOT}/modules${ARTIFACT_PATH}
