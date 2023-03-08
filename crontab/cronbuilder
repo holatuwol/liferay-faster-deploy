@@ -42,7 +42,7 @@ touch $BUILD_FOLDER_PREFIX/.build
 # for our rebase.
 
 if [ "clean" == "$1" ]; then
-	cx all
+	cxall
 
 	pushd "$PORTAL_SOURCE_ROOT"
 

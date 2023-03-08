@@ -92,12 +92,11 @@ cx() {
 		return 1
 	fi
 
-	if [ "all" == "$1" ]; then
-		ps -ef | grep catalina.base | grep -v grep | awk '{ print $2 }' | xargs kill -9
-		return 0
-	fi
-
 	ps -ef | grep -F $BUILD_FOLDER_PREFIX/$1 | grep catalina.base | grep -v grep | awk '{ print $2 }' | xargs kill -9
+}
+
+cxall() {
+	jps | grep -vF Jps | awk '{ print $1 }' | xargs -r kill -9
 }
 
 ct() {

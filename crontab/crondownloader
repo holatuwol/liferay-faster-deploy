@@ -26,7 +26,7 @@ download_branch() {
 
 source "${HOME}/crontab/aliases"
 
-cx all
+cxall
 
 download_branch master-private master 7z
 download_branch 73x-private 7.3.x-private 7z
