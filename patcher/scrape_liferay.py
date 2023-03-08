@@ -144,7 +144,11 @@ def get_okta_state_token(response_text):
         json_text = json_text[0:function_start] + '""' + json_text[function_end+1:]
         function_start = json_text.find('function(')
 
-    okta_data = json.loads(json_text)
+    try:
+        okta_data = json.loads(json_text)
+    except:
+        print(json_text)
+        return None
 
     return okta_data['signIn']['stateToken']
 
@@ -154,6 +158,9 @@ def login_okta(okta_url):
     while redirect_url is None:
         r = session.get(okta_url, verify=False)
         state_token = get_okta_state_token(r.text)
+
+        if state_token is None:
+            return False
 
         print('attempting login with state token %s' % state_token)
 
