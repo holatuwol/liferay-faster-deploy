@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        16.4
+// @version        16.5
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -693,7 +693,7 @@ function getProductVersion(tags) {
  */
 function getProductVersionId(version) {
     if (version == '7.4') {
-        return '206638675';
+        return '206111201';
     }
     if (version == '7.3') {
         return '175004848';
