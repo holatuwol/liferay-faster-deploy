@@ -1,5 +1,4 @@
 #!/bin/bash
 
 pkill -f 'crondownloader'
-jps | cut -d' ' -f 1 xargs kill
 $(dirname $0)/crondownloader
