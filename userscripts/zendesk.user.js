@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        16.5
+// @version        16.6
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -2177,6 +2177,55 @@ if ((unsafeWindow.location.hostname.indexOf('zendesk.com') != -1) &&
     (unsafeWindow.location.pathname.indexOf('/knowledge/') == 0)) {
     setInterval(updateKnowledgeCenterEditor, 1000);
 }
+function viewsGoToPage(target) {
+    if (target <= 0) {
+        return;
+    }
+    var pageIndicator = document.querySelector('[data-test-id="views_views-header-page-amount"]');
+    if (pageIndicator == null) {
+        setTimeout(viewsGoToPage.bind(null, target), 100);
+        return;
+    }
+    var pageMatcher = (pageIndicator.textContent || '').match(/\d+/g);
+    if (pageMatcher == null) {
+        setTimeout(viewsGoToPage.bind(null, target), 100);
+        return;
+    }
+    var _a = pageMatcher.map(function (it) { return parseInt(it); }).sort(function (a, b) { return a - b; }), current = _a[0], total = _a[1];
+    if (current == target) {
+        return;
+    }
+    var direction = current > target ? 'previous' : 'next';
+    var button = document.querySelector('button[data-test-id="generic-table-pagination-' + direction + '"]');
+    if (button == null) {
+        setTimeout(viewsGoToPage.bind(null, target), 100);
+        return;
+    }
+    button.click();
+    viewsGoToPage(target);
+}
+function addViewsGoToPageButton() {
+    var cursorPaginator = document.querySelector('#views_views-ticket-table nav[data-garden-id="cursor_pagination"]');
+    if (!cursorPaginator) {
+        return;
+    }
+    var goToPageButton = cursorPaginator.querySelector('button.lesa-ui-go-to-page');
+    if (goToPageButton) {
+        return;
+    }
+    var nextButton = cursorPaginator.querySelector('button[data-test-id="generic-table-pagination-next"]');
+    if (!nextButton) {
+        return;
+    }
+    goToPageButton = document.createElement('button');
+    goToPageButton.classList.add('lesa-ui-go-to-page');
+    goToPageButton.textContent = '...';
+    goToPageButton.addEventListener('click', function () {
+        viewsGoToPage(parseInt(prompt('Which page?') || '0'));
+    });
+    var buttonContainer = nextButton.parentElement;
+    buttonContainer.insertBefore(goToPageButton, nextButton);
+}
 /**
  * Updates all help.liferay.com/attachments links to point to the current domain.
  */
@@ -2354,7 +2403,7 @@ function checkForSubtitles() {
  * Set the old compact ticket status column style and change "Open-Pending" color to differenciate it from the "Open" one
  * For more information, see https://liferay.slack.com/archives/CL8DNJYB0/p1675440794494529
  */
-function oldTicketStatusColumn() {
+function fixOldTicketStatusColumnStyle() {
     var viewPage = ((unsafeWindow.location.pathname.indexOf('/agent/filters') == 0) || (unsafeWindow.location.pathname.indexOf('/agent/dashboard') == 0));
     /* update status column */
     var badges = Array.from(document.querySelectorAll('div[data-cy-test-id="status-badge-state"]'));
@@ -2364,13 +2413,13 @@ function oldTicketStatusColumn() {
         /* Change the status text to the abreviate form only if we are in a view page and we are not in a popup */
         if (viewPage && badge.textContent && (badge.textContent.length > 2) && (badge.textContent[0] != ' ') && !isBadgeInPopup(badge)) {
             if (badge.textContent === 'On-hold') {
-                badge.textContent = ' H ';
+                badge.textContent = '\u00A0H\u00A0';
             }
             else if (badge.textContent === 'Open-Pending') {
                 badge.textContent = 'OP';
             }
             else {
-                badge.textContent = ' ' + badge.textContent[0] + ' ';
+                badge.textContent = '\u00A0' + badge.textContent[0] + '\u00A0';
             }
         }
     }
@@ -2466,6 +2515,7 @@ if (unsafeWindow.location.hostname.indexOf('zendesk.com') != -1) {
         setInterval(checkSidebarTags, 1000);
         setInterval(fixAttachmentLinks, 1000);
         setInterval(makeDraggableModals, 1000);
-        setInterval(oldTicketStatusColumn, 1000);
+        setInterval(fixOldTicketStatusColumnStyle, 1000);
+        setInterval(addViewsGoToPageButton, 1000);
     }
 }
