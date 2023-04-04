@@ -1,6 +1,6 @@
 #!/bin/bash
 
-filtererror() {
+finderror() {
 	local counter=$(echo $1 | grep -o '\.[0-9][0-9][0-9][0-9][0-9]$' | cut -d'.' -f 2)
 
 	if [ "" == "$counter" ]; then
@@ -25,4 +25,4 @@ filtererror() {
 	python ${BASH_SOURCE[0]}.py ${old_filename} ${new_filename} ${@:2}
 }
 
-filtererror $@
+finderror $@

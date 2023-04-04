@@ -17,6 +17,10 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 
 	MCD_RD_CLONE_PATH=/path/to/clone/location
 
+	finderror() {
+		${MCD_RD_CLONE_PATH}/logparse/finderror $@
+	}
+
 	filtererror() {
 		${MCD_RD_CLONE_PATH}/logparse/filtererror $@
 	}
@@ -24,6 +28,17 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 	upgradetimes() {
 		${MCD_RD_CLONE_PATH}/logparse/upgradetimes $@
 	}
+
+Find Error in Log
+=================
+
+Sometimes, logs are flooded with multiple errors, but you're only concerned with one error. This script will find just that one error and include all stack traces with that error.
+
+.. code-block:: bash
+
+	finderror FILE_NAME StaleStateException
+
+The file generates numbered files so that you can repeatedly call it with new exceptions, and it uses the last numbered file rather than the original log. This allows you to further drill down into specific causes of a specific exception.
 
 Filter Error from Log
 =====================
