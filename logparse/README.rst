@@ -36,7 +36,7 @@ Sometimes, logs are flooded with multiple errors, but you're only concerned with
 
 .. code-block:: bash
 
-	finderror FILE_NAME StaleStateException
+	finderror FILE_NAME StaleObjectStateException
 
 The file generates numbered files so that you can repeatedly call it with new exceptions, and it uses the last numbered file rather than the original log. This allows you to further drill down into specific causes of a specific exception.
 
@@ -47,7 +47,7 @@ Sometimes, logs are flooded with a single error, like a ``StaleStateException``,
 
 .. code-block:: bash
 
-	filtererror FILE_NAME StaleStateException
+	filtererror FILE_NAME StaleObjectStateException
 
 The file generates numbered files so that you can repeatedly call it with new exceptions, and it uses the last numbered file rather than the original log. This allows you to incrementally remove all of the errors, if there are many different types of errors flooding the logs.
 
