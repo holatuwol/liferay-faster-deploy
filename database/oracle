@@ -5,6 +5,14 @@
 execute_script() {
 	if [ "" == "${SYS_PASSWORD}" ]; then
 		SYS_PASSWORD=$(docker logs ${CONTAINER_NAME} | grep -F PASSWORD | cut -d':' -f 2 | sed 's/^ *//g')
+
+		if [ "" == "${SYS_PASSWORD}" ]; then
+			SYS_PASSWORD="$(date +%s | sha256sum | base64 | head -c 16 ; echo)"
+			echo "sys password will be set to ${SYS_PASSWORD}"
+			docker exec -it 72x-oracle ./setPassword.sh ${SYS_PASSWORD}
+		else
+			echo "sys password was set to ${SYS_PASSWORD}"
+		fi
 	fi
 
 	echo "================================"
@@ -23,11 +31,11 @@ restorebackup_dba() {
 grant read, write on directory export_lportal to lportal;
 grant dba to lportal;"
 
-	local FILENAME=$(docker exec -i ${CONTAINER_NAME} ls -1 ${BACKUP_FOLDER_NAME} | grep -F '.dmp')
+	local FILENAME=$(docker exec -i ${CONTAINER_NAME} ls -1 ${BACKUP_FOLDER_NAME} | grep -iF '.dmp' | tr '\n' ',')
 
 	docker exec -e ORACLE_SID=ORCLCDB -i ${CONTAINER_NAME} \
 		impdp \"/ AS SYSDBA\" \
-			dumpfile=${FILENAME} \
+			dumpfile="${FILENAME}" \
 			directory=export_lportal \
 			logfile=import_log.txt \
 			sqlfile=ddl_dump.txt \
@@ -61,7 +69,7 @@ restorebackup_normal() {
 grant read, write on directory export_lportal to lportal;
 grant imp_full_database to lportal;"
 
-	local FILENAME=$(docker exec -i ${CONTAINER_NAME} ls -1 ${BACKUP_FOLDER_NAME} | grep -F '.dmp')
+	local FILENAME=$(docker exec -i ${CONTAINER_NAME} ls -1 ${BACKUP_FOLDER_NAME} | grep -iF '.dmp' | tr '\n' ',')
 
 	docker exec -e ORACLE_SID=ORCLCDB -i ${CONTAINER_NAME} \
 		impdp \"/ AS SYSDBA\" \
@@ -81,10 +89,19 @@ grant imp_full_database to lportal;"
 	local OLD_SCHEMA=$(docker exec -i ${CONTAINER_NAME} grep -o 'CREATE USER ".*"' ${BACKUP_FOLDER_NAME}/ddl_dump.txt | cut -d'"' -f 2)
 	local OLD_TABLESPACE=$(docker exec -i ${CONTAINER_NAME} grep -o 'TABLESPACE ".*"' ${BACKUP_FOLDER_NAME}/ddl_dump.txt | cut -d'"' -f 2 | sort -u)
 
+	echo docker exec -e ORACLE_SID=ORCLCDB -i ${CONTAINER_NAME} \
+		impdp lportal/lportal \
+			directory=export_lportal \
+			dumpfile="${FILENAME}" \
+			remap_schema=$(echo "${OLD_SCHEMA}" | awk '{print $1 ":lportal"}' | tr '\n' ',') \
+			tablespaces=$(echo ${OLD_TABLESPACE} | tr ' ' ',') \
+			$(echo "${OLD_TABLESPACE}" | awk '{print "remap_tablespace=" $1 ":lportal"}' | tr '\n' ' ') \
+			table_exists_action=TRUNCATE version=${ORACLE_COMPAT_VERSION} \
+
 	docker exec -e ORACLE_SID=ORCLCDB -i ${CONTAINER_NAME} \
 		impdp lportal/lportal \
 			directory=export_lportal \
-			dumpfile=${FILENAME} \
+			dumpfile="${FILENAME}" \
 			remap_schema=$(echo "${OLD_SCHEMA}" | awk '{print $1 ":lportal"}' | tr '\n' ',') \
 			tablespaces=$(echo ${OLD_TABLESPACE} | tr ' ' ',') \
 			$(echo "${OLD_TABLESPACE}" | awk '{print "remap_tablespace=" $1 ":lportal"}' | tr '\n' ' ') \

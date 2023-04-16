@@ -29,6 +29,18 @@ docker_cp_chown() {
 		return 1
 	fi
 
+	if [ -d "${1}" ]; then
+		for file in $(find ${1} -type f); do
+			docker_cp_chown ${file}
+
+			if [[ 0 -ne $? ]]; then
+				return $?
+			fi
+		done
+
+		return 0
+	fi
+
 	if [ "" == "${CONTAINER_USER_NAME}" ]; then
 		echo "Unable to restore ${1} because CONTAINER_USER_NAME is not set"
 		return 1
