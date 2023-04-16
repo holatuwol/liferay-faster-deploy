@@ -17,13 +17,13 @@ s3cp() {
 		gzip -c "${1}" > "${1}.gz"
 
 		if [[ ${1} == *.html ]]; then
-			aws s3 --profile $AWS_PROFILE cp "${1}.gz" "s3://$S3_BUCKET/${1}" --acl public-read --metadata-directive REPLACE --content-encoding gzip --content-type 'text/html; charset=utf-8'
+			aws s3 --profile $AWS_PROFILE cp "${1}.gz" "s3://$S3_BUCKET/${2}${1}" --acl public-read --metadata-directive REPLACE --content-encoding gzip --content-type 'text/html; charset=utf-8'
 		else
-			aws s3 --profile $AWS_PROFILE cp "${1}.gz" "s3://$S3_BUCKET/${1}" --acl public-read --metadata-directive REPLACE --content-encoding gzip
+			aws s3 --profile $AWS_PROFILE cp "${1}.gz" "s3://$S3_BUCKET/${2}${1}" --acl public-read --metadata-directive REPLACE --content-encoding gzip
 		fi
 
 		rm "${1}.gz"
 	fi
 }
 
-s3cp "$@"
+s3cp $@
