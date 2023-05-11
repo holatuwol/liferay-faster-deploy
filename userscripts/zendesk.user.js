@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        16.8
+// @version        16.9
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -671,24 +671,9 @@ function getPatcherPortalAccountsHREF(path, params) {
     return 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/accounts' + path + '?p_p_id=' + portletId + '&' + queryString;
 }
 /**
- * Retrieve the Liferay version from the sidebar.
+ * Retrieve the Liferay version from the tags.
  */
 function getProductVersion(tags) {
-    var propertyBoxes = getPropertyBoxes();
-    for (var i = 0; i < propertyBoxes.length; i++) {
-        var propertyBox = propertyBoxes[i];
-        var parentElement = propertyBox.parentElement;
-        var productVersionField = parentElement.querySelector('.custom_field_360006076471 div[data-garden-id="dropdowns.select"]');
-        if (productVersionField) {
-            var version = (productVersionField.textContent || '').trim();
-            if (version.indexOf('7.') == 0) {
-                return version;
-            }
-            if (version.indexOf('6.') == 0) {
-                return '6.x';
-            }
-        }
-    }
     for (var i = 0; i < tags.length; i++) {
         var tag = tags[i];
         var x = tag.indexOf('7_');
@@ -698,6 +683,14 @@ function getProductVersion(tags) {
         x = tag.indexOf('_7_');
         if (x != -1) {
             return '7.' + tag.charAt(x + 3);
+        }
+        x = tag.indexOf('6_');
+        if (x == 0) {
+            return '6.x';
+        }
+        x = tag.indexOf('_6_');
+        if (x != -1) {
+            return '6.x';
         }
     }
     return '';
