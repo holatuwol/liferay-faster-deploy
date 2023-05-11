@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        16.6
+// @version        16.7
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -339,9 +339,11 @@ function addServiceLifeMarker(priorityElement, ticketId, tags) {
     var limitedSupport = false;
     var endOfSoftwareLife = false;
     var extendedPremiumSupport = false;
+    var extendedPremiumSupportDeclined = false;
     for (var i = 0; i < tags.length; i++) {
-        if (tags[i].indexOf('eps') != -1) {
+        if ((tags[i].indexOf('eps') != -1)) {
             extendedPremiumSupport = true;
+            extendedPremiumSupportDeclined = tags[i].indexOf('neg') == 0;
             break;
         }
     }
@@ -353,7 +355,7 @@ function addServiceLifeMarker(priorityElement, ticketId, tags) {
     var serviceLifeLink = null;
     var href = 'https://liferay.atlassian.net/wiki/spaces/SUPPORT/pages/1998783040/EOSL+Guide+For+Support';
     if (extendedPremiumSupport) {
-        serviceLifeLink = createAnchorTag('Extended Premium Support', href);
+        serviceLifeLink = createAnchorTag(extendedPremiumSupportDeclined ? 'Declined EPS' : 'Extended Premium Support', href);
     }
     else if (endOfSoftwareLife) {
         serviceLifeLink = createAnchorTag('End of Software Life', href);
@@ -368,18 +370,32 @@ function addServiceLifeMarker(priorityElement, ticketId, tags) {
         priorityElement.appendChild(serviceLifeElement);
     }
 }
-function addCriticalMarker(priorityElement, ticketInfo, tagSet) {
+function getCriticalMarkerText(ticketInfo, tagSet) {
     var subpriority = ticketInfo.ticket.priority || 'none';
     if ((subpriority != 'high') && (subpriority != 'urgent')) {
-        return;
+        return null;
+    }
+    if (tagSet.has('premium')) {
+        return 'premium critical';
     }
     var criticalMarkers = ['production', 'production_completely_shutdown', 'production_severely_impacted_inoperable'].filter(Set.prototype.has.bind(tagSet));
     if (criticalMarkers.length >= 2) {
-        var criticalElement = document.createElement('span');
-        criticalElement.classList.add('lesa-ui-priority-critical');
-        criticalElement.textContent = tagSet.has('platinum') ? 'platinum critical' : 'critical';
-        priorityElement.appendChild(criticalElement);
+        if (tagSet.has('platinum')) {
+            return 'platinum critical';
+        }
+        return 'critical';
     }
+    return null;
+}
+function addCriticalMarker(priorityElement, ticketInfo, tagSet) {
+    var markerText = getCriticalMarkerText(ticketInfo, tagSet);
+    if (markerText == null) {
+        return;
+    }
+    var criticalElement = document.createElement('span');
+    criticalElement.classList.add('lesa-ui-priority-critical');
+    criticalElement.textContent = markerText;
+    priorityElement.appendChild(criticalElement);
 }
 function addCustomerTypeMarker(priorityElement, tagSet) {
     if (tagSet.has('service_solution')) {
@@ -1436,6 +1452,10 @@ function addJiraLinks(ticketId, ticketInfo, conversation) {
 /**
  * Add a playbook reminder to the given editor.
  */
+var reminderLinks = {
+    'platinum critical': '<a href="https://liferay.atlassian.net/wiki/spaces/SUPPORT/pages/2093908830/How+To+Handle+Critical+Tickets" target="_blank">playbook</a>',
+    'premium critical': '<a href="https://liferay.atlassian.net/wiki/spaces/LXC/pages/2156265703/LXC+Global+Critical+Ticket+Workflow" target="_blank">workflow</a>'
+};
 function addPlaybookReminder(ticketId, ticketInfo, conversation) {
     var editor = conversation.querySelector(isAgentWorkspace ? 'div[data-test-id="omnicomposer-rich-text-ckeditor"]' : '.editor');
     if (!editor) {
@@ -1456,14 +1476,11 @@ function addPlaybookReminder(ticketId, ticketInfo, conversation) {
     var reminders = [];
     var tags = (ticketInfo && ticketInfo.ticket && ticketInfo.ticket.tags) || [];
     var tagSet = new Set(tags);
-    var subpriority = ticketInfo.ticket.priority || 'none';
-    if (((subpriority == 'high') || (subpriority == 'urgent')) && tagSet.has('platinum')) {
-        var criticalMarkers = ['production', 'production_completely_shutdown', 'production_severely_impacted_inoperable'].filter(Set.prototype.has.bind(tagSet));
-        if (criticalMarkers.length >= 2) {
-            reminders.push(['platinum critical', 'https://liferay.atlassian.net/wiki/spaces/SUPPORT/pages/2093908830/How+To+Handle+Critical+Tickets', 'playbook']);
-        }
+    var markerText = getCriticalMarkerText(ticketInfo, tagSet);
+    if ((markerText != null) && (markerText in reminderLinks)) {
+        reminders.push([markerText, reminderLinks[markerText]]);
     }
-    playbookReminderElement.innerHTML = reminders.map(function (x) { return 'This is a <strong>' + x[0] + '</strong> ticket. Please remember to follow the <a href="' + x[1] + '">' + x[2] + '</a> !'; }).join('<br/>');
+    playbookReminderElement.innerHTML = reminders.map(function (x) { return 'This is a <strong>' + x[0] + '</strong> ticket. Please remember to follow the ' + x[1] + '!'; }).join('<br/>');
     parentElement.insertBefore(playbookReminderElement, editor);
 }
 /**
