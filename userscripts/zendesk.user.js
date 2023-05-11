@@ -600,15 +600,6 @@ function generateFormField(propertyBox, className, labelText, formElements) {
     propertyBox.appendChild(formField);
 }
 /**
- * Generate a URL to Customer Portal's account details view.
- */
-function getCustomerPortalAccountsHREF(params) {
-    var portletId = 'com_liferay_osb_customer_account_entry_details_web_AccountEntryDetailsPortlet';
-    var ns = '_' + portletId + '_';
-    var queryString = Object.keys(params).map(function (key) { return (key.indexOf('p_p_') == 0 ? key : (ns + key)) + '=' + encodeURIComponent(params[key]); }).join('&');
-    return 'https://customer.liferay.com/project-details?p_p_id=' + portletId + '&' + queryString;
-}
-/**
  * Add the Organization field to the sidebar, which will contain a link to Help Center
  * for the account details and the customer's SLA level.
  */
@@ -637,15 +628,8 @@ function addOrganizationField(propertyBox, ticketId, ticketInfo) {
     if (organizationInfo) {
         var organizationFields = organizationInfo.organization_fields;
         serviceLevel.push(organizationFields.sla.toUpperCase());
-        helpCenterLinkHREF = getCustomerPortalAccountsHREF({
-            mvcRenderCommandName: '/view_account_entry',
-            accountEntryId: organizationInfo.external_id
-        });
-    }
-    else if (accountCode) {
-        helpCenterLinkHREF = getCustomerPortalAccountsHREF({
-            keywords: accountCode
-        });
+        helpCenterLinkHREF = "https://support.liferay.com/project/#/" +
+            organizationInfo.organization_fields.account_key;
     }
     var helpCenterItems = [];
     if (accountCode && helpCenterLinkHREF) {
