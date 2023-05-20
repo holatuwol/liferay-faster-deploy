@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        16.7
+// @version        16.8
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -335,27 +335,39 @@ function setAccountInfo(callback) {
     xhr.setRequestHeader('Pragma', 'no-cache');
     xhr.send();
 }
-function addServiceLifeMarker(priorityElement, ticketId, tags) {
+function addServiceLifeMarker(priorityElement, ticketId, ticketTags, organizationTags) {
     var limitedSupport = false;
     var endOfSoftwareLife = false;
-    var extendedPremiumSupport = false;
-    var extendedPremiumSupportDeclined = false;
-    for (var i = 0; i < tags.length; i++) {
-        if ((tags[i].indexOf('eps') != -1)) {
-            extendedPremiumSupport = true;
-            extendedPremiumSupportDeclined = tags[i].indexOf('neg') == 0;
-            break;
+    var extendedPremiumSupport = null;
+    var version = getProductVersion(ticketTags);
+    for (var i = 0; i < organizationTags.length; i++) {
+        var tag = organizationTags[i];
+        if ((tag == 'neg_7_0_eps') && (version == '7.0')) {
+            extendedPremiumSupport = 'Declined 7.0 EPS';
+        }
+        else if ((tag == 'neg_7_1_eps') && (version == '7.1')) {
+            extendedPremiumSupport = 'Declined 7.1 EPS';
+        }
+        else if ((tag == 'neg_7_2_eps') && (version == '7.2')) {
+            extendedPremiumSupport = 'Declined 7.2 EPS';
         }
     }
-    var version = getProductVersion(tags);
+    if (extendedPremiumSupport == null) {
+        for (var i = 0; i < ticketTags.length; i++) {
+            if ((ticketTags[i].indexOf('eps') != -1)) {
+                extendedPremiumSupport = 'Extended Premium Support';
+                break;
+            }
+        }
+    }
     if ((version == '6.x') || (version == '7.0') || (version == '7.1')) {
         limitedSupport = true;
         endOfSoftwareLife = true;
     }
     var serviceLifeLink = null;
     var href = 'https://liferay.atlassian.net/wiki/spaces/SUPPORT/pages/1998783040/EOSL+Guide+For+Support';
-    if (extendedPremiumSupport) {
-        serviceLifeLink = createAnchorTag(extendedPremiumSupportDeclined ? 'Declined EPS' : 'Extended Premium Support', href);
+    if (extendedPremiumSupport != null) {
+        serviceLifeLink = createAnchorTag(extendedPremiumSupport, href);
     }
     else if (endOfSoftwareLife) {
         serviceLifeLink = createAnchorTag('End of Software Life', href);
@@ -554,13 +566,15 @@ function addPriorityMarker(header, conversation, ticketId, ticketInfo) {
     priorityElement.setAttribute('data-ticket-id', ticketId);
     // Check to see if the ticket matches the rules for a regular
     // high priority ticket (production, severely impacted or worse)
-    var tags = (ticketInfo && ticketInfo.ticket && ticketInfo.ticket.tags) || [];
-    var tagSet = new Set(tags);
-    addServiceLifeMarker(priorityElement, ticketId, tags);
-    addCriticalMarker(priorityElement, ticketInfo, tagSet);
-    addCustomerTypeMarker(priorityElement, tagSet);
+    var ticketTags = (ticketInfo && ticketInfo.ticket && ticketInfo.ticket.tags) || [];
+    var ticketTagSet = new Set(ticketTags);
+    var organizationTags = (ticketInfo && ticketInfo.organizations) ? ticketInfo.organizations.map(function (it) { return it.tags || []; }).reduce(function (acc, it) { return acc.concat(it); }) : [];
+    organizationTags = Array.from(new Set(organizationTags));
+    addServiceLifeMarker(priorityElement, ticketId, ticketTags, organizationTags);
+    addCriticalMarker(priorityElement, ticketInfo, ticketTagSet);
+    addCustomerTypeMarker(priorityElement, ticketTagSet);
     addRegionMarker(priorityElement, ticketInfo, ticketContainer);
-    var emojiContainer = getEmojiAnchorTags(tags);
+    var emojiContainer = getEmojiAnchorTags(ticketTags);
     if (emojiContainer != null) {
         priorityElement.appendChild(emojiContainer);
     }
