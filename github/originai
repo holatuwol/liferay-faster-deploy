@@ -24,8 +24,8 @@ UPSTREAM_CE=$(git remote -v | grep -F 'liferay/liferay-portal.git' | awk '{ prin
 UPSTREAM_EE=$(git remote -v | grep -F 'liferay/liferay-portal-ee.git' | awk '{ print $1 }' | head -1)
 
 if [ "" != "${UPSTREAM_CE}" ]; then
-	for remote in $@; do
-		if [ "${1}" == "${remote}" ]; then
+	for remote in $(git remote); do
+		if [ "${remote}" == "${UPSTREAM_CE}" ]; then
 			continue
 		fi
 
@@ -57,8 +57,8 @@ if [ "" != "${UPSTREAM_CE}" ]; then
 fi
 
 if [ "" != "${UPSTREAM_EE}" ]; then
-	for remote in $@; do
-		if [ "${1}" == "${remote}" ]; then
+	for remote in $(git remote); do
+		if [ "${remote}" == "${UPSTREAM_EE}" ]; then
 			continue
 		fi
 
@@ -67,7 +67,7 @@ if [ "" != "${UPSTREAM_EE}" ]; then
 		fi
 
 		for branch in master; do
-			echo "Updating ${branch} on ${remote}"
+			echo "Updating ${branch}-private on ${remote}"
 			git push -f ${remote} refs/remotes/${UPSTREAM_EE}/${branch}-private:refs/heads/${branch}-private
 		done
 
