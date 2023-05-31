@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        17.0
+// @version        17.1
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -2479,24 +2479,28 @@ function removeTicketStatusColumn() {
         if (statusIndex == -1) {
             continue;
         }
-        var statusHeaderCell = table.tHead.rows[0].cells[statusIndex];
+        var headerCells = Array.from(table.tHead.rows[0].cells);
+        var statusHeaderCell = headerCells[statusIndex];
         if (statusHeaderCell.getAttribute('processed') == 'true') {
             continue;
         }
         /* remove "Ticket status" text from headers */
-        statusHeaderCell.setAttribute('processed', 'true');
         statusHeaderCell.textContent = ' ';
+        for (var _i = 0, headerCells_1 = headerCells; _i < headerCells_1.length; _i++) {
+            var headerCell = headerCells_1[_i];
+            headerCell.setAttribute('processed', 'true');
+        }
         /* remove the padding of the column 2 before the status column */
-        var cells = Array.from(table.querySelectorAll('tr:nth-child(' + (statusIndex - 1) + ')'));
-        for (var _i = 0, cells_1 = cells; _i < cells_1.length; _i++) {
-            var cell = cells_1[_i];
+        var cells = Array.from(table.querySelectorAll('td:nth-child(' + (statusIndex - 1) + ')'));
+        for (var _a = 0, cells_1 = cells; _a < cells_1.length; _a++) {
+            var cell = cells_1[_a];
             cell.style.paddingLeft = '0px';
             cell.style.paddingRight = '2px';
         }
         /* remove the column 1 before the status column */
-        cells = Array.from(table.querySelectorAll('tr:nth-child(' + (statusIndex) + ')'));
-        for (var _a = 0, cells_2 = cells; _a < cells_2.length; _a++) {
-            var cell = cells_2[_a];
+        cells = Array.from(table.querySelectorAll('td:nth-child(' + (statusIndex) + ')'));
+        for (var _b = 0, cells_2 = cells; _b < cells_2.length; _b++) {
+            var cell = cells_2[_b];
             cell.remove();
         }
     }
