@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        16.9
+// @version        17.0
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -2407,28 +2407,37 @@ function checkForSubtitles() {
         checkTicket(ticketId, updateSubtitle.bind(null, title, subtitle));
     }
 }
+function abbreviateBadgeText(badge) {
+    if (!badge.textContent || (badge.textContent.length <= 2) || (badge.textContent[0] == '\u00A0')) {
+        return;
+    }
+    if (badge.textContent === 'On-hold') {
+        badge.textContent = '\u00A0H\u00A0';
+    }
+    else if (badge.textContent === 'Open-Pending') {
+        badge.textContent = 'OP';
+    }
+    else {
+        badge.textContent = '\u00A0' + badge.textContent[0] + '\u00A0';
+    }
+}
 /**
  * Set the old compact ticket status column style and change "Open-Pending" color to differenciate it from the "Open" one
  * For more information, see https://liferay.slack.com/archives/CL8DNJYB0/p1675440794494529
  */
 function fixOldTicketStatusColumnStyle() {
-    var viewPage = ((unsafeWindow.location.pathname.indexOf('/agent/filters') == 0) || (unsafeWindow.location.pathname.indexOf('/agent/dashboard') == 0));
+    var pathname = unsafeWindow.location.pathname;
+    var viewPage = (pathname.indexOf('/agent/dashboard') == 0) ||
+        ((pathname.indexOf('/agent/filters/') == 0) && (pathname.indexOf('/suspended') == -1)) ||
+        ((pathname.indexOf('/agent/search/') == 0) && (document.querySelector('div[data-test-id="search_tables_tab-tickets"][aria-selected="true"]') != null));
     /* update status column */
     var badges = Array.from(document.querySelectorAll('div[data-cy-test-id="status-badge-state"]'));
     for (var _i = 0, badges_1 = badges; _i < badges_1.length; _i++) {
         var badge = badges_1[_i];
         updateBadge(badge);
-        /* Change the status text to the abreviate form only if we are in a view page and we are not in a popup */
-        if (viewPage && badge.textContent && (badge.textContent.length > 2) && (badge.textContent[0] != ' ') && !isBadgeInPopup(badge)) {
-            if (badge.textContent === 'On-hold') {
-                badge.textContent = '\u00A0H\u00A0';
-            }
-            else if (badge.textContent === 'Open-Pending') {
-                badge.textContent = 'OP';
-            }
-            else {
-                badge.textContent = '\u00A0' + badge.textContent[0] + '\u00A0';
-            }
+        /* Change the status text to the abbreviate form only if we are in a view page and we are not in a popup */
+        if (viewPage && !isBadgeInPopup(badge)) {
+            abbreviateBadgeText(badge);
         }
     }
     /* Update Open-Pending badge color inside the ticket */
@@ -2437,38 +2446,59 @@ function fixOldTicketStatusColumnStyle() {
         var badge = ticketBadges_1[_a];
         updateBadge(badge);
     }
-    if (!viewPage) {
-        return;
+    if (viewPage) {
+        removeTicketStatusColumn();
+        unsafeWindow.dispatchEvent(new Event('resize'));
     }
-    /* remove "Ticket status" text from headers */
-    var headers = Array.from(document.querySelectorAll('th[data-garden-id="tables.header_cell"]:not([processed="true"]'));
-    for (var _b = 0, headers_1 = headers; _b < headers_1.length; _b++) {
-        var header = headers_1[_b];
-        header.setAttribute('processed', 'true');
-    }
-    if (headers[3] !== undefined) {
-        headers[3].textContent = '';
-    }
-    /* remove the padding of second column */
-    var secondColumn = Array.from(document.querySelectorAll('td.sc-15v8wy4-1:not([processed="true"]'));
-    for (var _c = 0, secondColumn_1 = secondColumn; _c < secondColumn_1.length; _c++) {
-        var cell = secondColumn_1[_c];
-        cell.style.paddingLeft = '0px';
-        cell.style.paddingRight = '2px';
-        cell.setAttribute('processed', 'true');
-    }
-    if (headers[1] !== undefined) {
-        headers[1].style.paddingLeft = '0px';
-        headers[1].style.paddingRight = '2px';
-    }
-    /* remove empty third column */
-    var thirdColumn = Array.from(document.querySelectorAll('td.oeot8n-0'));
-    for (var _d = 0, thirdColumn_1 = thirdColumn; _d < thirdColumn_1.length; _d++) {
-        var cell = thirdColumn_1[_d];
-        cell.remove();
-    }
-    if (headers[2] !== undefined) {
-        headers[2].remove();
+}
+function removeTicketStatusColumn() {
+    var tables = Array.from(document.querySelectorAll('table[data-onboarding-id="table_main"], table[data-test-id="table_header"]'));
+    for (var i = 0; i < tables.length; i++) {
+        var table = tables[i];
+        var statusIndex = -1;
+        var badge = table.querySelector('div[data-cy-test-id="status-badge-state"]');
+        if (!badge) {
+            if (table.getAttribute('data-test-id') == 'table_header') {
+                var container = table.closest('div[data-test-id="table_container"]');
+                var sibling = container.querySelector('table[data-test-id="table_main"]');
+                if (sibling) {
+                    badge = sibling.querySelector('div[data-cy-test-id="status-badge-state"]');
+                }
+            }
+        }
+        if (badge) {
+            var cell = badge.closest('td');
+            var row = cell.closest('tr');
+            for (var j = 0; j < row.cells.length; j++) {
+                if (row.cells[j] == cell) {
+                    statusIndex = j;
+                    break;
+                }
+            }
+        }
+        if (statusIndex == -1) {
+            continue;
+        }
+        var statusHeaderCell = table.tHead.rows[0].cells[statusIndex];
+        if (statusHeaderCell.getAttribute('processed') == 'true') {
+            continue;
+        }
+        /* remove "Ticket status" text from headers */
+        statusHeaderCell.setAttribute('processed', 'true');
+        statusHeaderCell.textContent = ' ';
+        /* remove the padding of the column 2 before the status column */
+        var cells = Array.from(table.querySelectorAll('tr:nth-child(' + (statusIndex - 1) + ')'));
+        for (var _i = 0, cells_1 = cells; _i < cells_1.length; _i++) {
+            var cell = cells_1[_i];
+            cell.style.paddingLeft = '0px';
+            cell.style.paddingRight = '2px';
+        }
+        /* remove the column 1 before the status column */
+        cells = Array.from(table.querySelectorAll('tr:nth-child(' + (statusIndex) + ')'));
+        for (var _a = 0, cells_2 = cells; _a < cells_2.length; _a++) {
+            var cell = cells_2[_a];
+            cell.remove();
+        }
     }
 }
 function updateBadge(badge) {
