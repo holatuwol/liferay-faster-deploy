@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        17.0
+// @version        17.1
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -2487,17 +2487,19 @@ function removeTicketStatusColumn() {
         statusHeaderCell.setAttribute('processed', 'true');
         statusHeaderCell.textContent = ' ';
         /* remove the padding of the column 2 before the status column */
-        var cells = Array.from(table.querySelectorAll('tr:nth-child(' + (statusIndex - 1) + ')'));
+        var cells = Array.from(table.querySelectorAll('tr > td:nth-child(' + (statusIndex - 1) + ')'));
         for (var _i = 0, cells_1 = cells; _i < cells_1.length; _i++) {
             var cell = cells_1[_i];
             cell.style.paddingLeft = '0px';
             cell.style.paddingRight = '2px';
         }
         /* remove the column 1 before the status column */
-        cells = Array.from(table.querySelectorAll('tr:nth-child(' + (statusIndex) + ')'));
+        cells = Array.from(table.querySelectorAll('tr > td:nth-child(' + (statusIndex) + ')'));
         for (var _a = 0, cells_2 = cells; _a < cells_2.length; _a++) {
             var cell = cells_2[_a];
-            cell.remove();
+            cell.style.width = '0px';
+            cell.style.minWidth = '0px';
+            cell.style.maxWidth = '0px';
         }
     }
 }
