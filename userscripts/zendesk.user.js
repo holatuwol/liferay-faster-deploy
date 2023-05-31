@@ -2487,19 +2487,19 @@ function removeTicketStatusColumn() {
         statusHeaderCell.setAttribute('processed', 'true');
         statusHeaderCell.textContent = ' ';
         /* remove the padding of the column 2 before the status column */
-        var cells = Array.from(table.querySelectorAll('tr > td:nth-child(' + (statusIndex - 1) + ')'));
+        var cells = Array.from(table.querySelectorAll('tr > td:nth-child(' + (statusIndex - 1) + '), tr > th:nth-child(' + (statusIndex - 1) + ')'));
         for (var _i = 0, cells_1 = cells; _i < cells_1.length; _i++) {
             var cell = cells_1[_i];
-            cell.style.paddingLeft = '0px';
-            cell.style.paddingRight = '2px';
+            cell.style.paddingLeft = '0';
         }
         /* remove the column 1 before the status column */
-        cells = Array.from(table.querySelectorAll('tr > td:nth-child(' + (statusIndex) + ')'));
+        cells = Array.from(table.querySelectorAll('tr > td:nth-child(' + (statusIndex) + '), tr > th:nth-child(' + (statusIndex) + ')'));
         for (var _a = 0, cells_2 = cells; _a < cells_2.length; _a++) {
             var cell = cells_2[_a];
-            cell.style.width = '0px';
-            cell.style.minWidth = '0px';
-            cell.style.maxWidth = '0px';
+            cell.style.width = '0';
+            cell.style.minWidth = '0';
+            cell.style.maxWidth = '0';
+            cell.style.padding = '0';
         }
     }
 }
