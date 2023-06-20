@@ -103,7 +103,7 @@ jira_password = get_config('jira.session-password')
 assert(jira_username is not None)
 assert(jira_password is not None)
 
-jira_base_url = 'https://issues.liferay.com/rest'
+jira_base_url = 'https://liferay.atlassian.net/rest'
 
 def get_jira_cookie():
     jira_cookie = None

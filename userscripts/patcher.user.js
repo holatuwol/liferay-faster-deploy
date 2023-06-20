@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        7.3
+// @version        7.4
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -98,7 +98,7 @@ function getTicketLink(className, ticket, title) {
     if (ticket.toUpperCase() != ticket) {
         return ticket;
     }
-    var ticketURL = 'https://issues.liferay.com/browse/' + ticket;
+    var ticketURL = 'https://liferay.atlassian.net/browse/' + ticket;
     if (className) {
         var productVersionElement = querySelector('patcherProductVersionId');
         var productVersionId = productVersionElement.value;
@@ -879,7 +879,7 @@ function replaceLesaLink(target) {
         }
         else if (isNaN(parseInt(oldNode.value))) {
             if ((oldNode.value.indexOf('LPP-') == 0) || (oldNode.value.indexOf('GROW-') == 0) || (oldNode.value.indexOf('LRP-') == 0)) {
-                ticketHREF = 'https://issues.liferay.com/browse/' + oldNode.value;
+                ticketHREF = 'https://liferay.atlassian.net/browse/' + oldNode.value;
                 ticketId = oldNode.value;
                 jiraSearchLinkHREF = ticketHREF;
             }
@@ -895,7 +895,7 @@ function replaceLesaLink(target) {
         if (jiraSearchLinkHREF == null) {
             var query = "\"Customer Ticket Permalink\" = \"" + ticketHREF + "\" OR \"Zendesk Ticket IDs\" ~ " + ticketId + " OR \"Customer Ticket\" = \"" + ticketId + "\" OR \"Customer Ticket\" = \"" + ticketHREF + "\"";
             var encodedQuery = encodeURIComponent(query);
-            jiraSearchLinkHREF = 'https://issues.liferay.com/issues/?jql=' + encodedQuery;
+            jiraSearchLinkHREF = 'https://liferay.atlassian.net/issues/?jql=' + encodedQuery;
         }
         var newNode;
         if (ticketHREF == jiraSearchLinkHREF) {

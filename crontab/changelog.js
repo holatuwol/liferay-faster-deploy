@@ -314,7 +314,7 @@ function generateChangelogEntry(releaseId, update) {
 }
 
 function createJiraLink(fixId) {
-	return '<a href="https://issues.liferay.com/browse/' + fixId + '">' + fixId + '</a>';
+	return '<a href="https://liferay.atlassian.net/browse/' + fixId + '">' + fixId + '</a>';
 }
 
 request.onreadystatechange = function() {

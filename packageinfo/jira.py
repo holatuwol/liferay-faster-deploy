@@ -7,7 +7,7 @@ sys.path.insert(0, dirname(dirname(abspath(inspect.getfile(inspect.currentframe(
 
 import git
 
-jira_base_url = 'https://issues.liferay.com'
+jira_base_url = 'https://liferay.atlassian.net'
 
 jira_username = git.config('jira.session-username')
 jira_password = git.config('jira.session-password')

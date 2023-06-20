@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           GitHub Link to LPS Tickets
 // @namespace      holatuwol
-// @version        2.1
+// @version        2.2
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/github_link_jira.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/github_link_jira.user.js
 // @match          https://github.com/LiferayCloud/*
@@ -36,16 +36,16 @@ function copyClassList(source, target) {
 }
 
 var projects = {
-  'BPR': 'issues.liferay.com',
-  'CLDSVCS': 'issues.liferay.com',
-  'COMMERCE': 'issues.liferay.com',
+  'BPR': 'liferay.atlassian.net',
+  'CLDSVCS': 'liferay.atlassian.net',
+  'COMMERCE': 'liferay.atlassian.net',
   'LCP': 'services.liferay.com',
-  'LPP': 'issues.liferay.com',
-  'LPS': 'issues.liferay.com',
-  'LRAC': 'issues.liferay.com',
-  'LRCI': 'issues.liferay.com',
-  'LRDOCS': 'issues.liferay.com',
-  'LRQA': 'issues.liferay.com'
+  'LPP': 'liferay.atlassian.net',
+  'LPS': 'liferay.atlassian.net',
+  'LRAC': 'liferay.atlassian.net',
+  'LRCI': 'liferay.atlassian.net',
+  'LRDOCS': 'liferay.atlassian.net',
+  'LRQA': 'liferay.atlassian.net'
 };
 
 function replaceLinks(links) {
@@ -117,7 +117,7 @@ function addJiraLink(element, debug) {
 
     for (var i = 0; i < projectKeys.length; i++) {
       var projectKey = projectKeys[i];
-      var projectDomain = projects[projectKey] || 'issues.liferay.com';
+      var projectDomain = projects[projectKey] || 'liferay.atlassian.net';
 
       newHTML = newHTML.replace(new RegExp("([^/])(" + projectKey + "-[0-9]+)", "g"), '$1<a href="https://' + projectDomain + '/browse/$2" target="_blank" data-link-replaced="true">$2</a>');
       newHTML = newHTML.replace(new RegExp("^(" + projectKey + "-[0-9]+)", "g"), '<a href="https://' + projectDomain + '/browse/$1" target="_blank" data-link-replaced="true">$1</a>');

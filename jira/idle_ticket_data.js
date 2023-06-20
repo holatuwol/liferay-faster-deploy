@@ -23,7 +23,7 @@ function addIdleTicket(tbody, rowData) {
 	row.appendChild(cell);
 
 	cell = document.createElement('td');
-	cell.innerHTML = '<a href="https://issues.liferay.com/browse/' + rowData['ticket_key'] + '" target="_blank">' + rowData['ticket_key'] + '</a>'
+	cell.innerHTML = '<a href="https://liferay.atlassian.net/browse/' + rowData['ticket_key'] + '" target="_blank">' + rowData['ticket_key'] + '</a>'
 	row.appendChild(cell);
 
 	cell = document.createElement('td');

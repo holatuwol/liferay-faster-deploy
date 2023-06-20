@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        17.4
+// @version        17.5
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -110,7 +110,7 @@ function getCookieValue(name) {
 function getJiraSearchLink(text, ticketId) {
     var query = ("\n\"Customer Ticket Permalink\" = \"https://" + document.location.host + document.location.pathname + "\" OR\n\"Zendesk Ticket IDs\" ~ " + ticketId + " OR\n\"Customer Ticket\" = \"https://" + document.location.host + document.location.pathname + "\"\n  ").trim();
     var encodedQuery = encodeURIComponent(query);
-    var jiraSearchLinkHREF = 'https://issues.liferay.com/issues/?jql=' + encodedQuery;
+    var jiraSearchLinkHREF = 'https://liferay.atlassian.net/issues/?jql=' + encodedQuery;
     return createAnchorTag(text, jiraSearchLinkHREF);
 }
 var accountCodeCache = {};
@@ -1302,11 +1302,11 @@ function addJiraLinksToElement(element) {
     var newHTML = element.innerHTML.replace(jiraTicketIdLink, '$1');
     newHTML = element.innerHTML.replace(jiraTicketURLLink, '$1$2');
     if (element.contentEditable == 'true') {
-        newHTML = newHTML.replace(jiraTicketId, '$1<a href="https://issues.liferay.com/browse/$2">$2</a>');
+        newHTML = newHTML.replace(jiraTicketId, '$1<a href="https://liferay.atlassian.net/browse/$2">$2</a>');
         newHTML = newHTML.replace(jiraTicketURL, '$1<a href="$2$3">$2$3</a>');
     }
     else {
-        newHTML = newHTML.replace(jiraTicketId, '$1<a href="https://issues.liferay.com/browse/$2" target="_blank">$2</a>');
+        newHTML = newHTML.replace(jiraTicketId, '$1<a href="https://liferay.atlassian.net/browse/$2" target="_blank">$2</a>');
         newHTML = newHTML.replace(jiraTicketURL, '$1<a href="$2$3" target="_blank">$2$3</a>');
     }
     if (element.innerHTML != newHTML) {

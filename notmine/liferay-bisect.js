@@ -117,7 +117,7 @@ function generateRow(notableHash, arrayIndex) {
 
 	cell = document.createElement('td');
 	cell.classList.add('ticket-id');
-	cell.innerHTML = notableHash.ticket ? '<a href="https://issues.liferay.com/browse/' + notableHash.ticket + '">' + notableHash.ticket + '</a>' : 'merge commit';
+	cell.innerHTML = notableHash.ticket ? '<a href="https://liferay.atlassian.net/browse/' + notableHash.ticket + '">' + notableHash.ticket + '</a>' : 'merge commit';
 	row.appendChild(cell);
 
 	cell = document.createElement('td');
