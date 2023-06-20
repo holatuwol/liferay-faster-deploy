@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        17.5
+// @version        17.6
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -1967,12 +1967,9 @@ function getSupportOffices(assigneeGroup) {
  * Set the initial values for the "Create Issue" modal dialog window
  * after the fields have initialized.
  */
-function initJiraTicketValues(data) {
+function initPatchTicketValues(data) {
     var ticket = data['ticket'];
     var productVersion = data['ticket.customField:custom_field_360006076471'];
-    function setProjectId(callback) {
-        setReactSearchSelectValue('projectId', 'LPP', callback);
-    }
     function setSummary(callback) {
         setReactInputValue('input[data-test-id=summary]', ticket.subject, callback);
     }
@@ -2023,43 +2020,35 @@ function initJiraTicketValues(data) {
             callback();
         }
     }
-    var callOrder = [setProjectId, setSummary, setCustomerTicketCreationDate, setSupportOffice, setAffectsVersion, setDeliveryBaseFixPack, focusSummary];
+    var callOrder = [setSummary, setCustomerTicketCreationDate, setSupportOffice, setAffectsVersion, setDeliveryBaseFixPack, focusSummary];
     var nestedFunction = callOrder.reverse().reduce(function (accumulator, x) { return x.bind(null, accumulator); });
     nestedFunction();
-}
-/**
- * Attach a click listener to the copyFieldsLink element to populate
- * the JIRA ticket fields.
- */
-function attachCopyFieldsLinkListener(client, parentClient) {
-    var copyFieldsLink = document.querySelector('div[class*="copyFieldsLink"]');
-    if (copyFieldsLink) {
-        parentClient.get(['currentUser', 'ticket', 'ticket.customField:custom_field_360006076471']).then(initJiraTicketValues);
-    }
-    else {
-        setTimeout(attachCopyFieldsLinkListener.bind(null, client, parentClient), 1000);
-    }
-}
-/**
- * Attempt to initialize the ZAF parent client instance using a
- * registered ZAF client instance.
- */
-function initZafParentClient(client, callback) {
-    var parentGuid = document.location.hash.substring('#parentGuid='.length);
-    var parentClient = client.instance(parentGuid);
-    callback(client, parentClient);
 }
 /**
  * Attempt to initialize the ZAF client instance, then initialize the
  * ZAF parent client instance so we can retrieve ticket metadata.
  */
-function initZafClient(callback) {
+function initZafClient() {
     if (!unsafeWindow.ZAFClient) {
-        setTimeout(initZafClient.bind(null, callback), 1000);
+        setTimeout(initZafClient, 1000);
         return;
     }
-    var client = unsafeWindow.ZAFClient.init();
-    client.on('app.registered', initZafParentClient.bind(null, client, callback));
+    function initJiraTicketValues() {
+        var issueTypeMenu = document.querySelector('div[data-test-id="issuetype-menu"]');
+        if (!issueTypeMenu) {
+            setTimeout(initJiraTicketValues, 1000);
+            return;
+        }
+        if (issueTypeMenu.textContent != 'Patch') {
+            setTimeout(initJiraTicketValues, 1000);
+            return;
+        }
+        var parentGuid = document.location.hash.substring('#parentGuid='.length);
+        var client = unsafeWindow.ZAFClient.init();
+        var parentClient = client.instance(parentGuid);
+        parentClient.get(['ticket', 'ticket.customField:custom_field_360006076471']).then(initPatchTicketValues);
+    }
+    setReactSearchSelectValue('projectId', 'LPP');
 }
 function detachModalWindowHandler() {
     var backdrop = document.querySelector('.modal-backdrop.in');
@@ -2069,7 +2058,7 @@ function detachModalWindowHandler() {
     jQuery(backdrop).unbind('click');
 }
 if (unsafeWindow.location.hostname == '24475.apps.zdusercontent.com') {
-    setTimeout(initZafClient.bind(null, attachCopyFieldsLinkListener), 3000);
+    setTimeout(initZafClient, 1000);
 }
 else {
     setInterval(detachModalWindowHandler, 1000);
