@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        17.6
+// @version        17.7
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -1974,12 +1974,12 @@ function initPatchTicketValues(data) {
         setReactInputValue('input[data-test-id=summary]', ticket.subject, callback);
     }
     function setCustomerTicketCreationDate(callback) {
-        setReactInputValue('span[data-test-id=customfield_11126] input', new Date(ticket.createdAt), callback);
+        setReactInputValue('span[data-test-id=customfield_10134] input', new Date(ticket.createdAt), callback);
     }
     function setSupportOffice(callback) {
         var assigneeGroup = ticket.assignee.group.name;
         var supportOffices = Array.from(getSupportOffices(assigneeGroup));
-        addReactLabelValues('customfield_11523', supportOffices, callback);
+        addReactLabelValues('customfield_10133', supportOffices, callback);
     }
     function setAffectsVersion(callback) {
         var value = (productVersion.indexOf('7_0') != -1) ? '7.0.10' :
@@ -1987,29 +1987,14 @@ function initPatchTicketValues(data) {
                 (productVersion.indexOf('7_2') != -1) ? '7.2.10' :
                     (productVersion.indexOf('7_3') != -1) ? '7.3.10' :
                         (productVersion.indexOf('7_4') != -1) ? '7.4.13' :
-                            null;
+                            (productVersion.indexOf('lxc') != -1) ? '7.4.13' :
+                                null;
         if (value) {
             addReactLabelValue('versions', value, callback);
         }
         else if (callback) {
             callback();
         }
-    }
-    function setDeliveryBaseFixPack(callback) {
-        var conversations = ticket.conversation;
-        var baselines = new Set();
-        for (var i = 0; i < conversations.length; i++) {
-            var conversationText = conversations[i].value;
-            var baselineRegExp = /(de|dxp)-[0-9][0-9]*/gi;
-            var matcher = null;
-            while (matcher = baselineRegExp.exec(conversationText)) {
-                baselines.add(matcher[0].toUpperCase());
-            }
-        }
-        var versionNumber = (productVersion.indexOf('7_0') != -1) ? '7010' :
-            (productVersion.indexOf('7_1') != -1) ? '7110' :
-                (productVersion.indexOf('7_2') != -1) ? '7210' : null;
-        setReactInputValue('input[data-test-id=customfield_22551]', Array.from(baselines).join(' '), callback);
     }
     function focusSummary(callback) {
         var summary = document.querySelector('input[data-test-id=summary]');
@@ -2020,7 +2005,7 @@ function initPatchTicketValues(data) {
             callback();
         }
     }
-    var callOrder = [setSummary, setCustomerTicketCreationDate, setSupportOffice, setAffectsVersion, setDeliveryBaseFixPack, focusSummary];
+    var callOrder = [setSummary, setCustomerTicketCreationDate, setSupportOffice, setAffectsVersion, focusSummary];
     var nestedFunction = callOrder.reverse().reduce(function (accumulator, x) { return x.bind(null, accumulator); });
     nestedFunction();
 }
@@ -2043,12 +2028,13 @@ function initZafClient() {
             setTimeout(initJiraTicketValues, 1000);
             return;
         }
-        var parentGuid = document.location.hash.substring('#parentGuid='.length);
         var client = unsafeWindow.ZAFClient.init();
-        var parentClient = client.instance(parentGuid);
-        parentClient.get(['ticket', 'ticket.customField:custom_field_360006076471']).then(initPatchTicketValues);
+        client.context().then(function (context) {
+            var parentGuid = document.location.hash.substring('#parentGuid='.length);
+            client.instance(parentGuid).get(['ticket', 'ticket.customField:custom_field_360006076471']).then(initPatchTicketValues);
+        });
     }
-    setReactSearchSelectValue('projectId', 'LPP');
+    setReactSearchSelectValue('projectId', 'LPP', initJiraTicketValues);
 }
 function detachModalWindowHandler() {
     var backdrop = document.querySelector('.modal-backdrop.in');
