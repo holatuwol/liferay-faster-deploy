@@ -14,16 +14,15 @@ startdatabase() {
 	fi
 
 	docker run --name ${CONTAINER_NAME} \
-		-e 'POSTGRES_USER=lportal' -e 'POSTGRES_PASSWORD=lportal' -e 'POSTGRES_DB=lportal' \
-		--detach --expose 5432 postgres:${POSTGRES_VERSION}
+		-e 'POSTGRES_USER=lportal' -e 'POSTGRES_PASSWORD=lportal' \
+		--detach -p 5432:5432 postgres:${POSTGRES_VERSION}
 }
 
 updateprops() {
 	if [ "" == "${DB_HOST_NAME}" ]; then
-		local DB_HOST_NAME=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${CONTAINER_NAME})
+		local DB_HOST_NAME="localhost"
 		echo "PostgreSQL database is started with IP address ${DB_HOST_NAME}"
 	fi
-
 
 	echo "Updating ${LIFERAY_HOME}/portal-ext.properties with database connection information"
 
@@ -52,7 +51,7 @@ waitfor_database() {
 DB_TYPE='postgres'
 
 if [ "" == "${POSTGRES_VERSION}" ]; then
-	POSTGRES_VERSION='10.4'
+	POSTGRES_VERSION='15.2'
 fi
 
 runcontainer $@
