@@ -51,7 +51,7 @@ waitfor_database() {
 DB_TYPE='postgres'
 
 if [ "" == "${POSTGRES_VERSION}" ]; then
-	POSTGRES_VERSION='15.2'
+	POSTGRES_VERSION='13.11-bullseye'
 fi
 
 runcontainer $@
