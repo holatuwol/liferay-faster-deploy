@@ -9,7 +9,7 @@ execute_script() {
 		if [ "" == "${SYS_PASSWORD}" ]; then
 			SYS_PASSWORD="$(date +%s | sha256sum | base64 | head -c 16 ; echo)"
 			echo "sys password will be set to ${SYS_PASSWORD}"
-			docker exec -it 72x-oracle ./setPassword.sh ${SYS_PASSWORD}
+			docker exec -it ${CONTAINER_NAME} ./setPassword.sh ${SYS_PASSWORD}
 		else
 			echo "sys password was set to ${SYS_PASSWORD}"
 		fi
@@ -24,6 +24,8 @@ execute_script() {
 }
 
 restorebackup_dba() {
+	echo "Restoring database backup as sysdba..."
+
 	mkdir -p ${LIFERAY_HOME}/oracle
 
 	execute_script "create or replace directory export_lportal as '${BACKUP_FOLDER_NAME}';
@@ -62,6 +64,8 @@ grant dba to lportal;"
 }
 
 restorebackup_normal() {
+	echo "Restoring database backup as normal user..."
+
 	mkdir -p ${LIFERAY_HOME}/oracle
 
 	execute_script "create or replace directory export_lportal as '${BACKUP_FOLDER_NAME}';
@@ -135,7 +139,7 @@ startdatabase() {
 	docker run --name ${CONTAINER_NAME} \
 		-e 'ORACLE_CHARACTERSET=AL32UTF8' \
 		-e 'ORACLE_PDB=orcl' \
-		--detach --expose 1521 ${ORACLE_VERSION}
+		--detach -p 1521 ${ORACLE_VERSION}
 
 	waitfor_database
 
@@ -200,7 +204,7 @@ DB_TYPE='oracle'
 
 DB_IMPORT_TYPE='normal'
 
-if [ "dba" == "$2" ]; then
+if [ "dba" == "${2}" ]; then
 	DB_IMPORT_TYPE='dba'
 fi
 

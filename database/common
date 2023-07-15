@@ -15,9 +15,13 @@ containername() {
 }
 
 copydriver() {
+	if [ "" == "${LIFERAY_HOME}" ] && [ "" == "${CATALINA_HOME}" ]; then
+		return 0
+	fi
+
 	if [ "" == "${CATALINA_HOME}" ]; then
-		mkdir -p ${LIFERAY_HOME}/tomcat/lib/ext
 		CATALINA_HOME=${LIFERAY_HOME}/tomcat
+		mkdir -p ${CATALINA_HOME}/lib/ext
 	fi
 
 	. $(dirname ${BASH_SOURCE[0]})/copydriver
@@ -75,35 +79,24 @@ docker_cp_chown() {
 	fi
 }
 
-liferayhome() {
-	if [ "${PWD}" != "${HOME}" ] && [ -f portal-ext.properties ]; then
-		LIFERAY_HOME=${PWD}
-	fi
-
-	if [ "" != "${LIFERAY_HOME}" ]; then
-		if [ -d ${PWD}/tomcat-* ]; then
-			CATALINA_HOME=${PWD}/tomcat-*
-		fi
-
-		return 0
-	fi
-
-	. $(dirname ${BASH_SOURCE[0]})/../appserverprops
-
-	if [ "" == "${LIFERAY_HOME}" ]; then
-		echo 'Please either define LIFERAY_HOME or navigate to a portal source folder'
-		exit 1
-	fi
-
-	. $(dirname ${BASH_SOURCE[0]})/../getparent
-}
-
 random_password() {
 	cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 30 | head -n 1
 }
 
 runcontainer() {
-	containername && startdatabase $@ && updateprops && copydriver && waitfor_database && docker_cp_chown $@ && restorebackup $@
-}
+	containername && startdatabase $@
 
-liferayhome
+	if [[ 0 -ne $? ]]; then
+		return 1
+	fi
+
+	if [ "" != "${LIFERAY_HOME}" ] || [ "" != "${CATALINA_HOME}" ]; then
+		updateprops && copydriver
+
+		if [[ 0 -ne $? ]]; then
+			return 1
+		fi
+	fi
+
+	waitfor_database && docker_cp_chown $@ && restorebackup $@
+}
