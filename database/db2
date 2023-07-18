@@ -38,7 +38,7 @@ startdatabase() {
 
 	docker run --name ${CONTAINER_NAME} \
 		-e DB2INST1_PASSWORD="${DB2INST1_PASSWORD}" -e LICENSE=accept \
-		--detach  --expose 50000 ibmcom/db2express-c:${DB2_VERSION} db2start
+		--detach -p 50000:50000 ibmcom/db2express-c:${DB2_VERSION} db2start
 
 	docker cp dbpass.txt ${CONTAINER_NAME}:/home/db2inst1/
 

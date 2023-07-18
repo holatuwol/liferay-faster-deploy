@@ -16,7 +16,7 @@ startdatabase() {
 	docker run --name ${CONTAINER_NAME} \
 		-e 'MYSQL_ALLOW_EMPTY_PASSWORD=yes' -e 'MYSQL_USER=lportal' -e 'MYSQL_PASSWORD=lportal' -e 'MYSQL_DATABASE=lportal' \
 		--health-cmd='mysqladmin ping --silent' \
-		--detach --expose 3306 mysql:${MYSQL_VERSION} \
+		--detach -p 3307:3306 mysql:${MYSQL_VERSION} \
 		--character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
 
 	echo "

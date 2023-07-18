@@ -30,7 +30,7 @@ startdatabase() {
 	docker run --name ${CONTAINER_NAME} \
 		--cap-add SYS_PTRACE \
 		-e 'ACCEPT_EULA=1' -e "MSSQL_SA_PASSWORD=${MSSQL_PASSWORD}" ${VOLUME} \
-		--detach --expose 1433 mcr.microsoft.com/azure-sql-edge
+		--detach -p 1433:1433 mcr.microsoft.com/azure-sql-edge
 
 	docker cp dbpass.txt ${CONTAINER_NAME}:/
 }

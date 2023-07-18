@@ -19,7 +19,7 @@ startdatabase() {
 
 	docker run --name ${CONTAINER_NAME} \
 		-e 'ACCEPT_EULA=y' -e "SA_PASSWORD=${MSSQL_PASSWORD}" \
-		--detach --expose 1433 mcr.microsoft.com/mssql/server:${MSSQL_VERSION}
+		--detach -p 1433:1433 mcr.microsoft.com/mssql/server:${MSSQL_VERSION}
 
 	docker cp dbpass.txt ${CONTAINER_NAME}:/
 }

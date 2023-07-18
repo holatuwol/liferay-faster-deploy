@@ -14,7 +14,7 @@ startdatabase() {
 	fi
 
 	docker run --name ${CONTAINER_NAME} \
-		--detach --expose 5000 --expose 5001 nguoianphu/docker-sybase
+		--detach -p 5000:5000 -p 5001:5001 nguoianphu/docker-sybase
 
 	echo "Waiting for initial database startup..."
 

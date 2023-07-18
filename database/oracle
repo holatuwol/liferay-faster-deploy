@@ -139,7 +139,7 @@ startdatabase() {
 	docker run --name ${CONTAINER_NAME} \
 		-e 'ORACLE_CHARACTERSET=AL32UTF8' \
 		-e 'ORACLE_PDB=orcl' \
-		--detach -p 1521 ${ORACLE_VERSION}
+		--detach -p 1521:1521 ${ORACLE_VERSION}
 
 	waitfor_database
 
