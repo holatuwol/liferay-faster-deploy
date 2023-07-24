@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        17.8
+// @version        17.9
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -1297,33 +1297,10 @@ function createDescriptionContainer(ticketId, ticketInfo, conversation) {
     return descriptionContainer;
 }
 /**
- * Recursively scan LPS tickets and LPE tickets, and replace any
- * plain text with HTML.
- */
-var jiraTicketId = /([^/])(LP[EPS]-[0-9]+)/g;
-var jiraTicketURL = /([^"])(https:\/\/issues\.liferay\.com\/browse\/)(LP[EPS]-[0-9]+)/g;
-var jiraTicketIdLink = /<a [^>]*href="https:\/\/issues\.liferay\.com\/browse\/(LP[EPS]-[0-9]+)"[^>]*>\1<\/a>/g;
-var jiraTicketURLLink = /<a [^>]*href="(https:\/\/issues\.liferay\.com\/browse\/)(LP[EPS]-[0-9]+)"[^>]*>\1\2<\/a>/g;
-function addJiraLinksToElement(element) {
-    var newHTML = element.innerHTML.replace(jiraTicketIdLink, '$1');
-    newHTML = element.innerHTML.replace(jiraTicketURLLink, '$1$2');
-    if (element.contentEditable == 'true') {
-        newHTML = newHTML.replace(jiraTicketId, '$1<a href="https://liferay.atlassian.net/browse/$2">$2</a>');
-        newHTML = newHTML.replace(jiraTicketURL, '$1<a href="$2$3">$2$3</a>');
-    }
-    else {
-        newHTML = newHTML.replace(jiraTicketId, '$1<a href="https://liferay.atlassian.net/browse/$2" target="_blank">$2</a>');
-        newHTML = newHTML.replace(jiraTicketURL, '$1<a href="$2$3" target="_blank">$2$3</a>');
-    }
-    if (element.innerHTML != newHTML) {
-        element.innerHTML = newHTML;
-    }
-}
-/**
  * Adds a button which loads a window which allows you to compose a
  * post with Markdown.
  */
-function addReplyStackeditButton(element, callback) {
+function addReplyStackeditButton(element) {
     var parentElement = element.parentElement;
     var grandparentElement = parentElement.parentElement;
     var list = grandparentElement.querySelector('.zendesk-editor--toolbar ul');
@@ -1336,7 +1313,7 @@ function addReplyStackeditButton(element, callback) {
     img.src = 'https://benweet.github.io/stackedit.js/icon.svg';
     var listItem = document.createElement('li');
     listItem.appendChild(img);
-    listItem.onclick = composeWithStackedit.bind(null, element, callback);
+    listItem.onclick = composeWithStackedit.bind(null, element);
     list.appendChild(listItem);
 }
 /**
@@ -1391,7 +1368,7 @@ function addReplyFormattingButtons(ticketId, ticketInfo, conversation) {
     var legacyComments = Array.from(conversation.querySelectorAll('.zendesk-editor--rich-text-container .zendesk-editor--rich-text-comment'));
     for (var i = 0; i < legacyComments.length; i++) {
         addReplyUnderlineButton(legacyComments[i]);
-        addReplyStackeditButton(legacyComments[i], addJiraLinksToElement);
+        addReplyStackeditButton(legacyComments[i]);
     }
     var workspaceComments = Array.from(conversation.querySelectorAll('div[data-test-id="editor-view"]'));
     for (var i = 0; i < workspaceComments.length; i++) {
@@ -1424,23 +1401,6 @@ function composeWithStackedit(element, callback) {
             callback(element);
         }
     });
-}
-/**
- * Scan the ticket for LPS tickets and LPE tickets, and replace any
- * plain text with HTML.
- */
-function addJiraLinks(ticketId, ticketInfo, conversation) {
-    if (conversation.classList.contains('lesa-ui-jiralink')) {
-        return;
-    }
-    conversation.classList.add('lesa-ui-jiralink');
-    var comments = Array.from(conversation.querySelectorAll(isAgentWorkspace ? 'article' : 'div[data-comment-id]'));
-    for (var i = 0; i < comments.length; i++) {
-        var comment = comments[i].querySelector('div[data-test-id="omni-log-message-content"]');
-        if (comment) {
-            addJiraLinksToElement(comment);
-        }
-    }
 }
 /**
  * Add a playbook reminder to the given editor.
@@ -2263,7 +2223,6 @@ function checkTicketConversation(ticketId, ticketInfo) {
         enablePublicConversation(ticketId, ticketInfo, conversation);
     }
     addReplyFormattingButtons(ticketId, ticketInfo, conversation);
-    addJiraLinks(ticketId, ticketInfo, conversation);
     addPlaybookReminder(ticketId, ticketInfo, conversation);
     addTicketDescription(ticketId, ticketInfo, conversation);
     fixPermaLinkAnchors(ticketId, ticketInfo, conversation);
