@@ -24,7 +24,7 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 Disable Touchpad
 ================
 
-In most modern operating systems, you can tell the operating system to ignore the trackpad input when an external mouse is connected, but no such option exists in the Liferay Fedora setups. This script checks ``xinput`` for the Touchpad and then either enables/disables it based on whether you pass ``0`` or ``1``.
+In most modern operating systems, you can tell the operating system to ignore the trackpad input when an external mouse is connected, but no such option exists in the Liferay Fedora setups. This script checks ``xinput`` for the Touchpad and then either disables it if you pass ``0`` or enables it if you pass ``1``.
 
 .. code-block:: bash
 
