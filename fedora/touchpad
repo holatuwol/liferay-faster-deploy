@@ -1,0 +1,30 @@
+#!/bin/bash
+
+if [ "0" != "${1}" ] && [ "1" != "${1}" ]; then
+	echo "touchpad 0 to disable, touchpad 1 to enable"
+	exit 1
+fi
+
+DEVICE_ID=$(xinput list | grep Touchpad | grep -o 'id=[0-9]*' | cut -d'=' -f 2)
+
+if [ "" == "${DEVICE_ID}" ]; then
+	echo "Unable to disable touchpad"
+	exit 1
+fi
+
+PROPERTY_ID=$(xinput list-props ${DEVICE_ID} | grep 'Device Enabled' | cut -d'(' -f 2 | cut -d')' -f 1)
+
+if [ "" == "${PROPERTY_ID}" ]; then
+	echo "Unable to disable touchpad"
+	exit 1
+fi
+
+
+if [ "0" == "${1}" ]; then
+	echo "Disabling touchpad"
+else
+	echo "Enabling touchpad"
+fi
+
+set -o xtrace
+xinput set-prop ${DEVICE_ID} ${PROPERTY_ID} ${1}
