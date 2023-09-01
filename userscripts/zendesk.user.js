@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        17.9
+// @version        18.0
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -462,7 +462,7 @@ function getSupportRegions(assigneeText) {
     if (isSupportRegion(assigneeText, 'JP')) {
         supportRegions.push('Japan');
     }
-    if ((assigneeText.indexOf('Spain Pod') == 0) || (isSupportRegion(assigneeText, 'ES'))) {
+    if ((assigneeText.indexOf('Spain Pod') == 0) || (isSupportRegion(assigneeText, 'ES') && !isSupportRegion(assigneeText, 'BR'))) {
         supportRegions.push('Spain');
     }
     if (isSupportRegion(assigneeText, 'US')) {
@@ -1921,7 +1921,7 @@ function getSupportOffices(assigneeGroup) {
     if (assigneeGroup.indexOf('- JP') != -1) {
         supportOffices.push('Japan');
     }
-    if ((assigneeGroup.indexOf('Spain Pod') == 0) || (assigneeGroup.indexOf(' - ES') != -1)) {
+    if ((assigneeGroup.indexOf('Spain Pod') == 0) || ((assigneeGroup.indexOf(' - ES') != -1) && (assigneeGroup.indexOf('- BR') == -1))) {
         supportOffices.push('Spain');
     }
     if (assigneeGroup.indexOf(' - US') != -1) {
