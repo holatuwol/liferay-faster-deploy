@@ -6,13 +6,7 @@ javahome() {
 	BASE_JAVA=
 	JAVA_VERSION=$1
 
-	if [ -d /opt/java ]; then
-		BASE_JAVA=/opt/java
-	elif [ -d /usr/java ]; then
-		BASE_JAVA=/usr/java
-	elif [ -d /usr/lib/jvm ]; then
-		BASE_JAVA=/usr/lib/jvm
-	else
+	if [ ! -d /opt/java ] && [ -d /usr/java ] && [ ! -d /usr/lib/jvm ]; then
 		echo "Unable to change Java on your operating system"
 		return 0
 	fi
@@ -22,8 +16,11 @@ javahome() {
 	if [ "" == "${1}" ]; then
 		if [ "" != "${JAVA_HOME}" ]; then
 			echo JAVA_HOME=${JAVA_HOME}
-			${JAVA_HOME}/bin/java 2>&1 -version | head -1
-			return 0
+
+			if [ -f ${JAVA_HOME}/bin/java ]; then
+				${JAVA_HOME}/bin/java 2>&1 -version | head -1
+				return 0
+			fi
 		fi
 
 		JAVA_VERSION=8
@@ -105,6 +102,17 @@ check_javahome() {
 
 	if [ "" == "${JAVA_ALT_ID}" ]; then
 		for folder in $(ls -1 ${BASE_JAVA} | grep -F java-${JAVA_VERSION}-openjdk); do
+			if [ ! -f ${BASE_JAVA}/${folder}/bin/java ]; then
+				continue
+			fi
+
+			JAVA_ALT_ID=${BASE_JAVA}/${folder}
+			break
+		done
+	fi
+
+	if [ "" == "${JAVA_ALT_ID}" ]; then
+		for folder in $(ls -1 ${BASE_JAVA} | grep -F zulu${JAVA_VERSION}); do
 			if [ ! -f ${BASE_JAVA}/${folder}/bin/java ]; then
 				continue
 			fi
