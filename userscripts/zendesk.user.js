@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        18.0
+// @version        18.1
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -488,21 +488,23 @@ function addRegionMarker(priorityElement, ticketInfo, ticketContainer) {
         customerCountryElement.appendChild(customerCountryLink);
         priorityElement.appendChild(customerCountryElement);
     }
-    var assigneeElement = ticketContainer.querySelector(isAgentWorkspace ? 'div[data-test-id="assignee-field-selected-agent-tag"] > span, div[data-test-id="assignee-field-selected-group-tag"]' : '.js-zero-state-ticket-tutorial-assignee-field > div > div');
-    if (assigneeElement && (ticketInfo.ticket.status != 'closed')) {
-        var customerRegion = organizationFields.support_region;
-        var assigneeText = (assigneeElement.textContent || '').trim();
-        var assigneeRegions = getSupportRegions(assigneeText);
-        if (!assigneeRegions.has(customerRegion)) {
-            var customerRegionElement = document.createElement('span');
-            customerRegionElement.classList.add('lesa-ui-priority-major');
-            var customerRegionLink = document.createElement('a');
-            customerRegionLink.textContent = 'customer region: ' + customerRegion;
-            var query = 'support_region:' + customerRegion;
-            customerRegionLink.href = 'https://' + document.location.host + '/agent/search/1?type=organization&q=' + encodeURIComponent(query);
-            customerRegionElement.appendChild(customerRegionLink);
-            priorityElement.appendChild(customerRegionElement);
-        }
+    var assigneeElement = ticketContainer.querySelector('.js-zero-state-ticket-tutorial-assignee-field > div > div');
+    if (ticketInfo.ticket.status == 'closed') {
+        return;
+    }
+    var customerRegion = organizationFields.support_region;
+    var assigneeText = ((assigneeElement && assigneeElement.textContent) || '').trim();
+    var assigneeRegions = getSupportRegions(assigneeText);
+    var subpriority = ticketInfo.ticket.priority || 'none';
+    if ((subpriority == 'high') || (subpriority == 'urgent') || !assigneeRegions.has(customerRegion)) {
+        var customerRegionElement = document.createElement('span');
+        customerRegionElement.classList.add('lesa-ui-priority-major');
+        var customerRegionLink = document.createElement('a');
+        customerRegionLink.textContent = 'customer region: ' + customerRegion;
+        var query = 'support_region:' + customerRegion;
+        customerRegionLink.href = 'https://' + document.location.host + '/agent/search/1?type=organization&q=' + encodeURIComponent(query);
+        customerRegionElement.appendChild(customerRegionLink);
+        priorityElement.appendChild(customerRegionElement);
     }
 }
 /**
@@ -566,10 +568,10 @@ function addPriorityMarker(header, conversation, ticketId, ticketInfo) {
     var ticketTagSet = new Set(ticketTags);
     var organizationTags = (ticketInfo && ticketInfo.organizations) ? ticketInfo.organizations.map(function (it) { return it.tags || []; }).reduce(function (acc, it) { return acc.concat(it); }) : [];
     organizationTags = Array.from(new Set(organizationTags));
+    addRegionMarker(priorityElement, ticketInfo, ticketContainer);
     addServiceLifeMarker(priorityElement, ticketId, ticketTags, organizationTags);
     addCriticalMarker(priorityElement, ticketInfo, ticketTagSet);
     addCustomerTypeMarker(priorityElement, ticketTagSet);
-    addRegionMarker(priorityElement, ticketInfo, ticketContainer);
     var emojiContainer = getEmojiAnchorTags(ticketTags);
     if (emojiContainer != null) {
         priorityElement.appendChild(emojiContainer);
