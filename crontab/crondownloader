@@ -28,7 +28,7 @@ source "${HOME}/crontab/aliases"
 
 cxall
 
-download_branch master-private master 7z
+download_branch master-private master-private 7z
 download_branch 73x-private 7.3.x-private 7z
 download_branch 72x-private 7.2.x-private 7z
 download_branch 71x-private 7.1.x-private 7z
