@@ -21,6 +21,7 @@ download_branch() {
 		tar -zxf liferay-portal-tomcat-${2}-all.${3}
 	fi
 
+	rm -rf rm -rf liferay-portal-${2}-all/data/ liferay-portal-${2}-all/osgi/state/
 	mv liferay-portal-${2}-all ${TIMESTAMP}
 }
 
