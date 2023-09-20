@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        18.3
+// @version        18.4
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -640,6 +640,7 @@ function addOrganizationField(propertyBox, ticketId, ticketInfo) {
     if (organizationInfo && organizationInfo.notes) {
         var notesContainer = document.createElement('div');
         notesContainer.textContent = organizationInfo.notes;
+        notesContainer.innerHTML = notesContainer.innerHTML.replace(/(https:\/\/liferay-support.zendesk.com\/agent\/tickets\/([0-9]+)\?comment=[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z)/g, '<a href="$1" target="_blank">#$2</a>');
         notesContainer.innerHTML = notesContainer.innerHTML.replace(/(https:\/\/liferay-support.zendesk.com\/agent\/tickets\/([0-9]+))/g, '<a href="$1">#$2</a>');
         generateFormField(propertyBox, 'lesa-ui-orgnotes', 'Notes', [notesContainer]);
     }
