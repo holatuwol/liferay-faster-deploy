@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        18.4
+// @version        18.5
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -121,11 +121,11 @@ var accountInfo = null;
  * Retrieve the account code from the sidebar.
  */
 function getAccountCode(ticketId, ticketInfo, propertyBox) {
-    if (accountCodeCache.hasOwnProperty(ticketId)) {
+    if (ticketId && accountCodeCache.hasOwnProperty(ticketId)) {
         return accountCodeCache[ticketId];
     }
     var accountCode = null;
-    if (ticketInfo.organizations && (ticketInfo.organizations.length == 1)) {
+    if (ticketInfo && ticketInfo.organizations && (ticketInfo.organizations.length == 1)) {
         var organizationInfo = ticketInfo.organizations[0];
         var organizationFields = organizationInfo.organization_fields;
         accountCode = organizationFields.account_code;
@@ -137,7 +137,7 @@ function getAccountCode(ticketId, ticketInfo, propertyBox) {
             accountCode = accountCodeField.value;
         }
     }
-    if (accountCode) {
+    if (ticketId && accountCode) {
         accountCodeCache[ticketId] = accountCode;
     }
     return accountCode;
@@ -594,6 +594,13 @@ function addPriorityMarker(header, conversation, ticketId, ticketInfo) {
  * Generate a single dummy field to add to the sidebar.
  */
 function generateFormField(propertyBox, className, labelText, formElements) {
+    var oldFormFields = propertyBox.querySelectorAll('.' + className);
+    for (var i = 0; i < oldFormFields.length; i++) {
+        propertyBox.removeChild(oldFormFields[i]);
+    }
+    if (formElements.length == 0) {
+        return;
+    }
     var formField = document.createElement('div');
     formField.classList.add('ember-view');
     formField.classList.add('form_field');
@@ -604,10 +611,6 @@ function generateFormField(propertyBox, className, labelText, formElements) {
     formField.appendChild(label);
     for (var i = 0; i < formElements.length; i++) {
         formField.appendChild(formElements[i]);
-    }
-    var oldFormFields = propertyBox.querySelectorAll('.' + className);
-    for (var i = 0; i < oldFormFields.length; i++) {
-        propertyBox.removeChild(oldFormFields[i]);
     }
     propertyBox.appendChild(formField);
 }
@@ -637,13 +640,15 @@ function addOrganizationField(propertyBox, ticketId, ticketInfo) {
     if (accountCode) {
         organizationInfo = organizationCache[accountCode];
     }
+    var notesItems = [];
     if (organizationInfo && organizationInfo.notes) {
         var notesContainer = document.createElement('div');
         notesContainer.textContent = organizationInfo.notes;
         notesContainer.innerHTML = notesContainer.innerHTML.replace(/(https:\/\/liferay-support.zendesk.com\/agent\/tickets\/([0-9]+)\?comment=[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z)/g, '<a href="$1" target="_blank">#$2</a>');
         notesContainer.innerHTML = notesContainer.innerHTML.replace(/(https:\/\/liferay-support.zendesk.com\/agent\/tickets\/([0-9]+))/g, '<a href="$1">#$2</a>');
-        generateFormField(propertyBox, 'lesa-ui-orgnotes', 'Notes', [notesContainer]);
+        notesItems.push(notesContainer);
     }
+    generateFormField(propertyBox, 'lesa-ui-orgnotes', 'Notes', notesItems);
     if (organizationInfo) {
         var organizationFields = organizationInfo.organization_fields;
         serviceLevel.push(organizationFields.sla.toUpperCase());
@@ -745,7 +750,7 @@ function addPatcherPortalField(propertyBox, ticketId, ticketInfo) {
             patcherPortalItems.push(createAnchorTag(version + ' Builds', versionBuildsLinkHREF));
         }
     }
-    else {
+    else if (ticketId) {
         patcherPortalItems.push(document.createTextNode('N/A'));
     }
     generateFormField(propertyBox, 'lesa-ui-patcher', 'Patcher Portal', patcherPortalItems);
@@ -756,8 +761,11 @@ function addPatcherPortalField(propertyBox, ticketId, ticketInfo) {
  */
 function addJIRASearchField(propertyBox, ticketId) {
     var jiraSearchLinkContainer = document.createElement('div');
-    jiraSearchLinkContainer.appendChild(getJiraSearchLink('Linked Issues', ticketId));
-    var jiraSearchItems = [jiraSearchLinkContainer];
+    var jiraSearchItems = [];
+    if (ticketId) {
+        jiraSearchLinkContainer.appendChild(getJiraSearchLink('Linked Issues', ticketId));
+        jiraSearchItems.push(jiraSearchLinkContainer);
+    }
     generateFormField(propertyBox, 'lesa-ui-jirasearch', 'JIRA Search', jiraSearchItems);
 }
 function hideSidebarSelectOption(parentElement, hiddenMenuItemTexts) {
@@ -834,7 +842,7 @@ function updateSidebarBoxContainer(ticketId, ticketInfo) {
         addJIRASearchField(propertyBoxes[i], ticketId);
         addPatcherPortalField(propertyBoxes[i], ticketId, ticketInfo);
         hideSidebarSelectOptions(propertyBoxes[i], ticketId, ticketInfo);
-        propertyBoxes[i].setAttribute('data-ticket-id', ticketId);
+        propertyBoxes[i].setAttribute('data-ticket-id', ticketId || '');
     }
 }
 /**
