@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        18.7
+// @version        18.8
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -1529,8 +1529,8 @@ function clearHighlightedComments() {
  * Scroll to a specific comment if its comment ID is included in a
  * query string parameter.
  */
-function highlightComment(conversation, ticketId, commentId) {
-    if (!commentId && !document.location.search) {
+function highlightComment(conversation, ticketId, commentId, force) {
+    if (!force && !commentId && !document.location.search) {
         var logContainer = conversation.querySelector('div[data-test-id="omni-log-container"]');
         if (logContainer && logContainer.getAttribute('data-sort-ticket-id') != ticketId) {
             var sortedComments = document.querySelectorAll('div[data-sort-ticket-id]');
@@ -1565,16 +1565,21 @@ function highlightComment(conversation, ticketId, commentId) {
         return;
     }
     var event = comment.closest(isAgentWorkspace ? 'article' : '.event');
-    if (event.classList.contains('lesa-ui-event-highlighted')) {
+    if (!force && event.classList.contains('lesa-ui-event-highlighted')) {
         return;
     }
     var commentURL = 'https://' + document.location.host + document.location.pathname + '?comment=' + commentId;
     history.pushState({ path: commentURL }, '', commentURL);
     clearHighlightedComments();
     event.classList.add('lesa-ui-event-highlighted');
-    setTimeout(function () {
+    if (force) {
         event.scrollIntoView();
-    }, 1000);
+    }
+    else {
+        setTimeout(function () {
+            event.scrollIntoView();
+        }, 1000);
+    }
 }
 /**
  * Creates a self-highlighting input field.
@@ -1664,7 +1669,7 @@ function fixZenDeskLink(conversation, anchor, ticketId) {
     anchor.removeAttribute('href');
     if (href.substring(x + '?comment='.length, y) == ticketId) {
         var commentId = href.substring(y + '?comment='.length);
-        anchor.onclick = highlightComment.bind(null, conversation, ticketId, commentId);
+        anchor.onclick = highlightComment.bind(null, conversation, ticketId, commentId, true);
     }
     else {
         var commentURL = 'https://' + document.location.host + '/agent' + href.substring(x);
@@ -1703,7 +1708,7 @@ function fixHelpCenterLink(conversation, anchor, ticketId) {
     anchor.removeAttribute('href');
     var linkTicketId = href.substring(y + '/requests/'.length, Math.min(href.indexOf('?'), z));
     if (linkTicketId == ticketId) {
-        anchor.onclick = highlightComment.bind(null, conversation, ticketId, commentId);
+        anchor.onclick = highlightComment.bind(null, conversation, ticketId, commentId, true);
     }
     else {
         anchor.onclick = skipSinglePageApplication.bind(null, commentURL);
@@ -2289,7 +2294,7 @@ function checkTicketConversation(ticketId, ticketInfo) {
     fixPermaLinkAnchors(ticketId, ticketInfo, conversation);
     addPermaLinks(ticketId, ticketInfo, conversation);
     updateWindowTitle(ticketId, ticketInfo);
-    highlightComment(conversation, ticketId, '');
+    highlightComment(conversation, ticketId, '', false);
 }
 /**
  * Set the window title based on which URL you are currently visiting, so that if you
