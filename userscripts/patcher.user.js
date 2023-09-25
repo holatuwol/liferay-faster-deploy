@@ -756,6 +756,25 @@ function replaceFixes() {
     }
     replaceNode(oldNode, oldNode.innerHTML.split(',').map(getTicketLink.bind(null, '')).join(', '));
 }
+function updateCompactContainer(compactContainer, controlGroup) {
+    var labelElement = controlGroup.querySelector('label');
+    var label = (labelElement.textContent || '').trim();
+    var textarea = controlGroup.querySelector('textarea');
+    var ticketCount = 0;
+    if (textarea && textarea.value) {
+        ticketCount = textarea.value.split(',').length;
+    }
+    var text = label.substring(0, label.indexOf(' Ticket Suggestions'));
+    var tableRow = document.createElement('tr');
+    tableRow.setAttribute('data-suggestion-type', text);
+    compactContainer.appendChild(tableRow);
+    var tableHeader = document.createElement('th');
+    tableHeader.textContent = text;
+    tableRow.appendChild(tableHeader);
+    var tableCell = document.createElement('td');
+    tableCell.textContent = ticketCount + ((ticketCount == 1) ? ' ticket' : ' tickets');
+    tableRow.appendChild(tableCell);
+}
 function rearrangeColumns() {
     if (document.location.pathname.indexOf('/-/osb_patcher/builds/') == -1) {
         return;
@@ -784,27 +803,16 @@ function rearrangeColumns() {
     var compactContainer = document.createElement('table');
     compactContainer.classList.add('compact', 'table', 'table-bordered', 'table-hover');
     tableContainer.appendChild(compactContainer);
+    var controlGroup = getFixesFromPreviousBuilds();
+    tableContainer.appendChild(controlGroup);
+    updateCompactContainer(compactContainer, controlGroup);
     for (var i = 2; i < columns.length; i++) {
         controlGroups = columns[i].querySelectorAll('.control-group');
         for (var j = 0; j < controlGroups.length; j++) {
-            var controlGroup = controlGroups[j];
+            controlGroup = controlGroups[j];
             controlGroup.classList.add('verbose');
             tableContainer.appendChild(controlGroup);
-            var labelElement = controlGroup.querySelector('label');
-            var label = (labelElement.textContent || '').trim();
-            var textarea = controlGroup.querySelector('textarea');
-            var ticketCount = 0;
-            if (textarea.value) {
-                ticketCount = textarea.value.split(',').length;
-            }
-            var tableRow = document.createElement('tr');
-            compactContainer.appendChild(tableRow);
-            var tableHeader = document.createElement('th');
-            tableHeader.textContent = label.substring(0, label.indexOf(' Ticket Suggestions'));
-            tableRow.appendChild(tableHeader);
-            var tableCell = document.createElement('td');
-            tableCell.textContent = ticketCount + ((ticketCount == 1) ? ' ticket' : ' tickets');
-            tableRow.appendChild(tableCell);
+            updateCompactContainer(compactContainer, controlGroup);
         }
     }
     for (var i = 2; i < columns.length; i++) {
@@ -1134,6 +1142,71 @@ function addEngineerComments() {
     xhr1.setRequestHeader('Cache-Control', 'no-cache, no-store, max-age=0');
     xhr1.setRequestHeader('Pragma', 'no-cache');
     xhr1.send(null);
+}
+function updateFixesFromPreviousBuilds(accountNode, buildNameNode, projectNode, previousBuildsInput) {
+    var queryString = getQueryString({
+        advancedSearch: true,
+        andOperator: true,
+        delta: 200,
+        patcherBuildAccountEntryCode: accountNode.value,
+        patcherProjectVersionIdFilter: projectNode.value
+    });
+    var accountBuildsURL = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/accounts/view?' + queryString;
+    console.log(accountBuildsURL);
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', accountBuildsURL);
+    xhr.onload = function () {
+        // https://stackoverflow.com/questions/20583396/queryselectorall-to-html-from-another-page
+        var container = document.implementation.createHTMLDocument().documentElement;
+        container.innerHTML = xhr.responseText;
+        var pastTickets = new Set(Array.from(container.querySelectorAll('td > a[title]')).
+            map(function (it) { return (it.getAttribute('title') || '').split(/\s*,\s*/g); }).
+            reduce(function (acc, next) { return acc.concat(next); }, []));
+        var currentTickets = new Set((buildNameNode.value || '').split(/\s*,\s*/g));
+        var missingTickets = Array.from(pastTickets).
+            filter(function (it) { return !currentTickets.has(it); }).
+            sort(function (a, b) {
+            var splitA = a.split('-');
+            var splitB = b.split('-');
+            return splitA[0] != splitB[0] ? splitA[0] > splitB[0] ? 1 : -1 :
+                parseInt(splitA[1]) - parseInt(splitB[1]);
+        });
+        previousBuildsInput.value = missingTickets.join(', ');
+        var compactCell = document.querySelector('tr[data-suggestion-type="Previous Builds"] td');
+        var ticketCount = missingTickets.length;
+        compactCell.textContent = ticketCount + ((ticketCount == 1) ? ' ticket' : ' tickets');
+    };
+    xhr.send(null);
+}
+;
+function getFixesFromPreviousBuilds() {
+    var previousBuildsContainer = document.createElement('div');
+    previousBuildsContainer.classList.add('control-group', 'field-wrapper', 'verbose');
+    if (document.location.pathname.indexOf('/builds/create') == -1) {
+        return previousBuildsContainer;
+    }
+    var previousBuildsLabel = document.createElement('label');
+    previousBuildsLabel.classList.add('control-label');
+    previousBuildsLabel.setAttribute('for', '_1_WAR_osbpatcherportlet_previousBuildsTicketList');
+    previousBuildsLabel.textContent = 'Previous Builds Ticket Suggestions';
+    previousBuildsContainer.appendChild(previousBuildsLabel);
+    var previousBuildsInput = document.createElement('textarea');
+    previousBuildsInput.classList.add('input');
+    previousBuildsInput.setAttribute('id', '_1_WAR_osbpatcherportlet_previousBuildsTicketList');
+    previousBuildsInput.setAttribute('name', '_1_WAR_osbpatcherportlet_previousBuildsTicketList');
+    previousBuildsInput.setAttribute('inputcssclass', 'osb-patcher-input-wide');
+    previousBuildsContainer.appendChild(previousBuildsInput);
+    var accountNode = querySelector('patcherBuildAccountEntryCode');
+    var buildNameNode = querySelector('patcherBuildName');
+    var projectNode = querySelector('patcherProjectVersionId');
+    if (accountNode != null && buildNameNode != null && projectNode != null) {
+        updateFixesFromPreviousBuilds(accountNode, buildNameNode, projectNode, previousBuildsInput);
+        var refreshPreviousBuilds = updateFixesFromPreviousBuilds.bind(null, accountNode, buildNameNode, projectNode, previousBuildsInput);
+        accountNode.addEventListener('blur', refreshPreviousBuilds);
+        buildNameNode.addEventListener('blur', refreshPreviousBuilds);
+        projectNode.addEventListener('change', refreshPreviousBuilds);
+    }
+    return previousBuildsContainer;
 }
 // Run all the changes we need to the page.
 var applyPatcherCustomizations = function () {
