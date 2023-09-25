@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        7.5
+// @version        7.6
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -90,6 +90,13 @@ function replaceNode(oldNode, newHTML) {
     var parentElement = oldNode.parentElement;
     parentElement.replaceChild(newHiddenInputNode, oldNode);
     parentElement.insertBefore(newNode, newHiddenInputNode);
+}
+/**
+ * Returns a link to the build.
+ */
+function getBuildLink(buildId) {
+    return '<a class="nowrap" href="https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/' +
+        buildId + '" target="_blank">' + buildId + '</a>';
 }
 /**
  * Returns a link to the ticket.
@@ -1152,18 +1159,34 @@ function updateFixesFromPreviousBuilds(accountNode, buildNameNode, projectNode, 
         patcherProjectVersionIdFilter: projectNode.value
     });
     var accountBuildsURL = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/accounts/view?' + queryString;
-    console.log(accountBuildsURL);
     var xhr = new XMLHttpRequest();
     xhr.open('GET', accountBuildsURL);
     xhr.onload = function () {
         // https://stackoverflow.com/questions/20583396/queryselectorall-to-html-from-another-page
         var container = document.implementation.createHTMLDocument().documentElement;
         container.innerHTML = xhr.responseText;
-        var pastTickets = new Set(Array.from(container.querySelectorAll('td > a[title]')).
-            map(function (it) { return (it.getAttribute('title') || '').split(/\s*,\s*/g); }).
-            reduce(function (acc, next) { return acc.concat(next); }, []));
+        var pastTickets = Array.from(container.querySelectorAll('td > a[title]')).
+            reduce(function (acc, next) {
+            var row = next.closest('tr');
+            if ((row.cells[2].textContent || '').trim().toLowerCase() == 'ignore') {
+                return acc;
+            }
+            var buildId = (row.cells[1].textContent || '').trim();
+            console.log(buildId, Array.from(row.cells).map(function (it) { return it.textContent; }));
+            var newTickets = (next.getAttribute('title') || '').split(/\s*,\s*/g);
+            for (var i = 0; i < newTickets.length; i++) {
+                var newTicket = newTickets[i];
+                if (!acc[newTicket]) {
+                    acc[newTicket] = [buildId];
+                }
+                else {
+                    acc[newTicket].push(buildId);
+                }
+            }
+            return acc;
+        }, {});
         var currentTickets = new Set((buildNameNode.value || '').split(/\s*,\s*/g));
-        var missingTickets = Array.from(pastTickets).
+        var missingTickets = Array.from(Object.keys(pastTickets)).
             filter(function (it) { return !currentTickets.has(it); }).
             sort(function (a, b) {
             var splitA = a.split('-');
@@ -1171,7 +1194,11 @@ function updateFixesFromPreviousBuilds(accountNode, buildNameNode, projectNode, 
             return splitA[0] != splitB[0] ? splitA[0] > splitB[0] ? 1 : -1 :
                 parseInt(splitA[1]) - parseInt(splitB[1]);
         });
-        previousBuildsInput.value = missingTickets.join(', ');
+        previousBuildsInput.innerHTML = '<ul>' +
+            missingTickets.map(function (it1) {
+                return '<li>' + getTicketLink('', it1, it1) + ': ' +
+                    pastTickets[it1].map(function (it2) { return getBuildLink(it2); }).join(', ') + '</li>';
+            }).join('') + '</ul>';
         var compactCell = document.querySelector('tr[data-suggestion-type="Previous Builds"] td');
         var ticketCount = missingTickets.length;
         compactCell.textContent = ticketCount + ((ticketCount == 1) ? ' ticket' : ' tickets');
@@ -1190,7 +1217,7 @@ function getFixesFromPreviousBuilds() {
     previousBuildsLabel.setAttribute('for', '_1_WAR_osbpatcherportlet_previousBuildsTicketList');
     previousBuildsLabel.textContent = 'Previous Builds Ticket Suggestions';
     previousBuildsContainer.appendChild(previousBuildsLabel);
-    var previousBuildsInput = document.createElement('textarea');
+    var previousBuildsInput = document.createElement('div');
     previousBuildsInput.classList.add('input');
     previousBuildsInput.setAttribute('id', '_1_WAR_osbpatcherportlet_previousBuildsTicketList');
     previousBuildsInput.setAttribute('name', '_1_WAR_osbpatcherportlet_previousBuildsTicketList');
