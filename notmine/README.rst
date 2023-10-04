@@ -14,7 +14,7 @@ GCO
 ===
 
 * Wrapper: ``gco``
-* Repository: `drewbrokke/gist <https://gist.github.com/drewbrokke/35b2f5fcb424d908b25760a3237b5bb1>`__
+* Repository: `drewbrokke/git-fuzzy-checkout <https://github.com/drewbrokke/git-fuzzy-checkout/>`__
 
 .. code-block:: bash
 
@@ -36,7 +36,7 @@ Jack
 ====
 
 * Wrapper: ``jack``
-* Repository: `drewbrokke/jack <https://github.com/drewbrokke/jack>`__
+* Repository: `drewbrokke/jack-cli <https://github.com/drewbrokke/jack-cli/>`__
 
 .. code-block:: bash
 
@@ -49,7 +49,7 @@ Liferay Bisect
 ==============
 
 * Wrapper: ``lb``
-* Repository: `SpencerWoo/gist <https://grow.liferay.com/people/Liferay+Bisect+script>`__
+* Repository: `SpencerWoo/ticket-bisect <https://raw.githubusercontent.com/SpencerWoo/ticket-bisect/>`__
 
 .. code-block:: bash
 
@@ -61,7 +61,7 @@ Liferay Watch
 =============
 
 * Wrapper: ``lwatch``
-* Repository: `brunobasto/liferay-watch <https://github.com/liferay/liferay-osgi-watch>`__
+* Repository: `brunobasto/liferay-watch <https://github.com/liferay/liferay-osgi-watch/>`__
 
 .. code-block:: bash
 
