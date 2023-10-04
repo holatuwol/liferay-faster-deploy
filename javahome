@@ -6,7 +6,7 @@ javahome() {
 	BASE_JAVA=
 	JAVA_VERSION=$1
 
-	if [ ! -d /opt/java ] && [ -d /usr/java ] && [ ! -d /usr/lib/jvm ]; then
+	if [ ${HOME}/dev/applications ] && [ ! -d /opt/java ] && [ -d /usr/java ] && [ ! -d /usr/lib/jvm ]; then
 		echo "Unable to change Java on your operating system"
 		return 0
 	fi
@@ -34,7 +34,7 @@ javahome() {
 
 	# Check for a valid /etc/alternatives value
 
-	for BASE_JAVA in /opt/java /usr/java /usr/lib/jvm; do
+	for BASE_JAVA in ${HOME}/dev/applications /opt/java /usr/java /usr/lib/jvm; do
 		if [ ! -d ${BASE_JAVA} ]; then
 			continue
 		fi
