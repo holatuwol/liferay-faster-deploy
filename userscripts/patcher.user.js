@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        7.9
+// @version        8.0
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -376,6 +376,9 @@ function addProductVersionFilter() {
         for (var j = 1; j < versions.length; j++) {
             if ((optionText.indexOf('DXP ' + versions[j]) != -1) || (optionText.indexOf('Portal ' + versions[j]) != -1)) {
                 option.setAttribute('data-liferay-version', versions[j]);
+            }
+            else if (optionText.trim() == 'Quarterly Releases') {
+                option.setAttribute('data-liferay-version', '7.4');
             }
         }
     }
