@@ -93,7 +93,11 @@ def get_baseline_id():
 			print(base_tag, len(products_json))
 			return None
 
-		return products_json[base_tag], projects_json[base_tag] if base_tag in projects_json else None
+		if base_tag not in projects_json:
+			print(base_tag, len(products_json))
+			return None
+
+		return products_json[base_tag], projects_json[base_tag]
 
 def get_fix_id(typeFilter='0'):
 	base_url = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher'
