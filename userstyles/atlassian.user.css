@@ -1,13 +1,13 @@
 /* ==UserStyle==
 @name           liferay.atlassian.net User Style
 @namespace      holatuwol
-@version        1.0.0
+@version        1.0.1
 @description    A user style for liferay.atlassian.net
 @author         holatuwol
 ==/UserStyle== */
 
 @-moz-document url-prefix("https://liferay.atlassian.net/browse/") {
-  div[data-test-id="issue.activity.comments-list"] > div {
+  div[data-testid="issue.activity.comments-list"] > div {
     border: 0.5em solid whitesmoke;
     padding: 1em !important;
   }
