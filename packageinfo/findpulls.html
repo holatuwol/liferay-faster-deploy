@@ -24,6 +24,18 @@
 <h2>Ticket</h2>
 <input type="text" onkeyup="updateQueryVariables();" class="form-control" name="ticket" placeholder="enter in the ticket to search for" />
 
+<h2>Repositories</h2>
+
+<span class="checkbox-inline">
+<input type="checkbox" checked id="repository-liferay-portal" name="repository" value="liferay-portal" onchange="updateQueryVariables();">
+<label for="repository-liferay-portal">liferay-portal</label>
+</span>
+
+<span class="checkbox-inline">
+<input type="checkbox" checked id="repository-liferay-portal-ee" name="repository" value="liferay-portal-ee" onchange="updateQueryVariables();">
+<label for="repository-liferay-portal-ee">liferay-portal-ee</label>
+</span>
+
 </div>
 
 <div class="form-group">
@@ -65,7 +77,7 @@ query ($query: String!) {
 
 </body>
 <script>
-var repoNames = [];
+var members = [];
 var initializing = true;
 
 function updateQueryVariables() {
@@ -73,6 +85,10 @@ function updateQueryVariables() {
 		setTimeout(updateQueryVariables, 500);
 		return;
 	}
+
+	var repositories = Array.from(document.querySelectorAll('input[name="repository"]:checked')).map(it => it.value);
+
+	repoNames = repositories.reduce((acc, next) => acc.concat(members.map(it => 'repo:' + it + '/' + next)), []);
 
 	var ticketId = document.querySelector('input[name="ticket"]').value;
 
@@ -88,9 +104,7 @@ var requestURL = 'https://s3-us-west-2.amazonaws.com/mdang.grow/findpulls.json';
 
 request.onreadystatechange = function() {
 	if (this.readyState == 4 && this.status == 200) {
-		var members = JSON.parse(this.responseText);
-		
-		repoNames = members.map(it => 'repo:' + it + '/liferay-portal repo:' + it + '/liferay-portal-ee');
+		members = JSON.parse(this.responseText);
 
 		initializing = false;
 	}
