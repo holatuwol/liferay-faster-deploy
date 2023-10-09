@@ -181,6 +181,8 @@ checkfile() {
 		OUTPUT_FILE=${OUTPUT_FOLDER}/$2-$(echo "$1" | cut -d'-' -f 1 | sed 's/\.\([0-9]\)$/\.0\1/g' | tr -d '.')-$(echo "$1" | cut -d'-' -f 2-).txt
 	elif  [[ $1 == *-u* ]]; then
 		OUTPUT_FILE=${OUTPUT_FOLDER}/$2-$(echo "$1" | cut -d'-' -f 1 | sed 's/\.\([0-9]\)$/\.0\1/g' | tr -d '.')-$(echo "$1" | cut -d'-' -f 2-).txt
+	elif  [[ $1 == *.q* ]]; then
+		OUTPUT_FILE=${OUTPUT_FOLDER}/$2-7413-$1.txt
 	else
 		OUTPUT_FILE=${OUTPUT_FOLDER}/$2-$1.txt
 	fi
@@ -417,63 +419,40 @@ packageinfo_release() {
 		return 1
 	fi
 
-	local NEW_OUTPUT_FOLDER=
+	OUTPUT_FOLDER=${2}
 
-	if [ "" == "${OUTPUT_FOLDER}" ]; then
-		NEW_OUTPUT_FOLDER=$(dirname $PWD)/metadata
-		OUTPUT_FOLDER=${NEW_OUTPUT_FOLDER}
+	if [ ! -d ${OUTPUT_FOLDER} ]; then
+		OUTPUT_FOLDER='/tmp'
 	fi
 
-	if [ -d ${OUTPUT_FOLDER} ]; then
-		savetags ${2} ${3}
+	savetags ${3} ${4}
 
-		local OLD_TAG_ID=
+	local OLD_TAG_ID=
 
-		for tag_id in $(grep 'ga[0-9]*$' ${OUTPUT_FOLDER}/tags.txt); do
-			packageinfo_tag ${tag_id} "${OLD_TAG_ID}"
-			OLD_TAG_ID=${tag_id}
-		done
+	for tag_id in $(grep 'ga[0-9]*$' ${OUTPUT_FOLDER}/tags.txt); do
+		packageinfo_tag ${tag_id} "${OLD_TAG_ID}"
+		OLD_TAG_ID=${tag_id}
+	done
 
-		for tag_id in $(grep -F fix-pack-base- ${OUTPUT_FOLDER}/tags.txt); do
-			packageinfo_tag ${tag_id} ""
-			OLD_TAG_ID=${tag_id}
-		done
+	for tag_id in $(grep -F fix-pack-base- ${OUTPUT_FOLDER}/tags.txt); do
+		packageinfo_tag ${tag_id} ""
+		OLD_TAG_ID=${tag_id}
+	done
 
-		for tag_id in $(grep -F 'fix-pack-d' ${OUTPUT_FOLDER}/tags.txt); do
-			packageinfo_tag ${tag_id} ${OLD_TAG_ID}
-			OLD_TAG_ID=${tag_id}
-		done
+	for tag_id in $(grep -F 'fix-pack-d' ${OUTPUT_FOLDER}/tags.txt); do
+		packageinfo_tag ${tag_id} ${OLD_TAG_ID}
+		OLD_TAG_ID=${tag_id}
+	done
 
-		for tag_id in $(grep 'u[0-9]*$' ${OUTPUT_FOLDER}/tags.txt); do
-			packageinfo_tag ${tag_id} "${OLD_TAG_ID}"
-			OLD_TAG_ID=${tag_id}
-		done
-	else
-		if [ "" == "${OUTPUT_FOLDER}" ]; then
-			NEW_OUTPUT_FOLDER=/tmp
-			OUTPUT_FOLDER=${NEW_OUTPUT_FOLDER}
-		fi
+	for tag_id in $(grep 'u[0-9]*$' ${OUTPUT_FOLDER}/tags.txt); do
+		packageinfo_tag ${tag_id} "${OLD_TAG_ID}"
+		OLD_TAG_ID=${tag_id}
+	done
 
-		savetags ${2} ${3}
-
-		for tag_id in $(cat ${OUTPUT_FOLDER}/tags.txt); do
-			echo "Checking ${tag_id}"
-
-			if [ "" != "$(git tag | grep -F "${tag_id}")" ]; then
-				continue
-			fi
-
-			if [[ ${tag_id} == fix-pack-* ]] || [[ ${tag_id} == *-u* ]]; then
-				git fetch --no-tags git@github.com:liferay/liferay-portal-ee.git tags/${tag_id}:refs/tags/${tag_id}
-			else
-				git fetch --no-tags git@github.com:liferay/liferay-portal.git tags/${tag_id}:refs/tags/${tag_id}
-			fi
-		done
-	fi
-
-	if [ "" != "${NEW_OUTPUT_FOLDER}" ]; then
-		OUTPUT_FOLDER=
-	fi
+	for tag_id in $(grep '[0-9][0-9]*.q[0-9][0-9]*.[0-9][0-9]*$' ${OUTPUT_FOLDER}/tags.txt); do
+		packageinfo_tag ${tag_id} "${OLD_TAG_ID}"
+		OLD_TAG_ID=${tag_id}
+	done
 
 	popd > /dev/null
 }
@@ -592,6 +571,12 @@ savetags() {
 	git ls-remote -t git@github.com:liferay/liferay-portal-ee.git | \
 		awk '{ print $2 }' | grep "/${1}.[0-9]*-u[0-9]*$" | \
 		sort | cut -d'/' -f 3 | tee tags_tmp.txt
+
+	if [ "7.4" == "${1}" ]; then
+		git ls-remote -t git@github.com:liferay/liferay-portal-ee.git | \
+			awk '{ print $2 }' | grep "/[0-9][0-9]*.q[0-9][0-9]*.[0-9][0-9]*$" | \
+			sort | cut -d'/' -f 3 | tee -a tags_tmp.txt
+	fi
 
 	for tag in $(cat tags_tmp.txt); do
 		fetchtag liferay-portal-ee ${tag}

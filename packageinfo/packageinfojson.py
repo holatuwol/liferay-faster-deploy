@@ -28,7 +28,7 @@ def get_dxp_release_tuple(release_id):
 	if patch_level == 'base':
 		patch_level = '0'
 
-	return (release_number, int(patch_level))
+	return (release_number, int(patch_level) if patch_level.find('q') == -1 else patch_level)
 
 def get_marketplace_release_tuple(release_id):
 	product_pos = len('marketplace-')

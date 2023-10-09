@@ -30,7 +30,7 @@ update_all() {
 	popd
 
 	for version in ${AVAILABLE_VERSIONS}; do
-		packageinfo_release ${PACKAGEINFO_ROOT}/${version}.x/portal ${version} $(echo ${version} | tr -d '.')
+		packageinfo_release ${PORTAL_SOURCE_ROOT} ${PACKAGEINFO_ROOT}/${version}.x/metadata ${version} $(echo ${version} | tr -d '.')
 	done
 }
 
