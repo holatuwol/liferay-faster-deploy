@@ -229,12 +229,24 @@ request.onreadystatechange = function() {
 		var getFixPackVersion = function(a) {
 			var fixPackVersion = a.substring(a.lastIndexOf('-') + 1);
 
+			if (fixPackVersion == 'base') {
+				return 0;
+			}
+
 			if (fixPackVersion.indexOf('ga') == 0) {
 				return parseInt(fixPackVersion.substring(2));
 			}
 
+			while (fixPackVersion.indexOf('0') == 0) {
+				fixPackVersion = fixPackVersion.substring(1);
+			}
+
 			if (fixPackVersion.indexOf('u') == 0) {
 				return parseInt(fixPackVersion.substring(1));
+			}
+
+			if (fixPackVersion.indexOf('.q') != -1) {
+				return fixPackVersion;
 			}
 
 			return parseInt(fixPackVersion);

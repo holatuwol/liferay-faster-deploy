@@ -342,19 +342,27 @@ function checkVersionInfo() {
 		var versionId;
 		var versionNumber = parseInt(selectValue.substring(0, 4));
 
-		if (selectValue.indexOf('-ga') == -1) {
-			if (selectValue.indexOf('base') == -1) {
-				var classifierPos = selectValue.indexOf('-', 5) + 1;
-				var fixPackPrefix = 'fix-pack-' + selectValue.substring(5, classifierPos);
-				return fixPackPrefix + parseInt(selectValue.substring(classifierPos)) + '-' + versionNumber;
-			}
-			else {
-				return 'fix-pack-base-' + versionNumber;
-			}
+		var tagName = null;
+
+		if (selectValue.indexOf('-ga') != -1) {
+			tagName = Math.floor(versionNumber / 1000) + '.' + Math.floor((versionNumber % 1000) / 100) + '.' + (versionNumber % 100) + selectValue.substring(selectValue.lastIndexOf('-'));
+		}
+		else if (selectValue.indexOf('-u') != -1) {
+			tagName = Math.floor(versionNumber / 1000) + '.' + Math.floor((versionNumber % 1000) / 100) + '.' + (versionNumber % 100) + '-u' + selectValue.substring(selectValue.indexOf('-u') + 2);
+		}
+		else if (selectValue.indexOf('.q') != -1) {
+			tagName = selectValue.substring(selectValue.indexOf('-') + 1);
+		}
+		else if (selectValue.indexOf('base') == -1) {
+			var classifierPos = selectValue.indexOf('-', 5) + 1;
+			var fixPackPrefix = 'fix-pack-' + selectValue.substring(5, classifierPos);
+			tagName = fixPackPrefix + parseInt(selectValue.substring(classifierPos)) + '-' + versionNumber;
 		}
 		else {
-			return Math.floor(versionNumber / 1000) + '.' + Math.floor((versionNumber % 1000) / 100) + '.' + (versionNumber % 100) + selectValue.substring(selectValue.lastIndexOf('-'));
+			tagName = 'fix-pack-base-' + versionNumber;
 		}
+
+		return tagName;
 	}
 
 	var name1 = 'version_' + select1.options[select1.selectedIndex].value;
@@ -583,7 +591,7 @@ function checkVersionInfo() {
 checkVersionInfo = _.debounce(checkVersionInfo, 200);
 
 var request = new XMLHttpRequest();
-var requestURL = 'https://s3-us-west-2.amazonaws.com/mdang.grow/dxpmodules.json';
+var requestURL = ((document.location.hostname == 'localhost') ? '' : 'https://s3-us-west-2.amazonaws.com/mdang.grow/') + 'dxpmodules.json';
 
 function hasRepository(versionInfo) {
 	return versionInfo['repository'] && versionInfo['repository'] != 'none';
@@ -629,12 +637,24 @@ request.onreadystatechange = function() {
 		var getFixPackVersion = function(a) {
 			var fixPackVersion = a.substring(a.lastIndexOf('-') + 1);
 
+			if (fixPackVersion == 'base') {
+				return 0;
+			}
+
 			if (fixPackVersion.indexOf('ga') == 0) {
 				return parseInt(fixPackVersion.substring(2));
 			}
 
+			while (fixPackVersion.indexOf('0') == 0) {
+				fixPackVersion = fixPackVersion.substring(1);
+			}
+
 			if (fixPackVersion.indexOf('u') == 0) {
 				return parseInt(fixPackVersion.substring(1));
+			}
+
+			if (fixPackVersion.indexOf('.q') != -1) {
+				return fixPackVersion;
 			}
 
 			return parseInt(fixPackVersion);
@@ -654,7 +674,7 @@ request.onreadystatechange = function() {
 				x1 = getFixPackVersion(a);
 				x2 = getFixPackVersion(b);
 
-				return x1 - x2;
+				return x1 > x2 ? 1 : -1;
 			});
 
 		if (select0) {
