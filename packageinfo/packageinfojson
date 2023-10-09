@@ -39,7 +39,9 @@ update_one() {
 		return
 	fi
 
-	pushd ${PACKAGEINFO_ROOT}/7.0.x/portal
+	OUTPUT_FOLDER=/tmp
+
+	pushd ${PORTAL_SOURCE_ROOT}
 	packageinfo_tag $1
 	popd
 }
@@ -52,7 +54,7 @@ generate_json() {
 		echo "${AVAILABLE_VERSIONS}" | awk '{ print "'${PACKAGEINFO_ROOT}'/" $1 ".x" }' | xargs python ${SCRIPT_FOLDER}/requireschemajson.py
 	fi
 
-	PORTAL_SOURCE_ROOT=${PACKAGEINFO_ROOT}/7.0.x/portal ${SCRIPT_FOLDER}/jsversions > dxpjslibrary.json
+	PORTAL_SOURCE_ROOT=${PORTAL_SOURCE_ROOT} ${SCRIPT_FOLDER}/jsversions > dxpjslibrary.json
 }
 
 upload_json() {
@@ -91,8 +93,12 @@ upload_json() {
 
 AVAILABLE_VERSIONS="$(find ${PACKAGEINFO_ROOT} -mindepth 1 -maxdepth 1 -type d | sed 's@^.*/@@g' | sort | cut -d'.' -f 1,2)"
 
+if [ "" == "${PORTAL_SOURCE_ROOT}" ]; then
+	PORTAL_SOURCE_ROOT="${PACKAGEINFO_ROOT}/7.0.x/portal"
+fi
+
 if [ "update" == "${1}" ]; then
-	pushd ${PACKAGEINFO_ROOT}/7.0.x/portal
+	pushd ${PORTAL_SOURCE_ROOT}
 	. $(dirname ${BASH_SOURCE[0]})/../setopts
 	. ${SCRIPT_FOLDER}/packageinfo
 	popd

@@ -88,7 +88,16 @@ bundleinfo() {
 		ant setup-sdk
 	fi
 
-	local BASE_LP_VERSION=$(grep -F lp.version= tools/sdk/build.properties | cut -d'=' -f 2)
+	local BASE_LP_VERSION=
+
+	if [ -f tools/sdk/build.properties ]; then
+		BASE_LP_VERSION=$(grep -F lp.version= tools/sdk/build.properties | cut -d'=' -f 2)
+	elif [ -f release.properties ]; then
+		BASE_LP_VERSION=$(grep -F lp.version= release.properties | cut -d'=' -f 2)
+	else
+		echo 'Unable to determine Liferay version'
+		return 1
+	fi
 
 	for folder in $(cat ${GIT_ROOT}/.redeploy/bundleinfo.txt); do
 		local BUNDLE_GROUP='com.liferay'
