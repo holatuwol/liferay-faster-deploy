@@ -89,7 +89,7 @@ def getparent(check_tags):
 
 		branch_base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=fix-pack-*-%s%s10*' % (base_branch[0], base_branch[2]))
 
-		if branch_base_tag is None or len(branch_base_tag) == 0:
+		if branch_base_tag is None or len(branch_base_tag) == 0 or branch_base_tag.find('7410') != -1:
 			branch_base_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=%s.%s.*-u*' % (base_branch[0], base_branch[2]))
 
 		if marketplace_base_tag is None or len(marketplace_base_tag) == 0:
