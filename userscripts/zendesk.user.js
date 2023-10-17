@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        18.8
+// @version        18.9
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -1261,7 +1261,7 @@ function getCustomFieldValue(ticketInfo, fieldId) {
 function addTicketDescription(ticketId, ticketInfo, conversation) {
     var header = null;
     if (isAgentWorkspace) {
-        header = conversation.querySelector('div.omni-conversation-pane > div > div');
+        header = conversation.childNodes[0];
     }
     else {
         header = conversation.querySelector('.pane_header');
