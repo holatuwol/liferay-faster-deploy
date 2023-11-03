@@ -1,7 +1,7 @@
 #!/bin/bash
 
 baseline() {
-	echo "Running baseline check"
+	echo "Running baseline check against $@"
 
 	$(dirname "${BASH_SOURCE[0]}")/baseline $@
 }
@@ -155,7 +155,7 @@ sendpull() {
 	if [ -d "${GIT_ROOT}/portal-impl" ]; then
 		pushd ${GIT_ROOT} > /dev/null
 
-		. $(dirname "${BASH_SOURCE[0]}")/../gitchanges $(git log -1 --pretty='%H') ${upstream_remote}/${BASE_BRANCH}
+		. $(dirname "${BASH_SOURCE[0]}")/../gitchanges reviewer-tmp-rebase
 
 		if [[ 0 -eq $(cat ${GIT_ROOT}/.redeploy/changes.txt | grep -c '^') ]]; then
 			echo No changes detected.
@@ -169,7 +169,7 @@ sendpull() {
 				ant setup-sdk
 			fi
 
-			baseline ${upstream_remote}/${BASE_BRANCH} && formatsource ${upstream_remote}/${BASE_BRANCH} && pmdreport
+			baseline reviewer-tmp-rebase && formatsource reviewer-tmp-rebase && pmdreport
 		fi
 
 		popd > /dev/null
