@@ -3,6 +3,7 @@
 from __future__ import print_function
 import os
 import re
+import stat
 import sys
 
 timestamp_text = '^\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d$'
@@ -18,6 +19,7 @@ class LogSplitter:
 
 		if not os.path.exists(foldername):
 			os.mkdir(foldername)
+			os.chmod(foldername, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
 
 		lines = open(filename, 'r')
 
@@ -98,6 +100,7 @@ class LogSplitter:
 
 		if thread_dump:
 			thread_dump_file.close()
+			os.chmod(thread_dump_filename, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH | stat.S_IWOTH)
 
 	# Split each instance of a thread into its own file
 
@@ -158,6 +161,7 @@ class LogSplitter:
 
 		if thread_dump:
 			thread_dump_file.close()
+			os.chmod(thread_dump_filename, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH | stat.S_IWOTH)
 
 if __name__ == '__main__':
 	if len(sys.argv) != 3:

@@ -6,6 +6,7 @@ from matplotlib import pyplot
 import os
 import shutil
 import six
+import stat
 import sys
 from tarfile import TarFile
 from thread_dump import ThreadDump
@@ -31,6 +32,7 @@ class MultiThreadDump:
 
 			if not os.path.exists(target_foldername):
 				os.makedirs(target_foldername)
+				os.chmod(foldername, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
 
 			if thread_dump.count() == 0:
 				print('Remove %s because it is now empty' % filename)
@@ -40,6 +42,8 @@ class MultiThreadDump:
 			else:
 				with open(target_filename, 'w') as file:
 					file.write(str(thread_dump))
+
+				os.chmod(target_filename, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH | stat.S_IWOTH)
 
 	def thread_names(self, substring = None):
 		thread_names = set()
@@ -84,6 +88,8 @@ class MultiThreadDump:
 				file.write('\n\n')
 				file.write(str(stack_trace))
 				file.write('\n\n\n\n')
+
+		os.chmod(target_filename, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH | stat.S_IWOTH)
 
 	def count(self, phrases = []):
 		return self.counts(phrases)
