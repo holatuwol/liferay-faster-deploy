@@ -107,4 +107,11 @@ if [ "" != "${UPSTREAM_EE}" ]; then
 
 		fixpack git@github.com:liferay/liferay-portal-ee.git ${tag}
 	done
+
+	for tag in $(cat /dev/shm/tags-ee.txt | \
+		awk '{ print $2 }' | grep -e '/[0-9]*.q[0-9].[0-9]*$' | \
+		cut -d'/' -f 3 | sort -t '.' -k 1,1n -k 2,2 -k 3,3n); do
+
+		fixpack git@github.com:liferay/liferay-portal-ee.git ${tag}
+	done
 fi
