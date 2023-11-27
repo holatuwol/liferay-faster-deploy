@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        18.9
+// @version        19.0
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -27,6 +27,20 @@ else {
 var head = document.querySelector('head');
 head.appendChild(styleElement);
 var isAgentWorkspace = false;
+/**
+ * Waits until elements appear and then click on them.
+ */
+function clickReactElement(selector, callback) {
+    var element = document.querySelector(selector);
+    if (!element) {
+        setTimeout(clickReactElement.bind(null, selector, callback), 100);
+        return;
+    }
+    element.click();
+    if (callback) {
+        callback();
+    }
+}
 /**
  * Generate an anchor tag with the specified text, href, and download attributes.
  * If the download attribute has an extension that looks like it will probably be
@@ -2237,6 +2251,28 @@ function addViewsGoToPageButton() {
     var buttonContainer = nextButton.parentElement;
     buttonContainer.insertBefore(goToPageButton, nextButton);
 }
+function isInternalTicket(ticketId, ticketInfo, conversation) {
+    if (conversation.querySelectorAll('article').length == conversation.querySelectorAll('article div[data-test-id="omni-log-internal-note-tag"]').length) {
+        return true;
+    }
+    return false;
+}
+function switchToInternalNotes(ticketId, ticketInfo, conversation) {
+    if (!isInternalTicket(ticketId, ticketInfo, conversation)) {
+        return;
+    }
+    var editor = conversation.querySelector('div[data-test-id="editor-view"]');
+    if (!editor || editor.classList.contains('lesa-ui-channel')) {
+        return;
+    }
+    editor.classList.add('lesa-ui-channel');
+    var button = editor.querySelector('button[data-test-id="omnichannel-channel-switcher-button"][data-channel="web"]');
+    if (!button) {
+        return;
+    }
+    button.click();
+    clickReactElement('[data-test-id="omnichannel-channel-switcher-menuitem-internal"]');
+}
 /**
  * Updates all help.liferay.com/attachments links to point to the current domain.
  */
@@ -2294,6 +2330,7 @@ function checkTicketConversation(ticketId, ticketInfo) {
     fixPermaLinkAnchors(ticketId, ticketInfo, conversation);
     addPermaLinks(ticketId, ticketInfo, conversation);
     updateWindowTitle(ticketId, ticketInfo);
+    switchToInternalNotes(ticketId, ticketInfo, conversation);
     highlightComment(conversation, ticketId, '', false);
 }
 /**
