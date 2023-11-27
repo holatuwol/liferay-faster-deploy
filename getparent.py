@@ -34,7 +34,9 @@ def getparent(check_tags):
 	dxp_branches = ['7.4.x', '7.3.x', '7.2.x', '7.1.x']
 	dxp_branches = dxp_branches + ['%s-private' % branch for branch in dxp_branches]
 
-	if current_branch == 'master' or current_branch in ee_branches + de_branches + dxp_branches:
+	quarterly_branches = ['release-2023.q4', 'release-2023.q3']
+
+	if current_branch == 'master' or current_branch in ee_branches + de_branches + dxp_branches + quarterly_branches:
 		return current_branch
 
 	# Extract the full version
@@ -65,6 +67,14 @@ def getparent(check_tags):
 	elif short_version == '6.2':
 		base_branch = 'ee-6.2.x'
 	else:
+		quarterly_tag = git.describe('HEAD', '--tags', '--abbrev=0', '--match=202*.q*.*')
+
+		if len(quarterly_tag) > 0:
+			if check_tags:
+				return quarterly_tag
+
+			return 'release-%s' % quarterly_tag[:quarterly_tag.rfind('.')]
+
 		master_branches = git.for_each_ref('--format=%(refname)', 'refs/remotes/**/*master').split('\n')
 
 		for branch in master_branches:

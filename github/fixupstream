@@ -7,7 +7,7 @@ deletebranches() {
 	if [ "git@github.com:liferay/liferay-portal.git" == "$remote_url" ]; then
 		echo "$remote_branches" | grep -v '/master$'
 	elif [ "git@github.com:liferay/liferay-portal-ee.git" == "$remote_url" ]; then
-		echo "$remote_branches" | grep -v '/master-private$' | grep -v '/ee-[0-9]*\.[0-9]*\.x$' | grep -v '/[0-9]*.[0-9]*.x$' | grep -v '/[0-9]*.[0-9]*.x-private$'
+		echo "$remote_branches" | grep -v '/master-private$' | grep -v '/ee-[0-9]*\.[0-9]*\.x$' | grep -v '/[0-9]*.[0-9]*.x$' | grep -v '/[0-9]*.[0-9]*.x-private$' | grep -v '/release-[0-9]*.q[1-4]$'
 		echo "$remote_branches" | grep '/6.[012].x$'
 		echo "$remote_branches" | grep '/ee-7.0.x$'
 	elif [ "git@github.com:liferay/liferay-plugins.git" == "$remote_url" ]; then
@@ -78,6 +78,7 @@ retainbranches() {
 		echo "$remote_branches" | grep '/ee-[0-9]*\.[0-9]*\.x$' | grep -v '/ee-7.0.x$'
 		echo "$remote_branches" | grep '/[0-9]*.[0-9]*.x$' | grep -v '/6.[012].x$'
 		echo "$remote_branches" | grep '/[0-9]*.[0-9]*.x-private$'
+		echo "$remote_branches" | grep '/release-[0-9]*.q[1-4]$'
 	elif [ "git@github.com:liferay/liferay-plugins.git" == "$remote_url" ]; then
 		echo "$remote_branches" | grep '/master$'
 		echo "$remote_branches" | grep '/ee-[0-9]*\.[0-9]*\.x$'
