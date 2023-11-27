@@ -49,7 +49,7 @@ checkcommonerrors() {
 	local MODIFIED_BUNDLE_VERSION=
 
 	for file in ${CHANGED_BND}; do
-		if [ "" != "$(git diff ${BASE_TAG}..HEAD -- ${file} | grep -F '+' | grep -F Bundle-Version)" ]; then
+		if [ "" != "$(git diff ${BASE_TAG}..HEAD -- ${file} | grep '^+' | grep -F Bundle-Version)" ]; then
 			MODIFIED_BUNDLE_VERSION="${MODIFIED_BUNDLE_VERSION} ${file}"
 		fi
 	done
