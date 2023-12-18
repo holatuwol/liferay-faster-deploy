@@ -278,12 +278,10 @@ def attempt_login_okta(state_token):
                 pass
 
             del form_params['passCode']
-            print('return 2')
             return headers, response_json['_links']['next']['href']
 
     for i in range(12):
         if response_json['status'] == 'SUCCESS':
-            print('return 3')
             return headers, response_json['_links']['next']['href']
 
         sys.stderr.write('waiting for MFA result (%d/12)...\n' % (i+1))
