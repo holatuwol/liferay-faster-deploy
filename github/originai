@@ -8,7 +8,7 @@ cd "${PORTAL_SOURCE}"
 
 for remote_name in $(git remote); do
 	echo "Fetching updates from ${remote_name}"
-	git fetch -p --no-tags ${remote_name}
+	git fetch -f -p --no-tags ${remote_name}
 	git remote set-head ${remote_name} -d
 done
 

@@ -14,12 +14,16 @@ git ls-remote -t git@github.com:liferay/liferay-portal-ee.git | \
 	awk '{ print $2 }' > tags_upstream.txt
 
 check_tags '/[0-9]*.[0-9]*.[0-9]*-ga[0-9]*$'
+check_tags '/[0-9]*.[0-9]*.[0-9]*-u[0-9]*$'
+check_tags '/[0-9].[0-9].[0-9]*-u[0-9]$'
 check_tags '/fix-pack-base-[0-9]*\(-private\)*$'
 check_tags '/fix-pack-\(de\|dxp\)-[0-9]*-[0-9]*\(-private\)*$'
 check_tags '/marketplace-.*-[0-9]*\(-private\)*$'
 
 cat tags_local.txt | \
 	grep -v '^[0-9].[0-9].[0-9]*-ga[0-9]$' | \
+	grep -v '^[0-9].[0-9].[0-9]*-u[0-9]$' | \
+	grep -v '^[0-9][0-9]*.q[0-9].[0-9]*$' | \
 	grep -v '^fix-pack-base-[0-9]*\(-private\)*' | \
 	grep -v '^fix-pack-\(de\|dxp\)-[0-9]*-[0-9]*\(-private\)*$' | \
 	grep -v '^marketplace-.*-[0-9]*\(-private\)*$' > tags_delete.txt
