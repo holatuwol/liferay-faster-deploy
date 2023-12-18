@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        19.1
+// @version        19.2
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -695,6 +695,10 @@ function addOrganizationField(propertyBox, ticketId, ticketInfo) {
         organizationInfo = organizationCache[accountCode];
     }
     var notesItems = [];
+    if (organizationInfo) {
+        var provisioningSupportInstructionsLink = createAnchorTag("edit", "https://provisioning.liferay.com/group/guest/~/control_panel/manage?p_p_id=com_liferay_osb_provisioning_web_portlet_AccountsPortlet&p_p_lifecycle=0&p_p_state=maximized&p_p_mode=view&_com_liferay_osb_provisioning_web_portlet_AccountsPortlet_mvcRenderCommandName=%2Faccounts%2Fview_account&_com_liferay_osb_provisioning_web_portlet_AccountsPortlet_tabs1=support&_com_liferay_osb_provisioning_web_portlet_AccountsPortlet_accountKey=" + organizationInfo.organization_fields.account_key);
+        notesItems.push(provisioningSupportInstructionsLink);
+    }
     if (organizationInfo && organizationInfo.notes) {
         var notesContainer = document.createElement('div');
         notesContainer.textContent = organizationInfo.notes;
