@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        19.2
+// @version        19.3
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -2491,7 +2491,79 @@ function fixOldTicketStatusColumnStyle() {
     }
     if (viewPage) {
         removeTicketStatusColumn();
+        adjustColumnTextWidth();
         unsafeWindow.dispatchEvent(new Event('resize'));
+    }
+}
+function adjustColumnTextWidth() {
+    var tables = Array.from(document.querySelectorAll('table[data-onboarding-id="table_main"], table[data-test-id="table_header"]'));
+    for (var _i = 0, tables_1 = tables; _i < tables_1.length; _i++) {
+        var table = tables_1[_i];
+        var headers = Array.from(table.tHead.rows[0].cells);
+        for (var _a = 0, headers_1 = headers; _a < headers_1.length; _a++) {
+            var header = headers_1[_a];
+            if (header.getAttribute('heatscore_processed') === 'true') {
+                continue;
+            }
+            var textHeader = getTextHeader(header);
+            if (textHeader && (textHeader.nodeValue === 'Heat Score')) {
+                var button = header.querySelector('button');
+                if (button) {
+                    button.title = 'Heat Score';
+                }
+                textHeader.nodeValue = 'Heat';
+            }
+            header.setAttribute('heatscore_processed', 'true');
+        }
+        var product_column;
+        var i = 0;
+        for (var _b = 0, headers_2 = headers; _b < headers_2.length; _b++) {
+            var header = headers_2[_b];
+            var textHeader = getTextHeader(header);
+            if (textHeader && (textHeader.nodeValue === 'Product')) {
+                product_column = i;
+                break;
+            }
+            i++;
+        }
+        if (!product_column) {
+            continue;
+        }
+        var rows = Array.from(table.tBodies[0].rows);
+        for (var _c = 0, rows_1 = rows; _c < rows_1.length; _c++) {
+            var row = rows_1[_c];
+            var cell = row.cells[product_column];
+            if (!cell || !cell.textContent || cell.getAttribute('product_processed')) {
+                continue;
+            }
+            cell.title = cell.textContent;
+            if (cell.textContent === 'Liferay DXP::Quarterly Release') {
+                cell.textContent = 'DXP::Quarterly';
+            }
+            else if (cell.textContent === 'LXC - Self-Managed') {
+                cell.textContent = 'LXC - SM';
+            }
+            else if (cell.textContent === 'Provisioning Request') {
+                cell.textContent = 'Provisioning';
+            }
+            else if (cell.textContent.startsWith('Liferay ')) {
+                cell.textContent = cell.textContent.replace('Liferay ', '');
+            }
+            cell.setAttribute('product_processed', 'true');
+        }
+    }
+    function getTextHeader(header) {
+        var button = header.querySelector('button');
+        if (!button) {
+            return null;
+        }
+        if (!button.firstChild) {
+            return null;
+        }
+        if (button.firstChild.nodeType === Node.TEXT_NODE) {
+            return button.firstChild;
+        }
+        return null;
     }
 }
 function removeTicketStatusColumn() {
