@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        19.3
+// @version        19.4
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -747,6 +747,10 @@ function getPatcherPortalAccountsHREF(path, params) {
 function getProductVersion(tags) {
     for (var i = 0; i < tags.length; i++) {
         var tag = tags[i];
+        var qr = tag.indexOf('prd_quarterly_release');
+        if (qr == 0) {
+            return 'Quarterly Release';
+        }
         var x = tag.indexOf('7_');
         if (x == 0) {
             return '7.' + tag.charAt(2);
@@ -770,6 +774,9 @@ function getProductVersion(tags) {
  * Convert the Liferay version into the Patcher Portal product version.
  */
 function getProductVersionId(version) {
+    if (version == 'Quarterly Release') {
+        return '249803555';
+    }
     if (version == '7.4') {
         return '206111201';
     }
