@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        19.5
+// @version        19.6
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -1163,6 +1163,7 @@ function addHeatScoreMarker(header, conversation, ticketInfo) {
     }
     var heatScoreElement = document.createElement('span');
     heatScoreElement.classList.add('lesa-ui-heat-score', 'lesa-ui-priority-major');
+    heatScoreElement.setAttribute('title', 'Heat Score');
     heatScoreElement.textContent = heatScore;
     slaPolicyContainer.insertBefore(heatScoreElement, slaPolicy.nextSibling);
 }
