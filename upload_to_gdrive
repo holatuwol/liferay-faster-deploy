@@ -23,11 +23,15 @@ get_folder_id() {
 	folder_id=$(gdrive list --no-header --query "name = 'Large Attachments'" | awk '{ print $1 }')
 }
 
-echo 'Downloading file...'
-python ${SCRIPT_FOLDER}/patcher/scrape_liferay.py "${remote_file}" | tee output.txt
+if [ -f ${remote_file} ]; then
+	local_file="${remote_file}"
+else
+	echo 'Downloading file...'
+	python ${SCRIPT_FOLDER}/patcher/scrape_liferay.py "${remote_file}" | tee output.txt
 
-local_file=$(tail -1 output.txt)
-rm output.txt
+	local_file=$(tail -1 output.txt)
+	rm output.txt
+fi
 
 if [[ ${local_file} != *.zip ]] && [[ ${local_file} != *.gz ]]; then
 	gzip -9 ${local_file}
