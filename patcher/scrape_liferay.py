@@ -30,8 +30,11 @@ import git
 json_auth_token = {}
 
 if os.path.isfile('session.ser'):
-    with open('session.ser', 'rb') as f:
-        session = pickle.load(f)
+    try:
+        with open('session.ser', 'rb') as f:
+            session = pickle.load(f)
+    except:
+        pass
 else:
     session = requests.session()
 
