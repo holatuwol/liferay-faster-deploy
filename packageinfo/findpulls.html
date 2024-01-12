@@ -77,7 +77,7 @@ query ($query: String!) {
 
 </body>
 <script>
-var members = [];
+var members = ['liferay'];
 var initializing = true;
 
 function updateQueryVariables() {
@@ -104,7 +104,7 @@ var requestURL = 'https://s3-us-west-2.amazonaws.com/mdang.grow/findpulls.json';
 
 request.onreadystatechange = function() {
 	if (this.readyState == 4 && this.status == 200) {
-		members = JSON.parse(this.responseText);
+		members = ['liferay'].concat(JSON.parse(this.responseText));
 
 		initializing = false;
 	}
