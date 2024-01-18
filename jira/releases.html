@@ -1,0 +1,66 @@
+<html>
+<head>
+<title>Flattened Release Notes Generator</title>
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+<!-- Optional theme -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+
+<!-- Latest compiled and minified JavaScript -->
+<script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
+<style>
+	@media print {
+		.release-notes-divider {
+			display: none;
+		}
+
+		.release-notes-ticket {
+			page-break-before: always;
+		}
+
+		a[href]:after {
+			content: none !important;
+		}
+	}
+</style>
+</head>
+<body>
+
+<div class="container" role="main">
+
+<h1>Flattened Jira Release Notes</h1>
+
+<p>This is a prototype of what Liferay release notes might look like if we included the ticket descriptions on Jira. Users who view this might also be interested in the official <a href="https://github.com/liferay/liferay-portal/blob/master/readme/BREAKING_CHANGES.markdown">Breaking Changes</a> documentation found on GitHub. This page was built by pulling each of the releases listed on the <a href="https://liferay.atlassian.net/projects/LPS?selectedItem=com.atlassian.jira.jira-projects-plugin%3Arelease-page">PUBLIC - Liferay Portal Community Edition Releases</a> page and is updated on an as-needed basis for demo purposes only.</p>
+
+<p class="alert alert-warning"><strong>Warning</strong>: This is NOT an official Liferay tool, nor is it supported by Liferay in any way.</p>
+
+<table class="table">
+<thead>
+<tr>
+<th>Source Version</th>
+<th>Target Version</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<select id="sourceVersion" name="sourceVersion">
+</select>
+</td>
+<td>
+<select id="targetVersion" name="targetVersion">
+</select>
+</td>
+</tr>
+</tbody>
+</table>
+
+<div id="release-notes-details">
+</div>
+
+</body>
+<script src="releases.js"></script>
+</html>

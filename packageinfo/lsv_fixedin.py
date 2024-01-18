@@ -6,8 +6,11 @@ import re
 import requests
 import subprocess
 
-from jira import get_issues
 from lsv_helpcenter import get_lsv_articles
+
+sys.path.insert(0, dirname(dirname(abspath(inspect.getfile(inspect.currentframe())))))
+
+from jira import get_issues
 
 def get_prefix_suffix(base_version):
     prefix = None
