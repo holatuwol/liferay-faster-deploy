@@ -109,7 +109,20 @@ function generateReleasePages(fetchVersions, sourceUpdate, sourceQuarterly, sour
 			else {
 				src = 'https://liferay.atlassian.net/browse/' + src;
 			}
-			element.setAttribute('src', src);
+			if (element.tagName == 'IMG') {
+				element.setAttribute('src', src);
+			}
+			else {
+				var linkElement = document.createElement('a');
+				linkElement.setAttribute('href', src);
+				linkElement.textContent = src;
+
+				var wrapperElement = document.createElement('div');
+				wrapperElement.appendChild(document.createTextNode('EMBED: '));
+				wrapperElement.appendChild(linkElement);
+
+				element.replaceWith(wrapperElement);
+			}
 		});
 
 		ticketElement.appendChild(descriptionElement);
