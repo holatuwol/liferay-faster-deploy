@@ -72,7 +72,7 @@ if [ "" != "${UPSTREAM_EE}" ]; then
 			pushorigin ${branch}-private ${UPSTREAM_EE} ${remote}
 		done
 
-		for branch in $(git for-each-ref refs/remotes/upstream/*.x refs/remotes/upstream/release-*.q* | cut -d'/' -f 4); do
+		for branch in $(git for-each-ref refs/remotes/${UPSTREAM_EE}/*.x refs/remotes/${UPSTREAM_EE}/release-*.q* | cut -d'/' -f 4); do
 			pushorigin ${branch} ${UPSTREAM_EE} ${remote}
 		done
 	done
