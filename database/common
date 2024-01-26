@@ -5,7 +5,9 @@ containername() {
 		return
 	fi
 
-	if [ "" == "${BASE_BRANCH}" ]; then
+	if [ -f compose.yml ]; then
+		CONTAINER_NAME=$(basename ${PWD} | tr '[:upper:]' '[:lower:]')-database-1
+	elif [ "" == "${BASE_BRANCH}" ]; then
 		CONTAINER_NAME=${DB_TYPE}
 	elif [[ ${BASE_BRANCH} == ee-* ]]; then
 		CONTAINER_NAME=$(echo ${BASE_BRANCH} | cut -d'-' -f 2- | tr -d '.')-${DB_TYPE}
