@@ -41,19 +41,28 @@ grant ${1} to lportal;"
 			sqlfile=ddl_dump.txt \
 			< /dev/null
 
-	local OLD_TABLESPACE=$(docker exec -i ${CONTAINER_NAME} grep -o 'TABLESPACE ".*"' ${BACKUP_FOLDER_NAME}/ddl_dump.txt | cut -d'"' -f 2 | sort -u | grep -v '^\(SYS\|TEMP\|UNDO\)')
+	local OLD_TABLESPACE=$(
+		docker exec -i ${CONTAINER_NAME} grep -o 'TABLESPACE "[^"]*"' ${BACKUP_FOLDER_NAME}/ddl_dump.txt | cut -d'"' -f 2 | sort -u | grep -v '^\(SYS\|TEMP\|UNDO\)'
+		docker exec -i ${CONTAINER_NAME} grep -o "TABLESPACE_NAME = ''[^']''" ${BACKUP_FOLDER_NAME}/ddl_dump.txt | cut -d'"' -f 2 | sort -u | grep -v '^\(SYS\|TEMP\|UNDO\)'
+	)
 
-	execute_script "$(echo "${OLD_TABLESPACE}" | awk '{ print "CREATE TABLESPACE " $1 " DATAFILE \x27" $1 ".dbf\x27 SIZE 64m AUTOEXTEND ON NEXT 32m MAXSIZE UNLIMITED; " }')"
+	local NEW_TABLESPACES='full=yes'
 
-	execute_script "$(docker exec -i ${CONTAINER_NAME} cat ${BACKUP_FOLDER_NAME}/ddl_dump.txt | tr '\n' ' ' | grep -o 'CREATE USER "[^"]*"[^'"'"']*'"'"'[^'"'"']*'"'"'[^;]*;' | cut -d'"' -f 2,4 | sed 's/"/ IDENTIFIED BY lportal DEFAULT TABLESPACE /g' | sed 's/^/CREATE USER /g' | sed 's/$/;/g')"
+	if [ "dba" == "${1}" ]; then
+		execute_script "$(echo "${OLD_TABLESPACE}" | awk '{ print "CREATE TABLESPACE " $1 " DATAFILE \x27" $1 ".dbf\x27 SIZE 64m AUTOEXTEND ON NEXT 32m MAXSIZE UNLIMITED; " }')"
 
-	execute_script "$(docker exec -i ${CONTAINER_NAME} grep -o 'CREATE USER ".*"' ${BACKUP_FOLDER_NAME}/ddl_dump.txt | cut -d'"' -f 2 | awk '{ print "GRANT create session, resource, unlimited tablespace TO " $1 ";" }')"
+		execute_script "$(docker exec -i ${CONTAINER_NAME} cat ${BACKUP_FOLDER_NAME}/ddl_dump.txt | tr '\n' ' ' | grep -o 'CREATE USER "[^"]*"[^'"'"']*'"'"'[^'"'"']*'"'"'[^;]*;' | cut -d'"' -f 2,4 | sed 's/"/ IDENTIFIED BY lportal DEFAULT TABLESPACE /g' | sed 's/^/CREATE USER /g' | sed 's/$/;/g')"
+
+		execute_script "$(docker exec -i ${CONTAINER_NAME} grep -o 'CREATE USER ".*"' ${BACKUP_FOLDER_NAME}/ddl_dump.txt | cut -d'"' -f 2 | awk '{ print "CREATE USER " $1 " IDENTIFIED BY lportal DEFAULT TABLESPACE lportal; GRANT create session, resource, unlimited tablespace TO " $1 ";" }')"
+	else
+		NEW_TABLESPACES=$(echo "${OLD_TABLESPACE}" | awk '{print "remap_tablespace=" $1 ":lportal"}' | tr '\n' ' ')
+	fi
 
 	docker exec -e ORACLE_SID=${ORACLE_SID} -i ${CONTAINER_NAME} \
 		impdp lportal/lportal \
 			directory=export_lportal \
 			dumpfile=${FILENAME} \
-			full=yes exclude='ROLE_GRANT,STATISTICS,USER' \
+			${NEW_TABLESPACES} exclude='STATISTICS' \
 			table_exists_action=TRUNCATE version=${ORACLE_COMPAT_VERSION} \
 			LOGFILE=import_log.txt \
 			< /dev/null
