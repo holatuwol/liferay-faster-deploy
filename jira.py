@@ -3,6 +3,7 @@ import inspect
 from os.path import abspath, dirname
 import requests
 import sys
+import time
 
 import git
 
@@ -34,6 +35,15 @@ def get_issues(jql, fields, render=False):
     r = requests.get(search_url, headers=get_jira_auth(), params=payload)
 
     issues = {}
+
+    while r.status_code == 429:
+        print(r.headers)
+
+        retry_after = int(r.headers['Retry-After'])
+        print('Retrying in %d seconds...' % retry_after)
+        time.sleep(retry_after + 1)
+
+        r = requests.get(search_url, headers=get_jira_auth(), params=payload)
 
     if r.status_code != 200:
         return issues
