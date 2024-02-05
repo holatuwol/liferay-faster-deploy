@@ -134,4 +134,4 @@ with open('movedtickets.csv', 'a') as f:
 			task.result()
 
 with open('movedtickets.json', 'w') as f:
-	json.dump(OrderedDict(sorted(tickets.items(), key=lambda x: int(x[0].split('-')[1]))), f, separators=['',''])
+	json.dump(OrderedDict(sorted(tickets.items(), key=lambda x: int(x[0].split('-')[1]))), f, separators=[',',':'])
