@@ -17,18 +17,25 @@ def get_jira_auth():
         'Authorization': 'Basic %s' % b64encode(f'{jira_username}:{jira_password}'.encode('utf-8')).decode('ascii')
     }
 
-def get_issues(jql, fields, render=False):
+def get_issues(jql, fields=[], expand=[], render=False):
     start_at = 0
+
+    if render:
+        expand = expand + ['renderedFields']
 
     payload = {
         'jql': jql,
         'startAt': start_at,
-        'maxResults': 1000,
-        'fields': fields
+        'maxResults': 1000
     }
 
-    if render:
-        payload['expand'] = 'renderedFields'
+    if len(fields) > 0:
+        payload['fields'] = ','.join(fields)
+    else:
+        payload['fields'] = 'issuekey'
+
+    if len(expand) > 0:
+        payload['expand'] = ','.join(expand)
 
     search_url = f'{jira_base_url}/rest/api/2/search'
 

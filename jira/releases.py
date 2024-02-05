@@ -12,7 +12,7 @@ from jira import get_issues
 lsv_pattern = re.compile('LSV-[0-9]+')
 
 def get_fixed_issues(release_id):
-    fixed_issues = get_issues(f'fixVersion = {release_id}', ['summary', 'description', 'security'], True)
+    fixed_issues = get_issues(f'fixVersion = {release_id}', ['summary', 'description', 'security'], render=True)
 
     release_issues = {}
 
@@ -46,7 +46,7 @@ def get_fixed_issues(release_id):
         return release_issues
 
     lsv_issue_query = 'key in (%s)' % ','.join(lsv_issue_keys)
-    lsv_issues = get_issues(lsv_issue_query, ['summary', 'description', 'customfield_10563'], True)
+    lsv_issues = get_issues(lsv_issue_query, ['summary', 'description', 'customfield_10563'], render=True)
 
     for lsv_issue_key, lsv_issue in lsv_issues.items():
         if lsv_issue['fields']['customfield_10563'] is not None:
