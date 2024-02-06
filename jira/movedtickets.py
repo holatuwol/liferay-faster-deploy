@@ -11,29 +11,42 @@ sys.path.insert(0, dirname(dirname(abspath(inspect.getfile(inspect.currentframe(
 
 from jira import get_issues
 
-tickets = defaultdict(list)
+tickets = defaultdict()
 
 if exists('movedtickets.csv'):
-	def count_keys(acc, line):
+	def reduce_keys(acc, line):
 		if line.find('\t') == -1:
 			return acc
 
 		old_key, new_key = [x.strip() for x in line.split('\t')]
-		acc[old_key].append(new_key)
+		acc[old_key] = new_key
 
 		return acc
 
 	with open('movedtickets.csv', 'r') as f:
 		lines = set(f.readlines())
-		tickets = reduce(count_keys, lines, defaultdict(list))
+		tickets = reduce(reduce_keys, lines, defaultdict())
 
 with open('movedtickets.csv', 'w') as f:
 	for line in sorted(lines, key=lambda x: int(x.split('\t')[0].split('-')[1])):
-		if line.find('\t') != -1 or len(tickets[line.strip()]) == 0:
+		if line.find('\t') != -1 or line.strip() not in tickets:
 			f.write(line)
 
-with open('movedtickets.json', 'w') as f:
-	json.dump(OrderedDict(sorted(tickets.items(), key=lambda x: int(x[0].split('-')[1]))), f)
+def write_tickets_json():
+	ticket_values = []
+
+	for key, value in tickets.items():
+		index = int(key.split('\t')[0].split('-')[1])
+
+		for i in range(len(ticket_values), index + 1):
+			ticket_values.append(None)
+
+		ticket_values[index] = value
+
+	with open('movedtickets.json', 'w') as f:
+		json.dump(ticket_values, f, separators=[',', ':'])
+
+write_tickets_json()
 
 with open('movedtickets.csv', 'a') as f:
 	def remember_key_change(old_key, new_key=None):
@@ -133,5 +146,4 @@ with open('movedtickets.csv', 'a') as f:
 		for task in tasks:
 			task.result()
 
-with open('movedtickets.json', 'w') as f:
-	json.dump(OrderedDict(sorted(tickets.items(), key=lambda x: int(x[0].split('-')[1]))), f, separators=[',',':'])
+write_tickets_json()
