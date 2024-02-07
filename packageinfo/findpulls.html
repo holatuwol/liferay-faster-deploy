@@ -22,7 +22,10 @@
 <div class="form-group">
 
 <h2>Ticket</h2>
+
 <input type="text" onkeyup="updateQueryVariables();" class="form-control" name="ticket" placeholder="enter in the ticket to search for" />
+
+<p><strong>alt ticket id</strong>: <span id="alt-ticket-id"></p>
 
 <h2>Repositories</h2>
 
@@ -78,10 +81,15 @@ query ($query: String!) {
 </body>
 <script>
 var members = ['liferay'];
-var initializing = true;
+var remainingRequests = 2;
+var altTicketIds = {};
+
+if (document.location.search) {
+	document.querySelector('input[name="ticket"]').value = document.location.search.substring(1);
+}
 
 function updateQueryVariables() {
-	if (initializing) {
+	if (remainingRequests > 0) {
 		setTimeout(updateQueryVariables, 500);
 		return;
 	}
@@ -92,6 +100,8 @@ function updateQueryVariables() {
 
 	var ticketId = document.querySelector('input[name="ticket"]').value;
 
+	document.getElementById('alt-ticket-id').textContent = altTicketIds[ticketId] || 'none'
+
 	document.querySelector('textarea[name="query-variables"]').value = JSON.stringify({
 		query: 'is:pr "' + ticketId + '" ' + repoNames.join(' ')
 	});
@@ -99,23 +109,48 @@ function updateQueryVariables() {
 	window.history.replaceState(null, '', '?' + ticketId);
 }
 
-var request = new XMLHttpRequest();
-var requestURL = 'https://s3-us-west-2.amazonaws.com/mdang.grow/findpulls.json';
+var request1 = new XMLHttpRequest();
+var request1URL = 'findpulls.json';
 
-request.onreadystatechange = function() {
+request1.onreadystatechange = function() {
 	if (this.readyState == 4 && this.status == 200) {
 		members = ['liferay'].concat(JSON.parse(this.responseText));
 
-		initializing = false;
-	}
-
-	if (document.location.search) {
-		document.querySelector('input[name="ticket"]').value = document.location.search.substring(1);
-		updateQueryVariables();
+		if (--remainingRequests == 0) {
+			updateQueryVariables();
+		}
 	}
 };
 
-request.open('GET', requestURL, true);
-request.send();
+request1.open('GET', request1URL, true);
+request1.send();
+
+var request2 = new XMLHttpRequest();
+var request2URL = 'movedtickets.json';
+
+request2.onreadystatechange = function() {
+	if (this.readyState == 4 && this.status == 200) {
+		altTicketIds = JSON.parse(this.responseText).reduce(function(acc, next, i) {
+			if (next == null) {
+				return acc;
+			}
+
+			var lpsKey = 'LPS-' + i;
+
+			altTicketIds[next] = lpsKey;
+			altTicketIds[lpsKey] = next;
+
+			return altTicketIds;
+		}, {});
+
+		if (--remainingRequests == 0) {
+			updateQueryVariables();
+		}
+	}
+};
+
+request2.open('GET', request2URL, true);
+request2.send();
+
 </script>
 </html>
