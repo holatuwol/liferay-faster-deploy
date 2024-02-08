@@ -991,7 +991,7 @@ function extractExternalLinkMetadata(externalLink) {
         missingCorsHeader: true
     };
 }
-function addAttachmentDate(container, attachment, oldDate) {
+function addAttachmentDate(ticketId, conversation, container, attachment, oldDate) {
     var newDate = attachment.time;
     if (oldDate == newDate) {
         return newDate;
@@ -1003,7 +1003,7 @@ function addAttachmentDate(container, attachment, oldDate) {
     attachmentExtraInfo.appendChild(document.createTextNode(attachment.author + ' on '));
     var attachmentCommentLink = createAnchorTag(newDate, null);
     attachmentCommentLink.classList.add('attachment-comment-link');
-    attachmentCommentLink.onclick = highlightComment.bind(null, attachment.timestamp);
+    attachmentCommentLink.onclick = highlightComment.bind(null, conversation, ticketId, attachment.timestamp);
     attachmentExtraInfo.appendChild(attachmentCommentLink);
     container.appendChild(attachmentExtraInfo);
     return newDate;
@@ -1120,7 +1120,7 @@ function createAttachmentsContainer(ticketId, ticketInfo, conversation) {
     attachmentInfo.classList.add('lesa-ui-attachment-info');
     var oldDate = null;
     for (var i = 0; i < attachments.length; i++) {
-        oldDate = addAttachmentDate(attachmentInfo, attachments[i], oldDate);
+        oldDate = addAttachmentDate(ticketId, conversation, attachmentInfo, attachments[i], oldDate);
         addAttachmentRow(attachmentInfo, attachments[i]);
     }
     attachmentsContainer.appendChild(attachmentInfo);
