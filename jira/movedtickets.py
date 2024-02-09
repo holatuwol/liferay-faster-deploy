@@ -43,7 +43,10 @@ def write_tickets_json():
 
 		ticket_values[index] = value
 
-	with open('movedtickets.json', 'w') as f:
+	with open('movedtickets_object.json', 'w') as f:
+		json.dump(tickets, f, separators=[',', ':'])
+
+	with open('movedtickets_array.json', 'w') as f:
 		json.dump(ticket_values, f, separators=[',', ':'])
 
 write_tickets_json()
