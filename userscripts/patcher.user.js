@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        8.1
+// @version        8.2
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -203,6 +203,14 @@ function replaceJenkinsLinks() {
             href += '/';
         }
         links[i].setAttribute('href', href + consolePath);
+    }
+    links = document.querySelectorAll('a[href*="/job/build-hotfix"]:not([href*="/artifact/"])');
+    for (var i = 0; i < links.length; i++) {
+        var href = links[i].getAttribute('href');
+        if (href.charAt(href.length - 1) != '/') {
+            href += '/';
+        }
+        links[i].setAttribute('href', href + 'artifact/release/release-data/build/');
     }
     links = document.querySelectorAll('a[href*="//test-5-2/"]');
     for (var i = 0; i < links.length; i++) {
