@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        8.2
+// @version        8.3
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -14,7 +14,7 @@
  * https://github.com/holatuwol/liferay-patcher-userscript
  */ 
 var styleElement = document.createElement('style');
-styleElement.textContent = "\na.included-in-baseline,\na.included-in-baseline:hover {\n  color: #ddd;\n  text-decoration: line-through;\n}\n\n.nowrap {\n  white-space: nowrap;\n}\n\n#_1_WAR_osbpatcherportlet_patcherProductVersionId,\n#_1_WAR_osbpatcherportlet_patcherProjectVersionId {\n  width: auto;\n}\n\n#_1_WAR_osbpatcherportlet_patcherProductVersionId option {\n  display: none;\n}\n\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"6.x\"] option[data-liferay-version=\"6.x\"],\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"7.0\"] option[data-liferay-version=\"7.0\"],\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"7.1\"] option[data-liferay-version=\"7.1\"],\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"7.2\"] option[data-liferay-version=\"7.2\"],\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"7.3\"] option[data-liferay-version=\"7.3\"],\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"7.4\"] option[data-liferay-version=\"7.4\"] {\n  display: block;\n}\n\ntextarea[inputcssclass=\"osb-patcher-input-wide\"] {\n  height: 3em;\n  width: 60em;\n}\n\n#_1_WAR_osbpatcherportlet_patcherBuildName {\n  height: 5em;\n}\n\n.control-group.field-wrapper .table,\n.control-group.input-select-wrapper .table,\n.control-group.input-String-wrapper .table,\n.control-group.input-text-wrapper .table {\n  margin-bottom: 0.5em;\n}\n\n#security-fixes .show-details,\n#ticket-suggestions .show-details {\n  background-color: #fff;\n  font-size: x-small;\n  line-height: 0.5em;\n  text-align: right;\n}\n\n.compact .verbose,\n.verbose .compact {\n  display: none !important;\n}\n\nth.branch-type,\nth.branch-type a {\n  font-weight: bold;\n  width: 5em;\n}\n\n.control-group.field-wrapper,\n.control-group.input-select-wrapper,\n.control-group.input-String-wrapper,\n.control-group.input-text-wrapper {\n  display: flex;\n  margin-bottom: 0.1em;\n}\n\n.control-group .control-group.field-wrapper,\n.control-group .control-group.input-select-wrapper,\n.control-group .control-group.input-String-wrapper,\n.control-group .control-group.input-text-wrapper,\n.popover .control-group.field-wrapper,\n.popover .control-group.input-select-wrapper,\n.popover .control-group.input-String-wrapper,\n.popover .control-group.input-text-wrapper {\n  display: block;\n}\n\n#toggle_id_patcher_fix_searchadvancedBodyNode .control-group.field-wrapper,\n#toggle_id_patcher_fix_searchadvancedBodyNode .control-group.input-select-wrapper,\n#toggle_id_patcher_fix_searchadvancedBodyNode .control-group.input-String-wrapper,\n#toggle_id_patcher_fix_searchadvancedBodyNode .control-group.input-text-wrapper {\n  display: block;\n}\n\na[href*=\"https://grow.liferay.com/\"] {\n  padding-left: 0.5em;\n}\n\na[href*=\"https://test-5-2.liferay.com/\"] {\n  padding-right: 0.5em;\n}\n\na[href*=\"http://files.liferay.com/\"],\na[href*=\"https://files.liferay.com/\"] {\n  font-size: x-large;\n}\n\n.control-group.field-wrapper .control-label,\n.control-group.input-select-wrapper .control-label,\n.control-group.input-String-wrapper .control-label,\n.control-group.input-text-wrapper .control-label {\n  font-weight: bold;\n  min-width: 20em;\n  width: 20em;\n}\n\n#security-fixes dl {\n  margin-block-start: 0em;\n  margin-block-end: 0em;\n  margin-bottom: 0px;\n}\n\n/**\n * http://vrl.cs.brown.edu/color\n * 4 colors, lightness between 25 and 85, add alpha of 0.3\n */\n\ntr.qa-analysis-needed.version-6210 td {\n  background-color: rgba(79,140,157,0.3) !important;\n}\n\ntr.qa-analysis-needed.version-7010 td {\n  background-color: rgba(75,214,253,0.3) !important;\n}\n\ntr.qa-analysis-needed.version-7110 td {\n  background-color: rgba(101,52,102,0.3) !important;\n}\n\ntr.qa-analysis-needed.version-7210 td {\n  background-color: rgba(131,236,102,0.3) !important;\n}\n\ntr.qa-analysis-unneeded {\n  opacity: 0.3;\n}\n";
+styleElement.textContent = "\na.included-in-baseline,\na.included-in-baseline:hover {\n  color: #ddd;\n  text-decoration: line-through;\n}\n\n.nowrap {\n  white-space: nowrap;\n}\n\n#_1_WAR_osbpatcherportlet_patcherProductVersionId,\n#_1_WAR_osbpatcherportlet_patcherProjectVersionId {\n  width: auto;\n}\n\n#_1_WAR_osbpatcherportlet_patcherProductVersionId option {\n  display: none;\n}\n\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"6.x\"] option[data-liferay-version=\"6.x\"],\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"7.0\"] option[data-liferay-version=\"7.0\"],\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"7.1\"] option[data-liferay-version=\"7.1\"],\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"7.2\"] option[data-liferay-version=\"7.2\"],\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"7.3\"] option[data-liferay-version=\"7.3\"],\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"7.4\"] option[data-liferay-version=\"7.4\"] {\n  display: block;\n}\n\ntextarea[inputcssclass=\"osb-patcher-input-wide\"] {\n  height: 3em;\n  width: 60em;\n}\n\np[inputcssclass=\"osb-patcher-input-wide\"] {\n  display: inline-block;\n  padding: 4px 6px;\n  margin-right: 5px;\n  width: 60em;\n}\n\n#_1_WAR_osbpatcherportlet_patcherBuildName {\n  height: 5em;\n}\n\n.control-group.field-wrapper .table,\n.control-group.input-select-wrapper .table,\n.control-group.input-String-wrapper .table,\n.control-group.input-text-wrapper .table {\n  margin-bottom: 0.5em;\n}\n\n#security-fixes .show-details,\n#ticket-suggestions .show-details {\n  background-color: #fff;\n  font-size: x-small;\n  line-height: 0.5em;\n  text-align: right;\n}\n\n.compact .verbose,\n.verbose .compact {\n  display: none !important;\n}\n\nth.branch-type,\nth.branch-type a {\n  font-weight: bold;\n  width: 5em;\n}\n\n.control-group.field-wrapper,\n.control-group.input-select-wrapper,\n.control-group.input-String-wrapper,\n.control-group.input-text-wrapper {\n  display: flex;\n  margin-bottom: 0.1em;\n}\n\n.control-group .control-group.field-wrapper,\n.control-group .control-group.input-select-wrapper,\n.control-group .control-group.input-String-wrapper,\n.control-group .control-group.input-text-wrapper,\n.popover .control-group.field-wrapper,\n.popover .control-group.input-select-wrapper,\n.popover .control-group.input-String-wrapper,\n.popover .control-group.input-text-wrapper {\n  display: block;\n}\n\n#toggle_id_patcher_fix_searchadvancedBodyNode .control-group.field-wrapper,\n#toggle_id_patcher_fix_searchadvancedBodyNode .control-group.input-select-wrapper,\n#toggle_id_patcher_fix_searchadvancedBodyNode .control-group.input-String-wrapper,\n#toggle_id_patcher_fix_searchadvancedBodyNode .control-group.input-text-wrapper {\n  display: block;\n}\n\na[href*=\"https://grow.liferay.com/\"] {\n  padding-left: 0.5em;\n}\n\na[href*=\"https://test-5-2.liferay.com/\"] {\n  padding-right: 0.5em;\n}\n\na[href*=\"http://files.liferay.com/\"],\na[href*=\"https://files.liferay.com/\"] {\n  font-size: x-large;\n}\n\n.control-group.field-wrapper .control-label,\n.control-group.input-select-wrapper .control-label,\n.control-group.input-String-wrapper .control-label,\n.control-group.input-text-wrapper .control-label {\n  font-weight: bold;\n  min-width: 20em;\n  width: 20em;\n}\n\n#security-fixes dl {\n  margin-block-start: 0em;\n  margin-block-end: 0em;\n  margin-bottom: 0px;\n}\n\n/**\n * http://vrl.cs.brown.edu/color\n * 4 colors, lightness between 25 and 85, add alpha of 0.3\n */\n\ntr.qa-analysis-needed.version-6210 td {\n  background-color: rgba(79,140,157,0.3) !important;\n}\n\ntr.qa-analysis-needed.version-7010 td {\n  background-color: rgba(75,214,253,0.3) !important;\n}\n\ntr.qa-analysis-needed.version-7110 td {\n  background-color: rgba(101,52,102,0.3) !important;\n}\n\ntr.qa-analysis-needed.version-7210 td {\n  background-color: rgba(131,236,102,0.3) !important;\n}\n\ntr.qa-analysis-unneeded {\n  opacity: 0.3;\n}\n";
 document.head.appendChild(styleElement);
 var AUI = unsafeWindow.AUI;
 var Liferay = unsafeWindow.Liferay;
@@ -1162,6 +1162,20 @@ function addEngineerComments() {
     xhr1.send(null);
 }
 var pastTickets = {};
+function getHotfixShortNames(hotfixes) {
+    return hotfixes.map(function (it) {
+        return (it.indexOf('.q') != -1) ?
+            it.substring(it.indexOf('-hotfix') + 1, it.length - 4) :
+            it.substring(it.indexOf('-') + 1, it.lastIndexOf('-'));
+    });
+}
+function getTicketBuildCountSummary(ticketId, hotfixes) {
+    var summaryElement = document.createElement('span');
+    summaryElement.classList.add('nowrap', 'osb-ticket-builds-summary');
+    summaryElement.setAttribute('title', getHotfixShortNames(hotfixes).join(', '));
+    summaryElement.innerHTML = getTicketLink('', ticketId, ticketId) + ' (' + hotfixes.length + ' build' + ((hotfixes.length == 1) ? '' : 's') + ')</span>';
+    return summaryElement;
+}
 function checkFixesFromPreviousBuilds(buildNameNode, previousBuildsInput, accountBuildsURL) {
     var currentTickets = new Set((buildNameNode.value || '').split(/\s*,\s*/g));
     var missingTickets = Array.from(Object.keys(pastTickets)).
@@ -1172,13 +1186,40 @@ function checkFixesFromPreviousBuilds(buildNameNode, previousBuildsInput, accoun
         return splitA[0] != splitB[0] ? splitA[0] > splitB[0] ? 1 : -1 :
             parseInt(splitA[1]) - parseInt(splitB[1]);
     });
-    previousBuildsInput.innerHTML = '<p><a href="' + accountBuildsURL + '" target="_blank">see builds list</a></p><p>' +
-        missingTickets.map(function (it1) {
-            return '<span class="nowrap" title="' +
-                pastTickets[it1].map(function (it) { return it.substring(it.indexOf('-') + 1, it.lastIndexOf('-')); }).join(', ') +
-                '">' + getTicketLink('', it1, it1) + ' (' +
-                pastTickets[it1].length + ((pastTickets[it1].length == 1) ? ' build' : ' builds') + ')</span>';
-        }).join(', ') + '</p>';
+    previousBuildsInput.innerHTML = '';
+    var buildsListLink = document.createElement('a');
+    buildsListLink.setAttribute('href', accountBuildsURL);
+    buildsListLink.setAttribute('target', '_blank');
+    buildsListLink.textContent = 'see builds list';
+    var buildsListParagraph = document.createElement('p');
+    buildsListParagraph.appendChild(buildsListLink);
+    previousBuildsInput.appendChild(buildsListParagraph);
+    if (missingTickets.length > 0) {
+        var ticketsListParagraph = missingTickets.reduce(function (acc, next, i) {
+            if (i > 0) {
+                acc.appendChild(document.createTextNode(', '));
+            }
+            acc.appendChild(getTicketBuildCountSummary(next, pastTickets[next]));
+            return acc;
+        }, document.createElement('p'));
+        ticketsListParagraph.setAttribute('inputcssclass', 'osb-patcher-input-wide');
+        previousBuildsInput.appendChild(ticketsListParagraph);
+        var buttonHolderRow = document.createElement('div');
+        buttonHolderRow.classList.add('button-holder', 'osb-patcher-button-row');
+        var button = document.createElement('button');
+        button.setAttribute('type', 'button');
+        button.classList.add('btn', 'osb-patcher-button');
+        button.onclick = function () {
+            buildNameNode.value += ',' + missingTickets.join(',');
+            checkFixesFromPreviousBuilds(buildNameNode, previousBuildsInput, accountBuildsURL);
+            return false;
+        };
+        var buttonContent = document.createElement('i');
+        buttonContent.classList.add('icon-plus-sign');
+        button.appendChild(buttonContent);
+        buttonHolderRow.appendChild(button);
+        previousBuildsInput.appendChild(buttonHolderRow);
+    }
     var compactCell = document.querySelector('tr[data-suggestion-type="Previous Builds"] td');
     var ticketCount = missingTickets.length;
     compactCell.textContent = ticketCount + ((ticketCount == 1) ? ' ticket' : ' tickets');
@@ -1209,9 +1250,6 @@ function updateFixesFromPreviousBuilds(accountNode, buildNameNode, projectNode, 
                 return acc;
             }
             if ((row.cells[9].textContent || '').trim().toLowerCase().indexOf('ignore') != -1) {
-                return acc;
-            }
-            if ((row.cells[10].textContent || '').trim().toLowerCase().indexOf('qa passed') == -1) {
                 return acc;
             }
             var hotfixId = (row.cells[12].textContent || '').trim();
