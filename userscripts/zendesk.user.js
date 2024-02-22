@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        19.6
+// @version        19.8
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -1777,11 +1777,11 @@ function fixHelpCenterLink(conversation, anchor, ticketId) {
  * a new tab (if they are an existing ticket) or auto-scroll.
  */
 function fixPermaLinkAnchors(ticketId, ticketInfo, conversation) {
-    var permalinks = conversation.querySelectorAll(isAgentWorkspace ? 'article div.lesa-ui-permalink' : 'div[data-comment-id] div.lesa-ui-permalink');
-    if (permalinks.length > 0) {
-        return;
-    }
-    var anchors = conversation.querySelectorAll('a');
+    var selectors = [
+        'a[href^="https://help.liferay.com/hc/"]',
+        'a[href*="/tickets/' + ticketId + '?comment="]'
+    ];
+    var anchors = conversation.querySelectorAll(selectors.join(','));
     for (var i = 0; i < anchors.length; i++) {
         var anchor = anchors[i];
         fixZenDeskLink(conversation, anchor, ticketId);
