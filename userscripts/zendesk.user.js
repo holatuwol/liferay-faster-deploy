@@ -8,6 +8,7 @@
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/knowledge\/.*/
 // @include        /https:\/\/24475.apps.zdusercontent.com\/24475\/assets\/.*\/issue_creator.html/
 // @grant          unsafeWindow
+// @grant          GM.xmlHttpRequest
 // @require        https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.5/jszip.min.js
 // @require        https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js
 // @require        https://unpkg.com/stackedit-js@1.0.7/docs/lib/stackedit.min.js
@@ -72,30 +73,32 @@ function createAnchorTag(text, href, download) {
  * Download the specified HREF using the specified file name.
  */
 function downloadFile(href, filename, callback) {
-    var xhr = new XMLHttpRequest();
-    xhr.responseType = 'blob';
-    xhr.onload = function () {
-        if (callback) {
-            callback(this.response);
-        }
-        else {
-            downloadBlob(filename, this.response);
-        }
-    };
-    xhr.onerror = function () {
-        if (callback) {
-            callback(this.response);
-        }
-    };
+    var requestURL = href;
     if (href.indexOf('https://help.liferay.com') == 0) {
-        xhr.open('GET', href.substring('https://help.liferay.com'.length));
+        requestURL = href.substring('https://help.liferay.com'.length);
     }
-    else {
-        xhr.open('GET', href);
-    }
-    xhr.setRequestHeader('Cache-Control', 'no-cache, no-store, max-age=0');
-    xhr.setRequestHeader('Pragma', 'no-cache');
-    xhr.send(null);
+    GM.xmlHttpRequest({
+        'method': 'GET',
+        'url': requestURL,
+        'headers': {
+            'Cache-Control': 'no-cache, no-store, max-age=0',
+            'Pragma': 'no-cache'
+        },
+        'responseType': 'blob',
+        'onload': function (xhr) {
+            if (callback) {
+                callback(xhr.response);
+            }
+            else {
+                downloadBlob(filename, xhr.response);
+            }
+        },
+        'onerror': function (xhr) {
+            if (callback) {
+                callback(xhr.response);
+            }
+        }
+    });
 }
 /**
  * Download a generated Blob object by generating a dummy link and simulating a click.
