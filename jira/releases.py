@@ -19,7 +19,10 @@ def get_release_cf(release_name):
     return int(release_name.split('-')[1][1:])
 
 def get_fixed_issues(release_name, release_id):
-    query = f'fixVersion = {release_id} or (project in ("LPE","LPS","LPD") AND cf[10210] = {get_release_cf(release_name)})'
+    query = f'(project in ("LPE","LPS","LPD") AND cf[10210] = {get_release_cf(release_name)})'
+
+    if release_id > 0:
+        query = 'fixVersion = {release_id} or ' + query
 
     fixed_issues = get_issues(query, ['summary', 'description', 'security'], render=True)
 
@@ -42,19 +45,19 @@ def get_fixed_issues(release_name, release_id):
     secure_issue_query = 'project = LPE and (%s)' % ' or '.join(['issue in linkedIssues(%s)' % secure_issue_key for secure_issue_key in secure_issue_keys])
     secure_issues = get_issues(secure_issue_query, ['summary'])
 
-    lsv_issue_keys = []
+    lsv_issue_keys = {}
 
     for secure_issue_key, secure_issue in secure_issues.items():
         summary = secure_issue['fields']['summary']
         lsv_matcher = lsv_pattern.search(summary)
 
         if lsv_matcher is not None:
-            lsv_issue_keys.append(lsv_matcher[0])
+            lsv_issue_keys[lsv_matcher[0]] = secure_issue_key
 
     if len(lsv_issue_keys) == 0:
         return release_issues
 
-    lsv_issue_query = 'key in (%s)' % ','.join(lsv_issue_keys)
+    lsv_issue_query = 'key in (%s)' % ','.join(lsv_issue_keys.keys())
     lsv_issues = get_issues(lsv_issue_query, ['summary', 'description', 'customfield_10563'], render=True)
 
     for lsv_issue_key, lsv_issue in lsv_issues.items():
