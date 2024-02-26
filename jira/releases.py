@@ -11,8 +11,17 @@ from jira import get_issues
 
 lsv_pattern = re.compile('LSV-[0-9]+')
 
-def get_fixed_issues(release_id):
-    fixed_issues = get_issues(f'fixVersion = {release_id}', ['summary', 'description', 'security'], render=True)
+def get_release_cf(release_name):
+    if release_name.find('.q') != -1:
+        release_parts = release_name.split('.')
+        return '%d.%d' % (int(release_parts[0]), int(release_parts[1][1:]) * 100 + int(release_parts[2]))
+
+    return int(release_name.split('-')[1][1:])
+
+def get_fixed_issues(release_name, release_id):
+    query = f'fixVersion = {release_id} or (project in ("LPE","LPS","LPD") AND cf[10210] = {get_release_cf(release_name)})'
+
+    fixed_issues = get_issues(query, ['summary', 'description', 'security'], render=True)
 
     release_issues = {}
 
@@ -68,4 +77,4 @@ for release_name, release_id in releases.items():
 
     with open(release_file_name, 'w') as f:
         print(f'writing {release_name} metadata')
-        json.dump(get_fixed_issues(release_id), f, sort_keys=True, separators=(',', ':'))
+        json.dump(get_fixed_issues(release_name, release_id), f, sort_keys=True, separators=(',', ':'))
