@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        19.9
+// @version        20.0
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -27,7 +27,6 @@ else {
 }
 var head = document.querySelector('head');
 head.appendChild(styleElement);
-var isAgentWorkspace = false;
 /**
  * Waits until elements appear and then click on them.
  */
@@ -593,19 +592,14 @@ function addPriorityMarker(header, conversation, ticketId, ticketInfo) {
     if (emojiContainer != null) {
         priorityElement.appendChild(emojiContainer);
     }
-    if (isAgentWorkspace) {
-        var viaLabel = conversation.querySelector('div[data-test-id="omni-header-via-label"]');
-        var divider = document.createElement('div');
-        divider.classList.add('Divider-sc-2k6bz0-9');
-        if (priorityElement.childNodes.length > 0) {
-            divider.classList.add('fNgWaW');
-        }
-        viaLabel.before(divider);
-        divider.before(priorityElement);
+    var viaLabel = conversation.querySelector('div[data-test-id="omni-header-via-label"]');
+    var divider = document.createElement('div');
+    divider.classList.add('Divider-sc-2k6bz0-9');
+    if (priorityElement.childNodes.length > 0) {
+        divider.classList.add('fNgWaW');
     }
-    else {
-        header.insertBefore(priorityElement, header.querySelector('.round-avatar'));
-    }
+    viaLabel.before(divider);
+    divider.before(priorityElement);
 }
 /**
  * Generate a single dummy field to add to the sidebar.
@@ -953,13 +947,13 @@ function downloadAttachment(checkbox, callback) {
  * Generate a single object representing the metadata for the attachment.
  */
 function extractAttachmentLinkMetadata(attachmentLink) {
-    var comment = attachmentLink.closest(isAgentWorkspace ? 'article' : 'div[data-comment-id]');
+    var comment = attachmentLink.closest('article');
     // Since we're using the query string in order to determine the name (since the actual text
     // in the link has a truncated name), we need to decode the query string.
     var encodedFileName = attachmentLink.href.substring(attachmentLink.href.indexOf('?') + 6);
     encodedFileName = encodedFileName.replace(/\+/g, '%20');
     var attachmentFileName = decodeURIComponent(encodedFileName);
-    var authorElement = comment.querySelector(isAgentWorkspace ? 'span[data-test-id="omni-log-item-sender"]' : 'div.actor .name');
+    var authorElement = comment.querySelector('span[data-test-id="omni-log-item-sender"]');
     var timeElement = comment.querySelector('time');
     return {
         element: attachmentLink,
@@ -977,8 +971,8 @@ function extractAttachmentLinkMetadata(attachmentLink) {
  * Generate a single object representing the metadata for an external link.
  */
 function extractExternalLinkMetadata(externalLink) {
-    var comment = externalLink.closest(isAgentWorkspace ? 'article' : 'div[data-comment-id]');
-    var authorElement = comment.querySelector(isAgentWorkspace ? 'span[data-test-id="omni-log-item-sender"]' : 'div.actor .name');
+    var comment = externalLink.closest('article');
+    var authorElement = comment.querySelector('span[data-test-id="omni-log-item-sender"]');
     var timeElement = comment.querySelector('time');
     // Since we're using the query string in order to determine the name (since the actual text
     // in the link has a truncated name), we need to decode the query string.
@@ -1084,32 +1078,18 @@ function createAttachmentZip(ticketId, ticketInfo) {
     }
 }
 /**
- * Function to check if this is a large attachment, since those cannot be automatically
- * included in attachment .zip files due to CORS policies.
- */
-function isLiferayLargeAttachment(anchor) {
-    return anchor.href.indexOf('ticketAttachmentId') != -1;
-}
-/**
  * Create a container to hold all of the attachments in the ticket, and a convenience
  * link which allows the user to download all of the selected attachments at once.
  */
 function createAttachmentsContainer(ticketId, ticketInfo, conversation) {
     var attachmentLinks = Array.from(conversation.querySelectorAll('a.attachment'));
     var attachmentThumbnails = Array.from(conversation.querySelectorAll('a[data-test-id="attachment-thumbnail"]'));
-    var externalLinks = Array.from(conversation.querySelectorAll((isAgentWorkspace ? '' : '.is-public ') + '.zd-comment > a:not(.attachment)'));
-    externalLinks = externalLinks.filter(isLiferayLargeAttachment);
+    var externalLinks = Array.from(conversation.querySelectorAll('.zd-comment > a:not(.attachment)'));
     if (attachmentLinks.length + attachmentThumbnails.length + externalLinks.length == 0) {
         return null;
     }
     var attachmentsContainer = document.createElement('div');
     attachmentsContainer.classList.add('lesa-ui-attachments');
-    if (!isAgentWorkspace) {
-        var attachmentsLabel = document.createElement('div');
-        attachmentsLabel.classList.add('lesa-ui-attachments-label');
-        attachmentsLabel.innerHTML = 'Attachments:';
-        attachmentsContainer.appendChild(attachmentsLabel);
-    }
     // Accumulate the attachments, and then sort them by date
     var attachments = attachmentLinks.map(extractAttachmentLinkMetadata).
         concat(attachmentThumbnails.map(extractAttachmentLinkMetadata)).
@@ -1319,80 +1299,32 @@ function getCustomFieldValue(ticketInfo, fieldId) {
  * Add a ticket description and a complete list of attachments to the top of the page.
  */
 function addTicketDescription(ticketId, ticketInfo, conversation) {
-    var header = null;
-    if (isAgentWorkspace) {
-        header = conversation.childNodes[0];
-    }
-    else {
-        header = conversation.querySelector('.pane_header');
-    }
+    var header = conversation.childNodes[0];
     if (!header) {
         return;
     }
     // Check to see if we have any descriptions that we need to remove.
-    if (isAgentWorkspace) {
-        var oldLinks = conversation.querySelectorAll('.lesa-ui-modal-header-link');
-        if (oldLinks.length > 0) {
-            return;
-        }
-    }
-    else {
-        var oldDescriptions = conversation.querySelectorAll('.lesa-ui-description');
-        var hasNewDescription = false;
-        for (var i = 0; i < oldDescriptions.length; i++) {
-            if (oldDescriptions[i].getAttribute('data-ticket-id') == ticketId) {
-                hasNewDescription = true;
-            }
-            else {
-                revokeObjectURLs();
-                header.removeChild(oldDescriptions[i]);
-            }
-        }
-        if (hasNewDescription) {
-            return;
-        }
+    var oldLinks = conversation.querySelectorAll('.lesa-ui-modal-header-link');
+    if (oldLinks.length > 0) {
+        return;
     }
     // Add a marker indicating the LESA priority based on critical workflow rules
     addHeatScoreMarker(header, conversation, ticketInfo);
     addPriorityMarker(header, conversation, ticketId, ticketInfo);
     addSubjectTextWrap(header, ticketId, ticketInfo);
     // Generate something to hold all of our attachments.
-    if (isAgentWorkspace) {
-        addHeaderLinkModal('description-modal', 'Description', header, conversation, createDescriptionContainer.bind(null, ticketId, ticketInfo, conversation));
-        addHeaderLinkModal('description-modal', 'Fast Track', header, conversation, createKnowledgeCaptureContainer.bind(null, ticketId, ticketInfo, conversation));
-        addHeaderLinkModal('attachments-modal', 'Attachments', header, conversation, createAttachmentsContainer.bind(null, ticketId, ticketInfo, conversation));
-        addSortButton(conversation, header);
-    }
-    else {
-        var descriptionAncestor1 = document.createElement('div');
-        descriptionAncestor1.classList.add('lesa-ui-description');
-        descriptionAncestor1.classList.add('rich_text');
-        descriptionAncestor1.setAttribute('data-ticket-id', ticketId);
-        var descriptionContainer = createDescriptionContainer(ticketId, ticketInfo, conversation);
-        if (descriptionContainer) {
-            descriptionAncestor1.appendChild(descriptionContainer);
-        }
-        var knowledgeCaptureContainer = createKnowledgeCaptureContainer(ticketId, ticketInfo, conversation);
-        if (knowledgeCaptureContainer) {
-            descriptionAncestor1.appendChild(knowledgeCaptureContainer);
-        }
-        var attachmentsContainer = createAttachmentsContainer(ticketId, ticketInfo, conversation);
-        if (attachmentsContainer) {
-            descriptionAncestor1.appendChild(attachmentsContainer);
-        }
-        header.appendChild(descriptionAncestor1);
-    }
+    addHeaderLinkModal('description-modal', 'Description', header, conversation, createDescriptionContainer.bind(null, ticketId, ticketInfo, conversation));
+    addHeaderLinkModal('description-modal', 'Fast Track', header, conversation, createKnowledgeCaptureContainer.bind(null, ticketId, ticketInfo, conversation));
+    addHeaderLinkModal('attachments-modal', 'Attachments', header, conversation, createAttachmentsContainer.bind(null, ticketId, ticketInfo, conversation));
+    addSortButton(conversation, header);
 }
 function createDescriptionContainer(ticketId, ticketInfo, conversation) {
-    var comments = conversation.querySelectorAll(isAgentWorkspace ? 'article' : '.event .zd-comment');
+    var comments = conversation.querySelectorAll('article');
     if (comments.length == 0) {
         return null;
     }
     var descriptionContainer = document.createElement('div');
     descriptionContainer.classList.add('is-public');
-    if (!isAgentWorkspace) {
-        descriptionContainer.classList.add('event');
-    }
     var tags = (ticketInfo && ticketInfo.ticket && ticketInfo.ticket.tags) || [];
     var tagSet = new Set(tags);
     if (tagSet.has('partner_first_line_support')) {
@@ -1407,9 +1339,9 @@ function createDescriptionContainer(ticketId, ticketInfo, conversation) {
         flsContainer.appendChild(flsReminder);
         descriptionContainer.appendChild(flsContainer);
     }
-    var firstComment = comments[isAgentWorkspace ? 0 : comments.length - 1];
+    var firstComment = comments[0];
     if (isDummyComment(ticketInfo, firstComment)) {
-        firstComment = comments[isAgentWorkspace ? 1 : comments.length - 2];
+        firstComment = comments[1];
     }
     var description = document.createElement('div');
     description.classList.add('comment');
@@ -1532,7 +1464,7 @@ var reminderLinks = {
     'premium critical': '<a href="https://liferay.atlassian.net/wiki/spaces/LXC/pages/2156265703/LXC+Global+Critical+Ticket+Workflow" target="_blank">workflow</a>'
 };
 function addPlaybookReminder(ticketId, ticketInfo, conversation) {
-    var editor = conversation.querySelector(isAgentWorkspace ? 'div[data-test-id="omnicomposer-rich-text-ckeditor"]' : '.editor');
+    var editor = conversation.querySelector('div[data-test-id="omnicomposer-rich-text-ckeditor"]');
     if (!editor) {
         return;
     }
@@ -1625,7 +1557,7 @@ function highlightComment(conversation, ticketId, commentId, force) {
         }
         return;
     }
-    var event = comment.closest(isAgentWorkspace ? 'article' : '.event');
+    var event = comment.closest('article');
     if (!force && event.classList.contains('lesa-ui-event-highlighted')) {
         return;
     }
@@ -1658,51 +1590,29 @@ function createPermaLinkInputField(permalinkHREF) {
  * pseudo permalink (since this script scrolls to it).
  */
 function addPermaLinks(ticketId, ticketInfo, conversation) {
-    var comments = conversation.querySelectorAll(isAgentWorkspace ? 'article' : 'div[data-comment-id]');
-    var isPublicTab = !isAgentWorkspace && document.querySelector('.publicConversation.is-selected');
+    var comments = conversation.querySelectorAll('article');
     for (var i = 0; i < comments.length; i++) {
         var timeElement = comments[i].querySelector('time');
         if (!timeElement) {
             continue;
         }
         var commentHeader = null;
-        if (isAgentWorkspace) {
-            var actionsElement = comments[i].querySelector('.omnilog-header-actions');
-            commentHeader = actionsElement.parentElement;
-        }
-        else {
-            commentHeader = comments[i].querySelector('.content .header');
-        }
+        var actionsElement = comments[i].querySelector('.omnilog-header-actions');
+        commentHeader = actionsElement.parentElement;
         if (!commentHeader) {
             continue;
         }
-        if (isAgentWorkspace) {
-            var parentElement = commentHeader.parentElement;
-            if (parentElement.querySelector('.lesa-ui-permalink')) {
-                continue;
-            }
-        }
-        else {
-            if (commentHeader.querySelector('.lesa-ui-permalink')) {
-                continue;
-            }
+        var parentElement = commentHeader.parentElement;
+        if (parentElement.querySelector('.lesa-ui-permalink')) {
+            continue;
         }
         var commentId = timeElement.getAttribute('datetime');
         var permalinkContainer = document.createElement('div');
         permalinkContainer.classList.add('lesa-ui-permalink');
         var permalinkHREF = 'https://' + document.location.host + document.location.pathname + '?comment=' + commentId;
-        if (isPublicTab) {
-            var pageId = Math.ceil((comments.length - i) / 30);
-            permalinkHREF = 'https://help.liferay.com/hc/requests/' + ticketId + '?page=' + pageId + '#request_comment_' + commentId;
-        }
         var permalink = createPermaLinkInputField(permalinkHREF);
         permalinkContainer.appendChild(permalink);
-        if (isAgentWorkspace) {
-            commentHeader.after(permalinkContainer);
-        }
-        else {
-            commentHeader.appendChild(permalinkContainer);
-        }
+        commentHeader.after(permalinkContainer);
     }
 }
 /**
@@ -2334,17 +2244,6 @@ function fixAttachmentLinksHelper(tagName, attributeName) {
     });
 }
 /**
- * Shows the public conversation tab so that you can get help.liferay.com links to
- * share with customers.
- */
-function enablePublicConversation(ticketId, ticketInfo, conversation) {
-    var fullTab = conversation.querySelector('.event-nav.conversation .fullConversation');
-    var publicTab = conversation.querySelector('.event-nav.conversation .publicConversation');
-    if (publicTab && parseInt(publicTab.getAttribute('data-count') || '0') == 0) {
-        publicTab.setAttribute('data-count', fullTab.getAttribute('data-count') || '0');
-    }
-}
-/**
  * Apply updates to the page based on the retrieved ticket information. Since the
  * ticket corresponds to a "conversation", find that conversation.
  */
@@ -2360,16 +2259,8 @@ function checkTicketConversation(ticketId, ticketInfo) {
         return;
     }
     var hasAgentWorkspaceComments = conversation.querySelectorAll('article').length > 0;
-    var hasLegacyWorkspaceComments = conversation.querySelectorAll('.event .zd-comment').length > 0;
-    if (!hasAgentWorkspaceComments && !hasLegacyWorkspaceComments) {
+    if (!hasAgentWorkspaceComments) {
         return;
-    }
-    isAgentWorkspace = hasAgentWorkspaceComments;
-    if (!isAgentWorkspace && document.querySelectorAll('.editor').length == 0) {
-        return;
-    }
-    if (!isAgentWorkspace) {
-        enablePublicConversation(ticketId, ticketInfo, conversation);
     }
     addReplyFormattingButtons(ticketId, ticketInfo, conversation);
     addPlaybookReminder(ticketId, ticketInfo, conversation);
