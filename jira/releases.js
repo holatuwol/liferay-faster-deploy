@@ -16,6 +16,33 @@ var select2 = document.getElementById('targetVersion');
 var releaseVersions = {};
 var releaseDetails = {};
 
+function copyReleaseNotesToClipboard() {
+	var releaseNotesElement = document.getElementById('release-notes-details');
+
+	navigator.clipboard.write([
+		new ClipboardItem({
+			'text/plain': new Blob([releaseNotesElement.textContent], {type: 'text/plain'}),
+			'text/html': new Blob([releaseNotesElement.innerHTML], {type: 'text/html'})
+		})
+	]).then(function() {
+		var alertElement = document.createElement('div');
+		alertElement.classList.add('alert', 'alert-success', 'alert-dismissible');
+		alertElement.setAttribute('role', 'alert');
+
+		var closeButton = document.createElement('button');
+		closeButton.classList.add('close');
+		closeButton.setAttribute('aria-label', 'Close');
+		closeButton.setAttribute('data-dismiss', 'alert');
+		closeButton.setAttribute('type', 'button');
+		closeButton.innerHTML = '&times;';
+
+		alertElement.appendChild(closeButton);
+		alertElement.appendChild(document.createTextNode('Copied to clipboard!'));
+
+		document.getElementById('extraActions').appendChild(alertElement);
+	});
+}
+
 function generateReleasePages(fetchVersions, sourceUpdate, sourceQuarterly, sourcePatch, targetUpdate, targetQuarterly, targetPatch, releaseName) {
 	fetchVersions.delete(releaseName);
 
@@ -65,9 +92,14 @@ function generateReleasePages(fetchVersions, sourceUpdate, sourceQuarterly, sour
 		Object.assign(tickets, releaseDetails[version]);
 	}
 
+	var releaseCountsElement = document.getElementById('release-notes-count');
 	var releaseNotesElement = document.getElementById('release-notes-details');
 
-	Object.keys(tickets).sort().forEach(ticketKey => {
+	var ticketKeys = Object.keys(tickets);
+
+		releaseCountsElement.textContent = ticketKeys.length.toLocaleString() + ' ticket(s)';
+
+	ticketKeys.sort().forEach(ticketKey => {
 		var divider = document.createElement('hr');
 		divider.classList.add('release-notes-divider');
 
@@ -210,8 +242,17 @@ function populateReleaseDetails(sourceVersion, targetVersion) {
 }
 
 function checkReleaseDetails() {
+	var releaseCountsElement = document.getElementById('release-notes-count');
+
+	releaseCountsElement.textContent = 'Loading...';
+
+	var releaseNotesElement = document.getElementById('release-notes-details');
+
+	releaseNotesElement.innerHTML = '';
+
 	var select1Value = select1.options[select1.selectedIndex].value;
 	var select2Value = select2.options[select2.selectedIndex].value;
+
 	if (modifyState) {
 		var baseURL = window.location.protocol + "//" + window.location.host + window.location.pathname;
 
@@ -225,7 +266,7 @@ function checkReleaseDetails() {
 		modifyState = history.replaceState.bind(history);
 	}
 
-	populateReleaseDetails(select1Value, select2Value);
+	setTimeout(populateReleaseDetails.bind(null, select1Value, select2Value), 100);
 }
 
 function initUI() {

@@ -44,8 +44,9 @@
 <table class="table">
 <thead>
 <tr>
-<th>Source Version</th>
-<th>Target Version</th>
+<th class="col-md-3">Source Version</th>
+<th class="col-md-3">Target Version</th>
+<th class="col-md-6">&nbsp;</th>
 </tr>
 </thead>
 <tbody>
@@ -58,9 +59,17 @@
 <select id="targetVersion" name="targetVersion">
 </select>
 </td>
+<td id="extraActions">
+<div>
+<a href="javascript:copyReleaseNotesToClipboard();">Copy</a> |
+<a href="javascript:window.print();">Print</a>
+</div>
 </tr>
 </tbody>
 </table>
+
+<div id="release-notes-count">
+</div>
 
 <div id="release-notes-details">
 </div>
