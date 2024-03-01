@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           GitHub Link to LPS Tickets
 // @namespace      holatuwol
-// @version        2.2
+// @version        2.3
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/github_link_jira.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/github_link_jira.user.js
 // @match          https://github.com/LiferayCloud/*
