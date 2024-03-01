@@ -40,6 +40,7 @@ var projects = {
   'CLDSVCS': 'liferay.atlassian.net',
   'COMMERCE': 'liferay.atlassian.net',
   'LCP': 'services.liferay.com',
+  'LPD': 'liferay.atlassian.net',
   'LPP': 'liferay.atlassian.net',
   'LPS': 'liferay.atlassian.net',
   'LRAC': 'liferay.atlassian.net',
