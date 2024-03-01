@@ -131,8 +131,8 @@ patcher() {
 	python "$(dirname ${BASH_SOURCE[0]})/patcher.py" "${ORIGIN}" $@
 }
 
-if [ "" == "$(git config files.username)" ] || [ "" == "$(git config files.password)" ]; then
-	echo "Cannot access patcher portal unless files.username and files.password are set with git config --global"
+if [ "" == "$(git config 1password.liferay)" ]; then
+	echo "Cannot access patcher portal unless 1password.liferay is set with git config --global"
 	exit 1
 fi
 

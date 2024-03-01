@@ -129,7 +129,11 @@ While doing Support QA work, I realized that I really disliked how I had to trav
 
 * `testray <testray>`__
 
-It's not very secure, but in order to use this script, you'll want to set your Liferay username and password as ``git config`` values. Your liferay.com username should be set against ``files.username`` and your liferay.com password should be set against ``files.password``.
+In order to use this script, you'll want to set the ``id`` for the 1password entry for your liferay.com Okta login details to the git property ``1password.liferay``. If you're not sure what the ``id`` is but you do know what its ``name`` is (it shows up in the 1Password UI), you can set it using the following command, replacing "OKTA - Your Name" with the appropriate ``name``:
+
+.. code-block:: bash
+
+	git config --global 1password.liferay "$(op item get --format json "OKTA - Your Name" | jq -r '.id')"
 
 Once you've done that, just give it the name of a fix pack, a Patcher Portal build URL, or a hotfix URL.
 

@@ -28,10 +28,8 @@ convertargs() {
 	done
 }
 
-if [ "" == "$(git config files.username)" ] || [ "" == "$(git config files.password)" ]; then
-	echo "Cannot connect to patcher portal and testray API without username and password"
-	echo "Set your liferay.com username with git config --global files.username USERNAME"
-	echo "Set your liferay.com password with git config --global files.password PASSWORD"
+if [ "" == "$(git config 1password.liferay)" ]; then
+	echo "Cannot connect to patcher portal and testray API without credentials"
 	exit 1
 fi
 

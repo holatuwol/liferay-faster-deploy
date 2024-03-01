@@ -1,7 +1,7 @@
 #!/bin/bash
 
-if [ "" == "$(git config files.username)" ] || [ "" == "$(git config files.password)" ]; then
-	echo "Cannot decode $1 unless files.username and files.password are set with git config --global"
+if [ "" == "$(git config 1password.liferay)" ]; then
+	echo "Cannot decode $1 unless 1password.liferay is set with git config --global"
 	exit 1
 fi
 

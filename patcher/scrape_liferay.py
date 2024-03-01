@@ -6,8 +6,9 @@ import hmac
 import inspect
 import json
 import math
+from onepassword import OnePassword
 import os
-from os.path import abspath, dirname, isdir, isfile, join, relpath
+from os.path import abspath, basename, dirname, isdir, isfile, join, relpath
 import pickle
 import re
 import requests
@@ -42,36 +43,54 @@ def get_namespaced_parameters(portlet_id, parameters):
     return { ('_%s_%s' % (portlet_id, key)) : value for key, value in parameters.items() }
 
 def authenticate(base_url, get_params=None):
-    r = session.get(base_url, data=get_params, verify=False)
+    r = session.get(base_url, data=get_params, stream=True, verify=False)
+
+    if r.url == base_url:
+        return r
+
+    progress_bar_request(r)
 
     if r.url.find('https://login.liferay.com/') == 0:
-        login_okta(r.url)
+        r = login_okta(base_url, r.url)
     elif r.text.find('SAMLRequest') != -1:
-        saml_request(r.url, r.text)
+        r = saml_request(base_url, r.url, r.text)
     elif len(r.history) > 0 and r.url.find('p_p_id=') != -1:
         url_params = parse.parse_qs(parse.urlparse(r.url).query)
-        login_portlet(r.url, url_params, r.text)
+        r = login_portlet(base_url, r.url, url_params, r.text)
 
     with open('session.ser', 'wb') as f:
         pickle.dump(session, f)
 
-def get_liferay_file(base_url, target_file=None, params=None, method='get'):
-    r = make_liferay_request(base_url, params, method, True)
+    return r
+
+def progress_bar_request(r, f=None):
     total = int(r.headers.get('content-length', 0))
     progress_bar = tqdm(total=total, unit='iB', unit_scale=True)
+
+    if f is None:
+        for chunk in r.iter_content(chunk_size=8192):
+            progress_bar.update(len(chunk))
+    else:
+        for chunk in r.iter_content(chunk_size=8192):
+            progress_bar.update(len(chunk))
+            f.write(chunk)
+
+def get_liferay_file(base_url, target_file=None, params=None, method='get'):
+    r = make_liferay_request(base_url, params, method)
 
     if target_file is None:
         filenames = re.findall('filename="([^"]*)"', r.headers.get('content-disposition', ''))
 
         if len(filenames) == 0:
-            target_file = 'untitled'
+            target_file = basename(base_url)
+
+            if target_file.find('.') == -1:
+                target_file = 'untitled'
         else:
             target_file = filenames[0]
 
     with open(target_file, 'wb') as f:
-        for chunk in r.iter_content(chunk_size=8192):
-            progress_bar.update(len(chunk))
-            f.write(chunk)
+        progress_bar_request(r, f)
 
     return target_file
 
@@ -80,13 +99,16 @@ def get_liferay_content(base_url, params=None, method='get'):
 
     return r.text
 
-def make_liferay_request(base_url, params, method, stream=False):
+def make_liferay_request(base_url, params=None, method='get'):
     pos = base_url.find('/api/jsonws/')
 
-    if pos != -1:
+    if pos != -1 and params is not None:
         params['p_auth'] = get_json_auth_token(base_url[0:pos])
     else:
-        authenticate(base_url, params)
+        r = authenticate(base_url, params)
+
+        if r.url == base_url:
+            return r
 
     if method == 'get':
         if params is None:
@@ -99,13 +121,11 @@ def make_liferay_request(base_url, params, method, stream=False):
             else:
                 full_url = '%s&%s' % (base_url, query_string)
 
-        r = session.get(full_url, data=params, stream=stream, verify=False)
+        return session.get(full_url, data=params, stream=True, verify=False)
     else:
-        r = session.post(base_url, data=params, verify=False)
+        return session.post(base_url, data=params, verify=False)
 
-    return r
-
-def saml_request(response_url, response_body):
+def saml_request(base_url, response_url, response_body):
     soup = BeautifulSoup(response_body, 'html.parser')
 
     form = soup.find('form')
@@ -117,11 +137,11 @@ def saml_request(response_url, response_body):
     url_params = parse.parse_qs(parse.urlparse(r.url).query)
 
     if r.url.find('https://login.liferay.com/') == 0:
-        login_okta(r.url)
+        return login_okta(base_url, r.url)
     elif 'p_p_id' in url_params:
-        login_portlet(r.url, url_params, r.text)
+        return login_portlet(base_url, r.url, url_params, r.text)
     else:
-        saml_response(r.url, r.text)
+        return saml_response(base_url, r.url, r.text)
 
 def get_function_end(json_text, start):
     count = 0
@@ -155,7 +175,7 @@ def get_okta_state_token(response_text):
 
     return okta_data['signIn']['stateToken']
 
-def login_okta(okta_url):
+def login_okta(base_url, okta_url):
     redirect_url = None
 
     while redirect_url is None:
@@ -172,14 +192,18 @@ def login_okta(okta_url):
         if redirect_url is None:
             time.sleep(10*60)
 
-    print(redirect_url)
+    print('handling redirect to %s' % redirect_url)
 
-    r = session.get(redirect_url, headers=headers, verify=False)
+    r = session.get(redirect_url, headers=headers, stream=True, verify=False)
+
+    if r.url == base_url:
+        return r
 
     # Process the SAML response
 
-    saml_response(r.url, r.text)
-    return True
+    progress_bar_request(r)
+
+    return saml_response(base_url, r.url, r.text)
 
 def attempt_login_okta(state_token):
     form_params = {
@@ -298,7 +322,7 @@ def attempt_login_okta(state_token):
 
     return None, None
 
-def login_portlet(login_url, login_params, login_response_body):
+def login_portlet(base_url, login_url, login_params, login_response_body):
     soup = BeautifulSoup(login_response_body, 'html.parser')
 
     portlet_id = login_params['p_p_id'][0]
@@ -332,9 +356,11 @@ def login_portlet(login_url, login_params, login_response_body):
     r = session.post(form_action, data=form_params)
 
     if r.text.find('SAMLResponse') != -1:
-        saml_response(r.url, r.text)
+        return saml_response(r.url, r.text)
 
-def saml_response(response_url, response_body):
+    return r
+
+def saml_response(base_url, response_url, response_body):
     soup = BeautifulSoup(response_body, 'html.parser')
 
     form = soup.find('form')
@@ -342,6 +368,8 @@ def saml_response(response_url, response_body):
     form_params = { node.get('name'): node.get('value') for node in form.find_all('input') if node.get('name') is not None }
 
     r = session.post(form_action, data=form_params)
+
+    return r
 
 def get_json_auth_token(base_url):
     if base_url in json_auth_token:
@@ -365,19 +393,12 @@ def get_json_auth_token(base_url):
     json_auth_token[base_url] = p_auth_input['value']
     return json_auth_token[base_url]
 
+username = OnePassword.get_item(uuid=git.config('1password.liferay'), fields='username')['username']
+password = OnePassword.get_item(uuid=git.config('1password.liferay'), fields='password')['password']
+
 if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        username = git.config('files.username')
-        password = git.config('files.password')
+    make_liferay_request('https://www.liferay.com/c/portal/login')
 
-        get_liferay_file('https://www.liferay.com/c/portal/login')
-    else:
-        sys.stderr.write('username: ')
-        username = input()
-        password = getpass('password: ')
-
+    if len(sys.argv) > 1:
         for file_name in sys.argv[1:]:
             print(get_liferay_file(file_name))
-else:
-    username = git.config('files.username')
-    password = git.config('files.password')

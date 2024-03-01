@@ -140,8 +140,8 @@ downloadbranchbuild() {
 
 downloadbranchmirror() {
 	local REQUEST_URL=
-	local FILES_USERNAME=$(git config --global files.username)
-	local FILES_PASSWORD=$(git config --global files.password)
+	local FILES_USERNAME=$(op item get --format json "$(git config 1password.liferay)" | jq -r '.fields[] | select(.id=="username") | .value')
+	local FILES_PASSWORD=$(op item get --format json "$(git config 1password.liferay)" | jq -r '.fields[] | select(.id=="password") | .value')
 
 	if [ "$BASE_BRANCH" != "master" ]; then
 		if [ "" == "$LIFERAY_FILES_MIRROR" ]; then

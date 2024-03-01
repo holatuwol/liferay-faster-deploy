@@ -50,8 +50,8 @@ get_hotfix_url() {
 		return 0
 	fi
 
-	if [ "" == "$(git config files.username)" ] || [ "" == "$(git config files.password)" ]; then
-		echo "Cannot decode $1 unless files.username and files.password are set with git config --global"
+	if [ "" == "$(git config 1password.liferay)" ]; then
+		echo "Cannot decode $1 unless 1password.liferay is set with git config --global"
 		return 1
 	fi
 
@@ -79,12 +79,15 @@ prepare_server() {
 	fi
 
 	if [ "" == "${LIFERAY_FILES_MIRROR}" ] || [[ "${LIFERAY_FILES_MIRROR}" == https://files.liferay.com* ]]; then
-		if [ "" == "$(git config files.username)" ] || [ "" == "$(git config files.password)" ]; then
-			echo "Cannot access files.liferay.com unless files.username and files.password are set with git config --global"
+		if [ "" == "$(git config 1password.liferay)" ]; then
+			echo "Cannot access files.liferay.com unless 1password.liferay is set with git config --global"
 			return 1
 		fi
 
-		FILES_CREDENTIALS='-u '$(git config files.username)':'$(git config files.password)
+		local FILES_USERNAME=$(op item get --format json "$(git config 1password.liferay)" | jq -r '.fields[] | select(.id=="username") | .value')
+		local FILES_PASSWORD=$(op item get --format json "$(git config 1password.liferay)" | jq -r '.fields[] | select(.id=="password") | .value')
+
+		FILES_CREDENTIALS='-u "${FILES_USERNAME}:${FILES_PASSWORD}"'
 		LIFERAY_FILES_MIRROR="https://files.liferay.com"
 	fi
 
