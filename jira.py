@@ -17,6 +17,20 @@ def get_jira_auth():
         'Authorization': 'Basic %s' % b64encode(f'{jira_username}:{jira_password}'.encode('utf-8')).decode('ascii')
     }
 
+def await_request(url, payload):
+    r = requests.get(url, headers=get_jira_auth(), params=payload)
+
+    while r.status_code == 429:
+        print(r.headers)
+
+        retry_after = int(r.headers['Retry-After'])
+        print('Retrying in %d seconds...' % retry_after)
+        time.sleep(retry_after + 1)
+
+        r = requests.get(url, headers=get_jira_auth(), params=payload)
+
+    return r
+
 def get_issues(jql, fields=[], expand=[], render=False):
     start_at = 0
 
@@ -26,7 +40,7 @@ def get_issues(jql, fields=[], expand=[], render=False):
     payload = {
         'jql': jql,
         'startAt': start_at,
-        'maxResults': 1000
+        'maxResults': 100
     }
 
     if len(fields) > 0:
@@ -39,18 +53,9 @@ def get_issues(jql, fields=[], expand=[], render=False):
 
     search_url = f'{jira_base_url}/rest/api/2/search'
 
-    r = requests.get(search_url, headers=get_jira_auth(), params=payload)
+    r = await_request(search_url, payload)
 
     issues = {}
-
-    while r.status_code == 429:
-        print(r.headers)
-
-        retry_after = int(r.headers['Retry-After'])
-        print('Retrying in %d seconds...' % retry_after)
-        time.sleep(retry_after + 1)
-
-        r = requests.get(search_url, headers=get_jira_auth(), params=payload)
 
     if r.status_code != 200:
         return issues
@@ -64,7 +69,7 @@ def get_issues(jql, fields=[], expand=[], render=False):
         start_at += len(response_json['issues'])
         payload['startAt'] = start_at
 
-        r = requests.get(search_url, headers=get_jira_auth(), params=payload)
+        r = await_request(search_url, payload)
 
         if r.status_code != 200:
             return issues
@@ -75,3 +80,52 @@ def get_issues(jql, fields=[], expand=[], render=False):
             issues[issue['key']] = issue
 
     return issues
+
+def get_issue_changelog(issue_key):
+    start_at = 0
+
+    search_url = f'{jira_base_url}/rest/api/2/issue/{issue_key}/changelog'
+
+    payload = {
+        'startAt': start_at,
+        'maxResults': 100
+    }
+
+    r = await_request(search_url, payload)
+
+    changelog = []
+
+    if r.status_code != 200:
+        return changelog
+
+    response_json = r.json()
+
+    changelog.extend(response_json['values'])
+
+    while start_at + len(response_json['values']) < response_json['total']:
+        start_at += len(response_json['values'])
+        payload['startAt'] = start_at
+
+        r = await_request(search_url, payload)
+
+        if r.status_code != 200:
+            return changelog
+
+        response_json = r.json()
+        changelog.extend(response_json['values'])
+
+    return changelog
+
+def get_issue_fields(issue_key, fields=[]):
+    search_url = f'{jira_base_url}/rest/api/2/issue/{issue_key}'
+
+    payload = {
+        'fields': ','.join(fields)
+    }
+
+    r = await_request(search_url, payload)
+
+    if r.status_code != 200:
+        return {}
+
+    return r.json()['fields']
