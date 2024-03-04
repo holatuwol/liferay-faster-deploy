@@ -148,7 +148,7 @@ def get_fix_id(typeFilter='0'):
 	return None, None
 
 def get_candidate_fix_names():
-	pattern = re.compile('LP[EPS]-[0-9]*')
+	pattern = re.compile('LP[DEPS]-[0-9]*')
 
 	if current_branch.find('LPE-') == 0 or current_branch.find('LPP-') == 0 or current_branch.find('LPS-') == 0:
 		yield ','.join(sorted(pattern.findall(current_branch)))
