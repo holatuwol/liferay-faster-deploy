@@ -7,18 +7,21 @@ gethotfix() {
 
 	FIX_NAME=
 
-	if [[ $1 == http* ]]; then
-		FIX_NAME=$(echo "$1" | grep -o 'liferay-hotfix-[^\.]*')
+	if [[ ${1} == *.q* ]]; then
+		VERSION=$(echo ${1} | grep -o '[0-9]*\.q[0-9]\.[0-9]*')
+		FIX_NAME=liferay-dxp-${VERSION}-$(echo ${1} | grep -o 'hotfix-[0-9]*')
+	elif [[ ${1} == http* ]]; then
+		FIX_NAME=$(echo "${1}" | grep -o 'liferay-hotfix-[^\.]*')
 		VERSION=$(echo ${FIX_NAME} | cut -d'-' -f 4 | sed 's/\([0-9]\)\([0-9]\)\([0-9][0-9]\)/\1.\2.\3/')
-	elif [[ $1 == liferay* ]]; then
-		VERSION=$(echo $1 | cut -d'-' -f 4 | sed 's/\([0-9]\)\([0-9]\)\([0-9][0-9]\)/\1.\2.\3/')
-		FIX_NAME=$1
-	elif [[ $1 == hotfix* ]]; then
-		VERSION=$(echo $1 | cut -d'-' -f 3 | sed 's/\([0-9]\)\([0-9]\)\([0-9][0-9]\)/\1.\2.\3/')
-		FIX_NAME="liferay-$1"
+	elif [[ ${1} == liferay* ]]; then
+		VERSION=$(echo ${1} | cut -d'-' -f 4 | sed 's/\([0-9]\)\([0-9]\)\([0-9][0-9]\)/\1.\2.\3/')
+		FIX_NAME=${1}
+	elif [[ ${1} == hotfix* ]]; then
+		VERSION=$(echo ${1} | cut -d'-' -f 3 | sed 's/\([0-9]\)\([0-9]\)\([0-9][0-9]\)/\1.\2.\3/')
+		FIX_NAME="liferay-${1}"
 	else
 		VERSION=$(echo $2 | cut -d'-' -f 2 | sed 's/\([0-9]\)\([0-9]\)\([0-9][0-9]\)/\1.\2.\3/')
-		FIX_NAME="liferay-hotfix-$1-$2"
+		FIX_NAME="liferay-hotfix-${1}-$2"
 	fi
 
 	if [ -f ${FIX_NAME}.zip ]; then
@@ -27,10 +30,12 @@ gethotfix() {
 
 	local FILE_URL=
 
-	if [ "" == "${FILES_EE_FOLDER}" ]; then
-		FILE_URL=${FILES_MIRROR}/private/ee/fix-packs/$VERSION/hotfix/${FIX_NAME}.zip
+	if [[ ${VERSION} == *.q* ]]; then
+		FILE_URL="https://releases-cdn.liferay.com/dxp/hotfix/${VERSION}/${FIX_NAME}.zip"
+	elif [ "" == "${FILES_EE_FOLDER}" ]; then
+		FILE_URL=${FILES_MIRROR}/private/ee/fix-packs/${VERSION}/hotfix/${FIX_NAME}.zip
 	else
-		FILE_URL=${FILES_MIRROR}/${FILES_EE_FOLDER}/fix-packs/$VERSION/hotfix/${FIX_NAME}.zip
+		FILE_URL=${FILES_MIRROR}/${FILES_EE_FOLDER}/fix-packs/${VERSION}/hotfix/${FIX_NAME}.zip
 	fi
 
 	echo "Downloading ${FIX_NAME} to check fixpack_documentation.xml"
@@ -51,6 +56,10 @@ findbuildurl() {
 
 	if [ "" == "${BUILD_ID}" ]; then
 		BUILD_ID=$(unzip -p ${FIX_NAME}.zip fixpack_documentation.json 2>/dev/null | jq '.build.id' | cut -d'"' -f 2)
+	fi
+
+	if [ "" == "${BUILD_ID}" ]; then
+		BUILD_ID=$(unzip -p ${FIX_NAME}.zip hotfix.json 2>/dev/null | jq '.build.id' | cut -d'"' -f 2)
 	fi
 
 	if [ "" == "${BUILD_ID}" ]; then
