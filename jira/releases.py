@@ -146,9 +146,18 @@ for release_name, release_id in releases.items():
 
 seen_issue_keys = set()
 
+def ticket_sort_key(line):
+    issue_key = line.split('\t')[0]
+    project, number = issue_key.split('-')
+    return (project, int(number))
+
 if exists('releases.csv'):
     with open('releases.csv', 'r') as f:
-        seen_issue_keys.update([line.strip().split('\t')[0] for line in f.readlines()])
+        lines = sorted(f.readlines(), key=ticket_sort_key)
+        seen_issue_keys.update([line.strip().split('\t')[0] for line in lines])
+
+    with open('releases.csv', 'w') as f:
+        f.write(''.join(lines))
 
 for i, issue_key in enumerate(fixed_issues.keys()):
     if issue_key in seen_issue_keys:
