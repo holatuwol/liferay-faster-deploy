@@ -48,8 +48,6 @@ def authenticate(base_url, get_params=None):
     if r.url == base_url:
         return r
 
-    progress_bar_request(r)
-
     if r.url.find('https://login.liferay.com/') == 0:
         r = login_okta(base_url, r.url)
     elif r.text.find('SAMLRequest') != -1:
@@ -200,8 +198,6 @@ def login_okta(base_url, okta_url):
         return r
 
     # Process the SAML response
-
-    progress_bar_request(r)
 
     return saml_response(base_url, r.url, r.text)
 
