@@ -44,7 +44,9 @@ function copyReleaseNotesToClipboard() {
 }
 
 function generateReleasePages(fetchVersions, sourceUpdate, sourceQuarterly, sourcePatch, targetUpdate, targetQuarterly, targetPatch, releaseName) {
-	fetchVersions.delete(releaseName);
+	if (releaseName) {
+		fetchVersions.delete(releaseName);
+	}
 
 	if (fetchVersions.size > 0) {
 		return;
@@ -238,7 +240,12 @@ function populateReleaseDetails(sourceVersion, targetVersion) {
 		sourceUpdate, sourceQuarterly, sourcePatch,
 		targetUpdate, targetQuarterly, targetPatch);
 
-	fetchVersions.forEach(version => loadReleaseDetails(version, joinCallback));
+	if (fetchVersions.size == 0) {
+		joinCallback();
+	}
+	else {
+		fetchVersions.forEach(version => loadReleaseDetails(version, joinCallback));
+	}
 }
 
 function checkReleaseDetails() {
@@ -297,8 +304,8 @@ function initUI() {
 		setIndex(select1, getParameter('sourceVersion'));
 		setIndex(select2, getParameter('targetVersion'));
 
-		select1.onchange = checkReleaseDetails;
-		select2.onchange = checkReleaseDetails;
+		var button = document.getElementById('updateButton');
+		button.onclick = checkReleaseDetails;
 
 		checkReleaseDetails();
 	});
