@@ -129,3 +129,38 @@ def get_issue_fields(issue_key, fields=[]):
         return {}
 
     return r.json()['fields']
+
+def get_releases(project):
+    start_at = 0
+
+    search_url = f'{jira_base_url}/rest/api/3/project/{project}/version'
+
+    payload = {
+        'startAt': start_at,
+        'maxResults': 100
+    }
+
+    r = await_request(search_url, payload)
+
+    releases = []
+
+    if r.status_code != 200:
+        return releases
+
+    response_json = r.json()
+
+    releases.extend(response_json['values'])
+
+    while start_at + len(response_json['values']) < response_json['total']:
+        start_at += len(response_json['values'])
+        payload['startAt'] = start_at
+
+        r = await_request(search_url, payload)
+
+        if r.status_code != 200:
+            return releases
+
+        response_json = r.json()
+        releases.extend(response_json['values'])
+
+    return releases
