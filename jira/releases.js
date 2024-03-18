@@ -69,11 +69,18 @@ function generateReleasePages(fetchVersions, sourceUpdate, sourceQuarterly, sour
 
 			Object.assign(tickets, releaseDetails[version]);
 		}
+
+		var version = targetQuarterly + '.' + targetPatch;
+		Object.assign(tickets, releaseDetails[version]);
+	}
+	else {
+		var version = '7.4.13-u' + targetUpdate;
+		Object.assign(tickets, releaseDetails[version]);
 	}
 
-	if (sourceQuarterly) {
-		for (var i = 0; i <= sourcePatch; i++) {
-			var version = sourceQuarterly + '.' + i;
+	if (sourceUpdate != targetUpdate || sourceQuarterly != targetQuarterly) {
+		for (var i = 92; i <= sourceUpdate; i++) {
+			var version = '7.4.13-u' + i;
 
 			if (!(version in releaseDetails)) {
 				continue;
@@ -83,15 +90,20 @@ function generateReleasePages(fetchVersions, sourceUpdate, sourceQuarterly, sour
 				delete tickets[ticketKey];
 			}
 		}
-	}
 
-	if (targetQuarterly) {
-		var version = targetQuarterly + '.' + targetPatch;
-		Object.assign(tickets, releaseDetails[version]);
-	}
-	else {
-		var version = '7.4.13-u' + targetUpdate;
-		Object.assign(tickets, releaseDetails[version]);
+		if (sourceQuarterly) {
+			for (var i = 0; i <= sourcePatch; i++) {
+				var version = sourceQuarterly + '.' + i;
+
+				if (!(version in releaseDetails)) {
+					continue;
+				}
+
+				for (ticketKey in releaseDetails[version]) {
+					delete tickets[ticketKey];
+				}
+			}
+		}
 	}
 
 	var releaseCountsElement = document.getElementById('release-notes-count');
@@ -99,7 +111,7 @@ function generateReleasePages(fetchVersions, sourceUpdate, sourceQuarterly, sour
 
 	var ticketKeys = Object.keys(tickets);
 
-		releaseCountsElement.textContent = ticketKeys.length.toLocaleString() + ' ticket(s)';
+	releaseCountsElement.textContent = ticketKeys.length.toLocaleString() + ' ticket(s)';
 
 	ticketKeys.sort().forEach(ticketKey => {
 		var divider = document.createElement('hr');
@@ -181,7 +193,8 @@ function loadReleaseDetails(releaseName, joinCallback) {
 
 var quarterlies = {
 	'2023.q3': 92,
-	'2023.q4': 102
+	'2023.q4': 102,
+	'2024.q1': 112
 };
 
 function populateReleaseDetails(sourceVersion, targetVersion) {
@@ -200,6 +213,14 @@ function populateReleaseDetails(sourceVersion, targetVersion) {
 	var fetchVersions = new Set();
 
 	for (var i = sourceUpdate; i <= targetUpdate; i++) {
+		fetchVersions.add('7.4.13-u' + i);
+	}
+
+	for (var i = 92; i <= sourceUpdate; i++) {
+		fetchVersions.add('7.4.13-u' + i);
+	}
+
+	for (var i = 92; i <= targetUpdate; i++) {
 		fetchVersions.add('7.4.13-u' + i);
 	}
 

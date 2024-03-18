@@ -14,7 +14,8 @@ lsv_pattern = re.compile('LSV-[0-9]+')
 
 quarterly_releases = {
     '2023.q3': 92,
-    '2023.q4': 102
+    '2023.q4': 102,
+    '2024.q1': 112
 }
 
 quarterly_updates = { value: key for key, value in quarterly_releases.items() }
@@ -142,11 +143,13 @@ for release_name, release_ids in releases.items():
     else:
         unsorted_fixed_issues = get_fixed_issues(release_name, release_ids)
 
-    print(f'writing {release_name} metadata')
     sorted_fixed_issues = OrderedDict(sorted(unsorted_fixed_issues.items(), key=lambda x: ticket_sort_key(x[0])))
 
-    with open(release_file_name, 'w') as f:
-        json.dump(sorted_fixed_issues, f, sort_keys=False, separators=(',', ':'))
+    if len(sorted_fixed_issues) > 0:
+        print(f'writing {release_name} metadata')
+
+        with open(release_file_name, 'w') as f:
+            json.dump(sorted_fixed_issues, f, sort_keys=False, separators=(',', ':'))
 
 def check_issue_changelog(issue_key, past_fix_versions, past_74_fix_versions):
     releases_updates = set()
@@ -182,8 +185,6 @@ fixed_issues = {}
 
 for release_name, release_ids in releases.items():
     release_ulevel = get_release_ulevel(release_name)
-    if release_ulevel is None or release_ulevel < 92:
-        continue
 
     release_cf = get_release_cf(release_name)
     release_cf_key = 'u' if release_name.find('.q') == -1 else release_name[:7]
@@ -197,7 +198,8 @@ for release_name, release_ids in releases.items():
 
     with open(release_file_name, 'r') as f:
         releases_data[release_cf] = json.load(f)
-        fixed_issues.update(releases_data[release_cf])
+        if release_ulevel is not None and release_ulevel >= 92:
+            fixed_issues.update(releases_data[release_cf])
 
 seen_issue_keys = dict()
 
@@ -228,14 +230,9 @@ for i, issue_key in enumerate(fixed_issues.keys()):
             json.dump(releases_data[release_cf], f, sort_keys=True, separators=(',', ':'))
 
 for release_name in sorted(releases.keys(), key=release_sort_key, reverse=True):
-    if release_sort_key(release_name) > 2000:
-        continue
-
     release_cf = get_release_cf(release_name)
-    if len(releases_data[release_cf]) > 0:
-        break
-
-    del releases[release_name]
+    if release_cf not in releases_data or len(releases_data[release_cf]) == 0:
+        del releases[release_name]
 
 with open('releases.json', 'w') as f:
     json.dump(releases, f, sort_keys=False, indent=2, separators=(',', ': '))

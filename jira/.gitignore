@@ -1,4 +1,6 @@
 releases
+releases.csv
+releases.json.gz
 movedtickets.csv
 movedtickets_array.json
 movedtickets_object.json
