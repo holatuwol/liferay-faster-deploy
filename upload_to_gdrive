@@ -72,7 +72,7 @@ fi
 
 get_folder_id
 
-target_file="${local_file}"
+target_file="$(basename "${local_file}")"
 
 get_file_id
 
@@ -80,7 +80,7 @@ suffix=0
 
 while [ "" != "${file_id}" ]; do
 	suffix=$((suffix + 1))
-	target_file="${local_file} (${suffix})"
+	target_file="$(basename "${local_file}") (${suffix})"
 	get_file_id
 done
 
