@@ -65,7 +65,7 @@ else
 	rm output.txt
 fi
 
-if [[ ${local_file} != *.zip ]] && [[ ${local_file} != *.gz ]] && [[ ${local_file} != *.7z ]]; then
+if [[ ${local_file} != *.zip ]] && [[ ${local_file} != *.gz ]] && [[ ${local_file} != *.tgz ]] && [[ ${local_file} != *.7z ]]; then
 	gzip -9 ${local_file}
 	local_file="${local_file}.gz"
 fi
@@ -84,7 +84,7 @@ while [ "" != "${file_id}" ]; do
 	get_file_id
 done
 
-echo 'Uploading file ${local_file} to ${remote_folder}/${target_file}...'
+echo "Uploading file ${local_file} to ${remote_folder}/${target_file}..."
 gdrive upload --name "${target_file}" --delete --parent "${folder_id}" "${local_file}"
 
 get_file_id
