@@ -1,26 +1,58 @@
 #!/bin/bash
 
-if [ "" == "$(which gdrive)" ]; then
-	echo 'Please set up the gdrive script'
-	echo 'https://shouts.dev/mount-google-drive-using-gdrive-on-linux-server-with-own-oauth-credentials'
+if [ "" == "$(which go)" ]; then
+	echo 'Please install golang'
 	exit 1
+fi
+
+if [ ! -f ${HOME}/.gdrive/token_v2.json ]; then
+	echo -n 'client_id: '
+	read client_id
+
+	echo -n 'client secret: '
+	read client_secret
+
+	go install github.com/prasmussen/gdrive@2.1.1
+
+	cd ${HOME}/go/pkg/mod/github.com/prasmussen/gdrive@v0.0.0-20210528215742-b4b994c6e431
+
+	chmod u+w . handlers_drive.go
+	sed -i '/const ClientId = /s/^.*$/const ClientId = "'${client_id}'"/g' handlers_drive.go
+	sed -i '/const ClientSecret = /s/^.*$/const ClientSecret = "'${client_secret}'"/g' handlers_drive.go
+
+	cd -
+
+	go install github.com/prasmussen/gdrive@2.1.1
+
+	gdrive list
 fi
 
 SCRIPT_FOLDER="$(dirname $BASH_SOURCE[0])"
 
-if [ "" == "${1}" ]; then
-	echo -n "URL: "
-	read remote_file
-else
-	remote_file="${1}"
-fi
+echo -n "source file: "
+read remote_file
+
+echo -n 'target folder: '
+read remote_folder
 
 get_file_id() {
 	file_id=$(gdrive list --no-header --query "name = '${target_file}' and parents in '${folder_id}'" | awk '{ print $1 }' | head -1)
 }
 
 get_folder_id() {
-	folder_id=$(gdrive list --no-header --query "name = 'Large Attachments'" | awk '{ print $1 }')
+	folder_id='root'
+	while read folder_part; do
+		if [ "" != "${folder_part}" ]; then
+			next_folder_id="$(gdrive list --no-header --query "name = '${folder_part}' and parents in '${folder_id}'" | awk '{ print $1 }')"
+
+			if [ "" == "${next_folder_id}" ]; then
+				gdrive mkdir "${folder_part}" --parent "${folder_id}"
+				next_folder_id=$(gdrive list --no-header --query "name = '${folder_part}' and parents in '${folder_id}'" | awk '{ print $1 }')
+			fi
+
+			folder_id="${next_folder_id}"
+		fi
+	done <<< $(echo "${remote_folder}" | tr '/' '\n')
 }
 
 if [ -f ${remote_file} ]; then
@@ -33,17 +65,12 @@ else
 	rm output.txt
 fi
 
-if [[ ${local_file} != *.zip ]] && [[ ${local_file} != *.gz ]]; then
+if [[ ${local_file} != *.zip ]] && [[ ${local_file} != *.gz ]] && [[ ${local_file} != *.7z ]]; then
 	gzip -9 ${local_file}
 	local_file="${local_file}.gz"
 fi
 
 get_folder_id
-
-if [ "" == "${folder_id}" ]; then
-	gdrive mkdir "Large Attachments"
-	get_folder_id
-fi
 
 target_file="${local_file}"
 
@@ -57,7 +84,7 @@ while [ "" != "${file_id}" ]; do
 	get_file_id
 done
 
-echo 'Uploading file...'
+echo 'Uploading file ${local_file} to ${remote_folder}/${target_file}...'
 gdrive upload --name "${target_file}" --delete --parent "${folder_id}" "${local_file}"
 
 get_file_id
