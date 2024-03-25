@@ -54,44 +54,56 @@ function generateReleasePages(fetchVersions, sourceUpdate, sourceQuarterly, sour
 
 	var tickets = {};
 
-	for (var i = sourceUpdate + 1; i < targetUpdate; i++) {
-		var version = '7.4.13-u' + i;
-		Object.assign(tickets, releaseDetails[version]);
+	var sourceVersion, targetVersion;
+
+	if (sourceQuarterly) {
+		sourceVersion = sourceQuarterly + '.' + sourcePatch;
+	}
+	else {
+		sourceVersion = '7.4.13-u' + sourceUpdate;
 	}
 
 	if (targetQuarterly) {
-		for (var i = 0; i < targetPatch; i++) {
-			var version = targetQuarterly + '.' + i;
+		targetVersion = targetQuarterly + '.' + targetPatch;
+	}
+	else {
+		targetVersion = '7.4.13-u' + targetUpdate;
+	}
 
-			if (!(version in releaseDetails)) {
-				continue;
-			}
+	Object.assign(tickets, releaseDetails[targetVersion]);
 
+	if (sourceVersion != targetVersion) {
+		for (var i = sourceUpdate + 1; i < targetUpdate; i++) {
+			var version = '7.4.13-u' + i;
 			Object.assign(tickets, releaseDetails[version]);
 		}
 
-		var version = targetQuarterly + '.' + targetPatch;
-		Object.assign(tickets, releaseDetails[version]);
-	}
-	else {
-		var version = '7.4.13-u' + targetUpdate;
-		Object.assign(tickets, releaseDetails[version]);
-	}
+		if (targetQuarterly) {
+			for (var i = 0; i < targetPatch; i++) {
+				var version = targetQuarterly + '.' + i;
 
-	if (sourceUpdate != targetUpdate || sourceQuarterly != targetQuarterly) {
-		for (var i = 92; i <= sourceUpdate; i++) {
-			var version = '7.4.13-u' + i;
+				if (!(version in releaseDetails)) {
+					continue;
+				}
 
-			if (!(version in releaseDetails)) {
-				continue;
+				Object.assign(tickets, releaseDetails[version]);
 			}
 
-			for (ticketKey in releaseDetails[version]) {
-				delete tickets[ticketKey];
-			}
 		}
 
 		if (sourceQuarterly) {
+			for (var i = 92; i <= sourceUpdate; i++) {
+				var version = '7.4.13-u' + i;
+
+				if (!(version in releaseDetails)) {
+					continue;
+				}
+
+				for (ticketKey in releaseDetails[version]) {
+					delete tickets[ticketKey];
+				}
+			}
+
 			for (var i = 0; i <= sourcePatch; i++) {
 				var version = sourceQuarterly + '.' + i;
 
@@ -216,12 +228,14 @@ function populateReleaseDetails(sourceVersion, targetVersion) {
 		fetchVersions.add('7.4.13-u' + i);
 	}
 
-	for (var i = 92; i <= sourceUpdate; i++) {
-		fetchVersions.add('7.4.13-u' + i);
-	}
+	if (sourceUpdate != targetVersion) {
+		for (var i = 92; i <= sourceUpdate; i++) {
+			fetchVersions.add('7.4.13-u' + i);
+		}
 
-	for (var i = 92; i <= targetUpdate; i++) {
-		fetchVersions.add('7.4.13-u' + i);
+		for (var i = 92; i <= targetUpdate; i++) {
+			fetchVersions.add('7.4.13-u' + i);
+		}
 	}
 
 	var getQuarterly = function(version) {
