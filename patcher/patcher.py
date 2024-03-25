@@ -223,6 +223,7 @@ def open_patcher_portal():
 	namespaced_parameters = get_namespaced_parameters('1_WAR_osbpatcherportlet', parameters)
 
 	query_string = '&'.join(['%s=%s' % (key, value) for key, value in namespaced_parameters.items() if value is not None])
+	print('%s?%s' % (base_url, query_string))
 	webbrowser.open_new_tab('%s?%s' % (base_url, query_string))
 
 if __name__ == '__main__':
