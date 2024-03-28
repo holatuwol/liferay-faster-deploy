@@ -22,11 +22,11 @@ elif [[ $1 == *-7310.zip ]]; then
 	RELEASE_TAG="7.3.10-$(unzip -c "${1}" fixpack_documentation.json 2>/dev/null | tail -n +3 | jq -r '.patch.requirements')"
 	HOTFIX_IMAGE_TAG="${RELEASE_TAG}-$(basename ${1} | sed 's/\-7310.zip$//g' | sed 's/liferay-//g')"
 elif [[ $1 == *-7210.zip ]]; then
-	RELEASE_TAG="7.2.10-$(unzip -c "${1}" fixpack_documentation.json 2>/dev/null | tail -n +3 | jq -r '.patch.requirements')"
+	RELEASE_TAG="7.2.10-$(unzip -c "${1}" fixpack_documentation.xml 2>/dev/null | tail -n +3 | xq -r '.patch.requirements' | sed 's/=/-/g')"
 	HOTFIX_IMAGE_TAG="${RELEASE_TAG}-$(basename ${1} | sed 's/\-7210.zip$//g' | sed 's/liferay-//g')"
 elif [[ $1 == *-7210.zip ]]; then
-	RELEASE_TAG="7.1.10-$(unzip -c "${1}" fixpack_documentation.json 2>/dev/null | tail -n +3 | jq -r '.patch.requirements')"
-	HOTFIX_IMAGE_TAG="${RELEASE_TAG}-$(basename ${1} | sed 's/\-7210.zip$//g' | sed 's/liferay-//g')"
+	RELEASE_TAG="7.1.10-$(unzip -c "${1}" fixpack_documentation.xml 2>/dev/null | tail -n +3 | xq -r '.patch.requirements' | sed 's/=/-/g')"
+	HOTFIX_IMAGE_TAG="${RELEASE_TAG}-$(basename ${1} | sed 's/\-7110.zip$//g' | sed 's/liferay-//g')"
 else
 	echo "No docker image for ${1}"
 	exit 1
