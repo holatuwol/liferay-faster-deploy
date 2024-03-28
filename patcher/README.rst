@@ -32,6 +32,10 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 		${MCD_RD_CLONE_PATH}/patcher/patcher $@
 	}
 
+	scouthotfix() {
+		${MCD_RD_CLONE_PATH}/patcher/scouthotfix $@
+	}
+
 	subrepobp() {
 		SUBREPO_ROOT=/path/to/subrepo/root \
 			${MCD_RD_CLONE_PATH}/patcher/subrepobp $@
@@ -41,6 +45,16 @@ Then, add this section to ``.bash_aliases`` (or the equivalent on whichever shel
 		FILES_MIRROR=http://mirrors/files.liferay.com \
 			${MCD_RD_CLONE_PATH}/patcher/testray $@
 	}
+
+Scout Hotfix
+============
+
+Build a Docker image with the hotfix installed and then run ``docker scout sbom`` to see if all the versions that you were trying to update were properly updated.
+
+* `scouthotfix <scouthotfix>`__
+
+Navigate to the folder containing the hotfix and run the command. Make sure to download the appropriate version of Patching Tool to the same folder as well.
+
 
 Find Build for Hotfix
 =====================
