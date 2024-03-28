@@ -1,5 +1,15 @@
 #!/bin/bash
 
+if [ "" == "${AWS_PROFILE}" ]; then
+	echo AWS_PROFILE environment variable not set
+	exit 1
+fi
+
+if [ "" == "${S3_BUCKET}" ]; then
+	echo S3_BUCKET environment variable not set
+	exit 1
+fi
+
 python releases.py
 
 aws s3 --profile ${AWS_PROFILE} ls s3://${S3_BUCKET}/releases/ | awk '{ print $4 "\t" $3 }' | sort > 1.txt
