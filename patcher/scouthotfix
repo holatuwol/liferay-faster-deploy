@@ -1,12 +1,24 @@
 #!/bin/bash
 
+if [ "$(uname -s)" == "Linux" ]; then
+	if [ ! -f ${HOME}/.docker/cli-plugins/docker-scout ]; then
+		mkdir -p ${HOME}/.docker/cli-plugins
+		cd ${HOME}/.docker/cli-plugins
+		rm -f docker-scout*
+		gh -R docker/scout-cli release download -p '*linux_amd64*'
+		tar -zxf docker-scout*.tar.gz docker-scout
+		rm docker-scout*.tar.gz
+	fi
+fi
+
 if [ "" == "${1}" ] || [ ! -f "${1}" ]; then
 	echo "Please specify a patch file as a command line argument."
 	exit 1
 fi
 
 if [ -d "${1}" ]; then
-	docker scout sbom "fs://$(realpath ${1})"
+	docker scout sbom "fs://$(realpath ${1})" | tee bundle.sbom.json
+	docker scout cves liferay/hotfix:${HOTFIX_IMAGE_TAG} | tee bundle.cves.txt
 	exit 0
 fi
 
@@ -47,5 +59,6 @@ RUN rm -rf /opt/liferay/patching-tool /opt/liferay/tomcat/webapps/ROOT/WEB-INF/p
 
 if [ "" != "$(docker inspect liferay/hotfix:${HOTFIX_IMAGE_TAG})" ]; then
 	docker scout sbom liferay/hotfix:${HOTFIX_IMAGE_TAG} | tee ${HOTFIX_IMAGE_TAG}.sbom.json
+	docker scout cves liferay/hotfix:${HOTFIX_IMAGE_TAG} | tee ${HOTFIX_IMAGE_TAG}.cves.txt
 	docker rmi liferay/hotfix:${HOTFIX_IMAGE_TAG}
 fi
