@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        20.1
+// @version        20.2
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -675,6 +675,7 @@ function addOrganizationField(propertyBox, ticketId, ticketInfo) {
     var tagSet = new Set(tags);
     var helpCenterLinkHREF = null;
     var serviceLevel = [];
+    var subOrganizationTag = null;
     if (tagSet.has('t1')) {
         serviceLevel.push('Account Tier 1');
     }
@@ -712,6 +713,7 @@ function addOrganizationField(propertyBox, ticketId, ticketInfo) {
         serviceLevel.push(organizationFields.sla.toUpperCase());
         helpCenterLinkHREF = "https://support.liferay.com/project/#/" +
             organizationInfo.organization_fields.account_key;
+        subOrganizationTag = organizationFields.sub_organization;
     }
     var helpCenterItems = [];
     if (accountCode && helpCenterLinkHREF) {
@@ -728,6 +730,12 @@ function addOrganizationField(propertyBox, ticketId, ticketInfo) {
     var permalinkHREF = 'https://help.liferay.com/hc/requests/' + ticketInfo.ticket.id;
     helpCenterItems.push(createPermaLinkInputField(permalinkHREF));
     generateFormField(propertyBox, 'lesa-ui-helpcenter', 'Help Center', helpCenterItems);
+    if (subOrganizationTag) {
+        var subOrganizationContainer = document.createElement('div');
+        var subOrganizationName = subOrganizationTag.split("_").map(function (word) { return word.charAt(0).toUpperCase() + word.slice(1); }).join(" "); /* replace underscores with spaces and capitalize: spain_pod_a => Spain Pod A */
+        subOrganizationContainer.appendChild(document.createTextNode(subOrganizationName));
+        generateFormField(propertyBox, 'lesa-ui-suborganization', 'Sub Organization', [subOrganizationContainer]);
+    }
 }
 /**
  * Generate a URL to Patcher Portal's accounts view.
