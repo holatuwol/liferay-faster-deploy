@@ -22,29 +22,33 @@ if [ -d "${1}" ]; then
 	exit 0
 fi
 
-BACKUP_ZIP="$(basename ${1} | sed 's/^liferay-//g' | sed 's/\.zip$/-backup.zip/g')"
-
 if [[ ${1} == *.q*.zip ]]; then
 	RELEASE_TAG="$(basename ${1} | grep -o '[0-9]*\.q[0-9]\.[0-9]*')"
 	HOTFIX_IMAGE_TAG="${RELEASE_TAG}-$(basename ${1} | grep -o 'hotfix-[0-9]*')"
+	RELEASE_TAG="$(curl -s "https://hub.docker.com/v2/repositories/liferay/dxp/tags?name=${RELEASE_TAG}&ordering=last_updated" | jq -r '.results[].name' | sort -r -t'-' -k3 | head -n 1)"
 elif [[ $1 == *-7413.zip ]]; then
 	RELEASE_TAG="7.4.13-$(unzip -c "${1}" fixpack_documentation.json 2>/dev/null | tail -n +3 | jq -r '.patch.requirements')"
 	HOTFIX_IMAGE_TAG="${RELEASE_TAG}-$(basename ${1} | sed 's/\-7413.zip$//g' | sed 's/liferay-//g')"
+	RELEASE_TAG="$(curl -s "https://hub.docker.com/v2/repositories/liferay/dxp/tags?name=${RELEASE_TAG}&ordering=last_updated" | jq -r '.results[].name' | sort -r -t'-' -k4 | head -n 1)"
 elif [[ $1 == *-7310.zip ]]; then
 	RELEASE_TAG="7.3.10-$(unzip -c "${1}" fixpack_documentation.json 2>/dev/null | tail -n +3 | jq -r '.patch.requirements')"
 	HOTFIX_IMAGE_TAG="${RELEASE_TAG}-$(basename ${1} | sed 's/\-7310.zip$//g' | sed 's/liferay-//g')"
+	RELEASE_TAG="$(curl -s "https://hub.docker.com/v2/repositories/liferay/dxp/tags?name=${RELEASE_TAG}&ordering=last_updated" | jq -r '.results[].name' | sort -r -t'-' -k5 | head -n 1)"
 elif [[ $1 == *-7210.zip ]]; then
 	RELEASE_TAG="7.2.10-$(unzip -c "${1}" fixpack_documentation.xml 2>/dev/null | tail -n +3 | xq -r '.patch.requirements' | sed 's/=/-/g')"
 	HOTFIX_IMAGE_TAG="${RELEASE_TAG}-$(basename ${1} | sed 's/\-7210.zip$//g' | sed 's/liferay-//g')"
-elif [[ $1 == *-7210.zip ]]; then
+	RELEASE_TAG="$(curl -s "https://hub.docker.com/v2/repositories/liferay/dxp/tags?name=${RELEASE_TAG}&ordering=last_updated" | jq -r '.results[].name' | sort -r -t'-' -k5 | head -n 1)"
+elif [[ $1 == *-7110.zip ]]; then
 	RELEASE_TAG="7.1.10-$(unzip -c "${1}" fixpack_documentation.xml 2>/dev/null | tail -n +3 | xq -r '.patch.requirements' | sed 's/=/-/g')"
 	HOTFIX_IMAGE_TAG="${RELEASE_TAG}-$(basename ${1} | sed 's/\-7110.zip$//g' | sed 's/liferay-//g')"
+	RELEASE_TAG="$(curl -s "https://hub.docker.com/v2/repositories/liferay/dxp/tags?name=${RELEASE_TAG}&ordering=last_updated" | jq -r '.results[].name' | sort -r -t'-' -k5 | head -n 1)"
 else
 	echo "No docker image for ${1}"
 	exit 1
 fi
 
-echo "FROM liferay/dxp:${RELEASE_TAG}
+PATCH_LIFERAY="
+FROM liferay/dxp:${RELEASE_TAG}
 
 COPY ${1} /mnt/liferay/patching/
 COPY patching-tool-*.zip /mnt/liferay/patching/
@@ -54,11 +58,32 @@ ENV LIFERAY_JVM_OPTS='-Djdk.util.zip.disableZip64ExtraFieldValidation=true'
 
 RUN rm -rf /opt/liferay/elasticsearch-sidecar /opt/liferay/osgi/state
 RUN /usr/local/bin/patch_liferay.sh
-RUN rm -rf /opt/liferay/patching-tool /opt/liferay/tomcat/webapps/ROOT/WEB-INF/patching_backup /opt/liferay/tomcat/webapps/ROOT/WEB-INF/${BACKUP_ZIP}
-" | docker build -t liferay/hotfix:${HOTFIX_IMAGE_TAG} -f - .
+RUN rm -rf /opt/liferay/patching-tool /opt/liferay/tomcat/webapps/ROOT/WEB-INF/patching_backup /opt/liferay/tomcat/webapps/ROOT/WEB-INF/*backup*
+"
+
+START_LIFERAY="
+RUN echo 'dir=/opt/liferay/tomcat\nextra.lib.dirs=/bin\nglobal.lib.dir=/lib\nportal.dir=/webapps/ROOT\nserver.detector.server.id=tomcat' | tee /opt/liferay/tools/portal-tools-db-upgrade-client/app-server.properties
+RUN echo 'jdbc.default.driverClassName=org.hsqldb.jdbc.JDBCDriver\njdbc.default.url=jdbc:hsqldb:/opt/liferay/data/hypersonic/lportal;hsqldb.lock_file=false\njdbc.default.username=sa\njdbc.default.password=' | tee /opt/liferay/tools/portal-tools-db-upgrade-client/portal-upgrade-database.properties
+RUN echo 'liferay.home=/opt/liferay' | tee /opt/liferay/tools/portal-tools-db-upgrade-client/portal-upgrade-ext.properties
+RUN /opt/liferay/tools/portal-tools-db-upgrade-client/db_upgrade_client.sh --jvm-opts '-Djdk.util.zip.disableZip64ExtraFieldValidation=true'
+"
+
+(
+echo "${PATCH_LIFERAY}"
+
+if [ "${2}" == "startup" ]; then
+	echo "${START_LIFERAY}"
+fi
+) | docker build --progress=plain -t liferay/hotfix:${HOTFIX_IMAGE_TAG} -f - .
+
+if [ "" != "$(docker inspect liferay/dxp:${RELEASE_TAG})" ]; then
+	docker scout sbom liferay/dxp:${RELEASE_TAG} | tee ${RELEASE_TAG}.sbom.json
+	docker scout cves liferay/dxp:${RELEASE_TAG} | tee ${RELEASE_TAG}.cves.json
+fi
 
 if [ "" != "$(docker inspect liferay/hotfix:${HOTFIX_IMAGE_TAG})" ]; then
 	docker scout sbom liferay/hotfix:${HOTFIX_IMAGE_TAG} | tee ${HOTFIX_IMAGE_TAG}.sbom.json
 	docker scout cves liferay/hotfix:${HOTFIX_IMAGE_TAG} | tee ${HOTFIX_IMAGE_TAG}.cves.txt
+
 	docker rmi liferay/hotfix:${HOTFIX_IMAGE_TAG}
 fi
