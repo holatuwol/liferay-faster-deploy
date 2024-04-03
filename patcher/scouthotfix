@@ -50,15 +50,16 @@ fi
 PATCH_LIFERAY="
 FROM liferay/dxp:${RELEASE_TAG}
 
-COPY ${1} /mnt/liferay/patching/
-COPY patching-tool-*.zip /mnt/liferay/patching/
+COPY --chown=liferay ${1} /mnt/liferay/patching/
+COPY --chown=liferay patching-tool-*.zip /mnt/liferay/patching/
 
 ENV LIFERAY_PATCHING_DIR=/mnt/liferay/patching
 ENV LIFERAY_JVM_OPTS='-Djdk.util.zip.disableZip64ExtraFieldValidation=true'
 
-RUN rm -rf /opt/liferay/elasticsearch-sidecar /opt/liferay/osgi/state
+RUN rm -rf /opt/liferay/elasticsearch-sidecar/ /opt/liferay/osgi/state/
 RUN /usr/local/bin/patch_liferay.sh
-RUN rm -rf /opt/liferay/patching-tool /opt/liferay/tomcat/webapps/ROOT/WEB-INF/patching_backup /opt/liferay/tomcat/webapps/ROOT/WEB-INF/*backup*
+RUN rm /mnt/liferay/patching/* /opt/liferay/tomcat/webapps/ROOT/WEB-INF/*backup*.zip
+RUN rm -rf /opt/liferay/patching-tool/
 "
 
 START_LIFERAY="
