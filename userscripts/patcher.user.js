@@ -1222,7 +1222,13 @@ function checkFixesFromPreviousBuilds(buildNameNode, previousBuildsInput, accoun
     }
     var compactCell = document.querySelector('tr[data-suggestion-type="Previous Builds"] td');
     var ticketCount = missingTickets.length;
-    compactCell.textContent = ticketCount + ((ticketCount == 1) ? ' ticket' : ' tickets');
+    compactCell.innerHTML = '';
+    var countSpan = document.createElement('span');
+    countSpan.id = 'osb-patcher-missing-ticket-count';
+    countSpan.textContent = '' + ticketCount;
+    compactCell.appendChild(countSpan);
+    compactCell.appendChild(document.createTextNode((ticketCount == 1) ? ' ticket' : ' tickets'));
+    return ticketCount;
 }
 function updateFixesFromPreviousBuilds(accountNode, buildNameNode, projectNode, previousBuildsInput) {
     var queryString = getQueryString({
@@ -1296,6 +1302,19 @@ function getFixesFromPreviousBuilds() {
         accountNode.addEventListener('blur', refreshPreviousBuilds);
         buildNameNode.addEventListener('blur', refreshPreviousBuilds);
         projectNode.addEventListener('change', refreshPreviousBuilds);
+    }
+    var addButton = document.querySelector('button.btn-primary');
+    if (addButton) {
+        addButton.onclick = function () {
+            var ticketCountElement = document.getElementById('osb-patcher-missing-ticket-count');
+            if (!ticketCountElement) {
+                return true;
+            }
+            if (ticketCountElement.textContent != '0') {
+                return confirm('You are missing ' + ticketCountElement.textContent + " tickets from previous builds.\n\nWould you like to proceed anyway?");
+            }
+            return true;
+        };
     }
     return previousBuildsContainer;
 }
