@@ -1,0 +1,15 @@
+/* ==UserStyle==
+@name           app.slack.com User Style
+@namespace      holatuwol
+@version        1.0.0
+@description    A user style for app.slack.com
+@author         holatuwol
+==/UserStyle== */
+
+@-moz-document
+  domain("app.slack.com") {
+
+  div[aria-selected="false"] .p-channel_sidebar__channel--unread:not(.p-channel_sidebar__channel--muted,.p-channel_sidebar__channel--suggested) .p-channel_sidebar__name span {
+    color: palevioletred;
+  }
+}
