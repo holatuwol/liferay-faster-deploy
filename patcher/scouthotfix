@@ -11,14 +11,14 @@ if [ "$(uname -s)" == "Linux" ]; then
 	fi
 fi
 
-if [ "" == "${1}" ] || [ ! -f "${1}" ]; then
+if [ "" == "${1}" ] || [ ! -e "${1}" ]; then
 	echo "Please specify a patch file as a command line argument."
 	exit 1
 fi
 
 if [ -d "${1}" ]; then
 	docker scout sbom "fs://$(realpath ${1})" | tee bundle.sbom.json
-	docker scout cves liferay/hotfix:${HOTFIX_IMAGE_TAG} | tee bundle.cves.txt
+	docker scout cves "fs://$(realpath ${1})" | tee bundle.cves.txt
 	exit 0
 fi
 
