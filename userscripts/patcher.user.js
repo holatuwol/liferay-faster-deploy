@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        8.4
+// @version        8.5
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -1253,6 +1253,9 @@ function updateFixesFromPreviousBuilds(accountNode, buildNameNode, projectNode, 
             reduce(function (acc, next) {
             var row = next.closest('tr');
             if ((row.cells[2].textContent || '').trim().toLowerCase() == 'ignore') {
+                return acc;
+            }
+            if ((row.cells[7].textContent || '').trim().toLowerCase().indexOf('conflict') != -1) {
                 return acc;
             }
             if ((row.cells[9].textContent || '').trim().toLowerCase().indexOf('ignore') != -1) {
