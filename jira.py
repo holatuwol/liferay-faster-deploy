@@ -18,7 +18,10 @@ def get_jira_auth():
     }
 
 def await_request(url, payload):
-    r = requests.get(url, headers=get_jira_auth(), params=payload)
+    await_response(lambda: requests.get(url, headers=get_jira_auth(), params=payload))
+
+def await_response(response_generator):
+    r = response_generator()
 
     while r.status_code == 429:
         print(r.headers)
@@ -27,7 +30,7 @@ def await_request(url, payload):
         print('Retrying in %d seconds...' % retry_after)
         time.sleep(retry_after + 1)
 
-        r = requests.get(url, headers=get_jira_auth(), params=payload)
+        r = response_generator()
 
     return r
 
