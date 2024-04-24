@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        20.2
+// @version        20.3
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -132,7 +132,6 @@ function getJiraSearchLink(text, ticketId) {
 var accountCodeCache = {};
 var organizationCache = {};
 var ticketInfoCache = {};
-var accountInfo = null;
 /**
  * Retrieve the account code from the sidebar.
  */
@@ -181,17 +180,12 @@ function checkTicket(ticketId, callback) {
     }
     var ticketInfo;
     ticketInfoCache[ticketId] = 'PENDING';
-    var forkFunctions = [checkTicketMetadata, checkEvents];
-    var returnedFunctions = 0;
     var joinCallback = function (ticketId, newTicketInfo) {
         if (ticketInfo == null) {
             ticketInfo = newTicketInfo;
         }
         else {
             Object.assign(ticketInfo, newTicketInfo);
-        }
-        if (++returnedFunctions != forkFunctions.length) {
-            return;
         }
         if (Object.keys(ticketInfo).length == 0) {
             delete ticketInfoCache[ticketId];
@@ -200,9 +194,7 @@ function checkTicket(ticketId, callback) {
             ticketInfoCache[ticketId] = ticketInfo;
         }
     };
-    for (var i = 0; i < forkFunctions.length; i++) {
-        forkFunctions[i](ticketId, joinCallback);
-    }
+    checkTicketMetadata(ticketId, joinCallback);
 }
 /**
  * Retrieve information about a ticket, and then call a function
@@ -300,7 +292,9 @@ function checkEvents(ticketId, callback, audits, pageId) {
             checkEvents(ticketId, callback, audits, pageId + 1);
         }
         else {
-            callback(ticketId, { 'audits': audits });
+            var ticketInfo = ticketInfoCache[ticketId];
+            ticketInfo['audits'] = audits;
+            callback(ticketId, ticketInfo);
         }
     };
     xhr.onerror = function () {
@@ -316,37 +310,6 @@ function checkEvents(ticketId, callback, audits, pageId) {
         pageId
     ].join('');
     xhr.open('GET', auditEventsURL);
-    xhr.setRequestHeader('Cache-Control', 'no-cache, no-store, max-age=0');
-    xhr.setRequestHeader('Pragma', 'no-cache');
-    xhr.send();
-}
-/**
- * Cache the account information for the current ZenDesk site.
- */
-function setAccountInfo(callback) {
-    if (accountInfo) {
-        return;
-    }
-    var xhr = new XMLHttpRequest();
-    xhr.onload = function () {
-        if (xhr.status != 200) {
-            console.log("URL: " + xhr.responseURL);
-            console.log("Error: " + xhr.status + " - " + xhr.statusText);
-        }
-        try {
-            accountInfo = JSON.parse(xhr.responseText);
-        }
-        catch (e) {
-        }
-        callback();
-    };
-    var accountDetailsURL = [
-        document.location.protocol,
-        '//',
-        document.location.host,
-        '/api/v2/account.json'
-    ].join('');
-    xhr.open('GET', accountDetailsURL);
     xhr.setRequestHeader('Cache-Control', 'no-cache, no-store, max-age=0');
     xhr.setRequestHeader('Pragma', 'no-cache');
     xhr.send();
@@ -1329,7 +1292,7 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
     addSubjectTextWrap(header, ticketId, ticketInfo);
     // Generate something to hold all of our attachments.
     addHeaderLinkModal('description-modal', 'Description', header, conversation, createDescriptionContainer.bind(null, ticketId, ticketInfo, conversation));
-    addHeaderLinkModal('description-modal', 'Fast Track', header, conversation, createKnowledgeCaptureContainer.bind(null, ticketId, ticketInfo, conversation));
+    addHeaderLinkModal('description-modal', 'Fast Track', header, conversation, checkEvents.bind(null, ticketId, createKnowledgeCaptureContainer.bind(null, ticketId, ticketInfo, conversation)));
     addHeaderLinkModal('attachments-modal', 'Attachments', header, conversation, createAttachmentsContainer.bind(null, ticketId, ticketInfo, conversation));
     addSortButton(conversation, header);
 }
@@ -2291,11 +2254,7 @@ function checkTicketConversation(ticketId, ticketInfo) {
  * use browser history, you have useful information.
  */
 function updateWindowTitle(ticketId, ticketInfo) {
-    if (!accountInfo) {
-        setAccountInfo(updateWindowTitle.bind(null, ticketId, ticketInfo));
-        return;
-    }
-    var accountName = accountInfo.account.name;
+    var accountName = (document.location.hostname == 'liferay-support.zendesk.com') ? 'Liferay Help Center' : 'Liferay Sandbox';
     if (document.location.pathname.indexOf('/agent/dashboard') == 0) {
         document.title = accountName + ' - Agent Dashboard';
         return;
