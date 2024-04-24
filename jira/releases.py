@@ -19,19 +19,16 @@ quarterly_releases = {
 }
 
 old_update_threshold = {
-    '2023.3': 92,
-    '2023.4': 92,
-    '2024.1': 102
+    '2023.q3': 92,
+    '2023.q4': 92,
+    '2024.q1': 102
 }
 
 quarterly_updates = { value: key for key, value in quarterly_releases.items() }
 
-seen_issue_keys = {}
-seen_issue_versions = {}
-
-releases_data = {}
-releases_file_names = {}
-fixed_issues = {}
+ticket_summaries = {}
+update_fixed_issues = {}
+quarterly_fixed_issues = {}
 
 def get_release_cf(release_name):
     if release_name.find('.q') != -1:
@@ -80,33 +77,35 @@ def get_fixed_issues(release_name, release_ids):
         else:
             secure_issue_keys.append(fixed_issue_key)
 
-    if len(secure_issue_keys) == 0:
-        return release_issues
-
-    secure_issue_query = 'project = LPE and (%s)' % ' or '.join(['issue in linkedIssues(%s)' % secure_issue_key for secure_issue_key in secure_issue_keys])
-    secure_issues = get_issues(secure_issue_query, ['summary'])
-
     lsv_issue_keys = {}
 
-    for secure_issue_key, secure_issue in secure_issues.items():
-        summary = secure_issue['fields']['summary']
-        lsv_matcher = lsv_pattern.search(summary)
+    if len(secure_issue_keys) > 0:
+        secure_issue_query = 'project = LPE and (%s)' % ' or '.join(['issue in linkedIssues(%s)' % secure_issue_key for secure_issue_key in secure_issue_keys])
+        secure_issues = get_issues(secure_issue_query, ['summary'])
 
-        if lsv_matcher is not None:
-            lsv_issue_keys[lsv_matcher[0]] = secure_issue_key
+        for secure_issue_key, secure_issue in secure_issues.items():
+            summary = secure_issue['fields']['summary']
+            lsv_matcher = lsv_pattern.search(summary)
 
-    if len(lsv_issue_keys) == 0:
-        return release_issues
+            if lsv_matcher is not None:
+                lsv_issue_keys[lsv_matcher[0]] = secure_issue_key
 
-    lsv_issue_query = 'key in (%s)' % ','.join(lsv_issue_keys.keys())
-    lsv_issues = get_issues(lsv_issue_query, ['summary', 'description', 'customfield_10563'], render=True)
+    cve_issues = []
 
-    for lsv_issue_key, lsv_issue in lsv_issues.items():
-        if lsv_issue['fields']['customfield_10563'] is not None:
-            release_issues[lsv_issue['fields']['customfield_10563']] = {
-                'summary': lsv_issue['fields']['summary'],
-                'description': lsv_issue['renderedFields']['description']
-            }
+    if len(lsv_issue_keys) > 0:
+        lsv_issue_query = 'key in (%s)' % ','.join(lsv_issue_keys.keys())
+        lsv_issues = get_issues(lsv_issue_query, ['summary', 'description', 'customfield_10563'], render=True)
+
+        for lsv_issue_key, lsv_issue in lsv_issues.items():
+            if lsv_issue['fields']['customfield_10563'] is not None:
+                cve_issues.append(lsv_issue['fields']['customfield_10563'])
+                release_issues[lsv_issue['fields']['customfield_10563']] = {
+                    'summary': lsv_issue['fields']['summary'],
+                    'description': lsv_issue['renderedFields']['description']
+                }
+
+    if len(secure_issue_keys) > 0:
+        print('Found [%s] = [%s] = [%s] for %s' % (','.join(secure_issue_keys), ','.join(lsv_issue_keys.keys()), ','.join(cve_issues), release_name))
 
     return release_issues
 
@@ -125,7 +124,7 @@ def update_releases():
             release_num = int(name[12:])
             short_name = '7.4.13-u%d' % release_num
         elif len(name) > 8 and (name[4:6] == '.Q' or name[4:6] == '.q'):
-            short_name = name.lower()
+            short_name = name.lower().strip()
 
         if short_name is not None and get_release_ulevel(short_name) is not None:
             unsorted_releases[short_name].append(str(release['id']))
@@ -144,153 +143,183 @@ def update_releases():
 
 update_releases()
 
-def sort_releases():
+def pull_updates():
     with open('releases.json', 'r') as f:
         releases = json.load(f)
 
     for release_name, release_ids in releases.items():
+        if release_name.find('.q') != -1:
+            continue
+
         release_file_name = f'releases/{release_name}.json'
 
         if exists(release_file_name):
+            print(f'Reading {release_name} metadata')
+
             with open(release_file_name, 'r') as f:
-                unsorted_fixed_issues = json.load(f)
+                fixed_issues = json.load(f)
         else:
-            unsorted_fixed_issues = get_fixed_issues(release_name, release_ids)
+            print(f'Pulling {release_name} metadata')
 
-        sorted_fixed_issues = OrderedDict(sorted(unsorted_fixed_issues.items(), key=lambda x: ticket_sort_key(x[0])))
+            fixed_issues = get_fixed_issues(release_name, release_ids)
 
-        if len(sorted_fixed_issues) == 0:
+        ticket_summaries.update(fixed_issues)
+
+        release_ulevel = get_release_ulevel(release_name)
+        update_fixed_issues[release_ulevel] = set(fixed_issues.keys())
+
+        if not exists(release_file_name):
+            print(f'Writing {release_name} metadata')
+
+            with open(f'releases/{release_name}.json', 'w') as f:
+                json.dump(fixed_issues, f, sort_keys=False, separators=(',', ':'))
+
+def pull_quarterlies():
+    with open('releases.json', 'r') as f:
+        releases = json.load(f)
+
+    for release_name, release_ids in releases.items():
+        if release_name.find('.q') == -1:
             continue
 
-        print(f'writing {release_name} metadata')
+        release_file_name = f'releases/{release_name}.json'
 
-        with open(release_file_name, 'w') as f:
-            json.dump(sorted_fixed_issues, f, sort_keys=False, separators=(',', ':'))
+        if exists(release_file_name):
+            print(f'Reading {release_name} metadata')
 
-sort_releases()
+            with open(release_file_name, 'r') as f:
+                fixed_issues = json.load(f)
+        else:
+            print(f'Pulling {release_name} metadata')
 
-def check_issue_changelog(issue_key, past_fix_versions, past_74_fix_versions):
+            fixed_issues = get_fixed_issues(release_name, release_ids)
+
+        ticket_summaries.update(fixed_issues)
+
+        for i in range(1, old_update_threshold[release_name[:7]] + 1):
+             if i in update_fixed_issues:
+                 fixed_issues = {key: value for key, value in fixed_issues.items() if key not in update_fixed_issues[i]}
+
+        quarterly_fixed_issues[release_name] = set(fixed_issues.keys())
+
+        if not exists(release_file_name):
+            print(f'Writing {release_name} metadata')
+
+            with open(f'releases/{release_name}.json', 'w') as f:
+                json.dump(fixed_issues, f, sort_keys=False, separators=(',', ':'))
+
+pull_updates()
+pull_quarterlies()
+
+def check_issue_changelog(issue_key):
     releases_updates = set()
 
-    if past_fix_versions is None or past_74_fix_versions is None:
-        changelog = get_issue_changelog(issue_key)
-        changelog_items = sum([changelog_entry['items'] for changelog_entry in changelog if 'items' in changelog_entry], [])
+    changelog = get_issue_changelog(issue_key)
+    changelog_items = sum([changelog_entry['items'] for changelog_entry in changelog if 'items' in changelog_entry], [])
 
-        issue_fields = get_issue_fields(issue_key, ['fixVersions'])
-        past_fix_versions = [field['name'] for field in issue_fields['fixVersions']]
+    issue_fields = get_issue_fields(issue_key, ['fixVersions'])
+    past_fix_versions = [field['name'].lower().strip() for field in issue_fields['fixVersions']]
 
-        past_74_fix_versions = [item['toString'] for item in changelog_items if 'fieldId' in item and item['fieldId'] == 'customfield_10210']
-        past_74_fix_versions = [version + '00' if version.find('.') != -1 and len(version) < 8 else version for version in past_74_fix_versions if len(version) == 8 or (version != '' and float(version) < 2000)]
-
-        with open('releases.csv', 'a') as f:
-            f.write(f'{issue_key}\t{json.dumps(sorted(past_fix_versions))}\t{json.dumps(sorted(past_74_fix_versions))}\n')
+    past_74_fix_versions = [item['toString'] for item in changelog_items if 'fieldId' in item and item['fieldId'] == 'customfield_10210']
+    past_74_fix_versions = [version + '00' if version.find('.') != -1 and len(version) < 8 else version for version in past_74_fix_versions if len(version) == 8 or (version != '' and float(version) < 2000)]
 
     updates = set()
     quarterlies = set()
 
-    for fix_version in past_fix_versions:
-        if fix_version.find('7.4.13 DXP U') == 0:
-            update = int(fix_version[12:])
-            updates.add(update)
-        elif fix_version.lower().find('.q') != -1:
-            quarterly = '%s.%s%02d' % (fix_version.lower()[:4], fix_version[6], int(fix_version[8:]))
-            quarterlies.add(quarterly)
-
     for fix_version in past_74_fix_versions:
         if float(fix_version) < 2000:
-            update = int(fix_version)
-            updates.add(update)
+            updates.add(int(fix_version))
         else:
             quarterlies.add(fix_version)
 
-        if fix_version not in releases_data:
-            continue
+    if len(updates) != 0 or len(quarterlies) != 0:
+        for fix_version in past_fix_versions:
+            if fix_version.find('7.4.13 DXP U') == 0:
+                update_fixed_issues[int(fix_version[12:])].remove(issue_key)
+            elif fix_version.find('.q') != -1:
+                if issue_key in quarterly_fixed_issues[fix_version]:
+                    quarterly_fixed_issues[fix_version].remove(issue_key)
 
-        if issue_key in releases_data[fix_version]:
-            continue
+    for fix_version in past_fix_versions:
+        if fix_version.find('7.4.13 DXP U') == 0:
+            updates.add(int(fix_version[12:]))
 
-        releases_data[fix_version][issue_key] = fixed_issues[issue_key]
-        releases_updates.add(fix_version)
+    if (len(updates) == 0 or min(updates) >= 92):
+        for fix_version in past_fix_versions:
+            if fix_version.find('.q') != -1:
+                quarterlies.add(fix_version)
 
-    if len(updates) > 0 and len(quarterlies) > 0:
-        max_update = max(updates)
-        min_quarterly = min(quarterlies)[:6]
+    missing_updates = [x for x in updates if x in update_fixed_issues and issue_key not in update_fixed_issues[x]]
+    missing_quarterlies = [x for x in quarterlies if x in quarterly_fixed_issues and issue_key not in quarterly_fixed_issues[x]]
 
-        if max_update < old_update_threshold[min_quarterly]:
-            for quarterly in quarterlies:
-                if quarterly in releases_data and issue_key in releases_data[quarterly]:
-                    del releases_data[quarterly][issue_key]
-                    releases_updates.add(quarterly)
+    for x in missing_updates:
+        update_fixed_issues[x].add(issue_key)
 
-    return releases_updates
+    for x in missing_quarterlies:
+        quarterly_fixed_issues[x].add(issue_key)
 
-def check_fixed_issues():
-    with open('releases.json', 'r') as f:
-        releases = json.load(f)
-
-    for release_name, release_ids in releases.items():
-        release_ulevel = get_release_ulevel(release_name)
-
-        release_cf = get_release_cf(release_name)
-        release_cf_key = 'u' if release_name.find('.q') == -1 else release_name[:7]
-
-        release_file_name = f'releases/{release_name}.json'
-
-        if not exists(release_file_name):
-            continue
-
-        releases_file_names[release_cf] = release_file_name
-
-        with open(release_file_name, 'r') as f:
-            releases_data[release_cf] = json.load(f)
-            if release_ulevel is not None and release_ulevel >= 92:
-                fixed_issues.update(releases_data[release_cf])
-
-def sort_seen_issues():
-    if not exists('releases.csv'):
-        return
-
-    with open('releases.csv', 'r') as f:
-        lines = sorted(f.readlines(), key=ticket_sort_key)
-        for line in lines:
-            issue_key, fix_json, fix74_json = line.strip().split('\t')
-            seen_issue_keys[issue_key] = (json.loads(fix_json), json.loads(fix74_json))
-
-    with open('releases.csv', 'w') as f:
-        f.write(''.join(lines))
-
-check_fixed_issues()
-sort_seen_issues()
+    return missing_updates + missing_quarterlies
 
 def check_changelogs():
     with open('releases.json', 'r') as f:
         releases = json.load(f)
 
-    for i, issue_key in enumerate(fixed_issues.keys()):
+    post92_fixed_issues = set()
+
+    for i, issue_keys in update_fixed_issues.items():
+         if i >= 92:
+             post92_fixed_issues.update(issue_keys)
+
+    for issue_keys in quarterly_fixed_issues.values():
+         post92_fixed_issues.update(issue_keys)
+
+    for i, issue_key in enumerate(sorted(post92_fixed_issues, key=ticket_sort_key)):
         if issue_key[:4] == 'CVE-':
             continue
 
-        print('Checking issue %d of %d (%s)' % (i + 1, len(fixed_issues), issue_key))
+        print('Checking issue %d of %d (%s)' % (i + 1, len(post92_fixed_issues), issue_key))
+        check_issue_changelog(issue_key)
 
-        if issue_key in seen_issue_keys:
-            past_fix_versions, past_74_fix_versions = seen_issue_keys[issue_key]
-            release_cfs = check_issue_changelog(issue_key, past_fix_versions, past_74_fix_versions)
-        else:
-            release_cfs = check_issue_changelog(issue_key, None, None)
-
-        if len(release_cfs) > 0:
-            print('Fixing releases for issue %d of %d (%s)' % (i + 1, len(fixed_issues), issue_key))
-
-        for release_cf in release_cfs:
-            with open(releases_file_names[release_cf], 'w') as f:
-                json.dump(releases_data[release_cf], f, sort_keys=True, separators=(',', ':'))
-
-    for release_name in sorted(releases.keys(), key=release_sort_key, reverse=True):
-        release_cf = get_release_cf(release_name)
-        if release_cf not in releases_data or len(releases_data[release_cf]) == 0:
+    for i, issue_keys in update_fixed_issues.items():
+        release_name = '7.4.13-u%d' % i
+        release_file_name = 'releases/%s.json' % release_name
+        if len(issue_keys) == 0:
             del releases[release_name]
+            os.remove(release_file_name)
+        else:
+            with open(release_file_name, 'w') as f:
+                json.dump({key: ticket_summaries[key] for key in sorted(issue_keys, key=ticket_sort_key)}, f)
+
+    for release_name, issue_keys in quarterly_fixed_issues.items():
+        release_file_name = 'releases/%s.json' % release_name
+        if len(issue_keys) == 0:
+            del releases[release_name]
+            os.remove(release_file_name)
+        else:
+            with open(release_file_name, 'w') as f:
+                json.dump({key: ticket_summaries[key] for key in sorted(issue_keys, key=ticket_sort_key)}, f)
 
     with open('releases.json', 'w') as f:
         json.dump(releases, f, sort_keys=False, indent=2, separators=(',', ': '))
 
 check_changelogs()
+
+def save_fix_versions():
+    ticket_fix_versions = defaultdict(list)
+
+    for i, issue_keys in update_fixed_issues.items():
+        release_name = '7.4.13-u%d' % i
+
+        for issue_key in issue_keys:
+            ticket_fix_versions[issue_key].append(release_name)
+
+    for release_name, issue_keys in quarterly_fixed_issues.items():
+        for issue_key in issue_keys:
+            ticket_fix_versions[issue_key].append(release_name)
+
+    with open('releases.csv', 'w') as f:
+        f.write('ticket\tfixPackVersion\n')
+        for issue_key in sorted(ticket_fix_versions.keys(), key=ticket_sort_key):
+        	f.write(f'{issue_key}\t{",".join(ticket_fix_versions[issue_key])}\n')
+
+save_fix_versions()

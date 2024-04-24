@@ -18,7 +18,7 @@ def get_jira_auth():
     }
 
 def await_request(url, payload):
-    await_response(lambda: requests.get(url, headers=get_jira_auth(), params=payload))
+    return await_response(lambda: requests.get(url, headers=get_jira_auth(), params=payload))
 
 def await_response(response_generator):
     r = response_generator()
