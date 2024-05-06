@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        8.6
+// @version        8.7
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -1167,7 +1167,7 @@ function getHotfixShortNames(hotfixes) {
     return hotfixes.map(function (it) {
         return (it.indexOf('.q') != -1) ?
             it.substring(it.indexOf('-hotfix') + 1, it.length - 4) :
-            it.substring(it.indexOf('-') + 1, it.lastIndexOf('-'));
+            it.indexOf('build-') == 0 ? it : it.substring(it.indexOf('-') + 1, it.lastIndexOf('-'));
     });
 }
 function getTicketBuildCountSummary(ticketId, hotfixes) {
@@ -1266,6 +1266,9 @@ function updateFixesFromPreviousBuilds(accountNode, buildNameNode, projectNode, 
                 return acc;
             }
             var hotfixId = (row.cells[12].textContent || '').trim();
+            if (hotfixId == '') {
+                hotfixId = 'build-' + (row.cells[1].textContent || '').trim();
+            }
             var newTickets = (next.getAttribute('title') || '').split(/\s*,\s*/g);
             for (var i = 0; i < newTickets.length; i++) {
                 var newTicket = newTickets[i];
