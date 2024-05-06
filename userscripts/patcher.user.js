@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        8.5
+// @version        8.6
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -1163,6 +1163,7 @@ function addEngineerComments() {
 }
 var pastTickets = {};
 function getHotfixShortNames(hotfixes) {
+    debugger;
     return hotfixes.map(function (it) {
         return (it.indexOf('.q') != -1) ?
             it.substring(it.indexOf('-hotfix') + 1, it.length - 4) :
@@ -1173,7 +1174,7 @@ function getTicketBuildCountSummary(ticketId, hotfixes) {
     var summaryElement = document.createElement('span');
     summaryElement.classList.add('nowrap', 'osb-ticket-builds-summary');
     summaryElement.setAttribute('title', getHotfixShortNames(hotfixes).join(', '));
-    summaryElement.innerHTML = getTicketLink('', ticketId, ticketId) + ' (' + hotfixes.length + ' build' + ((hotfixes.length == 1) ? '' : 's') + ')</span>';
+    summaryElement.innerHTML = getTicketLink('', ticketId, ticketId) + ' (' + getHotfixShortNames(hotfixes).join(', ') + ')';
     return summaryElement;
 }
 function checkFixesFromPreviousBuilds(buildNameNode, previousBuildsInput, accountBuildsURL) {
@@ -1256,6 +1257,9 @@ function updateFixesFromPreviousBuilds(accountNode, buildNameNode, projectNode, 
                 return acc;
             }
             if ((row.cells[7].textContent || '').trim().toLowerCase().indexOf('conflict') != -1) {
+                return acc;
+            }
+            if ((row.cells[7].textContent || '').trim().toLowerCase().indexOf('failed') != -1) {
                 return acc;
             }
             if ((row.cells[9].textContent || '').trim().toLowerCase().indexOf('ignore') != -1) {
