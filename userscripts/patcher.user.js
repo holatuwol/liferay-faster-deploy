@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        8.7
+// @version        8.8
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -1161,7 +1161,7 @@ function addEngineerComments() {
     xhr1.setRequestHeader('Pragma', 'no-cache');
     xhr1.send(null);
 }
-var pastTickets = {};
+var pastTicketsCache = {};
 function getHotfixShortNames(hotfixes) {
     debugger;
     return hotfixes.map(function (it) {
@@ -1177,7 +1177,16 @@ function getTicketBuildCountSummary(ticketId, hotfixes) {
     summaryElement.innerHTML = getTicketLink('', ticketId, ticketId) + ' (' + getHotfixShortNames(hotfixes).join(', ') + ')';
     return summaryElement;
 }
-function checkFixesFromPreviousBuilds(buildNameNode, previousBuildsInput, accountBuildsURL) {
+function checkFixesFromPreviousBuilds(accountNode, buildNameNode, projectNode, previousBuildsInput) {
+    var queryString = getQueryString({
+        advancedSearch: true,
+        andOperator: true,
+        delta: 200,
+        patcherBuildAccountEntryCode: accountNode.value,
+        patcherProjectVersionIdFilter: projectNode.value
+    });
+    var accountBuildsURL = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/accounts/view?' + queryString;
+    var pastTickets = pastTicketsCache[accountBuildsURL] || {};
     var currentTickets = new Set((buildNameNode.value || '').split(/\s*,\s*/g));
     var missingTickets = Array.from(Object.keys(pastTickets)).
         filter(function (it) { return !currentTickets.has(it); }).
@@ -1212,7 +1221,7 @@ function checkFixesFromPreviousBuilds(buildNameNode, previousBuildsInput, accoun
         button.classList.add('btn', 'osb-patcher-button');
         button.onclick = function () {
             buildNameNode.value += ',' + missingTickets.join(',');
-            checkFixesFromPreviousBuilds(buildNameNode, previousBuildsInput, accountBuildsURL);
+            checkFixesFromPreviousBuilds(accountNode, buildNameNode, projectNode, previousBuildsInput);
             return false;
         };
         var buttonContent = document.createElement('i');
@@ -1240,8 +1249,9 @@ function updateFixesFromPreviousBuilds(accountNode, buildNameNode, projectNode, 
         patcherProjectVersionIdFilter: projectNode.value
     });
     var accountBuildsURL = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/accounts/view?' + queryString;
+    var pastTickets = pastTicketsCache[accountBuildsURL] || {};
     if (Object.keys(pastTickets).length > 0) {
-        checkFixesFromPreviousBuilds(buildNameNode, previousBuildsInput, accountBuildsURL);
+        checkFixesFromPreviousBuilds(accountNode, buildNameNode, projectNode, previousBuildsInput);
         return;
     }
     var xhr = new XMLHttpRequest();
@@ -1250,7 +1260,7 @@ function updateFixesFromPreviousBuilds(accountNode, buildNameNode, projectNode, 
         // https://stackoverflow.com/questions/20583396/queryselectorall-to-html-from-another-page
         var container = document.implementation.createHTMLDocument().documentElement;
         container.innerHTML = xhr.responseText;
-        pastTickets = Array.from(container.querySelectorAll('td > a[title]')).
+        pastTicketsCache[accountBuildsURL] = Array.from(container.querySelectorAll('td > a[title]')).
             reduce(function (acc, next) {
             var row = next.closest('tr');
             if ((row.cells[2].textContent || '').trim().toLowerCase() == 'ignore') {
@@ -1281,7 +1291,7 @@ function updateFixesFromPreviousBuilds(accountNode, buildNameNode, projectNode, 
             }
             return acc;
         }, {});
-        checkFixesFromPreviousBuilds(buildNameNode, previousBuildsInput, accountBuildsURL);
+        checkFixesFromPreviousBuilds(accountNode, buildNameNode, projectNode, previousBuildsInput);
     };
     xhr.send(null);
 }
