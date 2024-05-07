@@ -1,3 +1,4 @@
+from collections import defaultdict
 import inspect
 import itertools
 import json
@@ -13,7 +14,7 @@ from jira import await_response, get_issues, get_issue_fields, get_jira_auth, ji
 with open('releases.json', 'r') as f:
 	releases = json.load(f)
 
-unused_releases = set()
+unused_releases = defaultdict(set)
 fixed_tickets = set()
 
 if exists('fix_releases.txt'):
@@ -29,7 +30,7 @@ def update_issue(issue_key, fix_pack_versions):
 
 	while True:
 		mapped_releases = [releases[key] for key in fix_pack_versions]
-		new_flattened_releases = [value for value in itertools.chain.from_iterable(mapped_releases) if value not in unused_releases]
+		new_flattened_releases = [value for value in itertools.chain.from_iterable(mapped_releases) if value not in unused_releases[issue_key[:3]]]
 
 		if set(new_flattened_releases) == old_flattened_releases:
 			return True
@@ -50,7 +51,7 @@ def update_issue(issue_key, fix_pack_versions):
 
 			if field_error.find('is not valid') != -1:
 				unused_release = field_error.split('\'')[1]
-				unused_releases.add(unused_release)
+				unused_releases[issue_key[:3]].add(unused_release)
 				continue
 
 			print(field_error)
