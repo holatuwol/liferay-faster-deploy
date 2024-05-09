@@ -11,7 +11,7 @@ if [ "$(uname -s)" == "Linux" ]; then
 	fi
 fi
 
-if [ "" == "${1}" ] || [ ! -e "${1}" ]; then
+if [ "" == "${1}" ]; then
 	echo "Please specify a patch file as a command line argument."
 	exit 1
 fi
@@ -20,28 +20,37 @@ if [ -d "${1}" ]; then
 	docker scout sbom "fs://$(realpath ${1})" | tee bundle.sbom.json
 	docker scout cves "fs://$(realpath ${1})" | tee bundle.cves.txt
 	exit 0
+elif [ -e "${1}" ]; then
+	echo "Assuming ${1} is a patch file."
+	exit 1
+else
+	RELEASE_TAG=$(curl -s "https://hub.docker.com/v2/repositories/liferay/dxp/tags?name=${1}-&ordering=last_updated" | jq -r '.results[].name' | sort -r -t'-' -k4 | head -n 1)
+	HOTFIX_IMAGE_TAG=
 fi
 
-if [[ ${1} == *.q*.zip ]]; then
+if [ "" != "${RELEASE_TAG}" ]; then
+	echo "Assuming ${1} is release image ${RELEASE_TAG}"
+	docker pull liferay/dxp:${RELEASE_TAG}
+elif [[ ${1} == *.q*.zip ]]; then
 	RELEASE_TAG="$(basename ${1} | grep -o '[0-9]*\.q[0-9]\.[0-9]*')"
 	HOTFIX_IMAGE_TAG="${RELEASE_TAG}-$(basename ${1} | grep -o 'hotfix-[0-9]*')"
-	RELEASE_TAG="$(curl -s "https://hub.docker.com/v2/repositories/liferay/dxp/tags?name=${RELEASE_TAG}&ordering=last_updated" | jq -r '.results[].name' | sort -r -t'-' -k3 | head -n 1)"
+	RELEASE_TAG="$(curl -s "https://hub.docker.com/v2/repositories/liferay/dxp/tags?name=${RELEASE_TAG}-&ordering=last_updated" | jq -r '.results[].name' | sort -r -t'-' -k3 | head -n 1)"
 elif [[ $1 == *-7413.zip ]]; then
 	RELEASE_TAG="7.4.13-$(unzip -c "${1}" fixpack_documentation.json 2>/dev/null | tail -n +3 | jq -r '.patch.requirements')"
 	HOTFIX_IMAGE_TAG="${RELEASE_TAG}-$(basename ${1} | sed 's/\-7413.zip$//g' | sed 's/liferay-//g')"
-	RELEASE_TAG="$(curl -s "https://hub.docker.com/v2/repositories/liferay/dxp/tags?name=${RELEASE_TAG}&ordering=last_updated" | jq -r '.results[].name' | sort -r -t'-' -k4 | head -n 1)"
+	RELEASE_TAG="$(curl -s "https://hub.docker.com/v2/repositories/liferay/dxp/tags?name=${RELEASE_TAG}-&ordering=last_updated" | jq -r '.results[].name' | sort -r -t'-' -k4 | head -n 1)"
 elif [[ $1 == *-7310.zip ]]; then
 	RELEASE_TAG="7.3.10-$(unzip -c "${1}" fixpack_documentation.json 2>/dev/null | tail -n +3 | jq -r '.patch.requirements')"
 	HOTFIX_IMAGE_TAG="${RELEASE_TAG}-$(basename ${1} | sed 's/\-7310.zip$//g' | sed 's/liferay-//g')"
-	RELEASE_TAG="$(curl -s "https://hub.docker.com/v2/repositories/liferay/dxp/tags?name=${RELEASE_TAG}&ordering=last_updated" | jq -r '.results[].name' | sort -r -t'-' -k5 | head -n 1)"
+	RELEASE_TAG="$(curl -s "https://hub.docker.com/v2/repositories/liferay/dxp/tags?name=${RELEASE_TAG}-&ordering=last_updated" | jq -r '.results[].name' | sort -r -t'-' -k5 | head -n 1)"
 elif [[ $1 == *-7210.zip ]]; then
 	RELEASE_TAG="7.2.10-$(unzip -c "${1}" fixpack_documentation.xml 2>/dev/null | tail -n +3 | xq -r '.patch.requirements' | sed 's/=/-/g')"
 	HOTFIX_IMAGE_TAG="${RELEASE_TAG}-$(basename ${1} | sed 's/\-7210.zip$//g' | sed 's/liferay-//g')"
-	RELEASE_TAG="$(curl -s "https://hub.docker.com/v2/repositories/liferay/dxp/tags?name=${RELEASE_TAG}&ordering=last_updated" | jq -r '.results[].name' | sort -r -t'-' -k5 | head -n 1)"
+	RELEASE_TAG="$(curl -s "https://hub.docker.com/v2/repositories/liferay/dxp/tags?name=${RELEASE_TAG}-&ordering=last_updated" | jq -r '.results[].name' | sort -r -t'-' -k5 | head -n 1)"
 elif [[ $1 == *-7110.zip ]]; then
 	RELEASE_TAG="7.1.10-$(unzip -c "${1}" fixpack_documentation.xml 2>/dev/null | tail -n +3 | xq -r '.patch.requirements' | sed 's/=/-/g')"
 	HOTFIX_IMAGE_TAG="${RELEASE_TAG}-$(basename ${1} | sed 's/\-7110.zip$//g' | sed 's/liferay-//g')"
-	RELEASE_TAG="$(curl -s "https://hub.docker.com/v2/repositories/liferay/dxp/tags?name=${RELEASE_TAG}&ordering=last_updated" | jq -r '.results[].name' | sort -r -t'-' -k5 | head -n 1)"
+	RELEASE_TAG="$(curl -s "https://hub.docker.com/v2/repositories/liferay/dxp/tags?name=${RELEASE_TAG}-&ordering=last_updated" | jq -r '.results[].name' | sort -r -t'-' -k5 | head -n 1)"
 else
 	echo "No docker image for ${1}"
 	exit 1
@@ -69,20 +78,22 @@ RUN echo 'liferay.home=/opt/liferay' | tee /opt/liferay/tools/portal-tools-db-up
 RUN /opt/liferay/tools/portal-tools-db-upgrade-client/db_upgrade_client.sh --jvm-opts '-Djdk.util.zip.disableZip64ExtraFieldValidation=true'
 "
 
-(
-echo "${PATCH_LIFERAY}"
+if [ "" != "${HOTFIX_IMAGE_TAG}" ]; then
+	(
+	echo "${PATCH_LIFERAY}"
 
-if [ "${2}" == "startup" ]; then
-	echo "${START_LIFERAY}"
+	if [ "${2}" == "startup" ]; then
+		echo "${START_LIFERAY}"
+	fi
+	) | docker build --progress=plain -t liferay/hotfix:${HOTFIX_IMAGE_TAG} -f - .
 fi
-) | docker build --progress=plain -t liferay/hotfix:${HOTFIX_IMAGE_TAG} -f - .
 
 if [ "" != "$(docker inspect liferay/dxp:${RELEASE_TAG})" ]; then
 	docker scout sbom liferay/dxp:${RELEASE_TAG} | tee ${RELEASE_TAG}.sbom.json
 	docker scout cves liferay/dxp:${RELEASE_TAG} | tee ${RELEASE_TAG}.cves.json
 fi
 
-if [ "" != "$(docker inspect liferay/hotfix:${HOTFIX_IMAGE_TAG})" ]; then
+if [ "" != "${HOTFIX_IMAGE_TAG}" ] && [ "" != "$(docker inspect liferay/hotfix:${HOTFIX_IMAGE_TAG})" ]; then
 	docker scout sbom liferay/hotfix:${HOTFIX_IMAGE_TAG} | tee ${HOTFIX_IMAGE_TAG}.sbom.json
 	docker scout cves liferay/hotfix:${HOTFIX_IMAGE_TAG} | tee ${HOTFIX_IMAGE_TAG}.cves.txt
 
