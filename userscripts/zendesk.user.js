@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        20.4
+// @version        20.5
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -276,7 +276,7 @@ function checkUser(ticketId, ticketInfo, callback) {
  * Audit event information is incomplete unless we specifically
  * request it, so do that here.
  */
-function checkEvents(ticketId, callback, audits, pageId) {
+function checkEvents(ticketId, ticketInfo, callback, audits, pageId) {
     if (audits === void 0) { audits = []; }
     if (pageId === void 0) { pageId = 1; }
     var xhr = new XMLHttpRequest();
@@ -289,16 +289,15 @@ function checkEvents(ticketId, callback, audits, pageId) {
         }
         Array.prototype.push.apply(audits, auditInfo.audits);
         if (auditInfo.next_page) {
-            checkEvents(ticketId, callback, audits, pageId + 1);
+            checkEvents(ticketId, ticketInfo, callback, audits, pageId + 1);
         }
         else {
-            var ticketInfo = ticketInfoCache[ticketId];
             ticketInfo['audits'] = audits;
-            callback(ticketId, ticketInfo);
+            callback();
         }
     };
     xhr.onerror = function () {
-        callback(ticketId, null);
+        callback();
     };
     var auditEventsURL = [
         document.location.protocol,
@@ -313,6 +312,23 @@ function checkEvents(ticketId, callback, audits, pageId) {
     xhr.setRequestHeader('Cache-Control', 'no-cache, no-store, max-age=0');
     xhr.setRequestHeader('Pragma', 'no-cache');
     xhr.send();
+}
+/**
+ * Comments are hidden behind a "Show More" button, so click it here
+ * until we've loaded everything.
+ */
+function checkComments(conversation, callback) {
+    var showMoreButton = document.querySelector('button[data-test-id="convolog-show-more-button"]');
+    if (showMoreButton) {
+        showMoreButton.click();
+        setTimeout(checkComments.bind(null, conversation, callback), 500);
+        return;
+    }
+    if (document.querySelector('[role="progressbar"]')) {
+        setTimeout(checkComments.bind(null, conversation, callback), 500);
+        return;
+    }
+    callback();
 }
 function addServiceLifeMarker(priorityElement, ticketId, ticketTags, organizationTags) {
     var limitedSupport = false;
@@ -1291,9 +1307,9 @@ function addTicketDescription(ticketId, ticketInfo, conversation) {
     addPriorityMarker(header, conversation, ticketId, ticketInfo);
     addSubjectTextWrap(header, ticketId, ticketInfo);
     // Generate something to hold all of our attachments.
-    addHeaderLinkModal('description-modal', 'Description', header, conversation, createDescriptionContainer.bind(null, ticketId, ticketInfo, conversation));
-    addHeaderLinkModal('description-modal', 'Fast Track', header, conversation, checkEvents.bind(null, ticketId, createKnowledgeCaptureContainer.bind(null, ticketId, ticketInfo, conversation)));
-    addHeaderLinkModal('attachments-modal', 'Attachments', header, conversation, createAttachmentsContainer.bind(null, ticketId, ticketInfo, conversation));
+    addHeaderLinkModal('description-modal', 'Description', header, conversation, checkComments.bind(null, conversation), createDescriptionContainer.bind(null, ticketId, ticketInfo, conversation));
+    addHeaderLinkModal('description-modal', 'Fast Track', header, conversation, checkEvents.bind(null, ticketId, ticketInfo), createKnowledgeCaptureContainer.bind(null, ticketId, ticketInfo, conversation));
+    addHeaderLinkModal('attachments-modal', 'Attachments', header, conversation, checkComments.bind(null, conversation), createAttachmentsContainer.bind(null, ticketId, ticketInfo, conversation));
     addSortButton(conversation, header);
 }
 function createDescriptionContainer(ticketId, ticketInfo, conversation) {
@@ -1683,24 +1699,6 @@ function initializeModal(conversation, contentWrapper, callback) {
     var content = callback();
     var loadingElement = contentWrapper.querySelector('.loading');
     if (content == null) {
-        var showMoreButton = document.querySelector('button[data-test-id="convolog-show-more-button"]');
-        if (showMoreButton) {
-            if (!loadingElement) {
-                loadingElement = document.createElement('div');
-                loadingElement.classList.add('loading');
-                contentWrapper.appendChild(loadingElement);
-            }
-            var commentCount = conversation.querySelectorAll('article').length;
-            loadingElement.innerHTML = 'Loading older comments (' + commentCount + ' loaded so far)...';
-            contentWrapper.appendChild(loadingElement);
-            showMoreButton.click();
-            setTimeout(initializeModal.bind(null, conversation, contentWrapper, callback), 500);
-            return;
-        }
-        if (document.querySelector('[role="progressbar"]')) {
-            setTimeout(initializeModal.bind(null, conversation, contentWrapper, callback), 500);
-            return;
-        }
         content = document.createElement('div');
         content.appendChild(document.createTextNode('No data found.'));
     }
@@ -1710,7 +1708,7 @@ function initializeModal(conversation, contentWrapper, callback) {
     }
     contentWrapper.appendChild(content);
 }
-function createModal(modalId, linkText, header, conversation, callback) {
+function createModal(modalId, linkText, header, conversation, dataCallback, elementCallback) {
     var modal = document.createElement('div');
     modal.setAttribute('id', modalId);
     modal.classList.add('modal', 'modal-resizable', 'in');
@@ -1733,13 +1731,17 @@ function createModal(modalId, linkText, header, conversation, callback) {
     header.after(modal);
     var contentWrapper = document.createElement('div');
     contentWrapper.classList.add('modal-body', 'app_view_wrapper');
+    var loadingElement = document.createElement('div');
+    loadingElement.classList.add('loading');
+    loadingElement.innerHTML = 'Loading data...';
+    contentWrapper.appendChild(loadingElement);
     iframe.appendChild(contentWrapper);
-    initializeModal(conversation, contentWrapper, callback);
+    dataCallback(initializeModal.bind(null, conversation, contentWrapper, elementCallback));
 }
-function addHeaderLinkModal(modalId, linkText, header, conversation, callback) {
+function addHeaderLinkModal(modalId, linkText, header, conversation, dataCallback, elementCallback) {
     var openLink = document.createElement('a');
     openLink.textContent = linkText;
-    openLink.onclick = createModal.bind(null, modalId, linkText, header, conversation, callback);
+    openLink.onclick = createModal.bind(null, modalId, linkText, header, conversation, dataCallback, elementCallback);
     var viaLabel = conversation.querySelector('div[data-test-id="omni-header-via-label"]');
     var divider = document.createElement('div');
     divider.classList.add('Divider-sc-2k6bz0-9', 'fNgWaW', 'lesa-ui-modal-header-link');
