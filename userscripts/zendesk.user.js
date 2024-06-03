@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        20.5
+// @version        20.6
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -2214,6 +2214,10 @@ var rowCounts = {};
 function createViewGroupRowsSummary(rowCounts) {
     var table = document.createElement('table');
     table.classList.add('table', 'lesa-ui-group-rows-summary');
+    var ticketTable = document.querySelector('div#views_views-ticket-table > div');
+    if (ticketTable) {
+        table.setAttribute('data-views-ticket-table-id', ticketTable.getAttribute('id') || '');
+    }
     var body = Array.from(Object.keys(rowCounts)).sort().reduce(function (acc, next) {
         var row = document.createElement('tr');
         var valueCell = document.createElement('td');
@@ -2228,22 +2232,24 @@ function createViewGroupRowsSummary(rowCounts) {
     table.appendChild(body);
     return table;
 }
-function checkViewGroupRows(counterElement, rowCounts, page) {
-    var paginator = document.querySelector('ul[data-garden-id="pagination.pagination_view"]');
-    if (!paginator) {
-        setTimeout(checkViewGroupRows.bind(null, counterElement, rowCounts, page), 500);
-        return;
+function checkViewGroupRows(counterElement, rowCounts) {
+    var pageIndicator = document.querySelector('span[data-test-id="views_views-header-page-amount"]');
+    if (pageIndicator) {
+        var pageMatcher = (pageIndicator.textContent || '').match(/\d+/g);
+        if (pageMatcher) {
+            var _a = pageMatcher.map(function (it) { return parseInt(it); }).sort(function (a, b) { return a - b; }), current = _a[0], total = _a[1];
+            if (current != 1) {
+                var firstElement = document.querySelector('button[data-test-id="generic-table-pagination-first"]');
+                firstElement.click();
+            }
+        }
+        checkViewGroupRowsNextPageView(counterElement, rowCounts, 1);
     }
-    var pageElement = paginator.querySelector('li[title="' + page + '"]');
-    if (!pageElement) {
-        counterElement.appendChild(createViewGroupRowsSummary(rowCounts));
-        return;
+    else {
+        checkViewGroupRowsPaginationView(counterElement, rowCounts, 1);
     }
-    if (pageElement.getAttribute('aria-current') != 'true') {
-        pageElement.click();
-        setTimeout(checkViewGroupRows.bind(null, counterElement, rowCounts, page), 500);
-        return;
-    }
+}
+function updateViewGroupRowCounts(rowCounts) {
     var tableBody = document.querySelector('table[data-garden-id="tables.table"] tbody');
     if (!tableBody) {
         return;
@@ -2264,7 +2270,56 @@ function checkViewGroupRows(counterElement, rowCounts, page) {
             ++rowCounts[groupName];
         }
     }
-    checkViewGroupRows(counterElement, rowCounts, page + 1);
+}
+function checkViewGroupRowsNextPageView(counterElement, rowCounts, page) {
+    var paginator = document.querySelector('nav[data-test-id="generic-table-pagination"]');
+    console.log(paginator, rowCounts, page);
+    if (!paginator) {
+        setTimeout(checkViewGroupRowsNextPageView.bind(null, counterElement, rowCounts, page), 100);
+        return;
+    }
+    var pageIndicator = document.querySelector('[data-test-id="views_views-header-page-amount"]');
+    if (pageIndicator == null) {
+        setTimeout(checkViewGroupRowsNextPageView.bind(null, counterElement, rowCounts, page), 100);
+        return;
+    }
+    var pageMatcher = (pageIndicator.textContent || '').match(/\d+/g);
+    if (pageMatcher == null) {
+        setTimeout(checkViewGroupRowsNextPageView.bind(null, counterElement, rowCounts, page), 100);
+        return;
+    }
+    var _a = pageMatcher.map(function (it) { return parseInt(it); }).sort(function (a, b) { return a - b; }), current = _a[0], total = _a[1];
+    if (current != page) {
+        setTimeout(checkViewGroupRowsNextPageView.bind(null, counterElement, rowCounts, page), 100);
+        return;
+    }
+    updateViewGroupRowCounts(rowCounts);
+    if (current == total) {
+        counterElement.appendChild(createViewGroupRowsSummary(rowCounts));
+        return;
+    }
+    var nextElement = document.querySelector('button[data-test-id="generic-table-pagination-next"]');
+    nextElement.click();
+    setTimeout(checkViewGroupRowsNextPageView.bind(null, counterElement, rowCounts, page + 1), 100);
+}
+function checkViewGroupRowsPaginationView(counterElement, rowCounts, page) {
+    var paginator = document.querySelector('ul[data-garden-id="pagination.pagination_view"]');
+    if (!paginator) {
+        setTimeout(checkViewGroupRowsPaginationView.bind(null, counterElement, rowCounts, page), 500);
+        return;
+    }
+    var pageElement = paginator.querySelector('li[title="' + page + '"]');
+    if (!pageElement) {
+        counterElement.appendChild(createViewGroupRowsSummary(rowCounts));
+        return;
+    }
+    if (pageElement.getAttribute('aria-current') != 'true') {
+        pageElement.click();
+        setTimeout(checkViewGroupRowsPaginationView.bind(null, counterElement, rowCounts, page), 500);
+        return;
+    }
+    updateViewGroupRowCounts(rowCounts);
+    checkViewGroupRowsPaginationView(counterElement, rowCounts, page + 1);
 }
 function addViewsBreakdownLink() {
     var counterElement = document.querySelector('div[data-test-id="views_views-header-counter"]');
@@ -2272,9 +2327,16 @@ function addViewsBreakdownLink() {
         return;
     }
     var breakdownLink = counterElement.querySelector('a.lesa-ui-count-breakdown');
-    var groupRowsSummaryTable = counterElement.querySelector('table.lesa-ui-group-rows-summary');
-    if (breakdownLink || groupRowsSummaryTable) {
+    if (breakdownLink) {
         return;
+    }
+    var groupRowsSummaryTable = counterElement.querySelector('table.lesa-ui-group-rows-summary');
+    if (groupRowsSummaryTable) {
+        var ticketTable = document.querySelector('div#views_views-ticket-table > div');
+        if (ticketTable && groupRowsSummaryTable.getAttribute('data-views-ticket-table-id') == ticketTable.getAttribute('id')) {
+            return;
+        }
+        groupRowsSummaryTable.remove();
     }
     var groupRow = document.querySelector('table[data-garden-id="tables.table"] tbody tr[data-garden-id="tables.group_row"]');
     if (!groupRow) {
@@ -2285,7 +2347,7 @@ function addViewsBreakdownLink() {
     breakdownLink.textContent = '(count groups)';
     breakdownLink.addEventListener('click', function () {
         breakdownLink.remove();
-        checkViewGroupRows(counterElement, {}, 1);
+        checkViewGroupRows(counterElement, {});
     });
     counterElement.appendChild(breakdownLink);
 }
