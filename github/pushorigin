@@ -3,7 +3,7 @@
 pushorigin() {
 	local branch_name=${1}
 	local upstream_name=${2}
-	local origin_name=${3}
+	local origin_names=${3}
 
 	if [ "" == "${1}" ] || [ "" == "${2}" ]; then
 		echo "pushorigin <branch_name> <upstream_name> [origin_name]"
@@ -18,33 +18,35 @@ pushorigin() {
 			return 1
 		fi
 
-		origin_name=$(git remote -v | grep -F $(echo ${upstream_url} | cut -d'/' -f 2) | grep -vF ${upstream_url} | awk '{ print $1 }' | uniq)
+		origin_names=$(git remote -v | grep -F $(echo ${upstream_url} | cut -d'/' -f 2) | grep -vF ${upstream_url} | awk '{ print $1 }' | uniq)
 
-		if [ "" == "${origin_name}" ]; then
+		if [ "" == "${origin_names}" ]; then
 			return 0
 		fi
 	fi
 
-	echo "Updating ${branch_name} on ${origin_name}"
+	for origin_name in ${origin_names}; do
+		echo "Updating ${branch_name} on ${origin_name}"
 
-	if [ "" == "$(git for-each-ref refs/remotes/${origin_name}/${branch_name})" ]; then
-		commit=$(git log --reverse --pretty='%H' ${upstream_name}/${branch_name} | head -1)
-		git push ${origin_name} ${commit}:refs/heads/${branch_name}
-	fi
-
-	local origin_url=$(git remote -v | grep "^${origin_name}\s" | awk '{ print $2 }' | uniq)
-
-	if [[ "${origin_url}" == git@github.com:* ]]; then
-		local origin_repo=$(echo "${origin_url}" | cut -d':' -f 2 | sed 's/.git$//g')
-		gh repo sync ${origin_repo} -b ${branch_name}
-	else
-		for commit in $(git log --reverse --pretty='%H' ${origin_name}/${branch_name}..${upstream_name}/${branch_name} | awk 'NR % 10000 == 0'); do
+		if [ "" == "$(git for-each-ref refs/remotes/${origin_name}/${branch_name})" ]; then
+			commit=$(git log --reverse --pretty='%H' ${upstream_name}/${branch_name} | head -1)
 			git push ${origin_name} ${commit}:refs/heads/${branch_name}
-		done
+		fi
 
-		commit=$(git log -1 --pretty='%H' ${upstream_name}/${branch_name})
-		git push ${origin_name} ${commit}:refs/heads/${branch_name}
-	fi
+		local origin_url=$(git remote -v | grep "^${origin_name}\s" | awk '{ print $2 }' | uniq)
+
+		if [[ "${origin_url}" == git@github.com:* ]]; then
+			local origin_repo=$(echo "${origin_url}" | cut -d':' -f 2 | sed 's/.git$//g')
+			gh repo sync ${origin_repo} -b ${branch_name}
+		else
+			for commit in $(git log --reverse --pretty='%H' ${origin_name}/${branch_name}..${upstream_name}/${branch_name} | awk 'NR % 10000 == 0'); do
+				git push ${origin_name} ${commit}:refs/heads/${branch_name}
+			done
+
+			commit=$(git log -1 --pretty='%H' ${upstream_name}/${branch_name})
+			git push ${origin_name} ${commit}:refs/heads/${branch_name}
+		fi
+	done
 }
 
 pushorigin $@

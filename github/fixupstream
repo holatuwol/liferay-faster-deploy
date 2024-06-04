@@ -14,6 +14,8 @@ deletebranches() {
 		echo "$remote_branches" | grep -v '/master$' | grep -v '/ee-[0-9]*\.[0-9]*\.x$'
 	elif [ "git@github.com:liferay/liferay-plugins-ee.git" == "$remote_url" ]; then
 		echo "$remote_branches" | grep -v '/ee-[0-9]*\.[0-9]*\.x$' | grep -v '/ee-[0-9]*\.[0-9]*\.[0-9]*$'
+	elif [ "git@github.com:liferay/liferay-dxp.git" == "$remote_url" ]; then
+		echo "$remote_branches" | grep -v '/[0-9][0-9][0-9][0-9].q[0-9]*$'
 	elif [[ "$remote_url" == git@github.com:liferay/* ]]; then
 		echo "$remote_branches" | grep -v '/master$' | grep -v '/master-private$' | grep -v '/[0-9]*.[0-9]*.x-private$' | grep -v '/develop$'
 	fi
@@ -32,6 +34,7 @@ fixupstream() {
 		fi
 
 		for delete_branch in $delete_branches; do
+			echo git branch -d -r $delete_branch
 			git branch -d -r $delete_branch
 		done
 
@@ -42,23 +45,15 @@ fixupstream() {
 		fi
 
 		if [ "" != "$retain_branches" ]; then
+			echo git remote set-branches $remote $(echo "$retain_branches" | tr '\n' ' ')
 			git remote set-branches $remote $(echo "$retain_branches" | tr '\n' ' ')
 		fi
 
 		for branch in $retain_branches; do
+			echo pushorigin $branch $remote
 			pushorigin $branch $remote
 		done
 	done
-
-	for remote in $(git remote | grep upstream); do
-		git fetch --no-tags $remote --prune
-	done
-
-	for remote in $(git remote | grep origin); do
-		git fetch $remote --prune
-	done
-
-	git prune
 
 	return 0
 }
@@ -85,6 +80,8 @@ retainbranches() {
 	elif [ "git@github.com:liferay/liferay-plugins-ee.git" == "$remote_url" ]; then
 		echo "$remote_branches" | grep '/ee-[0-9]*\.[0-9]*\.x$'
 		echo "$remote_branches" | grep '/ee-[0-9]*\.[0-9]*\.[0-9]*$'
+	elif [ "git@github.com:liferay/liferay-dxp.git" == "$remote_url" ]; then
+		echo "$remote_branches" | grep '/[0-9][0-9][0-9][0-9].q[0-9]*$'
 	else
 		echo "$remote_branches" | grep '/master$'
 		echo "$remote_branches" | grep '/master-private$'
