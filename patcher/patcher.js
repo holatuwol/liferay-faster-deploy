@@ -173,6 +173,12 @@ function getLiferayVersion(version) {
 
     return parseInt(shortVersion) * 100 * 1000 + updateVersion;
   }
+  else if (version.indexOf('.q') != -1) {
+    var shortVersionMatcher = /([0-9][0-9][0-9][0-9])\.q([0-9])\.([0-9]*)/.exec(version);
+    var shortVersion = parseInt(shortVersionMatcher[1]) * 1000 + parseInt(shortVersionMatcher[2]) * 100 + parseInt(shortVersionMatcher[3]);
+
+    return parseInt(shortVersion) * 100 * 1000;
+  }
   else {
     var shortVersion = /[0-9]*\.[0-9]/.exec(version)[0].replace('.', '');
 
