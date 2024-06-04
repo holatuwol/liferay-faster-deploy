@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        20.7
+// @version        20.9
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -2367,7 +2367,12 @@ function populateViewsExtraColumns(tickets) {
         if (!link) {
             continue;
         }
-        var categoriesContainer = document.createElement('div');
+        var cell = link.closest('td');
+        var categoriesContainer = cell.querySelector('.lesa-ui-tags');
+        if (categoriesContainer) {
+            categoriesContainer.remove();
+        }
+        categoriesContainer = document.createElement('div');
         categoriesContainer.classList.add('lesa-ui-tags');
         categoriesContainer = swarmCategories.reduce(function (acc, next) {
             var categoryElement = document.createElement('span');
@@ -2375,7 +2380,6 @@ function populateViewsExtraColumns(tickets) {
             acc.appendChild(categoryElement);
             return acc;
         }, categoriesContainer);
-        var cell = link.closest('td');
         cell.appendChild(categoriesContainer);
     }
 }
@@ -2386,6 +2390,7 @@ function addViewsExtraColumns() {
     }
     var currentFilter = unsafeWindow.location.pathname.substring('/agent/filters/'.length);
     var currentPage = '1';
+    var currentSorts = Array.from(document.querySelectorAll('div#views_views-ticket-table thead th[aria-sort]:not([aria-sort="none"])')).map(function (it) { return it.textContent; }).filter(function (it) { return it && it.trim(); }).join(',');
     var pageIndicator = document.querySelector('span[data-test-id="views_views-header-page-amount"]');
     if (pageIndicator) {
         var pageMatcher = (pageIndicator.textContent || '').match(/\d+/g);
@@ -2395,11 +2400,13 @@ function addViewsExtraColumns() {
     }
     var previousFilter = ticketTable.getAttribute('data-lesa-ui-filter-container-id');
     var previousPage = ticketTable.getAttribute('data-lesa-ui-filter-page-number');
-    if ((currentFilter == previousFilter) && (currentPage == previousPage)) {
+    var previousSorts = ticketTable.getAttribute('data-lesa-ui-filter-sorts');
+    if ((currentFilter == previousFilter) && (currentPage == previousPage) && (currentSorts == previousSorts)) {
         return;
     }
     ticketTable.setAttribute('data-lesa-ui-filter-container-id', currentFilter);
     ticketTable.setAttribute('data-lesa-ui-filter-page-number', currentPage);
+    ticketTable.setAttribute('data-lesa-ui-filter-sorts', currentSorts);
     var requestURL = '/api/v2/views/' + currentFilter + '/tickets.json?per_page=30&page=' + currentPage;
     GM.xmlHttpRequest({
         'method': 'GET',
