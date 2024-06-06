@@ -8,7 +8,9 @@ import sys
 
 sys.path.insert(0, dirname(dirname(abspath(inspect.getfile(inspect.currentframe())))))
 
-from jira import get_issues, get_issue_changelog, get_issue_fields, get_releases
+from jira import get_issues, get_issue_changelog, get_issue_fields, get_releases, jira_env
+
+reload_fixed_issues = False
 
 lsv_pattern = re.compile('LSV-[0-9]+')
 
@@ -31,6 +33,9 @@ update_fixed_issues = {}
 quarterly_fixed_issues = {}
 
 def get_release_cf(release_name):
+    if release_name == '7.4.13-ga1':
+        return 0
+
     if release_name.find('.q') != -1:
         release_parts = release_name.split('.')
         return '%d.%d' % (int(release_parts[0]), int(release_parts[1][1:]) * 100 + int(release_parts[2]))
@@ -38,6 +43,9 @@ def get_release_cf(release_name):
     return int(release_name.split('-')[1][1:])
 
 def get_release_ulevel(release_name):
+    if release_name == '7.4.13-ga1':
+        return 0
+
     if release_name.find('.q') != -1:
         short_name = release_name[:7]
 
@@ -57,10 +65,17 @@ def ticket_sort_key(line):
     return (issue_key[:last_dash], int(issue_key[last_dash+1:]))
 
 def get_fixed_issues(release_name, release_ids):
-    query = f'(project in ("LPE","LPS","LPD") AND cf[10210] = {get_release_cf(release_name)})'
+    release_cf = get_release_cf(release_name)
 
-    if release_ids is not None:
-        query = 'fixVersion in (%s) or %s ' % (','.join(release_ids), query)
+    if release_ids is not None and release_cf != 0:
+        query = 'fixVersion in (%s) OR (project in ("LPE","LPS","LPD") AND cf[10210] = %s)' % (','.join(release_ids), release_cf)
+    elif release_ids is not None:
+        query = 'fixVersion in (%s)' % ','.join(release_ids)
+    elif release_cf != 0:
+        query = f'project in ("LPE","LPS","LPD") AND cf[10210] = {release_cf}'
+    else:
+        print(f'unrecognized release {release_name}')
+        return {}
 
     fixed_issues = get_issues(query, ['summary', 'description', 'security'], render=True)
 
@@ -110,9 +125,10 @@ def get_fixed_issues(release_name, release_ids):
     return release_issues
 
 def update_releases():
+    project_releases = defaultdict(list)
     unsorted_releases = defaultdict(list)
 
-    def add_release(release):
+    def add_release(project, release):
         name = release['name']
         short_name = None
 
@@ -120,6 +136,11 @@ def update_releases():
             release_num = int(name[6:name.find(' ')])
             if release_num >= 15:
                 short_name = '7.4.13-u%d' % release_num
+            elif release_num > 4:
+                short_name = '7.4.13-u%d' % (release_num - 4)
+        elif name == '7.4.13 DXP GA1':
+            release_num = 0
+            short_name = '7.4.13-ga1'
         elif name[:12] == '7.4.13 DXP U':
             release_num = int(name[12:])
             short_name = '7.4.13-u%d' % release_num
@@ -127,31 +148,35 @@ def update_releases():
             short_name = name.lower().strip()
 
         if short_name is not None and get_release_ulevel(short_name) is not None:
+            project_releases[project].append(str(release['id']))
             unsorted_releases[short_name].append(str(release['id']))
             unsorted_releases[short_name] = sorted(unsorted_releases[short_name])
 
     for release in get_releases('LPS'):
-        add_release(release)
+        add_release('LPS', release)
 
     for release in get_releases('LPD'):
-        add_release(release)
+        add_release('LPD', release)
 
     sorted_releases = OrderedDict(sorted(unsorted_releases.items(), key=lambda x: release_sort_key(x[0])))
 
-    with open('releases.json', 'w') as f:
+    with open(f'releases.{jira_env}.json', 'w') as f:
         json.dump(sorted_releases, f, sort_keys=False, indent=2, separators=(',', ': '))
+
+    with open(f'releases.{jira_env}.projects.json', 'w') as f:
+        json.dump(project_releases, f, sort_keys=False, indent=2, separators=(',', ': '))
 
 update_releases()
 
 def pull_updates():
-    with open('releases.json', 'r') as f:
+    with open(f'releases.{jira_env}.json', 'r') as f:
         releases = json.load(f)
 
     for release_name, release_ids in releases.items():
         if release_name.find('.q') != -1:
             continue
 
-        release_file_name = f'releases/{release_name}.json'
+        release_file_name = f'releases.{jira_env}/{release_name}.json'
 
         if exists(release_file_name):
             print(f'Reading {release_name} metadata')
@@ -171,18 +196,18 @@ def pull_updates():
         if not exists(release_file_name):
             print(f'Writing {release_name} metadata')
 
-            with open(f'releases/{release_name}.json', 'w') as f:
+            with open(f'releases.{jira_env}/{release_name}.json', 'w') as f:
                 json.dump(fixed_issues, f, sort_keys=False, separators=(',', ':'))
 
 def pull_quarterlies():
-    with open('releases.json', 'r') as f:
+    with open(f'releases.{jira_env}.json', 'r') as f:
         releases = json.load(f)
 
     for release_name, release_ids in releases.items():
         if release_name.find('.q') == -1:
             continue
 
-        release_file_name = f'releases/{release_name}.json'
+        release_file_name = f'releases.{jira_env}/{release_name}.json'
 
         if exists(release_file_name):
             print(f'Reading {release_name} metadata')
@@ -205,11 +230,11 @@ def pull_quarterlies():
         if not exists(release_file_name):
             print(f'Writing {release_name} metadata')
 
-            with open(f'releases/{release_name}.json', 'w') as f:
+            with open(f'releases.{jira_env}/{release_name}.json', 'w') as f:
                 json.dump(fixed_issues, f, sort_keys=False, separators=(',', ':'))
 
-pull_updates()
-pull_quarterlies()
+# pull_updates()
+# pull_quarterlies()
 
 def check_issue_changelog(issue_key):
     releases_updates = set()
@@ -234,13 +259,17 @@ def check_issue_changelog(issue_key):
 
     if len(updates) != 0 or len(quarterlies) != 0:
         for fix_version in past_fix_versions:
-            if fix_version.find('7.4.13 DXP U') == 0:
+            if fix_version == '7.4.13 DXP GA1':
+                update_fixed_issues[0].remove(issue_key)
+            elif fix_version.find('7.4.13 DXP U') == 0:
                 update_fixed_issues[int(fix_version[12:])].remove(issue_key)
             elif fix_version.find('.q') != -1:
                 if issue_key in quarterly_fixed_issues[fix_version]:
                     quarterly_fixed_issues[fix_version].remove(issue_key)
 
     for fix_version in past_fix_versions:
+        if fix_version == '7.4.13 DXP GA1':
+            updates.add(0)
         if fix_version.find('7.4.13 DXP U') == 0:
             updates.add(int(fix_version[12:]))
 
@@ -261,7 +290,7 @@ def check_issue_changelog(issue_key):
     return missing_updates + missing_quarterlies
 
 def check_changelogs():
-    with open('releases.json', 'r') as f:
+    with open(f'releases.{jira_env}.json', 'r') as f:
         releases = json.load(f)
 
     post92_fixed_issues = set()
@@ -281,8 +310,8 @@ def check_changelogs():
         check_issue_changelog(issue_key)
 
     for i, issue_keys in update_fixed_issues.items():
-        release_name = '7.4.13-u%d' % i
-        release_file_name = 'releases/%s.json' % release_name
+        release_name = '7.4.13-u%d' % i if i > 0 else '7.4.13-ga1'
+        release_file_name = f'releases.{jira_env}/{release_name}.json'
         if len(issue_keys) == 0:
             del releases[release_name]
             os.remove(release_file_name)
@@ -291,7 +320,7 @@ def check_changelogs():
                 json.dump({key: ticket_summaries[key] for key in sorted(issue_keys, key=ticket_sort_key)}, f)
 
     for release_name, issue_keys in quarterly_fixed_issues.items():
-        release_file_name = 'releases/%s.json' % release_name
+        release_file_name = f'releases.{jira_env}/{release_name}.json'
         if len(issue_keys) == 0:
             del releases[release_name]
             os.remove(release_file_name)
@@ -299,16 +328,16 @@ def check_changelogs():
             with open(release_file_name, 'w') as f:
                 json.dump({key: ticket_summaries[key] for key in sorted(issue_keys, key=ticket_sort_key)}, f)
 
-    with open('releases.json', 'w') as f:
+    with open(f'releases.{jira_env}.json', 'w') as f:
         json.dump(releases, f, sort_keys=False, indent=2, separators=(',', ': '))
 
-check_changelogs()
+# check_changelogs()
 
 def save_fix_versions():
     ticket_fix_versions = defaultdict(list)
 
     for i, issue_keys in update_fixed_issues.items():
-        release_name = '7.4.13-u%d' % i
+        release_name = '7.4.13-u%d' % i if i > 0 else '7.4.13-ga1'
 
         for issue_key in issue_keys:
             ticket_fix_versions[issue_key].append(release_name)
@@ -317,9 +346,9 @@ def save_fix_versions():
         for issue_key in issue_keys:
             ticket_fix_versions[issue_key].append(release_name)
 
-    with open('releases.csv', 'w') as f:
+    with open(f'releases.{jira_env}.csv', 'w') as f:
         f.write('ticket\tfixPackVersion\n')
         for issue_key in sorted(ticket_fix_versions.keys(), key=ticket_sort_key):
         	f.write(f'{issue_key}\t{",".join(ticket_fix_versions[issue_key])}\n')
 
-save_fix_versions()
+# save_fix_versions()

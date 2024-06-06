@@ -7,18 +7,27 @@ import time
 
 import git
 
-jira_base_url = 'https://liferay.atlassian.net'
-
 jira_username = git.config('jira.session-username')
 jira_password = git.config('jira.session-password')
+
+#jira_env = 'production'
+#jira_base_url = 'https://liferay.atlassian.net'
+
+jira_env = 'sandbox'
+jira_base_url = 'https://liferay-sandbox-822.atlassian.net'
 
 def get_jira_auth():
     return {
         'Authorization': 'Basic %s' % b64encode(f'{jira_username}:{jira_password}'.encode('utf-8')).decode('ascii')
     }
 
-def await_request(url, payload):
-    return await_response(lambda: requests.get(url, headers=get_jira_auth(), params=payload))
+def await_get_request(url, payload):
+    print(url, payload)
+    return await_response(lambda: requests.get(url, params=payload, headers=get_jira_auth()))
+
+def await_put_request(url, payload):
+    print(url, payload)
+    return await_response(lambda: requests.put(url, json=payload, headers=get_jira_auth()))
 
 def await_response(response_generator):
     r = response_generator()
@@ -56,7 +65,7 @@ def get_issues(jql, fields=[], expand=[], render=False):
 
     search_url = f'{jira_base_url}/rest/api/2/search'
 
-    r = await_request(search_url, payload)
+    r = await_get_request(search_url, payload)
 
     issues = {}
 
@@ -72,7 +81,7 @@ def get_issues(jql, fields=[], expand=[], render=False):
         start_at += len(response_json['issues'])
         payload['startAt'] = start_at
 
-        r = await_request(search_url, payload)
+        r = await_get_request(search_url, payload)
 
         if r.status_code != 200:
             return issues
@@ -94,7 +103,7 @@ def get_issue_changelog(issue_key):
         'maxResults': 100
     }
 
-    r = await_request(search_url, payload)
+    r = await_get_request(search_url, payload)
 
     changelog = []
 
@@ -109,7 +118,7 @@ def get_issue_changelog(issue_key):
         start_at += len(response_json['values'])
         payload['startAt'] = start_at
 
-        r = await_request(search_url, payload)
+        r = await_get_request(search_url, payload)
 
         if r.status_code != 200:
             return changelog
@@ -126,7 +135,7 @@ def get_issue_fields(issue_key, fields=[]):
         'fields': ','.join(fields)
     }
 
-    r = await_request(search_url, payload)
+    r = await_get_request(search_url, payload)
 
     if r.status_code != 200:
         return {}
@@ -143,7 +152,7 @@ def get_releases(project):
         'maxResults': 100
     }
 
-    r = await_request(search_url, payload)
+    r = await_get_request(search_url, payload)
 
     releases = []
 
@@ -158,7 +167,7 @@ def get_releases(project):
         start_at += len(response_json['values'])
         payload['startAt'] = start_at
 
-        r = await_request(search_url, payload)
+        r = await_get_request(search_url, payload)
 
         if r.status_code != 200:
             return releases
