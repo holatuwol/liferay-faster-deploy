@@ -22,7 +22,6 @@ if [ -d "${1}" ]; then
 	exit 0
 elif [ -e "${1}" ]; then
 	echo "Assuming ${1} is a patch file."
-	exit 1
 else
 	RELEASE_TAG=$(curl -s "https://hub.docker.com/v2/repositories/liferay/dxp/tags?name=${1}-&ordering=last_updated" | jq -r '.results[].name' | sort -r -t'-' -k4 | head -n 1)
 	HOTFIX_IMAGE_TAG=
@@ -56,6 +55,8 @@ else
 	exit 1
 fi
 
+
+
 PATCH_LIFERAY="
 FROM liferay/dxp:${RELEASE_TAG}
 
@@ -67,7 +68,7 @@ ENV LIFERAY_JVM_OPTS='-Djdk.util.zip.disableZip64ExtraFieldValidation=true'
 
 RUN rm -rf /opt/liferay/elasticsearch-sidecar/ /opt/liferay/osgi/state/
 RUN /usr/local/bin/patch_liferay.sh
-RUN rm /mnt/liferay/patching/* /opt/liferay/tomcat/webapps/ROOT/WEB-INF/*backup*.zip
+RUN rm -f /mnt/liferay/patching/* /opt/liferay/tomcat/webapps/ROOT/WEB-INF/*backup*.zip
 RUN rm -rf /opt/liferay/patching-tool/
 "
 
