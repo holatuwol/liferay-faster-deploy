@@ -10,11 +10,11 @@ if [ "" == "${S3_BUCKET}" ]; then
 	exit 1
 fi
 
-python releases.py
+# python releases.py
 
 aws s3 --profile ${AWS_PROFILE} ls s3://${S3_BUCKET}/releases/ | awk '{ print $4 "\t" $3 }' | sort > 1.txt
 
-cd releases
+cd releases.production
 
 for file in *.json; do
   gzip -c ${file} > ${file}.gz
@@ -34,5 +34,10 @@ done
 
 gzip -c releases.production.json > releases.json.gz
 aws s3 cp --profile ${AWS_PROFILE} releases.json.gz "s3://${S3_BUCKET}/releases.json" --acl public-read --metadata-directive REPLACE --content-encoding gzip
+
+for file in releases.html releases.js; do
+  gzip -c ${file} > ${file}.gz
+  aws s3 --profile ${AWS_PROFILE} cp ${file}.gz "s3://${S3_BUCKET}/${file}" --acl public-read --metadata-directive REPLACE --content-encoding gzip
+done
 
 rm 1.txt 2.txt
