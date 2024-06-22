@@ -39,6 +39,9 @@ if os.path.isfile('session.ser'):
 else:
     session = requests.session()
 
+username = OnePassword.get_item(uuid="'%s'" % git.config('1password.liferay'), fields='username')['username']
+password = OnePassword.get_item(uuid="'%s'" % git.config('1password.liferay'), fields='password')['password']
+
 def get_namespaced_parameters(portlet_id, parameters):
     return { ('_%s_%s' % (portlet_id, key)) : value for key, value in parameters.items() }
 
@@ -388,9 +391,6 @@ def get_json_auth_token(base_url):
 
     json_auth_token[base_url] = p_auth_input['value']
     return json_auth_token[base_url]
-
-username = OnePassword.get_item(uuid=git.config('1password.liferay'), fields='username')['username']
-password = OnePassword.get_item(uuid=git.config('1password.liferay'), fields='password')['password']
 
 if __name__ == '__main__':
     make_liferay_request('https://www.liferay.com/c/portal/login')
