@@ -18,8 +18,9 @@ csvmanifest() {
 	fi
 
 	echo "[ ${HEADER} ]"
-	${MANIFEST} | sed -n "/${HEADER}-Package/,/^[^ ]/p" | sed '$d' | sed "1s/${HEADER}-Package://" | tr -d '[:space:]' | \
-		sed 's/",/"\n/g' | sed 's/;uses:="[^"]*"//g' | sed 's/;version=/,/g' | sed 's/,\([^"0-9]\)/\n\1/g' | \
+	${MANIFEST} | sed -n "/${HEADER}-Package/,/^[^ ]/p" | grep "^\(${HEADER}-Package\| \)" | \
+		sed "1s/${HEADER}-Package://" | tr -d '[:space:]' | sed 's/",/"\n/g' | \
+		sed 's/;uses:="[^"]*"//g' | sed 's/;version=/,/g' | sed 's/,\([^"0-9]\)/\n\1/g' | \
 		sort | tee "${INPUT_FILE}.${HEADER}.csv"
 }
 
