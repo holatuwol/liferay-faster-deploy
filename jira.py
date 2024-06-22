@@ -10,11 +10,11 @@ import git
 jira_username = git.config('jira.session-username')
 jira_password = git.config('jira.session-password')
 
-#jira_env = 'production'
-#jira_base_url = 'https://liferay.atlassian.net'
+jira_env = 'production'
+jira_base_url = 'https://liferay.atlassian.net'
 
-jira_env = 'sandbox'
-jira_base_url = 'https://liferay-sandbox-822.atlassian.net'
+# jira_env = 'sandbox'
+# jira_base_url = 'https://liferay-sandbox-822.atlassian.net'
 
 def get_jira_auth():
     return {
