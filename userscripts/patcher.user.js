@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        8.8
+// @version        8.9
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -14,7 +14,7 @@
  * https://github.com/holatuwol/liferay-patcher-userscript
  */ 
 var styleElement = document.createElement('style');
-styleElement.textContent = "\na.included-in-baseline,\na.included-in-baseline:hover {\n  color: #ddd;\n  text-decoration: line-through;\n}\n\n.nowrap {\n  white-space: nowrap;\n}\n\n#_1_WAR_osbpatcherportlet_patcherProductVersionId,\n#_1_WAR_osbpatcherportlet_patcherProjectVersionId {\n  width: auto;\n}\n\n#_1_WAR_osbpatcherportlet_patcherProductVersionId option {\n  display: none;\n}\n\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"6.x\"] option[data-liferay-version=\"6.x\"],\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"7.0\"] option[data-liferay-version=\"7.0\"],\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"7.1\"] option[data-liferay-version=\"7.1\"],\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"7.2\"] option[data-liferay-version=\"7.2\"],\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"7.3\"] option[data-liferay-version=\"7.3\"],\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"7.4\"] option[data-liferay-version=\"7.4\"] {\n  display: block;\n}\n\ntextarea[inputcssclass=\"osb-patcher-input-wide\"] {\n  height: 3em;\n  width: 60em;\n}\n\np[inputcssclass=\"osb-patcher-input-wide\"] {\n  display: inline-block;\n  padding: 4px 6px;\n  margin-right: 5px;\n  width: 60em;\n}\n\n#_1_WAR_osbpatcherportlet_patcherBuildName {\n  height: 5em;\n}\n\n.control-group.field-wrapper .table,\n.control-group.input-select-wrapper .table,\n.control-group.input-String-wrapper .table,\n.control-group.input-text-wrapper .table {\n  margin-bottom: 0.5em;\n}\n\n#security-fixes .show-details,\n#ticket-suggestions .show-details {\n  background-color: #fff;\n  font-size: x-small;\n  line-height: 0.5em;\n  text-align: right;\n}\n\n.compact .verbose,\n.verbose .compact {\n  display: none !important;\n}\n\nth.branch-type,\nth.branch-type a {\n  font-weight: bold;\n  width: 5em;\n}\n\n.control-group.field-wrapper,\n.control-group.input-select-wrapper,\n.control-group.input-String-wrapper,\n.control-group.input-text-wrapper {\n  display: flex;\n  margin-bottom: 0.1em;\n}\n\n.control-group .control-group.field-wrapper,\n.control-group .control-group.input-select-wrapper,\n.control-group .control-group.input-String-wrapper,\n.control-group .control-group.input-text-wrapper,\n.popover .control-group.field-wrapper,\n.popover .control-group.input-select-wrapper,\n.popover .control-group.input-String-wrapper,\n.popover .control-group.input-text-wrapper {\n  display: block;\n}\n\n#toggle_id_patcher_fix_searchadvancedBodyNode .control-group.field-wrapper,\n#toggle_id_patcher_fix_searchadvancedBodyNode .control-group.input-select-wrapper,\n#toggle_id_patcher_fix_searchadvancedBodyNode .control-group.input-String-wrapper,\n#toggle_id_patcher_fix_searchadvancedBodyNode .control-group.input-text-wrapper {\n  display: block;\n}\n\na[href*=\"https://grow.liferay.com/\"] {\n  padding-left: 0.5em;\n}\n\na[href*=\"https://test-5-2.liferay.com/\"] {\n  padding-right: 0.5em;\n}\n\na[href*=\"http://files.liferay.com/\"],\na[href*=\"https://files.liferay.com/\"] {\n  font-size: x-large;\n}\n\n.control-group.field-wrapper .control-label,\n.control-group.input-select-wrapper .control-label,\n.control-group.input-String-wrapper .control-label,\n.control-group.input-text-wrapper .control-label {\n  font-weight: bold;\n  min-width: 20em;\n  width: 20em;\n}\n\n#security-fixes dl {\n  margin-block-start: 0em;\n  margin-block-end: 0em;\n  margin-bottom: 0px;\n}\n\n/**\n * http://vrl.cs.brown.edu/color\n * 4 colors, lightness between 25 and 85, add alpha of 0.3\n */\n\ntr.qa-analysis-needed.version-6210 td {\n  background-color: rgba(79,140,157,0.3) !important;\n}\n\ntr.qa-analysis-needed.version-7010 td {\n  background-color: rgba(75,214,253,0.3) !important;\n}\n\ntr.qa-analysis-needed.version-7110 td {\n  background-color: rgba(101,52,102,0.3) !important;\n}\n\ntr.qa-analysis-needed.version-7210 td {\n  background-color: rgba(131,236,102,0.3) !important;\n}\n\ntr.qa-analysis-unneeded {\n  opacity: 0.3;\n}\n";
+styleElement.textContent = "\na.included-in-baseline,\na.included-in-baseline:hover {\n  color: #ddd;\n  text-decoration: line-through;\n}\n\n.nowrap {\n  white-space: nowrap;\n}\n\n#_1_WAR_osbpatcherportlet_patcherProductVersionId,\n#_1_WAR_osbpatcherportlet_patcherProjectVersionId {\n  width: auto;\n}\n\n#_1_WAR_osbpatcherportlet_patcherProductVersionId option {\n  display: none;\n}\n\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"6.x\"] option[data-liferay-version=\"6.x\"],\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"7.0\"] option[data-liferay-version=\"7.0\"],\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"7.1\"] option[data-liferay-version=\"7.1\"],\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"7.2\"] option[data-liferay-version=\"7.2\"],\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"7.3\"] option[data-liferay-version=\"7.3\"],\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"7.4\"] option[data-liferay-version=\"7.4\"] {\n  display: block;\n}\n\ntextarea[inputcssclass=\"osb-patcher-input-wide\"] {\n  height: 3em;\n  width: 60em;\n}\n\np[inputcssclass=\"osb-patcher-input-wide\"] {\n  display: inline-block;\n  padding: 4px 6px;\n  margin-right: 5px;\n  width: 60em;\n}\n\n#_1_WAR_osbpatcherportlet_patcherBuildName {\n  height: 5em;\n}\n\n.control-group.field-wrapper .table,\n.control-group.input-select-wrapper .table,\n.control-group.input-String-wrapper .table,\n.control-group.input-text-wrapper .table {\n  margin-bottom: 0.5em;\n}\n\n#security-fixes .show-details,\n#ticket-suggestions .show-details {\n  background-color: #fff;\n  font-size: x-small;\n  line-height: 0.5em;\n  text-align: right;\n}\n\n.compact .verbose,\n.verbose .compact {\n  display: none !important;\n}\n\nth.branch-type,\nth.branch-type a {\n  font-weight: bold;\n  width: 5em;\n}\n\n.control-group.field-wrapper,\n.control-group.input-select-wrapper,\n.control-group.input-String-wrapper,\n.control-group.input-text-wrapper {\n  display: flex;\n  margin-bottom: 0.1em;\n}\n\n.control-group .control-group.field-wrapper,\n.control-group .control-group.input-select-wrapper,\n.control-group .control-group.input-String-wrapper,\n.control-group .control-group.input-text-wrapper,\n.popover .control-group.field-wrapper,\n.popover .control-group.input-select-wrapper,\n.popover .control-group.input-String-wrapper,\n.popover .control-group.input-text-wrapper {\n  display: block;\n}\n\n#toggle_id_patcher_fix_searchadvancedBodyNode .control-group.field-wrapper,\n#toggle_id_patcher_fix_searchadvancedBodyNode .control-group.input-select-wrapper,\n#toggle_id_patcher_fix_searchadvancedBodyNode .control-group.input-String-wrapper,\n#toggle_id_patcher_fix_searchadvancedBodyNode .control-group.input-text-wrapper {\n  display: block;\n}\n\na[href*=\"https://grow.liferay.com/\"] {\n  padding-left: 0.5em;\n}\n\na[href*=\"https://test-5-2.liferay.com/\"] {\n  padding-right: 0.5em;\n}\n\na[href*=\"http://files.liferay.com/\"],\na[href*=\"https://files.liferay.com/\"] {\n  font-size: x-large;\n}\n\n.control-group.field-wrapper .control-label,\n.control-group.input-select-wrapper .control-label,\n.control-group.input-String-wrapper .control-label,\n.control-group.input-text-wrapper .control-label {\n  font-weight: bold;\n  min-width: 20em;\n  width: 20em;\n}\n\n#security-fixes dl {\n  margin-block-start: 0em;\n  margin-block-end: 0em;\n  margin-bottom: 0px;\n}\n\n/**\n * http://vrl.cs.brown.edu/color\n * 4 colors, lightness between 25 and 85, add alpha of 0.3\n */\n\ntr.qa-analysis-needed.version-6210 td {\n  background-color: rgba(79,140,157,0.3) !important;\n}\n\ntr.qa-analysis-needed.version-7010 td {\n  background-color: rgba(75,214,253,0.3) !important;\n}\n\ntr.qa-analysis-needed.version-7110 td {\n  background-color: rgba(101,52,102,0.3) !important;\n}\n\ntr.qa-analysis-needed.version-7210 td {\n  background-color: rgba(131,236,102,0.3) !important;\n}\n\ntr.qa-analysis-unneeded {\n  opacity: 0.3;\n}\n\n.shortened-content {\n  margin: 0.5em !important;\n}\n\n.shortened-content .fix-item::before {\n  content: ', ';\n}\n\n.shortened-content .fix-item a {\n  white-space: nowrap;\n}\n";
 document.head.appendChild(styleElement);
 var AUI = unsafeWindow.AUI;
 var Liferay = unsafeWindow.Liferay;
@@ -1338,6 +1338,52 @@ function getFixesFromPreviousBuilds() {
     }
     return previousBuildsContainer;
 }
+function updatePreviousBuildsContent() {
+    if (document.location.pathname.indexOf('/accounts/view') == -1) {
+        return;
+    }
+    var buildsContainer = querySelector('patcherBuildsSearchContainer');
+    if (!buildsContainer) {
+        return;
+    }
+    var contentRows = Array.from(buildsContainer.querySelectorAll('tbody tr'));
+    var contentCells = contentRows.map(function (element) { return element.cells[6]; });
+    var fixes = contentCells.map(function (element) {
+        var fixesLink = element.querySelector('a');
+        var fixesList = fixesLink ? fixesLink.getAttribute('title') || '' : '';
+        return new Set(fixesList.split(/\s*,\s*/gi));
+    });
+    var parentIndices = fixes.map(function (element, index, array) {
+        for (var i = index + 1; i < array.length; i++) {
+            if (contentRows[index].cells[5].textContent != contentRows[i].cells[5].textContent) {
+                continue;
+            }
+            if (Array.from(array[i]).filter(function (it) { return !element.has(it); }).length == 0) {
+                return i;
+            }
+        }
+        return -1;
+    });
+    contentCells.forEach(function (element, index) {
+        var parent = parentIndices[index];
+        if (parent == -1) {
+            return;
+        }
+        var shortContentElement = document.createElement('p');
+        shortContentElement.classList.add('shortened-content');
+        shortContentElement.appendChild(document.createTextNode((contentRows[parent].cells[12].textContent || '').trim()));
+        Array.from(fixes[index]).filter(function (it) { return !fixes[parent].has(it); }).forEach(function (it) {
+            var fixSpan = document.createElement('span');
+            fixSpan.classList.add('fix-item');
+            var fixLink = document.createElement('a');
+            fixLink.textContent = it;
+            fixLink.href = 'https://liferay.atlassian.net/browse/' + it;
+            fixSpan.appendChild(fixLink);
+            shortContentElement.appendChild(fixSpan);
+        });
+        element.append(shortContentElement);
+    });
+}
 // Run all the changes we need to the page.
 var applyPatcherCustomizations = function () {
     highlightAnalysisNeededBuilds();
@@ -1364,6 +1410,7 @@ var applyPatcherCustomizations = function () {
         addProductVersionFilter();
         addSecurityFixesSection();
         addEngineerComments();
+        updatePreviousBuildsContent();
     }
     compareBuildFixes();
     setTimeout(updateFromQueryString, 500);
