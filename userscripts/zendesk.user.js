@@ -2408,18 +2408,28 @@ function addViewsExtraColumns() {
     ticketTable.setAttribute('data-lesa-ui-filter-page-number', currentPage);
     ticketTable.setAttribute('data-lesa-ui-filter-sorts', currentSorts);
     var requestURL = '/api/v2/views/' + currentFilter + '/tickets.json?per_page=30&page=' + currentPage;
-    GM.xmlHttpRequest({
-        'method': 'GET',
-        'url': requestURL,
-        'headers': {
-            'Cache-Control': 'no-cache, no-store, max-age=0',
-            'Pragma': 'no-cache'
-        },
-        'responseType': 'json',
-        'onload': function (xhr) {
-            populateViewsExtraColumns(xhr.response['tickets']);
+    var xhr = new XMLHttpRequest();
+    xhr.onload = function () {
+        if (xhr.status != 200) {
+            console.error("URL: " + xhr.responseURL);
+            console.error("Error: " + xhr.status + " - " + xhr.statusText);
+            return;
         }
-    });
+        var response = null;
+        try {
+            response = JSON.parse(xhr.responseText);
+        }
+        catch (e) {
+            console.error("URL: " + xhr.responseURL);
+            console.error("Not JSON: " + xhr.responseText);
+            return;
+        }
+        populateViewsExtraColumns(response['tickets']);
+    };
+    xhr.open('GET', requestURL);
+    xhr.setRequestHeader('Cache-Control', 'no-cache, no-store, max-age=0');
+    xhr.setRequestHeader('Pragma', 'no-cache');
+    xhr.send();
 }
 /**
  * Updates all help.liferay.com/attachments links to point to the current domain.
