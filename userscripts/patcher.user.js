@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        8.9
+// @version        9.0
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -1378,6 +1378,7 @@ function updatePreviousBuildsContent() {
             var fixLink = document.createElement('a');
             fixLink.textContent = it;
             fixLink.href = 'https://liferay.atlassian.net/browse/' + it;
+            fixLink.target = '_blank';
             fixSpan.appendChild(fixLink);
             shortContentElement.appendChild(fixSpan);
         });
