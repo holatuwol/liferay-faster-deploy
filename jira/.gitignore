@@ -1,6 +1,11 @@
+releases.html.gz
+releases.json.gz
+
 releases.sandbox
 releases.sandbox.csv
+releases.sandbox.json
 releases.sandbox.json.gz
+releases.sandbox.projects.json
 fix_releases.sandbox.success.txt
 fix_releases.sandbox.failure.txt
 
@@ -8,6 +13,7 @@ releases.production
 releases.production.csv
 releases.production.json
 releases.production.json.gz
+releases.production.projects.json
 fix_releases.production.success.txt
 fix_releases.production.failure.txt
 
