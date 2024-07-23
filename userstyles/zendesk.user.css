@@ -1,0 +1,20 @@
+/* ==UserStyle==
+@name           liferay-support.zendesk.com User Style
+@namespace      holatuwol
+@version        1.0.0
+@description    A user style for liferay-support.zendesk.com
+@author         holatuwol
+==/UserStyle== */
+
+@-moz-document
+  url-prefix("https://liferay-support.zendesk.com/agent/tickets/") {
+
+  article[data-test-id="omni-log-comment-item"] {
+    margin-bottom: 1em;
+    padding-top: 1em;
+  }
+
+  div[data-test-id="omni-log-item-message"] {
+    min-width: 100%;
+  }
+}
