@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        20.9
+// @version        21.0
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -731,6 +731,9 @@ function getPatcherPortalAccountsHREF(path, params) {
 function getProductVersion(tags) {
     for (var i = 0; i < tags.length; i++) {
         var tag = tags[i];
+        if (tag == 'go_live_7_days') {
+            continue;
+        }
         var qr = tag.indexOf('prd_quarterly_release');
         if (qr == 0) {
             return 'Quarterly Release';
