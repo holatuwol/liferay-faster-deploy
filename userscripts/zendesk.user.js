@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        21.1
+// @version        21.2
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -950,7 +950,7 @@ function extractAttachmentLinkMetadata(attachmentLink) {
     var encodedFileName = attachmentLink.href.substring(attachmentLink.href.indexOf('?') + 6);
     encodedFileName = encodedFileName.replace(/\+/g, '%20');
     var attachmentFileName = decodeURIComponent(encodedFileName);
-    var authorElement = comment.querySelector('span[data-test-id="omni-log-item-sender"]');
+    var authorElement = comment.querySelector('div[data-test-id="omni-log-item-sender"]');
     var timeElement = comment.querySelector('time');
     return {
         element: attachmentLink,
@@ -959,7 +959,7 @@ function extractAttachmentLinkMetadata(attachmentLink) {
         download: attachmentFileName,
         commentId: comment.getAttribute('data-comment-id'),
         author: authorElement.textContent,
-        time: timeElement.title,
+        time: timeElement.textContent || 'unknown',
         timestamp: timeElement.getAttribute('datetime'),
         missingCorsHeader: false
     };
@@ -969,7 +969,7 @@ function extractAttachmentLinkMetadata(attachmentLink) {
  */
 function extractExternalLinkMetadata(externalLink) {
     var comment = externalLink.closest('article');
-    var authorElement = comment.querySelector('span[data-test-id="omni-log-item-sender"]');
+    var authorElement = comment.querySelector('div[data-test-id="omni-log-item-sender"]');
     var timeElement = comment.querySelector('time');
     // Since we're using the query string in order to determine the name (since the actual text
     // in the link has a truncated name), we need to decode the query string.
@@ -980,7 +980,7 @@ function extractExternalLinkMetadata(externalLink) {
         download: externalLink.textContent,
         commentId: comment.getAttribute('data-comment-id'),
         author: authorElement.textContent,
-        time: timeElement.title,
+        time: timeElement.textContent || 'unknown',
         timestamp: timeElement.getAttribute('datetime'),
         missingCorsHeader: true
     };
@@ -994,7 +994,7 @@ function addAttachmentDate(ticketId, conversation, container, attachment, oldDat
     // other parts in this script provide us with that functionality.
     var attachmentExtraInfo = document.createElement('div');
     attachmentExtraInfo.classList.add('lesa-ui-attachment-extra-info');
-    attachmentExtraInfo.appendChild(document.createTextNode(attachment.author + ' on '));
+    attachmentExtraInfo.appendChild(document.createTextNode(attachment.author + ', '));
     var attachmentCommentLink = createAnchorTag(newDate, null);
     attachmentCommentLink.classList.add('attachment-comment-link');
     attachmentCommentLink.onclick = highlightComment.bind(null, conversation, ticketId, attachment.timestamp);
