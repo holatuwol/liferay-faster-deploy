@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        21.0
+// @version        21.1
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -1593,9 +1593,7 @@ function addPermaLinks(ticketId, ticketInfo, conversation) {
         if (!timeElement) {
             continue;
         }
-        var commentHeader = null;
-        var actionsElement = comments[i].querySelector('.omnilog-header-actions');
-        commentHeader = actionsElement.parentElement;
+        var commentHeader = comments[i].querySelector('div[data-test-id="ticket-conversation-event-message-envelope-container"]');
         if (!commentHeader) {
             continue;
         }
