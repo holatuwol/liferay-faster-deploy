@@ -10,7 +10,7 @@ if [ "" == "${S3_BUCKET}" ]; then
 	exit 1
 fi
 
-# python releases.py
+python releases.py
 
 aws s3 --profile ${AWS_PROFILE} ls s3://${S3_BUCKET}/releases/ | awk '{ print $4 "\t" $3 }' | sort > 1.txt
 
@@ -40,4 +40,4 @@ for file in releases.html releases.js; do
   aws s3 --profile ${AWS_PROFILE} cp ${file}.gz "s3://${S3_BUCKET}/${file}" --acl public-read --metadata-directive REPLACE --content-encoding gzip
 done
 
-rm 1.txt 2.txt
+rm 1.txt 2.txt releases.production/*.gz

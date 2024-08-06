@@ -17,13 +17,15 @@ lsv_pattern = re.compile('LSV-[0-9]+')
 quarterly_releases = {
     '2023.q3': 92,
     '2023.q4': 102,
-    '2024.q1': 112
+    '2024.q1': 112,
+    '2024.q2': 120
 }
 
 old_update_threshold = {
     '2023.q3': 92,
     '2023.q4': 92,
-    '2024.q1': 102
+    '2024.q1': 102,
+    '2024.q2': 112
 }
 
 quarterly_updates = { value: key for key, value in quarterly_releases.items() }
@@ -233,8 +235,8 @@ def pull_quarterlies():
             with open(f'releases.{jira_env}/{release_name}.json', 'w') as f:
                 json.dump(fixed_issues, f, sort_keys=False, separators=(',', ':'))
 
-# pull_updates()
-# pull_quarterlies()
+pull_updates()
+pull_quarterlies()
 
 def check_issue_changelog(issue_key):
     releases_updates = set()
@@ -243,7 +245,7 @@ def check_issue_changelog(issue_key):
     changelog_items = sum([changelog_entry['items'] for changelog_entry in changelog if 'items' in changelog_entry], [])
 
     issue_fields = get_issue_fields(issue_key, ['fixVersions'])
-    past_fix_versions = [field['name'].lower().strip() for field in issue_fields['fixVersions']]
+    past_fix_versions = [field['name'].lower().strip() for field in issue_fields['fixVersions']] if 'fixVersions' in issue_fields else []
 
     past_74_fix_versions = [item['toString'] for item in changelog_items if 'fieldId' in item and item['fieldId'] == 'customfield_10210']
     past_74_fix_versions = [version + '00' if version.find('.') != -1 and len(version) < 8 else version for version in past_74_fix_versions if len(version) == 8 or (version != '' and float(version) < 2000)]
@@ -307,6 +309,7 @@ def check_changelogs():
             continue
 
         print('Checking issue %d of %d (%s)' % (i + 1, len(post92_fixed_issues), issue_key))
+
         check_issue_changelog(issue_key)
 
     for i, issue_keys in update_fixed_issues.items():
@@ -331,7 +334,7 @@ def check_changelogs():
     with open(f'releases.{jira_env}.json', 'w') as f:
         json.dump(releases, f, sort_keys=False, indent=2, separators=(',', ': '))
 
-# check_changelogs()
+check_changelogs()
 
 def save_fix_versions():
     ticket_fix_versions = defaultdict(list)
@@ -349,6 +352,6 @@ def save_fix_versions():
     with open(f'releases.{jira_env}.csv', 'w') as f:
         f.write('ticket\tfixPackVersion\n')
         for issue_key in sorted(ticket_fix_versions.keys(), key=ticket_sort_key):
-        	f.write(f'{issue_key}\t{",".join(ticket_fix_versions[issue_key])}\n')
+            f.write(f'{issue_key}\t{",".join(ticket_fix_versions[issue_key])}\n')
 
-# save_fix_versions()
+save_fix_versions()
