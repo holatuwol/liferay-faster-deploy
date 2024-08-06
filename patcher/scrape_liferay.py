@@ -1,12 +1,10 @@
 
 from bs4 import BeautifulSoup
-from getpass import getpass
 import hashlib
 import hmac
 import inspect
 import json
 import math
-from onepassword import OnePassword
 import os
 from os.path import abspath, basename, dirname, isdir, isfile, join, relpath
 import pickle
@@ -26,7 +24,12 @@ except:
     import urlparse as parse
 
 sys.path.insert(0, dirname(dirname(abspath(inspect.getfile(inspect.currentframe())))))
+
 import git
+import onepass
+
+
+
 
 json_auth_token = {}
 
@@ -39,8 +42,8 @@ if os.path.isfile('session.ser'):
 else:
     session = requests.session()
 
-username = OnePassword.get_item(uuid="'%s'" % git.config('1password.liferay'), fields='username')['username']
-password = OnePassword.get_item(uuid="'%s'" % git.config('1password.liferay'), fields='password')['password']
+username = onepass.item(git.config('1password.liferay'), 'username')['username']
+password = onepass.item(git.config('1password.liferay'), 'password')['password']
 
 def get_namespaced_parameters(portlet_id, parameters):
     return { ('_%s_%s' % (portlet_id, key)) : value for key, value in parameters.items() }
