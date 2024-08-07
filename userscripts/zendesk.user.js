@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        21.2
+// @version        21.3
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/agent\/.*/
@@ -23,7 +23,7 @@ if (window.location.hostname == '24475.apps.zdusercontent.com') {
     styleElement.textContent = "\nbody {\n  overflow-y: hidden;\n}\n";
 }
 else {
-    styleElement.textContent = "\na.downloading {\n  color: #999;\n}\n\na.downloading::after {\n  content: ' (downloading...)';\n  color: #999;\n}\n\na.generating {\n  color: #999;\n}\n\na.generating::after {\n  content: ' (generating...)';\n  color: #999;\n}\n\narticle {\n  border-top: 1px solid #ebebeb;\n}\n\ndiv.lesa-ui-subtitle {\n  display: flex;\n  flex-direction: column;\n}\n\n.lesa-ui-attachments,\n.lesa-ui-knowledge-capture {\n  display: flex;\n  flex-direction: column;\n  margin-bottom: 0.5em;\n}\n\n#attachments-modal .lesa-ui-attachments,\n#description-modal .lesa-ui-description {\n  margin: 0.5em;\n}\n\n#description-modal .event {\n  border-top: 0px;\n}\n\n.lesa-ui-attachment-info {\n  display: grid;\n  grid-gap: 0em 1em;\n  grid-template-columns: 1em auto;\n  margin: 0.5em;\n}\n\n.lesa-ui-attachment-info input {\n  margin-left: 0.5em;\n}\n\n.lesa-ui-attachment-info .lesa-ui-attachment-extra-info {\n  grid-column: 1 / 2 span;\n  padding: 0.2em 0.5em;\n  text-align: right;\n  margin-bottom: 0.5em;\n}\n\n.lesa-ui-attachment-info .lesa-ui-attachment-extra-info:not(:first-child) {\n  margin-top: 1em;\n  border-top: 1px solid lightgray;\n  padding-top: 0.5em;\n}\n\n.lesa-ui-description .lesa-ui-attachment-info .lesa-ui-attachment-extra-info {\n  border-top: 1px solid #eee;\n}\n\n.lesa-ui-attachment-info a {\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n\n.lesa-ui-attachments-bulk-download {\n  margin-top: 0.5em;\n  text-align: right;\n  text-decoration: underline;\n}\n\n.lesa-ui-attachments-label,\n.lesa-ui-knowledge-capture-label {\n  font-weight: 600;\n  margin-right: 1em;\n  white-space: nowrap;\n}\n\n.lesa-ui-knowledge-capture-label:not(:first-child) {\n  margin-top: 1em;\n}\n\n.lesa-ui-knowledge-capture ul {\n  margin-left: 1em;\n}\n\n.lesa-ui-description {\n  font-weight: normal;\n}\n\n.lesa-ui-description > div {\n  margin-bottom: 2em;\n}\n\n.lesa-ui-description .zd-comment,\n.lesa-ui-description .lesa-ui-attachment-info {\n  max-height: 25em;\n  overflow-y: auto;\n}\n\n.lesa-ui-event-highlighted,\narticle.lesa-ui-event-highlighted {\n  background-color: #eee;\n  scroll-margin-top: 1em;\n}\n\n.lesa-ui-form-field {\n  display: flex;\n  flex-direction: column;\n  margin-bottom: 0.5em;\n}\n\n.lesa-ui-permalink {\n  margin-bottom: 1em;\n}\n\n.lesa-ui-orgnotes {\n  color: darkgreen;\n}\n\n.lesa-ui-permalink > input,\n.lesa-ui-form-field.lesa-ui-helpcenter > input {\n  background-color: transparent;\n  border: 0px;\n  font-size: 12px;\n  margin: 0px;\n  padding: 0px;\n  width: 100%;\n}\n\n.lesa-ui-stackedit-icon {\n  height: 16px;\n  width: 16px;\n  padding: 4px;\n}\n\n.mast .editable .lesa-ui-subject {\n  background-color: #fff;\n  font-size: 20px;\n  font-weight: 600;\n  resize: vertical;\n  text-align: left;\n  width: 100%;\n}\n\n.header.mast > .round-avatar {\n  display: none;\n}\n\n.lesa-ui-priority:not(:empty) {\n  margin-top: 6px;\n  margin-bottom: 8px;\n}\n\nspan[data-garden-container-id=\"containers.tooltip\"] {\n  display: inline-flex;\n  align-items: center;\n  column-gap: 4px;\n}\n\n.lesa-ui-heat-score,\n.lesa-ui-priority span {\n  color: #fff;\n  border-radius: 2px;\n  font-size: 10px;\n  font-weight: 600;\n  text-align: center;\n  text-transform: uppercase;\n}\n\n.lesa-ui-heat-score {\n  padding: 0px 4px;\n  line-height: 1.6;\n}\n\n.lesa-ui-priority span {\n  line-height: 16px;\n  margin-right: 8px;\n  padding: 0.5em;\n  width: 6em;\n}\n\n.lesa-ui-priority a {\n  color: #fff;\n  text-decoration: none;\n}\n\n.lesa-ui-priority > *:last-child {\n  margin-right: 0;\n}\n\n.lesa-ui-priority .lesa-ui-subject-emojis a {\n  color: #000;\n}\n\n.lesa-ui-subpriority {\n  border: 1px #eee dashed;\n  font-size: 0.8em;\n}\n\n.lesa-ui-priority-minor,\n.lesa-ui-subpriority-none,\n.lesa-ui-subpriority-low {\n  background-color: #0066cc;\n}\n\n.lesa-ui-priority-major,\n.lesa-ui-subpriority-medium {\n  background-color: #f2783b;\n}\n\n.lesa-ui-priority-critical,\n.lesa-ui-subpriority-high {\n  background-color: #bf1e2d;\n}\n\n.lesa-ui-priority .lesa-ui-subject-emojis {\n  background-color: #f8f9f9;\n}\n\n.lesa-ui-subject-emojis a {\n  font-size: 1.5em;\n  font-weight: normal;\n  margin-left: 2px;\n  margin-right: 2px;\n}\n\n.rich_text .comment_input .lesa-ui-playbook-reminder,\ndiv[data-test-id=\"editor-view\"] .lesa-ui-playbook-reminder {\n  display: none;\n}\n\n.rich_text .comment_input.is-public .lesa-ui-playbook-reminder:not(:empty),\ndiv[data-test-id=\"editor-view\"] .lesa-ui-playbook-reminder:not(:empty) {\n  background-color: #eef2fa;\n  border: 1px solid #d8dcde;\n  border-radius: 0 3px 0 0 !important;\n  color: #2e5aac;\n  display: block;\n  margin-bottom: 1em;\n  padding: 10px;\n}\n\n.rich_text .comment_input.is-public .lesa-ui-playbook-reminder a,\ndiv[data-test-id=\"editor-view\"] .lesa-ui-playbook-reminder a {\n  text-decoration: underline;\n}\n\n#modals .modal-header,\n#attachments-modal .modal-header {\n  cursor: move;\n}\n\n.fNgWaW {\n  padding: 2px 0px;\n  height: 14px;\n  width: 1px;\n  background: rgb(194, 200, 204);\n  display: flex;\n  margin: 0px 8px;\n}\n\nbutton[data-test-id=\"omnilog-jump-button\"] {\n  display: none;\n}\n\n.tags span a {\n  color: rgb(73, 84, 92);\n  font-weight: normal;\n}\n\n.tags span.important-tag a {\n  color: rebeccapurple;\n  font-weight: 600;\n}\n\n.lesa-ui-group-rows-summary {\n  width: fit-content;\n}\n\ntd[data-test-id=\"ticket-table-cells-subject\"] .lesa-ui-tags span {\n  background: rgb(233, 235, 237);\n  border-radius: 0.2em;\n  color: rgb(73, 84, 92);\n  font-size: smaller;\n  margin: 0.2em 0.2em;\n  padding: 0.3em;\n}\n";
+    styleElement.textContent = "\na.downloading {\n  color: #999;\n}\n\na.downloading::after {\n  content: ' (downloading...)';\n  color: #999;\n}\n\na.generating {\n  color: #999;\n}\n\na.generating::after {\n  content: ' (generating...)';\n  color: #999;\n}\n\narticle {\n  border-top: 1px solid #ebebeb;\n}\n\ndiv.lesa-ui-subtitle {\n  display: flex;\n  flex-direction: column;\n}\n\n.lesa-ui-attachments,\n.lesa-ui-knowledge-capture {\n  display: flex;\n  flex-direction: column;\n  margin-bottom: 0.5em;\n}\n\n#attachments-modal .lesa-ui-attachments,\n#description-modal .lesa-ui-description {\n  margin: 0.5em;\n}\n\n#description-modal .event {\n  border-top: 0px;\n}\n\n.lesa-ui-attachment-info {\n  display: grid;\n  grid-gap: 0em 1em;\n  grid-template-columns: 1em auto;\n  margin: 0.5em;\n}\n\n.lesa-ui-attachment-info input {\n  margin-left: 0.5em;\n}\n\n.lesa-ui-attachment-info .lesa-ui-attachment-extra-info {\n  grid-column: 1 / 2 span;\n  padding: 0.2em 0.5em;\n  text-align: right;\n  margin-bottom: 0.5em;\n}\n\n.lesa-ui-attachment-info .lesa-ui-attachment-extra-info:not(:first-child) {\n  margin-top: 1em;\n  border-top: 1px solid lightgray;\n  padding-top: 0.5em;\n}\n\n.lesa-ui-description .lesa-ui-attachment-info .lesa-ui-attachment-extra-info {\n  border-top: 1px solid #eee;\n}\n\n.lesa-ui-attachment-info a {\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n\n.lesa-ui-attachments-bulk-download {\n  margin-top: 0.5em;\n  text-align: right;\n  text-decoration: underline;\n}\n\n.lesa-ui-attachments-label,\n.lesa-ui-knowledge-capture-label {\n  font-weight: 600;\n  margin-right: 1em;\n  white-space: nowrap;\n}\n\n.lesa-ui-knowledge-capture-label:not(:first-child) {\n  margin-top: 1em;\n}\n\n.lesa-ui-knowledge-capture ul {\n  margin-left: 1em;\n}\n\n.lesa-ui-description {\n  font-weight: normal;\n}\n\n.lesa-ui-description > div {\n  margin-bottom: 2em;\n}\n\n.lesa-ui-description .zd-comment,\n.lesa-ui-description .lesa-ui-attachment-info {\n  max-height: 25em;\n  overflow-y: auto;\n}\n\n.lesa-ui-event-highlighted,\narticle.lesa-ui-event-highlighted {\n  background-color: #eee;\n  scroll-margin-top: 1em;\n}\n\n.lesa-ui-form-field {\n  display: flex;\n  flex-direction: column;\n  margin-bottom: 0.5em;\n}\n\n.lesa-ui-permalink {\n  margin-bottom: 1em;\n}\n\n.lesa-ui-orgnotes {\n  color: darkgreen;\n}\n\n.lesa-ui-permalink > input,\n.lesa-ui-form-field.lesa-ui-helpcenter > input {\n  background-color: transparent;\n  border: 0px;\n  font-size: 12px;\n  margin: 0px;\n  padding: 0px;\n  width: 100%;\n}\n\n.lesa-ui-stackedit-icon {\n  height: 16px;\n  width: 16px;\n  padding: 4px;\n}\n\n.mast .editable .lesa-ui-subject {\n  background-color: #fff;\n  font-size: 20px;\n  font-weight: 600;\n  resize: vertical;\n  text-align: left;\n  width: 100%;\n}\n\n.header.mast > .round-avatar {\n  display: none;\n}\n\n.lesa-ui-priority:not(:empty) {\n  margin-top: 6px;\n  margin-bottom: 8px;\n}\n\nspan[data-garden-container-id=\"containers.tooltip\"] {\n  display: inline-flex;\n  align-items: center;\n  column-gap: 4px;\n}\n\n.lesa-ui-heat-score,\n.lesa-ui-priority span {\n  color: #fff;\n  border-radius: 2px;\n  font-size: 10px;\n  font-weight: 600;\n  text-align: center;\n  text-transform: uppercase;\n}\n\n.lesa-ui-heat-score {\n  padding: 0px 4px;\n  line-height: 1.6;\n}\n\n.lesa-ui-priority span {\n  line-height: 16px;\n  margin-right: 8px;\n  padding: 0.5em;\n  width: 6em;\n}\n\n.lesa-ui-priority a {\n  color: #fff;\n  text-decoration: none;\n}\n\n.lesa-ui-priority > *:last-child {\n  margin-right: 0;\n}\n\n.lesa-ui-priority .lesa-ui-subject-emojis a {\n  color: #000;\n}\n\n.lesa-ui-subpriority {\n  border: 1px #eee dashed;\n  font-size: 0.8em;\n}\n\n.lesa-ui-priority-minor,\n.lesa-ui-subpriority-none,\n.lesa-ui-subpriority-low {\n  background-color: #0066cc;\n}\n\n.lesa-ui-priority-major,\n.lesa-ui-subpriority-medium {\n  background-color: #f2783b;\n}\n\n.lesa-ui-priority-critical,\n.lesa-ui-subpriority-high {\n  background-color: #bf1e2d;\n}\n\n.lesa-ui-priority .lesa-ui-subject-emojis {\n  background-color: #f8f9f9;\n}\n\n.lesa-ui-subject-emojis a {\n  font-size: 1.5em;\n  font-weight: normal;\n  margin-left: 2px;\n  margin-right: 2px;\n}\n\n.rich_text .comment_input .lesa-ui-playbook-reminder,\ndiv[data-test-id=\"editor-view\"] .lesa-ui-playbook-reminder {\n  display: none;\n}\n\n.rich_text .comment_input.is-public .lesa-ui-playbook-reminder:not(:empty),\ndiv[data-test-id=\"editor-view\"] .lesa-ui-playbook-reminder:not(:empty) {\n  background-color: #eef2fa;\n  border: 1px solid #d8dcde;\n  border-radius: 0 3px 0 0 !important;\n  color: #2e5aac;\n  display: block;\n  margin-bottom: 1em;\n  padding: 10px;\n}\n\n.rich_text .comment_input.is-public .lesa-ui-playbook-reminder a,\ndiv[data-test-id=\"editor-view\"] .lesa-ui-playbook-reminder a {\n  text-decoration: underline;\n}\n\n#modals .modal-header,\n#attachments-modal .modal-header {\n  cursor: move;\n}\n\n.fNgWaW {\n  padding: 2px 0px;\n  height: 14px;\n  width: 1px;\n  background: rgb(194, 200, 204);\n  display: flex;\n  margin: 0px 8px;\n}\n\nbutton[data-test-id=\"omnilog-jump-button\"] {\n  display: none;\n}\n\n.tags span a {\n  color: rgb(73, 84, 92);\n  font-weight: normal;\n}\n\n.tags span.important-tag a {\n  color: rebeccapurple;\n  font-weight: 600;\n}\n\n.lesa-ui-group-rows-summary {\n  width: fit-content;\n}\n\ntd[data-test-id=\"ticket-table-cells-subject\"] .lesa-ui-tags span {\n  background: rgb(233, 235, 237);\n  border-radius: 0.2em;\n  color: rgb(73, 84, 92);\n  font-size: smaller;\n  margin: 0.2em 0.2em;\n  padding: 0.3em;\n}\n\ndiv[data-cy-test-id=\"status-badge-state\"] {\n  width: 4em;\n}\n";
 }
 var head = document.querySelector('head');
 head.appendChild(styleElement);
@@ -2583,18 +2583,23 @@ function checkForSubtitles() {
     }
 }
 function abbreviateBadgeText(badge) {
+    var madeResizeChanges = false;
     if (!badge.textContent || (badge.textContent.length <= 2) || (badge.textContent[0] == '\u00A0')) {
-        return;
+        return madeResizeChanges;
     }
     if (badge.textContent === 'On-hold') {
         badge.textContent = '\u00A0H\u00A0';
+        madeResizeChanges = true;
     }
     else if (badge.textContent === 'Open-Pending') {
         badge.textContent = 'OP';
+        madeResizeChanges = true;
     }
     else {
         badge.textContent = '\u00A0' + badge.textContent[0] + '\u00A0';
+        madeResizeChanges = true;
     }
+    return madeResizeChanges;
 }
 /**
  * Set the old compact ticket status column style and change "Open-Pending" color to differenciate it from the "Open" one
@@ -2607,27 +2612,41 @@ function fixOldTicketStatusColumnStyle() {
         ((pathname.indexOf('/agent/search/') == 0) && (document.querySelector('div[data-test-id="search_tables_tab-tickets"][aria-selected="true"]') != null));
     /* update status column */
     var badges = Array.from(document.querySelectorAll('div[data-cy-test-id="status-badge-state"]'));
+    var needsResize = false;
     for (var _i = 0, badges_1 = badges; _i < badges_1.length; _i++) {
         var badge = badges_1[_i];
-        updateBadge(badge);
+        if (updateBadge(badge)) {
+            needsResize = true;
+        }
         /* Change the status text to the abbreviate form only if we are in a view page and we are not in a popup */
         if (viewPage && !isBadgeInPopup(badge)) {
-            abbreviateBadgeText(badge);
+            if (abbreviateBadgeText(badge)) {
+                needsResize = true;
+            }
         }
     }
     /* Update Open-Pending badge color inside the ticket */
     var ticketBadges = Array.from(document.querySelectorAll('span.ticket_status_label'));
     for (var _a = 0, ticketBadges_1 = ticketBadges; _a < ticketBadges_1.length; _a++) {
         var badge = ticketBadges_1[_a];
-        updateBadge(badge);
+        if (updateBadge(badge)) {
+            needsResize = true;
+        }
     }
     if (viewPage) {
-        removeTicketStatusColumn();
-        adjustColumnTextWidth();
-        unsafeWindow.dispatchEvent(new Event('resize'));
+        if (removeTicketStatusColumn()) {
+            needsResize = true;
+        }
+        if (adjustColumnTextWidth()) {
+            needsResize = true;
+        }
+        if (needsResize) {
+            unsafeWindow.dispatchEvent(new Event('resize'));
+        }
     }
 }
 function adjustColumnTextWidth() {
+    var madeResizeChanges = false;
     var tables = Array.from(document.querySelectorAll('table[data-onboarding-id="table_main"], table[data-test-id="table_header"]'));
     for (var _i = 0, tables_1 = tables; _i < tables_1.length; _i++) {
         var table = tables_1[_i];
@@ -2644,6 +2663,7 @@ function adjustColumnTextWidth() {
                     button.title = 'Heat Score';
                 }
                 textHeader.nodeValue = 'Heat';
+                madeResizeChanges = true;
             }
             header.setAttribute('heatscore_processed', 'true');
         }
@@ -2671,34 +2691,40 @@ function adjustColumnTextWidth() {
             cell.title = cell.textContent;
             if (cell.textContent === 'Liferay DXP::Quarterly Release') {
                 cell.textContent = 'DXP::Quarterly';
+                madeResizeChanges = true;
             }
             else if (cell.textContent === 'LXC - Self-Managed') {
                 cell.textContent = 'LXC - SM';
+                madeResizeChanges = true;
             }
             else if (cell.textContent === 'Provisioning Request') {
                 cell.textContent = 'Provisioning';
+                madeResizeChanges = true;
             }
             else if (cell.textContent.startsWith('Liferay ')) {
                 cell.textContent = cell.textContent.replace('Liferay ', '');
+                madeResizeChanges = true;
             }
             cell.setAttribute('product_processed', 'true');
         }
     }
-    function getTextHeader(header) {
-        var button = header.querySelector('button');
-        if (!button) {
-            return null;
-        }
-        if (!button.firstChild) {
-            return null;
-        }
-        if (button.firstChild.nodeType === Node.TEXT_NODE) {
-            return button.firstChild;
-        }
+    return madeResizeChanges;
+}
+function getTextHeader(header) {
+    var button = header.querySelector('button');
+    if (!button) {
         return null;
     }
+    if (!button.firstChild) {
+        return null;
+    }
+    if (button.firstChild.nodeType === Node.TEXT_NODE) {
+        return button.firstChild;
+    }
+    return null;
 }
 function removeTicketStatusColumn() {
+    var madeResizeChanges = false;
     var tables = Array.from(document.querySelectorAll('table[data-onboarding-id="table_main"], table[data-test-id="table_header"]'));
     for (var i = 0; i < tables.length; i++) {
         var table = tables[i];
@@ -2730,6 +2756,7 @@ function removeTicketStatusColumn() {
         if (statusHeaderCell.getAttribute('processed') == 'true') {
             continue;
         }
+        madeResizeChanges = true;
         /* remove "Ticket status" text from headers */
         statusHeaderCell.setAttribute('processed', 'true');
         statusHeaderCell.textContent = ' ';
@@ -2749,8 +2776,10 @@ function removeTicketStatusColumn() {
             cell.style.padding = '0';
         }
     }
+    return madeResizeChanges;
 }
 function updateBadge(badge) {
+    var madeResizeChanges = false;
     /* Change badge colors for Open-Pending to purple */
     if ((badge.textContent === 'Open-Pending' || badge.textContent === 'OP')) {
         if (!badge.getAttribute('updated-open-color')) {
@@ -2769,7 +2798,9 @@ function updateBadge(badge) {
         badge.style.setProperty("color", "#04363d", "important");
         badge.textContent = 'Closed';
         badge.setAttribute('updated-closed-color', "true");
+        madeResizeChanges = true;
     }
+    return madeResizeChanges;
 }
 function isBadgeInPopup(badge) {
     if (!badge.parentElement) {
