@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        9.0
+// @version        9.1
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -1371,7 +1371,8 @@ function updatePreviousBuildsContent() {
         }
         var shortContentElement = document.createElement('p');
         shortContentElement.classList.add('shortened-content');
-        shortContentElement.appendChild(document.createTextNode((contentRows[parent].cells[12].textContent || '').trim()));
+        shortContentElement.appendChild(document.createTextNode((contentRows[parent].cells[12].textContent || '').trim() ||
+            (contentRows[parent].cells[7].textContent || '').toLowerCase() + ' build ' + (contentRows[parent].cells[1].textContent || '').trim()));
         Array.from(fixes[index]).filter(function (it) { return !fixes[parent].has(it); }).forEach(function (it) {
             var fixSpan = document.createElement('span');
             fixSpan.classList.add('fix-item');
