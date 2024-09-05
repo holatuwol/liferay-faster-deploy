@@ -70,7 +70,7 @@ checkcommonerrors() {
 	local PORTAL_BOOTSTRAP=$(git ls-files modules/core | grep -F portal-bootstrap/build.gradle)
 
 	for file in ${CHANGED_GRADLE}; do
-		if [ "" != "$(git diff ${BASE_TAG}..HEAD -- ${file} | grep -F '+' | grep -F 'group: "com.liferay' | grep -F 'version: ')" ]; then
+		if [ "" != "$(git diff ${BASE_TAG}..HEAD -- ${file} | grep -F '+' | grep -F 'group: "com.liferay' | grep -F 'version: ' | grep -vF '.LIFERAY-PATCHED-')" ]; then
 			for bundle in $(git diff ${BASE_TAG}..HEAD -- ${file} | grep -F '+' | grep -F 'group: "com.liferay' | grep -F 'version: ' | grep -o 'name: "[^"]*"' | cut -d'"' -f 2); do
 				fix_dependencies "${file}" "${bundle}"
 				fix_dependencies "${PORTAL_BOOTSTRAP}" "${bundle}"
