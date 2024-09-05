@@ -45,20 +45,30 @@ else:
 username = onepass.item(git.config('1password.liferay'), 'username')['username']
 password = onepass.item(git.config('1password.liferay'), 'password')['password']
 
+default_headers = {
+	'User-Agent': 'scrape_liferay.py'
+}
+
 def get_namespaced_parameters(portlet_id, parameters):
     return { ('_%s_%s' % (portlet_id, key)) : value for key, value in parameters.items() }
 
 def authenticate(base_url, get_params=None):
-    r = session.get(base_url, data=get_params, stream=True, verify=False)
+    r = session.get(base_url, headers=default_headers, stream=True, verify=False)
+
+    if r.text.find('idpEntityId') != -1:
+        r = saml_request(base_url, r.url, r.text)
 
     if r.url == base_url:
         return r
 
     if r.url.find('https://login.liferay.com/') == 0:
+        print('redirected to login.liferay.com')
         r = login_okta(base_url, r.url)
     elif r.text.find('SAMLRequest') != -1:
+        print('redirected to a SAML IdP')
         r = saml_request(base_url, r.url, r.text)
     elif len(r.history) > 0 and r.url.find('p_p_id=') != -1:
+        print('redirected to login portlet')
         url_params = parse.parse_qs(parse.urlparse(r.url).query)
         r = login_portlet(base_url, r.url, url_params, r.text)
 
@@ -104,39 +114,44 @@ def get_liferay_content(base_url, params=None, method='get'):
     return r.text
 
 def make_liferay_request(base_url, params=None, method='get'):
+    full_url = base_url
+
+    if method == 'get' and params is not None:
+        query_string = '&'.join(['%s=%s' % (parse.quote(key), parse.quote(value)) for key, value in params.items()])
+
+        if base_url.find('?') == -1:
+            full_url = '%s?%s' % (base_url, query_string)
+        else:
+            full_url = '%s&%s' % (base_url, query_string)
+
+    print(full_url)
+
     pos = base_url.find('/api/jsonws/')
 
     if pos != -1 and params is not None:
         params['p_auth'] = get_json_auth_token(base_url[0:pos])
     else:
-        r = authenticate(base_url, params)
+        r = authenticate(full_url, params)
 
-        if r.url == base_url:
+        if r.url == full_url:
             return r
 
     if method == 'get':
-        if params is None:
-            full_url = base_url
-        else:
-            query_string = '&'.join(['%s=%s' % (key, value) for key, value in params.items()])
-
-            if base_url.find('?') == -1:
-                full_url = '%s?%s' % (base_url, query_string)
-            else:
-                full_url = '%s&%s' % (base_url, query_string)
-
-        return session.get(full_url, data=params, stream=True, verify=False)
+        return session.get(full_url, headers=default_headers, stream=True, verify=False)
     else:
-        return session.post(base_url, data=params, verify=False)
+        return session.post(full_url, data=params, headers=default_headers, verify=False)
 
-def saml_request(base_url, response_url, response_body):
+def post_liferay_form(response_body):
     soup = BeautifulSoup(response_body, 'html.parser')
 
     form = soup.find('form')
     form_action = form.get('action')
     form_params = { node.get('name'): node.get('value') for node in form.find_all('input') if node.get('name') is not None }
 
-    r = session.post(form_action, data=form_params)
+    return session.post(form_action, headers=default_headers, data=form_params)
+
+def saml_request(base_url, response_url, response_body):
+    r = post_liferay_form(response_body)
 
     url_params = parse.parse_qs(parse.urlparse(r.url).query)
 
@@ -183,22 +198,19 @@ def login_okta(base_url, okta_url):
     redirect_url = None
 
     while redirect_url is None:
-        r = session.get(okta_url, verify=False)
+        r = session.get(okta_url, headers=default_headers, verify=False)
         state_token = get_okta_state_token(r.text)
-
-        if state_token is None:
-            return False
 
         print('attempting login with state token %s' % state_token)
 
-        headers, redirect_url = attempt_login_okta(state_token)
+        okta_headers, redirect_url = attempt_login_okta(state_token)
 
         if redirect_url is None:
             time.sleep(10*60)
 
     print('handling redirect to %s' % redirect_url)
 
-    r = session.get(redirect_url, headers=headers, stream=True, verify=False)
+    r = session.get(redirect_url, headers=okta_headers, stream=True, verify=False)
 
     if r.url == base_url:
         return r
@@ -209,14 +221,14 @@ def login_okta(base_url, okta_url):
 
 def attempt_login_okta(state_token):
     form_params = {
-        'stateToken': state_token
+        'stateToken': state_token if state_token is not None else ''
     }
 
-    r = session.post('https://login.liferay.com/api/v1/authn', json=form_params)
+    r = session.post('https://login.liferay.com/api/v1/authn', headers=default_headers, json=form_params)
 
     request_id = r.headers['X-Okta-Request-Id']
 
-    headers = {
+    okta_headers = {
         'X-Okta-Request-Id': request_id
     }
 
@@ -226,7 +238,7 @@ def attempt_login_okta(state_token):
 
     # Retrieve the nonce
 
-    r = session.post('https://login.liferay.com/api/v1/internal/device/nonce', headers=headers)
+    r = session.post('https://login.liferay.com/api/v1/internal/device/nonce', headers=okta_headers)
 
     # Set the HMAC-SHA256 encoded fingerprint as a header
 
@@ -234,7 +246,7 @@ def attempt_login_okta(state_token):
     hashed_fingerprint = hmac.new(nonce.encode('utf-8'), msg=fingerprint.encode('utf-8'), digestmod=hashlib.sha256).hexdigest()
     device_fingerprint = '%s|%s|%s' % (nonce, hashed_fingerprint, fingerprint)
 
-    headers['x-device-fingerprint'] = device_fingerprint
+    okta_headers['x-device-fingerprint'] = device_fingerprint
 
     # Attempt to login
 
@@ -248,7 +260,7 @@ def attempt_login_okta(state_token):
         }
     }
 
-    r = session.post('https://login.liferay.com/api/v1/authn', json=form_params, headers=headers)
+    r = session.post('https://login.liferay.com/api/v1/authn', headers=okta_headers, json=form_params)
 
     # Pretend we can follow the login redirect
 
@@ -259,7 +271,7 @@ def attempt_login_okta(state_token):
     }
 
     if 'next' in response_json['_links']:
-        return headers, response_json['_links']['next']['href']
+        return okta_headers, response_json['_links']['next']['href']
 
     if response_json['status'] != 'MFA_REQUIRED':
         sys.stderr.write('unrecognized status: %s\n' % response_json['status'])
@@ -290,7 +302,7 @@ def attempt_login_okta(state_token):
     verify_url = links['verify']['href']
 
     try:
-        r = session.post(verify_url, json=form_params, headers=headers)
+        r = session.post(verify_url, json=form_params, headers=okta_headers)
         response_json = r.json()
     except:
         return None, None
@@ -301,23 +313,23 @@ def attempt_login_okta(state_token):
             form_params['passCode'] = input()
 
             try:
-                r = session.post(verify_url, json=form_params, headers=headers)
+                r = session.post(verify_url, json=form_params, headers=okta_headers)
                 response_json = r.json()
             except:
                 pass
 
             del form_params['passCode']
-            return headers, response_json['_links']['next']['href']
+            return okta_headers, response_json['_links']['next']['href']
 
     for i in range(12):
         if response_json['status'] == 'SUCCESS':
-            return headers, response_json['_links']['next']['href']
+            return okta_headers, response_json['_links']['next']['href']
 
         sys.stderr.write('waiting for MFA result (%d/12)...\n' % (i+1))
         time.sleep(5)
 
         try:
-            r = session.post(verify_url, json=form_params, headers=headers)
+            r = session.post(verify_url, json=form_params, headers=okta_headers)
             response_json = r.json()
         except:
             pass
@@ -342,20 +354,12 @@ def login_portlet(base_url, login_url, login_params, login_response_body):
     form_params = { node.get('name'): node.get('value') for node in form.find_all('input') if node.get('name') is not None }
 
     login_input_name = '%s%s' % (namespace, 'login')
-    use_email = False
 
-    for label in form.find_all('label'):
-        if label.get('for') == login_input_name:
-            use_email = label.text.lower().find('email') != -1
+    form_params[login_input_name] = input('username: ')
 
-    if use_email:
-        form_params[login_input_name] = '%s@liferay.com' % username
-    else:
-        form_params[login_input_name] = username
+    form_params['%s%s' % (namespace, 'password')] = input('password: ')
 
-    form_params['%s%s' % (namespace, 'password')] = password
-
-    r = session.post(form_action, data=form_params)
+    r = session.post(form_action, data=form_params, headers=default_headers)
 
     if r.text.find('SAMLResponse') != -1:
         return saml_response(r.url, r.text)
@@ -369,7 +373,7 @@ def saml_response(base_url, response_url, response_body):
     form_action = form.get('action')
     form_params = { node.get('name'): node.get('value') for node in form.find_all('input') if node.get('name') is not None }
 
-    r = session.post(form_action, data=form_params)
+    r = session.post(form_action, headers=default_headers, data=form_params)
 
     return r
 
