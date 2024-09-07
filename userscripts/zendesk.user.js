@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        21.7
+// @version        21.8
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @supportURL     https://github.com/holatuwol/liferay-zendesk-userscript/issues/new
@@ -393,7 +393,7 @@ function getCriticalMarkerText(ticketInfo, tagSet) {
         }
         return 'critical';
     }
-    return null;
+    return subpriority;
 }
 function addCriticalMarker(priorityElement, ticketInfo, tagSet) {
     var markerText = getCriticalMarkerText(ticketInfo, tagSet);
