@@ -1,13 +1,11 @@
 #!/bin/bash
 
 remove_fixes() {
-  for TEST_HASH in $(git diff --name-only ${BASE_TAG}..HEAD | grep -F "${1}" | xargs -r git log ${BASE_TAG}..HEAD --pretty='%H' --); do
-    GIT_SEQUENCE_EDITOR="sed -i -re '1s/^pick /e /'" git rebase -i ${TEST_HASH}~1
-    git diff --name-only HEAD~1..HEAD | grep -F "${1}" | xargs git reset HEAD~1 -- ${file}
-    git status -s | grep '^.M' | awk '{ print $2 }' | xargs -r git checkout
-    git commit --amend --allow-empty --no-edit
-    git rebase --continue
-  done
+	if [ "" != "$(git diff --name-only ${BASE_TAG}..HEAD | grep -F "${1}")" ]; then
+		git diff --name-only ${BASE_TAG}..HEAD | grep -F "${1}" | xargs git checkout ${BASE_TAG} --
+		git diff --name-only ${BASE_TAG}..HEAD | grep -F "${1}" | xargs git add
+		git commit -m "Remove changes to ${1} files for patcher"
+	fi
 }
 
 fix_dependencies() {
@@ -25,6 +23,8 @@ fix_dependencies() {
 }
 
 checkcommonerrors() {
+	echo "Checking to make sure ${BASE_TAG} is a known baseline..."
+
 	local PATCHER_JSON=$(dirname "${BASH_SOURCE[0]}")/patcher_projects.json
 	local BASELINE_ID=$(cat ${PATCHER_JSON} | jq '.["'${BASE_TAG}'"]')
 
@@ -39,11 +39,11 @@ checkcommonerrors() {
 		fi
 	done
 
-	# Make sure that we have not modified any packageinfo files
+	# Make sure that we have not modified any Bundle-Version values
+
+	echo 'Checking for what patcher will recognize as accidental bundle version changes...'
 
 	git diff --name-only ${BASE_TAG}..HEAD > ${GIT_ROOT}/.redeploy/patcher_diff.txt
-
-	# Make sure that we have not modified any Bundle-Version values
 
 	local CHANGED_BND=$(grep -F '/bnd.bnd' ${GIT_ROOT}/.redeploy/patcher_diff.txt)
 	local MODIFIED_BUNDLE_VERSION=
@@ -61,35 +61,40 @@ checkcommonerrors() {
 		for file in ${CHANGED_PACKAGEINFO}; do
 			echo ""
 			echo "${file}"
-			git log --pretty='   %C(yellow)%H%Creset %Cgreen%ci%Creset %s' ${BASE_TAG}..HEAD -- ${file}
+			git log --pretty='	 %C(yellow)%H%Creset %Cgreen%ci%Creset %s' ${BASE_TAG}..HEAD -- ${file}
 		done
 	fi
 
-	local CHANGED_GRADLE=$(grep -F '/build.gradle' ${GIT_ROOT}/.redeploy/patcher_diff.txt)
-	local MODIFIED_GRADLE_VERSION=
-	local PORTAL_BOOTSTRAP=$(git ls-files modules/core | grep -F portal-bootstrap/build.gradle)
+	echo 'Checking for unplanned dependency version changes...'
 
-	for file in ${CHANGED_GRADLE}; do
-		if [ "" != "$(git diff ${BASE_TAG}..HEAD -- ${file} | grep -F '+' | grep -F 'group: "com.liferay' | grep -F 'version: ' | grep -vF '.LIFERAY-PATCHED-')" ]; then
-			for bundle in $(git diff ${BASE_TAG}..HEAD -- ${file} | grep -F '+' | grep -F 'group: "com.liferay' | grep -F 'version: ' | grep -o 'name: "[^"]*"' | cut -d'"' -f 2); do
-				fix_dependencies "${file}" "${bundle}"
-				fix_dependencies "${PORTAL_BOOTSTRAP}" "${bundle}"
-			done
+	if [ "" != "$(git diff ${BASE_TAG}..HEAD -- '**/build.gradle' | grep -F '+' | grep -F 'group: "com.liferay' | grep -F 'version: ' | grep -vF '.LIFERAY-PATCHED-')" ]; then
+		local CHANGED_GRADLE=$(grep -F '/build.gradle' ${GIT_ROOT}/.redeploy/patcher_diff.txt)
+		local MODIFIED_GRADLE_VERSION=
+		local PORTAL_BOOTSTRAP=$(git ls-files modules/core | grep -F portal-bootstrap/build.gradle)
+
+		for file in ${CHANGED_GRADLE}; do
+			echo ${file}
+			if [ "" != "$(git diff ${BASE_TAG}..HEAD -- ${file} | grep -F '+' | grep -F 'group: "com.liferay' | grep -F 'version: ' | grep -vF '.LIFERAY-PATCHED-')" ]; then
+				for bundle in $(git diff ${BASE_TAG}..HEAD -- ${file} | grep -F '+' | grep -F 'group: "com.liferay' | grep -F 'version: ' | grep -vF '.LIFERAY-PATCHED-' | grep -o 'name: "[^"]*"' | cut -d'"' -f 2); do
+					fix_dependencies "${file}" "${bundle}"
+					fix_dependencies "${PORTAL_BOOTSTRAP}" "${bundle}"
+				done
+			fi
+
+			if [ "" != "$(git status | grep -F "${file}")" ]; then
+				MODIFIED_GRADLE_VERSION="${MODIFIED_GRADLE_VERSION}\n${file}"
+			fi
+		done
+
+		if [ "" != "${MODIFIED_GRADLE_VERSION}" ]; then
+			echo ""
+			echo "A fix must not modify dependency versions (switch to default or project dependency versions):"
+			echo -e "${MODIFIED_GRADLE_VERSION}"
+
+			git add ${PORTAL_BOOTSTRAP}
+			echo ""
+			git commit -m "Fix dependency versions"
 		fi
-
-		if [ "" != "$(git status | grep -F "${file}")" ]; then
-			MODIFIED_GRADLE_VERSION="${MODIFIED_GRADLE_VERSION}\n${file}"
-		fi
-	done
-
-	if [ "" != "${MODIFIED_GRADLE_VERSION}" ]; then
-		echo ""
-		echo "A fix must not modify dependency versions (switch to default or project dependency versions):"
-		echo -e "${MODIFIED_GRADLE_VERSION}"
-
-		git add ${PORTAL_BOOTSTRAP}
-		echo ""
-		git commit -m "Fix dependency versions"
 	fi
 
 	# If any of the checks failed, abort
@@ -109,14 +114,35 @@ patcher() {
 		return 1
 	fi
 
+		echo 'Checking for common errors...'
+
 	if ! checkcommonerrors; then
 		return 1
 	fi
 
+	echo 'Removing changes that patcher would reject...'
+
 	remove_fixes 'git-commit-portal'
-	remove_fixes 'test/src/'
-	remove_fixes 'sample'
 	remove_fixes '/packageinfo'
+
+	for folder in $(git diff --name-only ${BASE_TAG}..HEAD | grep '^modules/\(dxp/\)*apps/' | sed 's|/[^/]*$||g'); do
+		if [[ ${folder} == */src/main/* ]]; then
+			folder=$(echo ${folder} | sed 's|/src/main/.*$||g')
+		elif [[ ${folder} == */src/test/* ]]; then
+			folder=$(echo ${folder} | sed 's|/src/test/.*$||g')
+		elif [[ ${folder} == */src/testIntegration/* ]]; then
+			folder=$(echo ${folder} | sed 's|/src/testIntegration/.*$||g')
+		elif [[ ${folder} == */docroot/* ]]; then
+			folder=$(echo ${folder} | sed 's|/docroot/.*$||g')
+		fi
+
+		if [ ! -f ${folder}/.lfrbuild-portal ]; then
+			read -p "remove ${folder} changes? " yn
+			case $yn in
+				[Yy]* ) remove_fixes ${folder};;
+			esac
+		fi
+	done
 
 	# Check if there's a pre-existing patch in patcher portal
 
