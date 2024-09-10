@@ -2376,18 +2376,21 @@ function addViewsBreakdownLink() {
     counterElement.appendChild(breakdownLink);
 }
 var CUSTOM_FIELD_SWARM_CATEGORIES = 14748442953229;
-function populateViewsExtraColumns(tickets) {
-    if (document.querySelectorAll('td[data-test-id="ticket-table-cells-subject"]').length != tickets.length) {
-        setTimeout(populateViewsExtraColumns.bind(null, tickets), 100);
+function populateTicketTableExtraColumns(tableContainer, tickets) {
+    if (tableContainer.querySelectorAll('td[data-test-id="ticket-table-cells-subject"]').length != tickets.length) {
+        setTimeout(populateTicketTableExtraColumns.bind(null, tickets), 100);
         return;
     }
     for (var i = 0; i < tickets.length; i++) {
+        if (!tickets[i].custom_fields) {
+            continue;
+        }
         var swarmCategories = getCustomFieldValue(tickets[i], CUSTOM_FIELD_SWARM_CATEGORIES);
         if (swarmCategories == null) {
             continue;
         }
         var selector = 'td[data-test-id="ticket-table-cells-subject"] a[href="tickets/' + tickets[i].id + '"]';
-        var link = document.querySelector(selector);
+        var link = tableContainer.querySelector(selector);
         if (!link) {
             continue;
         }
@@ -2407,31 +2410,20 @@ function populateViewsExtraColumns(tickets) {
         cell.appendChild(categoriesContainer);
     }
 }
-function addViewsExtraColumns() {
-    var ticketTable = document.querySelector('div#views_views-ticket-table > div');
+function addTicketTableExtraColumns(tableContainer, requestURL) {
+    var ticketTable = tableContainer.querySelector('div#views_views-ticket-table > div, div[id^="search-ticket-"]');
     if (!ticketTable) {
         return;
     }
-    var currentFilter = unsafeWindow.location.pathname.substring('/agent/filters/'.length);
-    var currentPage = '1';
-    var currentSorts = Array.from(document.querySelectorAll('div#views_views-ticket-table thead th[aria-sort]:not([aria-sort="none"])')).map(function (it) { return it.textContent; }).filter(function (it) { return it && it.trim(); }).join(',');
-    var pageIndicator = document.querySelector('span[data-test-id="views_views-header-page-amount"]');
-    if (pageIndicator) {
-        var pageMatcher = (pageIndicator.textContent || '').match(/\d+/g);
-        if (pageMatcher) {
-            currentPage = pageMatcher[0];
-        }
-    }
-    var previousFilter = ticketTable.getAttribute('data-lesa-ui-filter-container-id');
-    var previousPage = ticketTable.getAttribute('data-lesa-ui-filter-page-number');
+    var currentSorts = Array.from(tableContainer.querySelectorAll('div#views_views-ticket-table thead th[aria-sort]:not([aria-sort="none"])')).map(function (it) { return it.textContent; }).filter(function (it) { return it && it.trim(); }).join(',');
     var previousSorts = ticketTable.getAttribute('data-lesa-ui-filter-sorts');
-    if ((currentFilter == previousFilter) && (currentPage == previousPage) && (currentSorts == previousSorts)) {
+    var currentURL = requestURL;
+    var previousURL = ticketTable.getAttribute('data-lesa-ui-filter-url');
+    if ((currentSorts == previousSorts) && (currentURL == previousURL)) {
         return;
     }
-    ticketTable.setAttribute('data-lesa-ui-filter-container-id', currentFilter);
-    ticketTable.setAttribute('data-lesa-ui-filter-page-number', currentPage);
+    ticketTable.setAttribute('data-lesa-ui-filter-url', currentURL);
     ticketTable.setAttribute('data-lesa-ui-filter-sorts', currentSorts);
-    var requestURL = '/api/v2/views/' + currentFilter + '/tickets.json?per_page=30&page=' + currentPage;
     var xhr = new XMLHttpRequest();
     xhr.onload = function () {
         if (xhr.status != 200) {
@@ -2448,13 +2440,46 @@ function addViewsExtraColumns() {
             console.error("Not JSON: " + xhr.responseText);
             return;
         }
-        populateViewsExtraColumns(response['tickets']);
+        populateTicketTableExtraColumns(tableContainer, response['tickets'] || response['results']);
     };
     xhr.open('GET', requestURL);
     xhr.setRequestHeader('Cache-Control', 'no-cache, no-store, max-age=0');
     xhr.setRequestHeader('Pragma', 'no-cache');
     xhr.send();
 }
+function addViewsExtraColumns() {
+    var currentFilter = unsafeWindow.location.pathname.substring('/agent/filters/'.length);
+    var currentPage = '1';
+    var pageIndicator = document.querySelector('span[data-test-id="views_views-header-page-amount"]');
+    if (pageIndicator) {
+        var pageMatcher = (pageIndicator.textContent || '').match(/\d+/g);
+        if (pageMatcher) {
+            currentPage = pageMatcher[0];
+        }
+    }
+    var tableContainer = document.querySelector('div[data-garden-id="pane"][role="tabpanel"]');
+    var requestURL = '/api/v2/views/' + currentFilter + '/tickets.json?per_page=30&page=' + currentPage;
+    addTicketTableExtraColumns(tableContainer, requestURL);
+}
+function addSearchExtraColumns() {
+    var activeWorkspaceElement = document.querySelector('div.workspace:not([style^="display"]');
+    if (!activeWorkspaceElement) {
+        return;
+    }
+    var pageElement = activeWorkspaceElement.querySelector('li[data-garden-id="pagination.page"][aria-current="true"]');
+    if (!pageElement) {
+        return;
+    }
+    var page = pageElement.title;
+    var searchElement = activeWorkspaceElement.querySelector('input[data-test-id="search_advanced-search-box_input-field_media-input"]');
+    var search = searchElement.value;
+    if (!search) {
+        return;
+    }
+    var requestURL = '/api/v2/search.json?include=tickets&per_page=30&page=' + page + '&query=' + encodeURIComponent(search);
+    addTicketTableExtraColumns(activeWorkspaceElement, requestURL);
+}
+;
 /**
  * Updates all help.liferay.com/attachments links to point to the current domain.
  */
@@ -2847,20 +2872,27 @@ function isBadgeInPopup(badge) {
     }
     return false;
 }
+function updateZendeskUI() {
+    var pathname = unsafeWindow.location.pathname;
+    if (pathname.indexOf('/agent/') == 0) {
+        checkForConversations();
+        checkForSubtitles();
+        checkSidebarTags();
+        fixAttachmentLinks();
+        makeDraggableModals();
+        fixOldTicketStatusColumnStyle();
+        if (pathname.indexOf('/agent/filters/') == 0) {
+            addViewsGoToPageButton();
+            addViewsBreakdownLink();
+            addViewsExtraColumns();
+        }
+        if (pathname.indexOf('/agent/search/') == 0) {
+            addSearchExtraColumns();
+        }
+    }
+}
 // Since there's an SPA framework in place that I don't fully understand,
 // attempt to do everything once per second.
 if (unsafeWindow.location.hostname.indexOf('zendesk.com') != -1) {
-    if (unsafeWindow.location.pathname.indexOf('/agent/') == 0) {
-        setInterval(checkForConversations, 1000);
-        setInterval(checkForSubtitles, 1000);
-        setInterval(checkSidebarTags, 1000);
-        setInterval(fixAttachmentLinks, 1000);
-        setInterval(makeDraggableModals, 1000);
-        setInterval(fixOldTicketStatusColumnStyle, 1000);
-    }
-    if (unsafeWindow.location.pathname.indexOf('/agent/filters/') == 0) {
-        setInterval(addViewsGoToPageButton, 1000);
-        setInterval(addViewsBreakdownLink, 1000);
-        setInterval(addViewsExtraColumns, 1000);
-    }
+    setInterval(updateZendeskUI, 1000);
 }
