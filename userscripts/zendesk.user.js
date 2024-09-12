@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        21.8
+// @version        21.9
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @supportURL     https://github.com/holatuwol/liferay-zendesk-userscript/issues/new
@@ -331,24 +331,51 @@ function checkComments(conversation, callback) {
     }
     callback();
 }
+var today = new Date();
+var limitedSupportDates = {
+    '6.x': new Date('2017-12-01'),
+    '7.0': new Date('2020-06-14'),
+    '7.1': new Date('2022-11-13'),
+    '7.2': new Date('2023-06-03'),
+    '7.3': new Date('2024-10-12')
+};
+var endOfSoftwareLifeDates = {
+    '6.x': new Date('2020-12-01'),
+    '7.0': new Date('2023-06-14'),
+    '7.1': new Date('2025-11-13'),
+    '7.2': new Date('2026-06-03'),
+    '7.3': new Date('2027-10-12')
+};
 function addServiceLifeMarker(priorityElement, ticketId, ticketTags, organizationTags) {
-    var limitedSupport = false;
-    var endOfSoftwareLife = false;
-    var extendedPremiumSupport = null;
-    var version = getProductVersion(ticketTags);
+    var versions = getProductVersions(ticketTags);
+    if (versions.length == 0) {
+        return;
+    }
+    var version = versions[0];
+    if (!endOfSoftwareLifeDates[version] || !limitedSupportDates[version]) {
+        return;
+    }
+    var limitedSupport = (today > limitedSupportDates[version]);
+    var endOfSoftwareLife = (today > endOfSoftwareLifeDates[version]);
+    var declinedVersions = [];
     for (var i = 0; i < organizationTags.length; i++) {
         var tag = organizationTags[i];
-        if ((tag == 'neg_7_0_eps') && (version == '7.0')) {
-            extendedPremiumSupport = 'Declined 7.0 EPS';
+        if ((tag == 'neg_7_0_eps') && (versions.indexOf('7.0') != -1)) {
+            declinedVersions.push('7.0');
         }
-        else if ((tag == 'neg_7_1_eps') && (version == '7.1')) {
-            extendedPremiumSupport = 'Declined 7.1 EPS';
+        else if ((tag == 'neg_7_1_eps') && (versions.indexOf('7.1') != -1)) {
+            declinedVersions.push('7.1');
         }
-        else if ((tag == 'neg_7_2_eps') && (version == '7.2')) {
-            extendedPremiumSupport = 'Declined 7.2 EPS';
+        else if ((tag == 'neg_7_2_eps') && (versions.indexOf('7.2') != -1)) {
+            declinedVersions.push('7.2');
+        }
+        else if ((tag == 'neg_7_3_eps') && (versions.indexOf('7.3') != -1)) {
+            declinedVersions.push('7.3');
         }
     }
-    if (extendedPremiumSupport == null) {
+    declinedVersions.sort().reverse();
+    var extendedPremiumSupport = null;
+    if (declinedVersions.length == 0) {
         for (var i = 0; i < ticketTags.length; i++) {
             if ((ticketTags[i].indexOf('eps') != -1)) {
                 extendedPremiumSupport = 'Extended Premium Support';
@@ -356,9 +383,8 @@ function addServiceLifeMarker(priorityElement, ticketId, ticketTags, organizatio
             }
         }
     }
-    if ((version == '6.x') || (version == '7.0') || (version == '7.1')) {
-        limitedSupport = true;
-        endOfSoftwareLife = true;
+    else {
+        extendedPremiumSupport = 'Declined ' + declinedVersions[0] + ' EPS';
     }
     var serviceLifeLink = null;
     var href = 'https://liferay.atlassian.net/wiki/spaces/SUPPORT/pages/1998783040/EOSL+Guide+For+Support';
@@ -748,34 +774,47 @@ function getPatcherPortalAccountsHREF(path, params) {
 /**
  * Retrieve the Liferay version from the tags.
  */
-function getProductVersion(tags) {
+function getProductVersions(tags) {
+    var candidates = [];
     for (var i = 0; i < tags.length; i++) {
         var tag = tags[i];
-        if (tag == 'go_live_7_days') {
+        if (tag == 'prd_quarterly_release') {
+            candidates.push('Quarterly Release');
+        }
+        else if (tag.indexOf('prd_liferay_dxp_7_') == 0) {
+            candidates.push('7.' + tag.charAt(18));
+        }
+        else if (tag.indexOf('prd_liferay_portal_') == 0) {
+            candidates.push('6.x');
+        }
+        else if ((tag.indexOf('go_live_') == 0) || (tag.indexOf('_eps') != -1)) {
             continue;
         }
-        var qr = tag.indexOf('prd_quarterly_release');
-        if (qr == 0) {
-            return 'Quarterly Release';
-        }
-        var x = tag.indexOf('7_');
-        if (x == 0) {
-            return '7.' + tag.charAt(2);
-        }
-        x = tag.indexOf('_7_');
-        if (x != -1) {
-            return '7.' + tag.charAt(x + 3);
-        }
-        x = tag.indexOf('6_');
-        if (x == 0) {
-            return '6.x';
-        }
-        x = tag.indexOf('_6_');
-        if (x != -1) {
-            return '6.x';
+        else {
+            var x = tag.indexOf('7_');
+            if (x == 0) {
+                candidates.push('7.' + tag.charAt(2));
+                continue;
+            }
+            x = tag.indexOf('_7_');
+            if (x != -1) {
+                candidates.push('7.' + tag.charAt(x + 3));
+                continue;
+            }
+            if ((tag.indexOf('6_') == 0) || (tag.indexOf('_6_') != -1)) {
+                candidates.push('6.x');
+                continue;
+            }
         }
     }
-    return '';
+    if ((candidates.indexOf('7.4') != -1) && (candidates.indexOf('Quarterly Release') == -1)) {
+        candidates.push('Quarterly Release');
+    }
+    candidates.sort().reverse();
+    if (candidates.length == 0) {
+        candidates.push('Quarterly Release');
+    }
+    return candidates;
 }
 /**
  * Convert the Liferay version into the Patcher Portal product version.
@@ -816,20 +855,14 @@ function addPatcherPortalField(propertyBox, ticketId, ticketInfo) {
             'accountEntryCode': accountCode
         });
         patcherPortalItems.push(createAnchorTag('All Builds', allBuildsLinkHREF));
-        var version = getProductVersion(ticketInfo.ticket && ticketInfo.ticket.tags ? ticketInfo.ticket.tags : []);
-        if (version) {
+        var versions = getProductVersions(ticketInfo.ticket && ticketInfo.ticket.tags ? ticketInfo.ticket.tags : []);
+        for (var i = 0; i < versions.length; i++) {
+            var version = versions[i];
             var versionBuildsLinkHREF = getPatcherPortalAccountsHREF('/view', {
                 'patcherBuildAccountEntryCode': accountCode,
                 'patcherProductVersionId': getProductVersionId(version)
             });
             patcherPortalItems.push(createAnchorTag(version + ' Builds', versionBuildsLinkHREF));
-        }
-        if (version == '7.4') {
-            var versionBuildsLinkHREF = getPatcherPortalAccountsHREF('/view', {
-                'patcherBuildAccountEntryCode': accountCode,
-                'patcherProductVersionId': getProductVersionId('Quarterly Release')
-            });
-            patcherPortalItems.push(createAnchorTag('Quarterly Release Builds', versionBuildsLinkHREF));
         }
     }
     else if (ticketId) {
