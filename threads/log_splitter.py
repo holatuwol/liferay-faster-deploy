@@ -11,17 +11,28 @@ timestamp_pattern = re.compile(timestamp_text)
 
 class LogSplitter:
 
+	def lines(self, path):
+		if os.path.isdir(path):
+			lines = []
+			for filename in os.listdir(path):
+				print(filename)
+				lines.extend(list(open(os.path.join(path, filename), 'r')))
+		else:
+			lines = list(open(filename, 'r'))
+
+		return lines
+
 	# Split by date
 
-	def split(self, foldername, filename):
+	def split(self, target_path, source_path):
 
 		# Create the folder if it does not yet exist.
 
-		if not os.path.exists(foldername):
-			os.mkdir(foldername)
-			os.chmod(foldername, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
+		if not os.path.exists(target_path):
+			os.mkdir(target_path)
+			os.chmod(target_path, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
 
-		lines = open(filename, 'r')
+		lines = self.lines(source_path)
 
 		# Search for the date format emitted at the top of every
 		# standard dump and continues searching until it sees two empty
@@ -52,7 +63,7 @@ class LogSplitter:
 				last_line_blank = False
 
 				thread_dump_filename = os.path.join(
-					foldername, 'thread_' + re.sub('[^\d]', '', line))
+					target_path, 'thread_' + re.sub('[^\d]', '', line))
 
 				thread_dump_file = open(thread_dump_filename, 'w')
 
@@ -67,7 +78,7 @@ class LogSplitter:
 				last_line_blank = False
 
 				thread_dump_filename = os.path.join(
-					foldername, 'thread_%05d' % counter)
+					target_path, 'thread_%05d' % counter)
 
 				thread_dump_file = open(thread_dump_filename, 'w')
 
@@ -104,14 +115,14 @@ class LogSplitter:
 
 	# Split each instance of a thread into its own file
 
-	def split_thread(self, foldername, filename):
+	def split_thread(self, target_path, source_path):
 		# Create the folder if it does not yet exist.
 
-		if not os.path.exists(foldername):
-			os.mkdir(foldername)
+		if not os.path.exists(target_path):
+			os.mkdir(target_path)
 
 		header_line = None
-		lines = open(filename, 'r')
+		lines = self.lines(source_path)
 		thread_dump = False
 		counter = 0
 
@@ -143,10 +154,10 @@ class LogSplitter:
 					counter += 1
 
 					# thread_dump_filename = os.path.join(
-					# 	foldername, 'thread_%05d' % counter)
+					# 	target_path, 'thread_%05d' % counter)
 
 					thread_dump_filename = os.path.join(
-						foldername, 'thread_%s' % thread_name.replace('/', '_'))
+						target_path, 'thread_%s' % thread_name.replace('/', '_'))
 
 					files[thread_name] = thread_dump_filename
 					thread_dump_file = open(thread_dump_filename, 'w')
