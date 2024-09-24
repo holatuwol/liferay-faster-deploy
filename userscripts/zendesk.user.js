@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        22.0
+// @version        22.1
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @supportURL     https://github.com/holatuwol/liferay-zendesk-userscript/issues/new
@@ -786,7 +786,8 @@ function getProductVersions(tags) {
         else if (tag.indexOf('prd_liferay_portal_') == 0) {
             candidates.push('6.x');
         }
-        else if ((tag.indexOf('go_live_') == 0) || (tag.indexOf('_eps') != -1)) {
+        else if ((tag.indexOf('event_') == 0) || (tag.indexOf('go_live_') == 0) ||
+            (tag.indexOf('_days') != -1) || (tag.indexOf('_eps') != -1)) {
             continue;
         }
         else {
