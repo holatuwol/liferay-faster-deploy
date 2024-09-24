@@ -55,7 +55,9 @@ def get_namespaced_parameters(portlet_id, parameters):
 def authenticate(base_url, get_params=None):
     r = session.get(base_url, headers=default_headers, stream=True, verify=False)
 
-    if r.text.find('idpEntityId') != -1:
+    is_html = r.headers['content-type'].lower().find('text/html') == 0
+
+    if is_html and r.text.find('idpEntityId') != -1:
         r = saml_request(base_url, r.url, r.text)
 
     if r.url == base_url:
@@ -64,13 +66,14 @@ def authenticate(base_url, get_params=None):
     if r.url.find('https://login.liferay.com/') == 0:
         print('redirected to login.liferay.com')
         r = login_okta(base_url, r.url)
-    elif r.text.find('SAMLRequest') != -1:
-        print('redirected to a SAML IdP')
-        r = saml_request(base_url, r.url, r.text)
-    elif len(r.history) > 0 and r.url.find('p_p_id=') != -1:
-        print('redirected to login portlet')
-        url_params = parse.parse_qs(parse.urlparse(r.url).query)
-        r = login_portlet(base_url, r.url, url_params, r.text)
+    elif is_html:
+        if r.text.find('SAMLRequest') != -1:
+            print('redirected to a SAML IdP')
+            r = saml_request(base_url, r.url, r.text)
+        elif len(r.history) > 0 and r.url.find('p_p_id=') != -1:
+            print('redirected to login portlet')
+            url_params = parse.parse_qs(parse.urlparse(r.url).query)
+            r = login_portlet(base_url, r.url, url_params, r.text)
 
     with open('session.ser', 'wb') as f:
         pickle.dump(session, f)
