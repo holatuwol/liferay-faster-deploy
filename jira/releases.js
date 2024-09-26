@@ -276,15 +276,37 @@ function generateReleaseNotesHelper(tickets) {
 
 	var ticketCount = Object.keys(tickets).length;
 
-	var totalTicketCountElement = document.createElement('h2');
-	totalTicketCountElement.setAttribute('id', 'release-notes-total-count');
-	totalTicketCountElement.textContent = ticketCount.toLocaleString() + ' ticket' + (ticketCount != 1 ? 's' : '');
-
-	releaseCountsElement.appendChild(totalTicketCountElement);
-
   var releaseCountsListElement = document.createElement('ul');
   releaseCountsListElement.classList.add('list-group');
   releaseCountsElement.appendChild(releaseCountsListElement);  
+
+	var selectAllListItemElement = document.createElement('li');
+	selectAllListItemElement.classList.add('list-group-item', 'active');
+	releaseCountsListElement.appendChild(selectAllListItemElement);
+
+	var selectAllCheckboxElement = document.createElement('input');
+	selectAllCheckboxElement.setAttribute('type', 'checkbox');
+	selectAllCheckboxElement.setAttribute('checked', '');
+	selectAllCheckboxElement.setAttribute('id', 'select_all');
+	selectAllListItemElement.appendChild(selectAllCheckboxElement);
+
+	selectAllCheckboxElement.onclick = function() {
+		var selectAll = this.checked;
+		var changeEvent = new Event('change');
+		document.querySelectorAll(
+			'#release-notes-count .list-group-item:not(.active) input[type="checkbox"]' +
+				(selectAll ? ':not(:checked)' : ':checked'))
+			.forEach(checkbox => {
+				checkbox.checked = selectAll;
+				checkbox.dispatchEvent(changeEvent);
+			});
+	};
+
+	var totalTicketCountElement = document.createElement('span');
+	totalTicketCountElement.classList.add('badge');
+	totalTicketCountElement.setAttribute('id', 'release-notes-total-count');
+	totalTicketCountElement.textContent = getTicketCountString(ticketCount);
+	selectAllListItemElement.appendChild(totalTicketCountElement);
 
 	var ticketsByComponent = Object.keys(tickets).reduce((acc, ticketKey) => {
 		var ticket = Object.assign({}, tickets[ticketKey]);
