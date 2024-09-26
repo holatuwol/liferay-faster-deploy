@@ -43,7 +43,7 @@ function copyReleaseNotesToClipboard() {
 	});
 }
 
-function generateReleasePages(fetchVersions, sourceUpdate, sourceQuarterly, sourcePatch, targetUpdate, targetQuarterly, targetPatch, releaseName) {
+function generateReleaseNotes(fetchVersions, sourceUpdate, sourceQuarterly, sourcePatch, targetUpdate, targetQuarterly, targetPatch, releaseName) {
 	if (releaseName) {
 		fetchVersions.delete(releaseName);
 	}
@@ -118,20 +118,84 @@ function generateReleasePages(fetchVersions, sourceUpdate, sourceQuarterly, sour
 		}
 	}
 
-	var releaseCountsElement = document.getElementById('release-notes-count');
-	var releaseNotesElement = document.getElementById('release-notes-details');
+	generateReleaseNotesHelper(tickets);
+}
 
-	var ticketKeys = Object.keys(tickets);
+function getTicketCountString(ticketCount) {
+	return ticketCount.toLocaleString() + ' ticket' + (ticketCount != 1 ? 's' : '');
+}
 
-	releaseCountsElement.textContent = ticketKeys.length.toLocaleString() + ' ticket(s)';
+function toggleComponent() {
+	var componentElementId = this.getAttribute('name');
+	var componentElement = document.getElementById(componentElementId);
 
-	ticketKeys.sort().forEach(ticketKey => {
+	if (this.checked) {
+		componentElement.classList.remove('hide');
+	}
+	else {
+		componentElement.classList.add('hide');
+	}
+
+	var ticketCount = new Set(Array.from(document.querySelectorAll('.release-notes-component:not(.hide) .release-notes-ticket a[data-jira-ticket-link]')).map(x => x.getAttribute('data-jira-ticket-link'))).size;
+
+	var totalTicketCountElement = document.getElementById('release-notes-total-count');
+	totalTicketCountElement.textContent = getTicketCountString(ticketCount);
+}
+
+function generateComponentReleaseNotes(releaseCountsListElement, releaseNotesElement, componentName, tickets) {
+	var componentElementId = componentName.toLowerCase().replace(/[^a-z]+/g, '_');
+
+	var componentElement = document.createElement('div');
+	componentElement.setAttribute('id', componentElementId);
+	componentElement.classList.add('release-notes-component');
+
+	var divider = document.createElement('hr');
+	divider.classList.add('release-notes-divider');
+	componentElement.appendChild(divider);
+
+	var componentHeaderContainerElement = document.createElement('div');
+	componentHeaderContainerElement.classList.add('release-notes-component-name');
+
+	var componentHeaderElement = document.createElement('h2');
+	componentHeaderElement.textContent = componentName;
+	componentHeaderContainerElement.appendChild(componentHeaderElement);
+
+	var headerTicketCountElement = document.createElement('h2');
+	headerTicketCountElement.textContent = '(' + getTicketCountString(tickets.length) + ')';
+	componentHeaderContainerElement.appendChild(headerTicketCountElement);
+
+	componentElement.appendChild(componentHeaderContainerElement);
+
+	var tableOfContentsListItemElement = document.createElement('li');
+	tableOfContentsListItemElement.classList.add('list-group-item');
+
+	var enableCheckboxElement = document.createElement('input');
+	enableCheckboxElement.setAttribute('type', 'checkbox');
+	enableCheckboxElement.setAttribute('checked', '');
+	enableCheckboxElement.setAttribute('name', componentElementId);
+	enableCheckboxElement.onchange = toggleComponent;
+
+	tableOfContentsListItemElement.appendChild(enableCheckboxElement);
+
+	var tableOfContentsLinkElement = document.createElement('a');
+	tableOfContentsLinkElement.setAttribute('href', '#' + componentElementId);
+	tableOfContentsLinkElement.textContent = componentName;
+	tableOfContentsListItemElement.appendChild(tableOfContentsLinkElement);
+
+	var tableOfContentsCountElement = document.createElement('span');
+	tableOfContentsCountElement.classList.add('badge');
+	tableOfContentsCountElement.textContent = tickets.length.toLocaleString();
+
+	tableOfContentsListItemElement.appendChild(tableOfContentsCountElement);
+
+	releaseCountsListElement.appendChild(tableOfContentsListItemElement);
+
+	tickets.forEach(ticket => {
+    var ticketKey = ticket['key'];
 		var divider = document.createElement('hr');
 		divider.classList.add('release-notes-divider');
 
-		releaseNotesElement.appendChild(divider);
-
-		var ticket = tickets[ticketKey];
+		componentElement.appendChild(divider);
 
 		var ticketElement = document.createElement('div');
 		ticketElement.classList.add('release-notes-ticket');
@@ -139,19 +203,31 @@ function generateReleasePages(fetchVersions, sourceUpdate, sourceQuarterly, sour
 		var ticketURL = ticketKey.startsWith('CVE-') ? ('https://cve.mitre.org/cgi-bin/cvename.cgi?name=' + ticketKey) : ('https://liferay.atlassian.net/browse/' + ticketKey);
 
 		var ticketAnchorElement = document.createElement('a');
+		ticketAnchorElement.setAttribute('data-jira-ticket-link', ticketKey);
 		ticketAnchorElement.setAttribute('href', ticketURL);
 		ticketAnchorElement.setAttribute('target', '_blank');
 		ticketAnchorElement.textContent = ticketKey;
 
-		var headerElement = document.createElement('h1');
+		var headerElement = document.createElement('h3');
 		headerElement.appendChild(ticketAnchorElement);
 
 		ticketElement.appendChild(headerElement);
 
-		var summaryElement = document.createElement('h2');
+		var summaryElement = document.createElement('h4');
 		summaryElement.appendChild(document.createTextNode(ticket['summary']));
 
 		ticketElement.appendChild(summaryElement);
+
+		var componentsElement = ticket['components'].reduce((acc, ticketComponentName) => {
+			var componentListItemElement = document.createElement('li');
+			componentListItemElement.textContent = ticketComponentName;
+			acc.appendChild(componentListItemElement);
+			return acc;
+		}, document.createElement('ul'));
+
+		ticketElement.appendChild(componentsElement);
+
+		ticketElement.appendChild(componentsElement);
 
 		var descriptionElement = document.createElement('div');
 		descriptionElement.innerHTML = ticket['description'];
@@ -185,8 +261,50 @@ function generateReleasePages(fetchVersions, sourceUpdate, sourceQuarterly, sour
 
 		ticketElement.appendChild(descriptionElement);
 
-		releaseNotesElement.appendChild(ticketElement);
+		componentElement.appendChild(ticketElement);
 	});
+
+	releaseNotesElement.appendChild(componentElement);
+}
+
+function generateReleaseNotesHelper(tickets) {
+	var releaseCountsElement = document.getElementById('release-notes-count');
+
+	releaseCountsElement.innerHTML = '';
+
+	var releaseNotesElement = document.getElementById('release-notes-details');
+
+	var ticketCount = Object.keys(tickets).length;
+
+	var totalTicketCountElement = document.createElement('h2');
+	totalTicketCountElement.setAttribute('id', 'release-notes-total-count');
+	totalTicketCountElement.textContent = ticketCount.toLocaleString() + ' ticket' + (ticketCount != 1 ? 's' : '');
+
+	releaseCountsElement.appendChild(totalTicketCountElement);
+
+  var releaseCountsListElement = document.createElement('ul');
+  releaseCountsListElement.classList.add('list-group');
+  releaseCountsElement.appendChild(releaseCountsListElement);  
+
+	var ticketsByComponent = Object.keys(tickets).reduce((acc, ticketKey) => {
+		var ticket = Object.assign({}, tickets[ticketKey]);
+		ticket['key'] = ticketKey;
+
+		Array.from(new Set(ticket['components'].map(it => it.split(' > ')[0]))).forEach(componentName => {
+			if (acc[componentName]) {
+				acc[componentName].push(ticket);
+			}
+			else {
+				acc[componentName] = [ticket];
+			}
+		})
+
+		return acc;
+	}, {});
+
+	Object.keys(ticketsByComponent).sort().forEach(componentName => {
+		generateComponentReleaseNotes(releaseCountsListElement, releaseNotesElement, componentName, ticketsByComponent[componentName]);
+	})
 }
 
 function loadReleaseDetails(releaseName, joinCallback) {
@@ -270,7 +388,7 @@ function populateReleaseDetails(sourceVersion, targetVersion) {
 		fetchVersions.add(targetQuarterly + '.' + i);
 	}
 
-	var joinCallback = generateReleasePages.bind(
+	var joinCallback = generateReleaseNotes.bind(
 		null, fetchVersions,
 		sourceUpdate, sourceQuarterly, sourcePatch,
 		targetUpdate, targetQuarterly, targetPatch);

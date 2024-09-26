@@ -18,14 +18,16 @@ quarterly_releases = {
     '2023.q3': 92,
     '2023.q4': 102,
     '2024.q1': 112,
-    '2024.q2': 120
+    '2024.q2': 120,
+    '2024.q3': 125
 }
 
 old_update_threshold = {
     '2023.q3': 92,
     '2023.q4': 92,
     '2024.q1': 102,
-    '2024.q2': 112
+    '2024.q2': 112,
+    '2024.q3': 120
 }
 
 quarterly_updates = { value: key for key, value in quarterly_releases.items() }
@@ -79,7 +81,7 @@ def get_fixed_issues(release_name, release_ids):
         print(f'unrecognized release {release_name}')
         return {}
 
-    fixed_issues = get_issues(query, ['summary', 'description', 'security'], render=True)
+    fixed_issues = get_issues(query, ['summary', 'description', 'components', 'security'], render=True)
 
     release_issues = {}
 
@@ -89,6 +91,7 @@ def get_fixed_issues(release_name, release_ids):
         if fixed_issue['fields']['security'] is None:
             release_issues[fixed_issue_key] = {
                 'summary': fixed_issue['fields']['summary'],
+                'components': [x['name'] for x in fixed_issue['fields']['components']],
                 'description': fixed_issue['renderedFields']['description']
             }
         else:
@@ -111,13 +114,14 @@ def get_fixed_issues(release_name, release_ids):
 
     if len(lsv_issue_keys) > 0:
         lsv_issue_query = 'key in (%s)' % ','.join(lsv_issue_keys.keys())
-        lsv_issues = get_issues(lsv_issue_query, ['summary', 'description', 'customfield_10563'], render=True)
+        lsv_issues = get_issues(lsv_issue_query, ['summary', 'description', 'components', 'customfield_10563'], render=True)
 
         for lsv_issue_key, lsv_issue in lsv_issues.items():
             if lsv_issue['fields']['customfield_10563'] is not None:
                 cve_issues.append(lsv_issue['fields']['customfield_10563'])
                 release_issues[lsv_issue['fields']['customfield_10563']] = {
                     'summary': lsv_issue['fields']['summary'],
+                    'components': [x['name'] for x in lsv_issue['fields']['components']],
                     'description': lsv_issue['renderedFields']['description']
                 }
 

@@ -34,10 +34,12 @@ done
 
 gzip -c releases.production.json > releases.json.gz
 aws s3 cp --profile ${AWS_PROFILE} releases.json.gz "s3://${S3_BUCKET}/releases.json" --acl public-read --metadata-directive REPLACE --content-encoding gzip
+rm releases.json.gz
 
 for file in releases.html releases.js; do
   gzip -c ${file} > ${file}.gz
   aws s3 --profile ${AWS_PROFILE} cp ${file}.gz "s3://${S3_BUCKET}/${file}" --acl public-read --metadata-directive REPLACE --content-encoding gzip
+  rm ${file}.gz
 done
 
 rm 1.txt 2.txt releases.production/*.gz

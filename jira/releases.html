@@ -12,17 +12,41 @@
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
 
 <style>
+	#release-notes-count input {
+		margin-right: 1em;
+	}
+
+	.release-notes-component-name {
+		display: flex;
+		flex-flow: row;
+		justify-content: space-between;
+	}
+
 	@media print {
+		#release-notes-help,
 		.release-notes-divider {
 			display: none;
 		}
 
+		.release-notes-component-name,
 		.release-notes-ticket {
-			page-break-before: always;
+			break-before: page;
+			break-after: page;
+		}
+
+		.release-notes-component-name {
+			height: 100%;
+			flex-flow: column;
+			align-items: center;
+			justify-content: center;
 		}
 
 		a[href]:after {
 			content: none !important;
+		}
+
+		img {
+			display: block;
 		}
 	}
 </style>
@@ -30,6 +54,8 @@
 <body>
 
 <div class="container" role="main">
+
+<div id="release-notes-help">
 
 <h1>Flattened Jira Release Notes</h1>
 
@@ -71,6 +97,8 @@
 </tr>
 </tbody>
 </table>
+
+</div>
 
 <div id="release-notes-count">
 </div>
