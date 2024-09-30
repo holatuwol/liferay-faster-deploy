@@ -1,13 +1,3 @@
-function getParameter(name) {
-	if (!location.search) {
-		return '';
-	}
-
-	var re = new RegExp('[?&]' + name + '=([^&]*)');
-	var m = re.exec(location.search);
-	return m ? m[1] : '';
-};
-
 var modifyState = history.pushState ? history.pushState.bind(history) : null;
 
 var select1 = document.getElementById('sourceVersion');
@@ -15,6 +5,49 @@ var select2 = document.getElementById('targetVersion');
 
 var releaseVersions = {};
 var releaseDetails = {};
+
+var quarterlies = {
+	'2023.q3': 92,
+	'2023.q4': 102,
+	'2024.q1': 112,
+	'2024.q2': 120,
+	'2024.q3': 125
+};
+
+function checkReleaseDetails() {
+	var releaseCountsElement = document.getElementById('release-notes-count');
+
+	releaseCountsElement.textContent = 'Loading...';
+
+	var exportLink = document.getElementById('export-to-csv');
+
+	if (exportLink.href) {
+		URL.revokeObjectURL(exportLink.href);
+		exportLink.removeAttribute('href');
+	}
+
+	var releaseNotesElement = document.getElementById('release-notes-details');
+
+	releaseNotesElement.innerHTML = '';
+
+	var select1Value = select1.options[select1.selectedIndex].value;
+	var select2Value = select2.options[select2.selectedIndex].value;
+
+	if (modifyState) {
+		var baseURL = window.location.protocol + "//" + window.location.host + window.location.pathname;
+
+		var newURL = baseURL + '?sourceVersion=' + select1Value;
+
+		if (select1Value != select2Value) {
+			newURL += '&targetVersion=' + select2Value;
+		}
+
+		modifyState({path: newURL}, '', newURL);
+		modifyState = history.replaceState.bind(history);
+	}
+
+	setTimeout(populateReleaseDetails.bind(null, select1Value, select2Value), 100);
+};
 
 function copyReleaseNotesToClipboard() {
 	var releaseNotesElement = document.getElementById('release-notes-details');
@@ -41,106 +74,74 @@ function copyReleaseNotesToClipboard() {
 
 		document.getElementById('extraActions').appendChild(alertElement);
 	});
-}
+};
 
-function generateReleaseNotes(fetchVersions, sourceUpdate, sourceQuarterly, sourcePatch, targetUpdate, targetQuarterly, targetPatch, releaseName) {
-	if (releaseName) {
-		fetchVersions.delete(releaseName);
+function exportReleaseNotesToCSV() {
+	var ticketKeys = new Set(Array.from(document.querySelectorAll('.release-notes-component:not(.hide) .release-notes-ticket a[data-jira-ticket-link]')).map(x => x.getAttribute('data-jira-ticket-link')));
+
+	var select1Value = select1.options[select1.selectedIndex].value;
+	var select2Value = select2.options[select2.selectedIndex].value;
+
+	var fetchVersions = getFetchVersions(select1Value, select2Value);
+
+	if (select1Value != select2Value) {
+		fetchVersions.delete(select1Value);
 	}
 
-	if (fetchVersions.size > 0) {
-		return;
-	}
+	var targetQuarterlyVersions = Array.from(fetchVersions).filter(it => it.indexOf('.q') != -1).sort((a, b) => {
+		return getPatch(a) - getPatch(b);
+	});
 
-	var tickets = {};
+	var hasQuarterlyVersion = targetQuarterlyVersions.length > 0;
 
-	var sourceVersion, targetVersion;
-
-	if (sourceQuarterly) {
-		sourceVersion = sourceQuarterly + '.' + sourcePatch;
-	}
-	else {
-		sourceVersion = '7.4.13-u' + sourceUpdate;
-	}
-
-	if (targetQuarterly) {
-		targetVersion = targetQuarterly + '.' + targetPatch;
-	}
-	else {
-		targetVersion = '7.4.13-u' + targetUpdate;
-	}
-
-	Object.assign(tickets, releaseDetails[targetVersion]);
-
-	if (sourceVersion != targetVersion) {
-		for (var i = sourceUpdate + 1; i < targetUpdate; i++) {
-			var version = '7.4.13-u' + i;
-			Object.assign(tickets, releaseDetails[version]);
+	var tickets = Array.from(fetchVersions).reduce((acc1, version) => {
+		if (!(version in releaseDetails)) {
+			return acc1;
 		}
 
-		if (targetQuarterly) {
-			for (var i = 0; i < targetPatch; i++) {
-				var version = targetQuarterly + '.' + i;
+		var versionTickets = Object.keys(releaseDetails[version]);
 
-				if (!(version in releaseDetails)) {
-					continue;
-				}
+		var updateVersion = null;
+		var nextQuarterly = null;
 
-				Object.assign(tickets, releaseDetails[version]);
-			}
+		var updateVersionIndex = version.indexOf('-u');
 
+		if (hasQuarterlyVersion && (updateVersionIndex != -1)) {
+			updateVersion = parseInt(version.substring(updateVersionIndex + 2));
+			nextQuarterly = getNextQuarterly(updateVersion);
 		}
 
-		if (sourceQuarterly) {
-			for (var i = 92; i <= sourceUpdate; i++) {
-				var version = '7.4.13-u' + i;
-
-				if (!(version in releaseDetails)) {
-					continue;
-				}
-
-				for (ticketKey in releaseDetails[version]) {
-					delete tickets[ticketKey];
-				}
+		return versionTickets.filter(key => ticketKeys.has(key)).reduce((acc2, ticketKey) => {
+			if (ticketKey in acc2) {
+				return acc2;
 			}
 
-			for (var i = 0; i <= sourcePatch; i++) {
-				var version = sourceQuarterly + '.' + i;
+			acc2[ticketKey] = {
+				'Issue Key': ticketKey,
+				'Summary': releaseDetails[version][ticketKey]['summary'],
+				'Components': releaseDetails[version][ticketKey]['components'].join('\n'),
+			};
 
-				if (!(version in releaseDetails)) {
-					continue;
+			if (nextQuarterly != null) {
+				if (hasQuarterlyVersion && targetQuarterlyVersions[0].indexOf(nextQuarterly) == 0) {
+					acc2[ticketKey]['Fix Version'] = targetQuarterlyVersions[0];
+				}
+				else {
+					acc2[ticketKey]['Fix Version'] = nextQuarterly;
 				}
 
-				for (ticketKey in releaseDetails[version]) {
-					delete tickets[ticketKey];
-				}
+				return acc2;
 			}
-		}
-	}
 
-	generateReleaseNotesHelper(tickets);
-}
+			acc2[ticketKey]['Fix Version'] = version;
+			return acc2;
+		}, acc1);
+	}, {});
 
-function getTicketCountString(ticketCount) {
-	return ticketCount.toLocaleString() + ' ticket' + (ticketCount != 1 ? 's' : '');
-}
-
-function toggleComponent() {
-	var componentElementId = this.getAttribute('name');
-	var componentElement = document.getElementById(componentElementId);
-
-	if (this.checked) {
-		componentElement.classList.remove('hide');
-	}
-	else {
-		componentElement.classList.add('hide');
-	}
-
-	var ticketCount = new Set(Array.from(document.querySelectorAll('.release-notes-component:not(.hide) .release-notes-ticket a[data-jira-ticket-link]')).map(x => x.getAttribute('data-jira-ticket-link'))).size;
-
-	var totalTicketCountElement = document.getElementById('release-notes-total-count');
-	totalTicketCountElement.textContent = getTicketCountString(ticketCount);
-}
+	var exportLink = document.getElementById('export-to-csv');
+	exportLink.setAttribute('download', 'release_notes.csv');
+	exportLink.href = URL.createObjectURL(new Blob([Papa.unparse(Object.values(tickets))], {'type': 'text/csv'}));
+};
 
 function generateComponentReleaseNotes(releaseCountsListElement, releaseNotesElement, componentName, tickets) {
 	var componentElementId = componentName.toLowerCase().replace(/[^a-z]+/g, '_');
@@ -265,7 +266,86 @@ function generateComponentReleaseNotes(releaseCountsListElement, releaseNotesEle
 	});
 
 	releaseNotesElement.appendChild(componentElement);
-}
+};
+
+function generateReleaseNotes(fetchVersions, sourceUpdate, sourceQuarterly, sourcePatch, targetUpdate, targetQuarterly, targetPatch, releaseName) {
+	if (releaseName) {
+		fetchVersions.delete(releaseName);
+	}
+
+	if (fetchVersions.size > 0) {
+		return;
+	}
+
+	var tickets = {};
+
+	var sourceVersion, targetVersion;
+
+	if (sourceQuarterly) {
+		sourceVersion = sourceQuarterly + '.' + sourcePatch;
+	}
+	else {
+		sourceVersion = '7.4.13-u' + sourceUpdate;
+	}
+
+	if (targetQuarterly) {
+		targetVersion = targetQuarterly + '.' + targetPatch;
+	}
+	else {
+		targetVersion = '7.4.13-u' + targetUpdate;
+	}
+
+	Object.assign(tickets, releaseDetails[targetVersion]);
+
+	if (sourceVersion != targetVersion) {
+		for (var i = sourceUpdate + 1; i < targetUpdate; i++) {
+			var version = '7.4.13-u' + i;
+			Object.assign(tickets, releaseDetails[version]);
+		}
+
+		if (targetQuarterly) {
+			for (var i = 0; i < targetPatch; i++) {
+				var version = targetQuarterly + '.' + i;
+
+				if (!(version in releaseDetails)) {
+					continue;
+				}
+
+				Object.assign(tickets, releaseDetails[version]);
+			}
+
+		}
+
+		if (sourceQuarterly) {
+			for (var i = 92; i <= sourceUpdate; i++) {
+				var version = '7.4.13-u' + i;
+
+				if (!(version in releaseDetails)) {
+					continue;
+				}
+
+				for (ticketKey in releaseDetails[version]) {
+					delete tickets[ticketKey];
+				}
+			}
+
+			for (var i = 0; i <= sourcePatch; i++) {
+				var version = sourceQuarterly + '.' + i;
+
+				if (!(version in releaseDetails)) {
+					continue;
+				}
+
+				for (ticketKey in releaseDetails[version]) {
+					delete tickets[ticketKey];
+				}
+			}
+		}
+	}
+
+	generateReleaseNotesHelper(tickets);
+	exportReleaseNotesToCSV();
+};
 
 function generateReleaseNotesHelper(tickets) {
 	var releaseCountsElement = document.getElementById('release-notes-count');
@@ -327,38 +407,9 @@ function generateReleaseNotesHelper(tickets) {
 	Object.keys(ticketsByComponent).sort().forEach(componentName => {
 		generateComponentReleaseNotes(releaseCountsListElement, releaseNotesElement, componentName, ticketsByComponent[componentName]);
 	})
-}
-
-function loadReleaseDetails(releaseName, joinCallback) {
-	if (!(releaseName in releaseVersions) || (releaseName in releaseDetails)) {
-		joinCallback(releaseName);
-		return;
-	}
-
-	var requestURL = ((document.location.hostname == 'localhost') ? '' : 'https://s3-us-west-2.amazonaws.com/mdang.grow/') + 'releases/' + releaseName + '.json';
-
-	fetch(requestURL).then(x => x.json()).then(tickets => {
-		releaseDetails[releaseName] = tickets;
-		joinCallback(releaseName);
-	}).catch(joinCallback.bind(null, releaseName));
-}
-
-var quarterlies = {
-	'2023.q3': 92,
-	'2023.q4': 102,
-	'2024.q1': 112
 };
 
-function populateReleaseDetails(sourceVersion, targetVersion) {
-	var getUpdate = function(version) {
-		if (version.indexOf('-u') != -1) {
-			return parseInt(version.substring(version.indexOf('-u') + 2));
-		}
-		else {
-			return quarterlies[version.substring(0, 7)];
-		}
-	};
-
+function getFetchVersions(sourceVersion, targetVersion) {
 	var sourceUpdate = getUpdate(sourceVersion);
 	var targetUpdate = getUpdate(targetVersion);
 
@@ -378,24 +429,6 @@ function populateReleaseDetails(sourceVersion, targetVersion) {
 		}
 	}
 
-	var getQuarterly = function(version) {
-		if (version.indexOf('.q') == -1) {
-			return undefined;
-		}
-		else {
-			return version.substring(0, 7);
-		}
-	}
-
-	var getPatch = function(version) {
-		if (version.indexOf('.q') == -1) {
-			return -1;
-		}
-		else {
-			return parseInt(version.substring(8));
-		}
-	}
-
 	var sourceQuarterly = getQuarterly(sourceVersion);
 	var sourcePatch = getPatch(sourceVersion);
 
@@ -410,10 +443,115 @@ function populateReleaseDetails(sourceVersion, targetVersion) {
 		fetchVersions.add(targetQuarterly + '.' + i);
 	}
 
+	return fetchVersions;
+};
+
+function getNextQuarterly(update) {
+	if (update < 92) {
+		return null;
+	}
+
+	var maxYear = new Date().getUTCFullYear();
+
+	for (var i = 2023; i <= maxYear; i++) {
+		for (var j = 1; j <= 4; j++) {
+			var quarterlyName = i + '.q' + j;
+
+			if (!(quarterlyName in quarterlies)) {
+				continue;
+			}
+
+			if (update <= quarterlies[quarterlyName]) {
+				return quarterlyName;
+			}
+		}
+	}
+
+	return null;
+};
+
+function getParameter(name) {
+	if (!location.search) {
+		return '';
+	}
+
+	var re = new RegExp('[?&]' + name + '=([^&]*)');
+	var m = re.exec(location.search);
+	return m ? m[1] : '';
+};
+
+function getPatch(version) {
+	if (version.indexOf('.q') == -1) {
+		return -1;
+	}
+	else {
+		return parseInt(version.substring(8));
+	}
+};
+
+function getPreviousQuarterly(update) {
+	var maxYear = new Date().getUTCFullYear();
+
+	for (var i = maxYear; i >= 2023; i--) {
+		for (var j = 4; j > 0; j--) {
+			var quarterlyName = i + '.q' + j;
+
+			if (!(quarterlyName in quarterlies)) {
+				continue;
+			}
+
+			if (update > quarterlies[quarterlyName]) {
+				return quarterlyName;
+			}
+		}
+	}
+
+	return null;
+};
+
+function getQuarterly(version) {
+	if (version.indexOf('.q') == -1) {
+		return undefined;
+	}
+	else {
+		return version.substring(0, 7);
+	}
+};
+
+function getTicketCountString(ticketCount) {
+	return ticketCount.toLocaleString() + ' ticket' + (ticketCount != 1 ? 's' : '');
+};
+
+function getUpdate(version) {
+	if (version.indexOf('-u') != -1) {
+		return parseInt(version.substring(version.indexOf('-u') + 2));
+	}
+	else {
+		return quarterlies[version.substring(0, 7)];
+	}
+};
+
+function loadReleaseDetails(releaseName, joinCallback) {
+	if (!(releaseName in releaseVersions) || (releaseName in releaseDetails)) {
+		joinCallback(releaseName);
+		return;
+	}
+
+	var requestURL = ((document.location.hostname == 'localhost') ? '' : 'https://s3-us-west-2.amazonaws.com/mdang.grow/') + 'releases/' + releaseName + '.json';
+
+	fetch(requestURL).then(x => x.json()).then(tickets => {
+		releaseDetails[releaseName] = tickets;
+		joinCallback(releaseName);
+	}).catch(joinCallback.bind(null, releaseName));
+};
+
+function populateReleaseDetails(sourceVersion, targetVersion) {
+	var fetchVersions = getFetchVersions(sourceVersion, targetVersion);
+
 	var joinCallback = generateReleaseNotes.bind(
 		null, fetchVersions,
-		sourceUpdate, sourceQuarterly, sourcePatch,
-		targetUpdate, targetQuarterly, targetPatch);
+		getUpdate(sourceVersion), getQuarterly(sourceVersion), getPatch(sourceVersion),
+		getUpdate(targetVersion), getQuarterly(targetVersion), getPatch(targetVersion));
 
 	if (fetchVersions.size == 0) {
 		joinCallback();
@@ -421,35 +559,24 @@ function populateReleaseDetails(sourceVersion, targetVersion) {
 	else {
 		fetchVersions.forEach(version => loadReleaseDetails(version, joinCallback));
 	}
-}
+};
 
-function checkReleaseDetails() {
-	var releaseCountsElement = document.getElementById('release-notes-count');
+function toggleComponent() {
+	var componentElementId = this.getAttribute('name');
+	var componentElement = document.getElementById(componentElementId);
 
-	releaseCountsElement.textContent = 'Loading...';
-
-	var releaseNotesElement = document.getElementById('release-notes-details');
-
-	releaseNotesElement.innerHTML = '';
-
-	var select1Value = select1.options[select1.selectedIndex].value;
-	var select2Value = select2.options[select2.selectedIndex].value;
-
-	if (modifyState) {
-		var baseURL = window.location.protocol + "//" + window.location.host + window.location.pathname;
-
-		var newURL = baseURL + '?sourceVersion=' + select1Value;
-
-		if (select1Value != select2Value) {
-			newURL += '&targetVersion=' + select2Value;
-		}
-
-		modifyState({path: newURL}, '', newURL);
-		modifyState = history.replaceState.bind(history);
+	if (this.checked) {
+		componentElement.classList.remove('hide');
+	}
+	else {
+		componentElement.classList.add('hide');
 	}
 
-	setTimeout(populateReleaseDetails.bind(null, select1Value, select2Value), 100);
-}
+	var ticketCount = new Set(Array.from(document.querySelectorAll('.release-notes-component:not(.hide) .release-notes-ticket a[data-jira-ticket-link]')).map(x => x.getAttribute('data-jira-ticket-link'))).size;
+
+	var totalTicketCountElement = document.getElementById('release-notes-total-count');
+	totalTicketCountElement.textContent = getTicketCountString(ticketCount);
+};
 
 function initUI() {
 	var requestURL = ((document.location.hostname == 'localhost') ? '' : 'https://s3-us-west-2.amazonaws.com/mdang.grow/') + 'releases.json';
@@ -484,6 +611,6 @@ function initUI() {
 
 		checkReleaseDetails();
 	});
-}
+};
 
 initUI();
