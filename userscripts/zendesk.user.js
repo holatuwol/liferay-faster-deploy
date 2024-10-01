@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        22.1
+// @version        22.2
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @supportURL     https://github.com/holatuwol/liferay-zendesk-userscript/issues/new
@@ -717,7 +717,7 @@ function addOrganizationField(propertyBox, ticketId, ticketInfo) {
         organizationInfo = organizationCache[accountCode];
     }
     var notesItems = [];
-    if (organizationInfo) {
+    if (organizationInfo && organizationInfo.organization_fields.account_key) {
         var provisioningSupportInstructionsLink = createAnchorTag("edit", "https://provisioning.liferay.com/group/guest/~/control_panel/manage?p_p_id=com_liferay_osb_provisioning_web_portlet_AccountsPortlet&p_p_lifecycle=0&p_p_state=maximized&p_p_mode=view&_com_liferay_osb_provisioning_web_portlet_AccountsPortlet_mvcRenderCommandName=%2Faccounts%2Fview_account&_com_liferay_osb_provisioning_web_portlet_AccountsPortlet_tabs1=support&_com_liferay_osb_provisioning_web_portlet_AccountsPortlet_accountKey=" + organizationInfo.organization_fields.account_key);
         notesItems.push(provisioningSupportInstructionsLink);
     }
@@ -734,9 +734,14 @@ function addOrganizationField(propertyBox, ticketId, ticketInfo) {
     generateFormField(propertyBox, 'lesa-ui-orgnotes', 'Notes', notesItems);
     if (organizationInfo) {
         var organizationFields = organizationInfo.organization_fields;
-        serviceLevel.push(organizationFields.sla.toUpperCase());
-        helpCenterLinkHREF = "https://support.liferay.com/project/#/" +
-            organizationInfo.organization_fields.account_key;
+        var sla = organizationFields.sla;
+        if (sla) {
+            serviceLevel.push(sla.toUpperCase());
+        }
+        if (organizationInfo.organization_fields.account_key) {
+            helpCenterLinkHREF = "https://support.liferay.com/project/#/" +
+                organizationInfo.organization_fields.account_key;
+        }
         subOrganizationTag = organizationFields.sub_organization;
     }
     var helpCenterItems = [];
@@ -759,6 +764,9 @@ function addOrganizationField(propertyBox, ticketId, ticketInfo) {
         var subOrganizationName = subOrganizationTag.split("_").map(function (word) { return word.charAt(0).toUpperCase() + word.slice(1); }).join(" "); /* replace underscores with spaces and capitalize: spain_pod_a => Spain Pod A */
         subOrganizationContainer.appendChild(document.createTextNode(subOrganizationName));
         generateFormField(propertyBox, 'lesa-ui-suborganization', 'Sub Organization', [subOrganizationContainer]);
+    }
+    else {
+        generateFormField(propertyBox, 'lesa-ui-suborganization', '', []);
     }
 }
 /**
