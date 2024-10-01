@@ -58,7 +58,13 @@ generate_json() {
 }
 
 upload_json() {
+	if [ "" == "${AWS_PROFILE}" ]; then
+		echo 'Please set AWS_PROFILE to upload files'
+		return
+	fi
+
 	if [ "" == "${S3_BUCKET}" ]; then
+		echo 'Please set S3_BUCKET to upload files'
 		return
 	fi
 
@@ -91,10 +97,14 @@ upload_json() {
 
 # Make sure the packageinfo files are up to date
 
+if [ "" == "${PACKAGEINFO_ROOT}" ]; then
+	PACKAGEINFO_ROOT="${HOME}/dev/packageinfo"
+fi
+
 AVAILABLE_VERSIONS="$(find ${PACKAGEINFO_ROOT} -mindepth 1 -maxdepth 1 -type d | sed 's@^.*/@@g' | sort | cut -d'.' -f 1,2)"
 
 if [ "" == "${PORTAL_SOURCE_ROOT}" ]; then
-	PORTAL_SOURCE_ROOT="${PACKAGEINFO_ROOT}/7.0.x/portal"
+	PORTAL_SOURCE_ROOT="${HOME}/dev/liferay/master"
 fi
 
 if [ "update" == "${1}" ]; then
