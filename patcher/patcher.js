@@ -87,6 +87,7 @@ function setProductVersions7(version, accumulator, next) {
 
 function setProjectVersions7(accumulator, next) {
   var key = next.innerText.trim();
+  console.log(key);
 
   if (key == '') {
     return accumulator;
@@ -159,20 +160,20 @@ function getLiferayVersion(version) {
   else if (version.indexOf('-ga1') != -1) {
     var shortVersionMatcher = /^([0-9]*)\.([0-9]*)\.([0-9]*)/.exec(version);
     var shortVersion = shortVersionMatcher[1] + shortVersionMatcher[2];
-    return parseInt(shortVersion) * 1000 + parseInt(shortVersionMatcher[3]);
+    return parseInt(shortVersion) * 100 * 1000 + parseInt(shortVersionMatcher[3]);
   }
   else if (version.indexOf('-u') != -1) {
-    var shortVersionMatcher = /[0-9]*\.[0-9]/.exec(version);
-    var shortVersion = shortVersionMatcher[0].replace('.', '');
+    var shortVersionMatcher = /[0-9]*\.[0-9]\.[0-9]+/.exec(version);
+    var shortVersion = shortVersionMatcher[0].replace(/\./g, '');
     var updateVersionMatcher = /-u([0-9]*)/.exec(version);
     var updateVersion = updateVersionMatcher[1];
-    return parseInt(shortVersion) * 100 * 1000 + parseInt(updateVersion);
+    return parseInt(shortVersion) * 1000 + parseInt(updateVersion);
   }
   else if (version.indexOf('.q') != -1) {
     var shortVersionMatcher = /([0-9][0-9][0-9][0-9])\.q([0-9])\.([0-9]*)/.exec(version);
     var shortVersion = shortVersionMatcher[1] + shortVersionMatcher[2];
     var updateVersion = shortVersionMatcher[3];
-    return parseInt(shortVersion) * 100 + parseInt(updateVersion);
+    return 8000000 + parseInt(shortVersion) * 100 + parseInt(updateVersion);
   }
   else {
     console.log('unrecognized version pattern', version);
@@ -186,9 +187,14 @@ function getLiferayVersion(version) {
  * and then group them numerically.
  */
 
+var cachedLiferayVersion = {};
+
 function compareLiferayVersions(a, b) {
-  var aValue = getLiferayVersion(a);
-  var bValue = getLiferayVersion(b);
+  var aValue = cachedLiferayVersion[a] || getLiferayVersion(a);
+  var bValue = cachedLiferayVersion[b] || getLiferayVersion(b);
+
+  cachedLiferayVersion[a] = aValue;
+  cachedLiferayVersion[b] = bValue;
 
   if (aValue != bValue) {
     return aValue - bValue;
@@ -218,6 +224,8 @@ function removeBadVersions(versionIds) {
   delete versionIds['fix-pack-base-6210-sp18'];
   delete versionIds['marketplace-portal-search-solr7-1.1.0-7110']
   delete versionIds['marketplace-portal-search-solr8-2.0.0-7110']
+  delete versionIds['DXP 7.4 EP2'];
+  delete versionIds['DXP 7.4 EP3'];
 }
 
 /**
