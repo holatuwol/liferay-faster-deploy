@@ -14,17 +14,25 @@ var quarterlies = {
 	'2024.q3': 125
 };
 
+var renderedComponents = {};
+var renderedTicketsByType = {};
+var renderedTicketsByComponent = {};
+
+function debounce(callback) {
+	var timer;
+
+	return function() {
+		detachExportURL();
+
+		clearTimeout(timer);
+		timer = setTimeout(callback, 100);
+	};
+}
+
 function checkReleaseDetails() {
 	var releaseCountsElement = document.getElementById('release-notes-count');
 
 	releaseCountsElement.textContent = 'Loading...';
-
-	var exportLink = document.getElementById('export-to-csv');
-
-	if (exportLink.href) {
-		URL.revokeObjectURL(exportLink.href);
-		exportLink.removeAttribute('href');
-	}
 
 	var releaseNotesElement = document.getElementById('release-notes-details');
 
@@ -46,7 +54,7 @@ function checkReleaseDetails() {
 		modifyState = history.replaceState.bind(history);
 	}
 
-	setTimeout(populateReleaseDetails.bind(null, select1Value, select2Value), 100);
+	populateReleaseDetails(select1Value, select2Value);
 };
 
 function copyReleaseNotesToClipboard() {
@@ -76,9 +84,78 @@ function copyReleaseNotesToClipboard() {
 	});
 };
 
-function exportReleaseNotesToCSV() {
-	var ticketKeys = new Set(Array.from(document.querySelectorAll('.release-notes-component:not(.hide) .release-notes-ticket a[data-jira-ticket-link]')).map(x => x.getAttribute('data-jira-ticket-link')));
+function createSelectAllElement(filterType, filterName) {
+	var selectAllListItemElement = document.createElement('li');
+	selectAllListItemElement.classList.add('list-group-item', 'active');
 
+	var selectAllCheckboxElement = document.createElement('input');
+	selectAllCheckboxElement.setAttribute('type', 'checkbox');
+	selectAllCheckboxElement.setAttribute('checked', '');
+	selectAllCheckboxElement.setAttribute('id', 'select_all');
+	selectAllListItemElement.appendChild(selectAllCheckboxElement);
+
+	selectAllCheckboxElement.onchange = function() {
+		detachExportURL();
+
+		var selectAll = this.checked;
+		var changeEvent = new Event('change');
+		var checkboxes = document.querySelectorAll(
+			'#release-notes-' + filterType + '-filter input[value]' +
+				(selectAll ? ':not(:checked)' : ':checked'));
+
+		checkboxes.forEach(checkbox => {
+			checkbox.checked = selectAll;
+		});
+
+		setTimeout(function() {
+			checkboxes.forEach(checkbox => {
+				checkbox.dispatchEvent(changeEvent);
+			});
+		}, 100);
+	};
+
+	var selectAllHeaderElement = document.createElement('strong');
+	selectAllHeaderElement.textContent = 'Filter by ' + filterName;
+	selectAllListItemElement.appendChild(selectAllHeaderElement);
+
+	return selectAllListItemElement;
+};
+
+function createTableOfContentsElement(checkboxName, elementId, label, count, toggleListener) {
+	var tableOfContentsListItemElement = document.createElement('li');
+	tableOfContentsListItemElement.classList.add('list-group-item');
+
+	var enableCheckboxElement = document.createElement('input');
+	enableCheckboxElement.setAttribute('type', 'checkbox');
+	enableCheckboxElement.setAttribute('checked', '');
+	enableCheckboxElement.setAttribute('name', checkboxName);
+	enableCheckboxElement.setAttribute('value', elementId || label);
+
+	enableCheckboxElement.onchange = toggleListener;
+
+	tableOfContentsListItemElement.appendChild(enableCheckboxElement);
+
+	if (elementId) {
+		var tableOfContentsLinkElement = document.createElement('a');
+		tableOfContentsLinkElement.setAttribute('href', '#' + elementId);
+		tableOfContentsLinkElement.textContent = label;
+		tableOfContentsListItemElement.appendChild(tableOfContentsLinkElement);
+	}
+	else {
+		tableOfContentsListItemElement.appendChild(document.createTextNode(label));	
+	}
+
+	var tableOfContentsCountElement = document.createElement('span');
+	tableOfContentsCountElement.classList.add('badge');
+	tableOfContentsCountElement.setAttribute('data-value', elementId || label);
+	tableOfContentsCountElement.textContent = count.toLocaleString();
+
+	tableOfContentsListItemElement.appendChild(tableOfContentsCountElement);
+
+	return tableOfContentsListItemElement;
+};
+
+function exportReleaseNotesToCSV(ticketKeys) {
 	var select1Value = select1.options[select1.selectedIndex].value;
 	var select2Value = select2.options[select2.selectedIndex].value;
 
@@ -118,8 +195,15 @@ function exportReleaseNotesToCSV() {
 
 			acc2[ticketKey] = {
 				'Issue Key': ticketKey,
-				'Summary': releaseDetails[version][ticketKey]['summary'],
+				'Issue Type': releaseDetails[version][ticketKey]['type'],
+				'Fix Priority': releaseDetails[version][ticketKey]['fix_priority'],
+				'Create Date': releaseDetails[version][ticketKey]['create_date'],
+				'Status': releaseDetails[version][ticketKey]['status'],
+				'Status Date': releaseDetails[version][ticketKey]['status_date'],
+				'Resolution': releaseDetails[version][ticketKey]['resolution'],
+				'Resolution Date': releaseDetails[version][ticketKey]['resolution_date'],
 				'Components': releaseDetails[version][ticketKey]['components'].join('\n'),
+				'Summary': releaseDetails[version][ticketKey]['summary'],
 			};
 
 			if (nextQuarterly != null) {
@@ -138,14 +222,90 @@ function exportReleaseNotesToCSV() {
 		}, acc1);
 	}, {});
 
-	var exportLink = document.getElementById('export-to-csv');
+	var exportLink = document.getElementById('exportToCSV');
+	exportLink.href = '#';
 	exportLink.setAttribute('download', 'release_notes.csv');
 	exportLink.href = URL.createObjectURL(new Blob([Papa.unparse(Object.values(tickets))], {'type': 'text/csv'}));
 };
 
-function generateComponentReleaseNotes(releaseCountsListElement, releaseNotesElement, componentName, tickets) {
-	var componentElementId = componentName.toLowerCase().replace(/[^a-z]+/g, '_');
+function getTicketElement(ticket, componentElementId) {
+  var ticketKey = ticket['key'];
 
+	var ticketElement = document.createElement('div');
+	ticketElement.classList.add('release-notes-ticket');
+	ticketElement.setAttribute('data-jira-ticket-key', ticketKey);
+	ticketElement.setAttribute('data-jira-ticket-type', ticket['type']);
+	ticketElement.setAttribute('data-jira-ticket-component', componentElementId);
+
+	var divider = document.createElement('hr');
+	divider.classList.add('release-notes-divider');
+	ticketElement.appendChild(divider);
+
+	var headerElement = document.createElement('h3');
+
+	var ticketURL = ticketKey.startsWith('CVE-') ? ('https://cve.mitre.org/cgi-bin/cvename.cgi?name=' + ticketKey) : ('https://liferay.atlassian.net/browse/' + ticketKey);
+
+	var ticketAnchorElement = document.createElement('a');
+	ticketAnchorElement.setAttribute('href', ticketURL);
+	ticketAnchorElement.setAttribute('target', '_blank');
+	ticketAnchorElement.textContent = ticketKey;
+
+	headerElement.appendChild(ticketAnchorElement);
+
+	ticketElement.appendChild(headerElement);
+
+	var summaryElement = document.createElement('h4');
+	summaryElement.appendChild(document.createTextNode(ticket['summary']));
+
+	ticketElement.appendChild(summaryElement);
+
+	var componentsElement = ticket['components'].reduce((acc, ticketComponentName) => {
+		var componentListItemElement = document.createElement('li');
+		componentListItemElement.textContent = ticketComponentName;
+		acc.appendChild(componentListItemElement);
+		return acc;
+	}, document.createElement('ul'));
+
+	ticketElement.appendChild(componentsElement);
+
+	ticketElement.appendChild(componentsElement);
+
+	var descriptionElement = document.createElement('div');
+	descriptionElement.innerHTML = ticket['description'];
+
+	descriptionElement.querySelectorAll('img[src],embed[src]').forEach(element => {
+		var src = element.getAttribute('src');
+		if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('//')) {
+			return;
+		}
+		else if (src.charAt(0) == '/') {
+			src = 'https://liferay.atlassian.net' + src;
+		}
+		else {
+			src = 'https://liferay.atlassian.net/browse/' + src;
+		}
+		if (element.tagName == 'IMG') {
+			element.setAttribute('src', src);
+		}
+		else {
+			var linkElement = document.createElement('a');
+			linkElement.setAttribute('href', src);
+			linkElement.textContent = src;
+
+			var wrapperElement = document.createElement('div');
+			wrapperElement.appendChild(document.createTextNode('EMBED: '));
+			wrapperElement.appendChild(linkElement);
+
+			element.replaceWith(wrapperElement);
+		}
+	});
+
+	ticketElement.appendChild(descriptionElement);
+
+	return ticketElement;
+};
+
+function generateComponentReleaseNotes(releaseNotesElement, componentName, componentElementId, tickets) {
 	var componentElement = document.createElement('div');
 	componentElement.setAttribute('id', componentElementId);
 	componentElement.classList.add('release-notes-component');
@@ -162,110 +322,19 @@ function generateComponentReleaseNotes(releaseCountsListElement, releaseNotesEle
 	componentHeaderContainerElement.appendChild(componentHeaderElement);
 
 	var headerTicketCountElement = document.createElement('h2');
+	headerTicketCountElement.classList.add('component-ticket-count');
 	headerTicketCountElement.textContent = '(' + getTicketCountString(tickets.length) + ')';
 	componentHeaderContainerElement.appendChild(headerTicketCountElement);
 
 	componentElement.appendChild(componentHeaderContainerElement);
 
-	var tableOfContentsListItemElement = document.createElement('li');
-	tableOfContentsListItemElement.classList.add('list-group-item');
-
-	var enableCheckboxElement = document.createElement('input');
-	enableCheckboxElement.setAttribute('type', 'checkbox');
-	enableCheckboxElement.setAttribute('checked', '');
-	enableCheckboxElement.setAttribute('name', componentElementId);
-	enableCheckboxElement.onchange = toggleComponent;
-
-	tableOfContentsListItemElement.appendChild(enableCheckboxElement);
-
-	var tableOfContentsLinkElement = document.createElement('a');
-	tableOfContentsLinkElement.setAttribute('href', '#' + componentElementId);
-	tableOfContentsLinkElement.textContent = componentName;
-	tableOfContentsListItemElement.appendChild(tableOfContentsLinkElement);
-
-	var tableOfContentsCountElement = document.createElement('span');
-	tableOfContentsCountElement.classList.add('badge');
-	tableOfContentsCountElement.textContent = tickets.length.toLocaleString();
-
-	tableOfContentsListItemElement.appendChild(tableOfContentsCountElement);
-
-	releaseCountsListElement.appendChild(tableOfContentsListItemElement);
-
 	tickets.forEach(ticket => {
-    var ticketKey = ticket['key'];
-		var divider = document.createElement('hr');
-		divider.classList.add('release-notes-divider');
-
-		componentElement.appendChild(divider);
-
-		var ticketElement = document.createElement('div');
-		ticketElement.classList.add('release-notes-ticket');
-
-		var ticketURL = ticketKey.startsWith('CVE-') ? ('https://cve.mitre.org/cgi-bin/cvename.cgi?name=' + ticketKey) : ('https://liferay.atlassian.net/browse/' + ticketKey);
-
-		var ticketAnchorElement = document.createElement('a');
-		ticketAnchorElement.setAttribute('data-jira-ticket-link', ticketKey);
-		ticketAnchorElement.setAttribute('href', ticketURL);
-		ticketAnchorElement.setAttribute('target', '_blank');
-		ticketAnchorElement.textContent = ticketKey;
-
-		var headerElement = document.createElement('h3');
-		headerElement.appendChild(ticketAnchorElement);
-
-		ticketElement.appendChild(headerElement);
-
-		var summaryElement = document.createElement('h4');
-		summaryElement.appendChild(document.createTextNode(ticket['summary']));
-
-		ticketElement.appendChild(summaryElement);
-
-		var componentsElement = ticket['components'].reduce((acc, ticketComponentName) => {
-			var componentListItemElement = document.createElement('li');
-			componentListItemElement.textContent = ticketComponentName;
-			acc.appendChild(componentListItemElement);
-			return acc;
-		}, document.createElement('ul'));
-
-		ticketElement.appendChild(componentsElement);
-
-		ticketElement.appendChild(componentsElement);
-
-		var descriptionElement = document.createElement('div');
-		descriptionElement.innerHTML = ticket['description'];
-
-		descriptionElement.querySelectorAll('img[src],embed[src]').forEach(element => {
-			var src = element.getAttribute('src');
-			if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('//')) {
-				return;
-			}
-			else if (src.charAt(0) == '/') {
-				src = 'https://liferay.atlassian.net' + src;
-			}
-			else {
-				src = 'https://liferay.atlassian.net/browse/' + src;
-			}
-			if (element.tagName == 'IMG') {
-				element.setAttribute('src', src);
-			}
-			else {
-				var linkElement = document.createElement('a');
-				linkElement.setAttribute('href', src);
-				linkElement.textContent = src;
-
-				var wrapperElement = document.createElement('div');
-				wrapperElement.appendChild(document.createTextNode('EMBED: '));
-				wrapperElement.appendChild(linkElement);
-
-				element.replaceWith(wrapperElement);
-			}
-		});
-
-		ticketElement.appendChild(descriptionElement);
-
-		componentElement.appendChild(ticketElement);
+		componentElement.appendChild(getTicketElement(ticket, componentElementId));
 	});
 
 	releaseNotesElement.appendChild(componentElement);
+
+	return componentElement;
 };
 
 function generateReleaseNotes(fetchVersions, sourceUpdate, sourceQuarterly, sourcePatch, targetUpdate, targetQuarterly, targetPatch, releaseName) {
@@ -344,7 +413,7 @@ function generateReleaseNotes(fetchVersions, sourceUpdate, sourceQuarterly, sour
 	}
 
 	generateReleaseNotesHelper(tickets);
-	exportReleaseNotesToCSV();
+	exportReleaseNotesToCSV(new Set(Object.keys(tickets)));
 };
 
 function generateReleaseNotesHelper(tickets) {
@@ -352,46 +421,57 @@ function generateReleaseNotesHelper(tickets) {
 
 	releaseCountsElement.innerHTML = '';
 
-	var releaseNotesElement = document.getElementById('release-notes-details');
-
 	var ticketCount = Object.keys(tickets).length;
+	var totalTicketCountElement = null;
 
-  var releaseCountsListElement = document.createElement('ul');
-  releaseCountsListElement.classList.add('list-group');
-  releaseCountsElement.appendChild(releaseCountsListElement);  
+	// filter by types
 
-	var selectAllListItemElement = document.createElement('li');
-	selectAllListItemElement.classList.add('list-group-item', 'active');
-	releaseCountsListElement.appendChild(selectAllListItemElement);
+	var typeListElement = document.createElement('ul');
+  typeListElement.classList.add('list-group');
+  typeListElement.setAttribute('id', 'release-notes-types-filter');
+  releaseCountsElement.appendChild(typeListElement);
 
-	var selectAllCheckboxElement = document.createElement('input');
-	selectAllCheckboxElement.setAttribute('type', 'checkbox');
-	selectAllCheckboxElement.setAttribute('checked', '');
-	selectAllCheckboxElement.setAttribute('id', 'select_all');
-	selectAllListItemElement.appendChild(selectAllCheckboxElement);
+  var selectAllTypesListItemElement = createSelectAllElement('types', 'Type');
+	typeListElement.appendChild(selectAllTypesListItemElement);
 
-	selectAllCheckboxElement.onclick = function() {
-		var selectAll = this.checked;
-		var changeEvent = new Event('change');
-		document.querySelectorAll(
-			'#release-notes-count .list-group-item:not(.active) input[type="checkbox"]' +
-				(selectAll ? ':not(:checked)' : ':checked'))
-			.forEach(checkbox => {
-				checkbox.checked = selectAll;
-				checkbox.dispatchEvent(changeEvent);
-			});
-	};
-
-	var totalTicketCountElement = document.createElement('span');
-	totalTicketCountElement.classList.add('badge');
-	totalTicketCountElement.setAttribute('id', 'release-notes-total-count');
+	totalTicketCountElement = document.createElement('span');
+	totalTicketCountElement.classList.add('badge', 'release-notes-total-count');
 	totalTicketCountElement.textContent = getTicketCountString(ticketCount);
-	selectAllListItemElement.appendChild(totalTicketCountElement);
+	selectAllTypesListItemElement.appendChild(totalTicketCountElement);
 
-	var ticketsByComponent = Object.keys(tickets).reduce((acc, ticketKey) => {
-		var ticket = Object.assign({}, tickets[ticketKey]);
-		ticket['key'] = ticketKey;
+	var ticketsByType = Object.values(tickets).reduce((acc, ticket) => {
+		var type = ticket['type'];
 
+		if (acc[type]) {
+			acc[type].push(ticket);
+		}
+		else {
+			acc[type] = [ticket];
+		}
+
+		return acc;
+	}, {});
+
+	Object.keys(ticketsByType).sort().forEach(type => {
+		typeListElement.appendChild(createTableOfContentsElement('type', null, type, ticketsByType[type].length, updateFacets));
+	});
+
+	// filter by components
+
+  var componentListElement = document.createElement('ul');
+  componentListElement.classList.add('list-group');
+  componentListElement.setAttribute('id', 'release-notes-components-filter');
+  releaseCountsElement.appendChild(componentListElement);
+
+  var selectAllComponentsListItemElement = createSelectAllElement('components', 'Component');
+	componentListElement.appendChild(selectAllComponentsListItemElement);
+
+	totalTicketCountElement = document.createElement('span');
+	totalTicketCountElement.classList.add('badge', 'release-notes-total-count');
+	totalTicketCountElement.textContent = getTicketCountString(ticketCount);
+	selectAllComponentsListItemElement.appendChild(totalTicketCountElement);
+
+	var ticketsByComponent = Object.values(tickets).reduce((acc, ticket) => {
 		Array.from(new Set(ticket['components'].map(it => it.split(' > ')[0]))).forEach(componentName => {
 			if (acc[componentName]) {
 				acc[componentName].push(ticket);
@@ -404,9 +484,38 @@ function generateReleaseNotesHelper(tickets) {
 		return acc;
 	}, {});
 
+	var releaseNotesElement = document.getElementById('release-notes-details');
+
+	for (var componentName in renderedComponents) {
+		delete renderedComponents[type];
+	}
+
+	for (var componentName in renderedTicketsByComponent) {
+		delete renderedTicketsByComponent[componentName];
+	}
+
 	Object.keys(ticketsByComponent).sort().forEach(componentName => {
-		generateComponentReleaseNotes(releaseCountsListElement, releaseNotesElement, componentName, ticketsByComponent[componentName]);
-	})
+		var componentElementId = componentName.toLowerCase().replace(/[^a-z]+/g, '_');
+		var componentTickets = ticketsByComponent[componentName];
+
+		componentListElement.appendChild(createTableOfContentsElement('component', componentElementId, componentName, componentTickets.length, updateFacets));
+
+		renderedComponents[componentElementId] = generateComponentReleaseNotes(releaseNotesElement, componentName, componentElementId, componentTickets);
+		renderedTicketsByComponent[componentElementId] = Array.from(renderedComponents[componentElementId].querySelectorAll('.release-notes-ticket'));
+	});
+
+	// populate the rendered ticket caches
+
+	for (var type in renderedTicketsByType) {
+		delete renderedTicketsByType[type];
+	}
+
+	var typesFilter = document.getElementById('release-notes-types-filter')
+	var availableTypes = Array.from(typesFilter.querySelectorAll('input[value]')).map(it => it.value);
+
+	availableTypes.forEach(type => {
+		renderedTicketsByType[type] = Array.from(document.querySelectorAll('.release-notes-ticket[data-jira-ticket-type="' + type + '"]'));
+	});
 };
 
 function getFetchVersions(sourceVersion, targetVersion) {
@@ -561,22 +670,108 @@ function populateReleaseDetails(sourceVersion, targetVersion) {
 	}
 };
 
-function toggleComponent() {
-	var componentElementId = this.getAttribute('name');
-	var componentElement = document.getElementById(componentElementId);
+function detachExportURL() {
+	var exportLink = document.getElementById('exportToCSV');
 
-	if (this.checked) {
-		componentElement.classList.remove('hide');
+	if (exportLink.href) {
+		URL.revokeObjectURL(exportLink.href);
+		exportLink.removeAttribute('href');
 	}
-	else {
-		componentElement.classList.add('hide');
-	}
-
-	var ticketCount = new Set(Array.from(document.querySelectorAll('.release-notes-component:not(.hide) .release-notes-ticket a[data-jira-ticket-link]')).map(x => x.getAttribute('data-jira-ticket-link'))).size;
-
-	var totalTicketCountElement = document.getElementById('release-notes-total-count');
-	totalTicketCountElement.textContent = getTicketCountString(ticketCount);
 };
+
+var updateFacets = debounce(function() {
+	// filter by type
+
+	var typesFilter = document.getElementById('release-notes-types-filter')
+	var availableTypes = Object.keys(renderedTicketsByType);
+	var visibleTypes = new Set(Array.from(typesFilter.querySelectorAll('input[value]:checked')).map(it => it.value));
+
+	Object.keys(renderedTicketsByType).forEach(type => {
+		if (visibleTypes.has(type)) {
+			renderedTicketsByType[type].forEach(it => {
+				if (it.classList.contains('hide')) {
+					it.classList.remove('hide');
+				}
+			});
+		}
+		else {
+			renderedTicketsByType[type].forEach(it => {
+				if (!it.classList.contains('hide')) {
+					it.classList.add('hide');
+				}
+			});
+		}
+	});
+
+	// filter by component
+
+	var componentsFilter = document.getElementById('release-notes-components-filter')
+
+	var availableComponents = Object.keys(renderedComponents);
+	var visibleComponents = new Set(Array.from(componentsFilter.querySelectorAll('input[value]:checked')).map(it => it.value));
+
+	availableComponents.forEach(componentName => {
+		if (visibleComponents.has(componentName)) {
+			if (renderedComponents[componentName].classList.contains('hide')) {
+				renderedComponents[componentName].classList.remove('hide');
+			}
+		}
+		else {
+			if (!renderedComponents[componentName].classList.contains('hide')) {
+				renderedComponents[componentName].classList.add('hide');
+			}
+		}
+	});
+
+	// recompute type badge values
+
+	var allTicketKeys = availableTypes.reduce((acc, type) => {
+		var badge = typesFilter.querySelector('span[data-value="' + type + '"]');
+
+		if (visibleTypes.has(type)) {
+			badge.classList.remove('hide');
+			var ticketKeys = new Set(renderedTicketsByType[type].filter(it => visibleComponents.has(it.getAttribute('data-jira-ticket-component'))).map(it => it.getAttribute('data-jira-ticket-key')));
+			badge.textContent = ticketKeys.size.toLocaleString();
+
+			return acc.union(ticketKeys);
+		}
+		else {
+			if (!badge.classList.contains('hide')) {
+				badge.classList.add('hide');
+			}
+
+			return acc;
+		}
+	}, new Set());
+
+	// recompute component badge values
+
+	availableComponents.forEach(componentName => {
+		var badge = componentsFilter.querySelector('span[data-value="' + componentName + '"]');
+
+		if (visibleComponents.has(componentName)) {
+			badge.classList.remove('hide');
+			var ticketKeys = new Set(renderedTicketsByComponent[componentName].filter(it => visibleTypes.has(it.getAttribute('data-jira-ticket-type'))).map(it => it.getAttribute('data-jira-ticket-key')));
+			badge.textContent = ticketKeys.size.toLocaleString();
+
+			var headerTicketCountElement = renderedComponents[componentName].querySelector('.component-ticket-count');
+			headerTicketCountElement.textContent = '(' + getTicketCountString(ticketKeys.size) + ')';
+		}
+		else {
+			if (!badge.classList.contains('hide')) {
+				badge.classList.add('hide');
+			}
+		}
+	});
+
+	// update the total counts
+
+	var ticketCount = allTicketKeys.size;
+	var totalTicketCountElements = document.querySelectorAll('.release-notes-total-count');
+	totalTicketCountElements.forEach(element => element.textContent = getTicketCountString(ticketCount));
+
+	exportReleaseNotesToCSV(allTicketKeys);
+});
 
 function initUI() {
 	var requestURL = ((document.location.hostname == 'localhost') ? '' : 'https://s3-us-west-2.amazonaws.com/mdang.grow/') + 'releases.json';

@@ -25,6 +25,10 @@
 		justify-content: space-between;
 	}
 
+	.container:has(a#exportToCSV:not([href])) {
+		opacity: 0.5;
+	}
+
 	a:not([href]) {
 		color: #ddd;
 		cursor: pointer;
@@ -101,7 +105,7 @@
 <div>
 <a href="javascript:copyReleaseNotesToClipboard();">Copy</a> |
 <a href="javascript:window.print();">Print</a> |
-<a id="export-to-csv">CSV</a>
+<a id="exportToCSV">CSV</a>
 </div>
 </tr>
 </tbody>
@@ -116,5 +120,5 @@
 </div>
 
 </body>
-<script src="releases.js"></script>
+<script src="releases.js?t=1727942641"></script>
 </html>

@@ -1,4 +1,5 @@
 from collections import defaultdict, OrderedDict
+from datetime import datetime, timezone
 import inspect
 import json
 import os
@@ -31,6 +32,8 @@ old_update_threshold = {
 }
 
 quarterly_updates = { value: key for key, value in quarterly_releases.items() }
+
+raw_fix_versions = {}
 
 ticket_summaries = {}
 update_fixed_issues = {}
@@ -68,7 +71,63 @@ def ticket_sort_key(line):
     last_dash = issue_key.rfind('-')
     return (issue_key[:last_dash], int(issue_key[last_dash+1:]))
 
-def get_fixed_issues(release_name, release_ids):
+def get_iso_time(jira_time):
+    if jira_time == '':
+        return None
+
+    return datetime.strptime(jira_time, '%Y-%m-%dT%H:%M:%S.%f%z').astimezone(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+def get_field_value(fixed_issue, field_name, sub_field_name=None):
+    if field_name not in fixed_issue['fields'] or fixed_issue['fields'][field_name] is None:
+        return ''
+
+    if sub_field_name is None:
+        return fixed_issue['fields'][field_name]
+
+    if sub_field_name not in fixed_issue['fields'][field_name] or fixed_issue['fields'][field_name][sub_field_name] is None:
+        return ''
+
+    return fixed_issue['fields'][field_name][sub_field_name]
+
+def has_matching_changelog_item(changelog_entry, field, to):
+    for changelog_item in changelog_entry['items']:
+        if changelog_item['field'] == field and changelog_item['to'] == to:
+            return True
+
+    return False
+
+def get_issue_compact(fixed_issue):
+    global raw_fix_versions
+
+    fix_versions = get_field_value(fixed_issue, 'fixVersions')
+
+    if fix_versions != '' and fix_versions is not None:
+        raw_fix_versions[fixed_issue['key']] = fix_versions
+
+    create_date = get_iso_time(fixed_issue['fields']['created'])
+    fix_priority = get_field_value(fixed_issue, 'customfield_10211', 'value')
+
+    resolution_id = get_field_value(fixed_issue, 'resolution', 'id')
+    resolution_date = get_iso_time(get_field_value(fixed_issue, 'resolutiondate'))
+    status_id = get_field_value(fixed_issue, 'status', 'id')
+    status_date = get_iso_time(get_field_value(fixed_issue, 'statuscategorychangedate'))
+
+    return {
+        'key': fixed_issue['key'],
+        'type': get_field_value(fixed_issue, 'issuetype', 'name'),
+        'summary': fixed_issue['fields']['summary'],
+        'description': fixed_issue['renderedFields']['description'],
+        'components': [x['name'] for x in fixed_issue['fields']['components']],
+        'fix_priority': fix_priority,
+        'create_date': create_date,
+        'resolution': get_field_value(fixed_issue, 'resolution', 'name'),
+        'resolution_date': resolution_date,
+        'status': get_field_value(fixed_issue, 'status', 'name'),
+        'status_date': status_date,
+    }
+
+
+def get_jira_fixed_issues(release_name, release_ids):
     release_cf = get_release_cf(release_name)
 
     if release_ids is not None and release_cf != 0:
@@ -81,19 +140,20 @@ def get_fixed_issues(release_name, release_ids):
         print(f'unrecognized release {release_name}')
         return {}
 
-    fixed_issues = get_issues(query, ['summary', 'description', 'components', 'security'], render=True)
+    release_raw_file_name = f'releases.{jira_env}/{release_name}.raw.json'
+
+    if exists(release_raw_file_name):
+        with open(release_raw_file_name, 'r') as f:
+            return json.load(f)
 
     release_issues = {}
 
+    fixed_issues = get_issues(query, None, render=True)
     secure_issue_keys = []
 
     for fixed_issue_key, fixed_issue in fixed_issues.items():
         if fixed_issue['fields']['security'] is None:
-            release_issues[fixed_issue_key] = {
-                'summary': fixed_issue['fields']['summary'],
-                'components': [x['name'] for x in fixed_issue['fields']['components']],
-                'description': fixed_issue['renderedFields']['description']
-            }
+            release_issues[fixed_issue_key] = fixed_issue
         else:
             secure_issue_keys.append(fixed_issue_key)
 
@@ -114,21 +174,28 @@ def get_fixed_issues(release_name, release_ids):
 
     if len(lsv_issue_keys) > 0:
         lsv_issue_query = 'key in (%s)' % ','.join(lsv_issue_keys.keys())
-        lsv_issues = get_issues(lsv_issue_query, ['summary', 'description', 'components', 'customfield_10563'], render=True)
+        lsv_issues = get_issues(lsv_issue_query, None, render=True)
 
         for lsv_issue_key, lsv_issue in lsv_issues.items():
             if lsv_issue['fields']['customfield_10563'] is not None:
                 cve_issues.append(lsv_issue['fields']['customfield_10563'])
-                release_issues[lsv_issue['fields']['customfield_10563']] = {
-                    'summary': lsv_issue['fields']['summary'],
-                    'components': [x['name'] for x in lsv_issue['fields']['components']],
-                    'description': lsv_issue['renderedFields']['description']
-                }
+                release_issues[lsv_issue['fields']['customfield_10563']] = lsv_issue
 
     if len(secure_issue_keys) > 0:
         print('Found [%s] = [%s] = [%s] for %s' % (','.join(secure_issue_keys), ','.join(lsv_issue_keys.keys()), ','.join(cve_issues), release_name))
 
+    with open(release_raw_file_name, 'w') as f:
+        json.dump(release_issues, f, sort_keys=False, separators=(',', ':'))
+
     return release_issues
+
+def get_fixed_issues(release_name, release_ids):
+    jira_fixed_issues = get_jira_fixed_issues(release_name, release_ids)
+
+    return {
+        issue_key: get_issue_compact(issue)
+            for issue_key, issue in jira_fixed_issues.items()
+    }
 
 def update_releases():
     project_releases = defaultdict(list)
@@ -182,27 +249,21 @@ def pull_updates():
         if release_name.find('.q') != -1:
             continue
 
-        release_file_name = f'releases.{jira_env}/{release_name}.json'
+        print(f'Pulling {release_name} metadata')
 
-        if exists(release_file_name):
-            print(f'Reading {release_name} metadata')
-
-            with open(release_file_name, 'r') as f:
-                fixed_issues = json.load(f)
-        else:
-            print(f'Pulling {release_name} metadata')
-
-            fixed_issues = get_fixed_issues(release_name, release_ids)
+        fixed_issues = get_fixed_issues(release_name, release_ids)
 
         ticket_summaries.update(fixed_issues)
 
         release_ulevel = get_release_ulevel(release_name)
         update_fixed_issues[release_ulevel] = set(fixed_issues.keys())
 
+        release_file_name = f'releases.{jira_env}/{release_name}.json'
+
         if not exists(release_file_name):
             print(f'Writing {release_name} metadata')
 
-            with open(f'releases.{jira_env}/{release_name}.json', 'w') as f:
+            with open(release_file_name, 'w') as f:
                 json.dump(fixed_issues, f, sort_keys=False, separators=(',', ':'))
 
 def pull_quarterlies():
@@ -215,15 +276,9 @@ def pull_quarterlies():
 
         release_file_name = f'releases.{jira_env}/{release_name}.json'
 
-        if exists(release_file_name):
-            print(f'Reading {release_name} metadata')
+        print(f'Pulling {release_name} metadata')
 
-            with open(release_file_name, 'r') as f:
-                fixed_issues = json.load(f)
-        else:
-            print(f'Pulling {release_name} metadata')
-
-            fixed_issues = get_fixed_issues(release_name, release_ids)
+        fixed_issues = get_fixed_issues(release_name, release_ids)
 
         ticket_summaries.update(fixed_issues)
 
@@ -243,13 +298,13 @@ pull_updates()
 pull_quarterlies()
 
 def check_issue_changelog(issue_key):
+    global raw_fix_versions
+
     releases_updates = set()
 
     changelog = get_issue_changelog(issue_key)
     changelog_items = sum([changelog_entry['items'] for changelog_entry in changelog if 'items' in changelog_entry], [])
-
-    issue_fields = get_issue_fields(issue_key, ['fixVersions'])
-    past_fix_versions = [field['name'].lower().strip() for field in issue_fields['fixVersions']] if 'fixVersions' in issue_fields else []
+    past_fix_versions = [field['name'].lower().strip() for field in raw_fix_versions[issue_key]] if issue_key in raw_fix_versions else []
 
     past_74_fix_versions = [item['toString'] for item in changelog_items if 'fieldId' in item and item['fieldId'] == 'customfield_10210']
     past_74_fix_versions = [version + '00' if version.find('.') != -1 and len(version) < 8 else version for version in past_74_fix_versions if len(version) == 8 or (version != '' and float(version) < 2000)]

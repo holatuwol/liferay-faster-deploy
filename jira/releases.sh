@@ -20,7 +20,7 @@ done
 
 cd -
 
-ls -l releases.production/*.gz | sed 's/\.gz$//g' | sed 's@releases.production/@@g' | awk '{ print $9 "\t" $5 }' | sort > 2.txt
+ls -l releases.production/*.gz | grep -vF '.raw.json' | sed 's/\.gz$//g' | sed 's@releases.production/@@g' | awk '{ print $9 "\t" $5 }' | sort > 2.txt
 
 diff 1.txt 2.txt | grep '<' | awk '{ print $2 }' > 3.txt
 diff 1.txt 2.txt | grep '>' | awk '{ print $2 }' > 4.txt
@@ -38,6 +38,9 @@ done
 gzip -c releases.production.json > releases.json.gz
 aws s3 cp --profile ${AWS_PROFILE} releases.json.gz "s3://${S3_BUCKET}/releases.json" --acl public-read --metadata-directive REPLACE --content-encoding gzip
 rm releases.json.gz
+
+JS_MODIFIED=$(date -r releases.js '+%s')
+sed -i '/<script src="releases.js/s@"releases.js.*"@"releases.js?t='${JS_MODIFIED}'"@g' releases.html
 
 for file in releases.html releases.js; do
   gzip -c ${file} > ${file}.gz

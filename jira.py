@@ -1,6 +1,7 @@
 from base64 import b64encode
 import inspect
-from os.path import abspath, dirname
+import json
+from os.path import abspath, dirname, exists
 import requests
 import sys
 import time
@@ -55,10 +56,11 @@ def get_issues(jql, fields=[], expand=[], render=False):
         'maxResults': 100
     }
 
-    if len(fields) > 0:
-        payload['fields'] = ','.join(fields)
-    else:
-        payload['fields'] = 'issuekey'
+    if fields is not None:
+        if len(fields) > 0:
+            payload['fields'] = ','.join(fields)
+        else:
+            payload['fields'] = 'issuekey'
 
     if len(expand) > 0:
         payload['expand'] = ','.join(expand)
@@ -93,7 +95,19 @@ def get_issues(jql, fields=[], expand=[], render=False):
 
     return issues
 
-def get_issue_changelog(issue_key):
+def get_issue_changelog(issue_key, last_updated=None):
+    issue_changelog_file_name = f'releases.{jira_env}.changelog/{issue_key}.json'
+
+    if exists(issue_changelog_file_name):
+        with open(issue_changelog_file_name, 'r') as f:
+            changelog = json.load(f)
+
+        if last_updated is None:
+            return changelog
+
+        if len(changelog) > 0 and last_updated <= changelog[-1]['created']:
+            return changelog
+
     start_at = 0
 
     search_url = f'{jira_base_url}/rest/api/2/issue/{issue_key}/changelog'
@@ -105,13 +119,13 @@ def get_issue_changelog(issue_key):
 
     r = await_get_request(search_url, payload)
 
-    changelog = []
-
     if r.status_code != 200:
-        return changelog
+        visited_changelogs[issue_key] = []
+        return []
 
     response_json = r.json()
 
+    changelog = []
     changelog.extend(response_json['values'])
 
     while start_at + len(response_json['values']) < response_json['total']:
@@ -125,6 +139,9 @@ def get_issue_changelog(issue_key):
 
         response_json = r.json()
         changelog.extend(response_json['values'])
+
+    with open(issue_changelog_file_name, 'w') as f:
+        json.dump(changelog, f, sort_keys=False, separators=(',', ':'))
 
     return changelog
 
