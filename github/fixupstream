@@ -47,6 +47,7 @@ fixupstream() {
 		if [ "" != "$retain_branches" ]; then
 			echo git remote set-branches $remote $(echo "$retain_branches" | tr '\n' ' ')
 			git remote set-branches $remote $(echo "$retain_branches" | tr '\n' ' ')
+			git fetch $remote --no-tags
 		fi
 
 		for branch in $retain_branches; do
