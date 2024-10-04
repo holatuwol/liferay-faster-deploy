@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        22.2
+// @version        22.3
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @supportURL     https://github.com/holatuwol/liferay-zendesk-userscript/issues/new
@@ -9,10 +9,14 @@
 // @include        /https:\/\/24475.apps.zdusercontent.com\/24475\/assets\/.*\/issue_creator.html/
 // @grant          unsafeWindow
 // @grant          GM.xmlHttpRequest
+// @grant          GM_getValue
+// @grant          GM_setValue
+// @grant          GM_registerMenuCommand
 // @require        https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.5/jszip.min.js
 // @require        https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js
 // @require        https://unpkg.com/stackedit-js@1.0.7/docs/lib/stackedit.min.js
 // @require        https://unpkg.com/turndown@5.0.3/dist/turndown.js
+// @require        https://raw.githubusercontent.com/sizzlemctwizzle/GM_config/master/gm_config.js
 // ==/UserScript==
 /**
  * Compiled from TypeScript
@@ -23,7 +27,7 @@ if (window.location.hostname == '24475.apps.zdusercontent.com') {
     styleElement.textContent = "\nbody {\n  overflow-y: hidden;\n}\n";
 }
 else {
-    styleElement.textContent = "\na.downloading {\n  color: #999;\n}\n\na.downloading::after {\n  content: ' (downloading...)';\n  color: #999;\n}\n\na.generating {\n  color: #999;\n}\n\na.generating::after {\n  content: ' (generating...)';\n  color: #999;\n}\n\narticle {\n  border-top: 1px solid #ebebeb;\n}\n\ndiv.lesa-ui-subtitle {\n  display: flex;\n  flex-direction: column;\n}\n\n.lesa-ui-attachments,\n.lesa-ui-knowledge-capture {\n  display: flex;\n  flex-direction: column;\n  margin-bottom: 0.5em;\n}\n\n#attachments-modal .lesa-ui-attachments,\n#description-modal .lesa-ui-description {\n  margin: 0.5em;\n}\n\n#description-modal .event {\n  border-top: 0px;\n}\n\n.lesa-ui-attachment-info {\n  display: grid;\n  grid-gap: 0em 1em;\n  grid-template-columns: 1em auto;\n  margin: 0.5em;\n}\n\n.lesa-ui-attachment-info input {\n  margin-left: 0.5em;\n}\n\n.lesa-ui-attachment-info .lesa-ui-attachment-extra-info {\n  grid-column: 1 / 2 span;\n  padding: 0.2em 0.5em;\n  text-align: right;\n  margin-bottom: 0.5em;\n}\n\n.lesa-ui-attachment-info .lesa-ui-attachment-extra-info:not(:first-child) {\n  margin-top: 1em;\n  border-top: 1px solid lightgray;\n  padding-top: 0.5em;\n}\n\n.lesa-ui-description .lesa-ui-attachment-info .lesa-ui-attachment-extra-info {\n  border-top: 1px solid #eee;\n}\n\n.lesa-ui-attachment-info a {\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n\n.lesa-ui-attachments-bulk-download {\n  margin-top: 0.5em;\n  text-align: right;\n  text-decoration: underline;\n}\n\n.lesa-ui-attachments-label,\n.lesa-ui-knowledge-capture-label {\n  font-weight: 600;\n  margin-right: 1em;\n  white-space: nowrap;\n}\n\n.lesa-ui-knowledge-capture-label:not(:first-child) {\n  margin-top: 1em;\n}\n\n.lesa-ui-knowledge-capture ul {\n  margin-left: 1em;\n}\n\n.lesa-ui-description {\n  font-weight: normal;\n}\n\n.lesa-ui-description > div {\n  margin-bottom: 2em;\n}\n\n.lesa-ui-description .zd-comment,\n.lesa-ui-description .lesa-ui-attachment-info {\n  max-height: 25em;\n  overflow-y: auto;\n}\n\n.lesa-ui-event-highlighted,\narticle.lesa-ui-event-highlighted {\n  background-color: #eee;\n  scroll-margin-top: 1em;\n}\n\n.lesa-ui-form-field {\n  display: flex;\n  flex-direction: column;\n  margin-bottom: 0.5em;\n}\n\n.lesa-ui-permalink {\n  margin-bottom: 1em;\n}\n\n.lesa-ui-orgnotes {\n  color: darkgreen;\n}\n\n.lesa-ui-permalink > input,\n.lesa-ui-form-field.lesa-ui-helpcenter > input {\n  background-color: transparent;\n  border: 0px;\n  font-size: 12px;\n  margin: 0px;\n  padding: 0px;\n  width: 100%;\n}\n\n.lesa-ui-stackedit-icon {\n  height: 16px;\n  width: 16px;\n  padding: 4px;\n}\n\n.mast .editable .lesa-ui-subject {\n  background-color: #fff;\n  font-size: 20px;\n  font-weight: 600;\n  resize: vertical;\n  text-align: left;\n  width: 100%;\n}\n\n.header.mast > .round-avatar {\n  display: none;\n}\n\n.lesa-ui-priority:not(:empty) {\n  margin-top: 6px;\n  margin-bottom: 8px;\n}\n\nspan[data-garden-container-id=\"containers.tooltip\"] {\n  display: inline-flex;\n  align-items: center;\n  column-gap: 4px;\n}\n\n.lesa-ui-heat-score,\n.lesa-ui-priority span {\n  color: #fff;\n  border-radius: 2px;\n  font-size: 10px;\n  font-weight: 600;\n  text-align: center;\n}\n\n.lesa-ui-priority span:not(.lesa-ui-offering) {\n  text-transform: uppercase;\n}\n\n.lesa-ui-heat-score {\n  padding: 0px 4px;\n  line-height: 1.6;\n}\n\n.lesa-ui-priority span {\n  line-height: 16px;\n  margin-right: 8px;\n  padding: 0.5em;\n  width: 6em;\n}\n\n.lesa-ui-priority a {\n  color: #fff;\n  text-decoration: none;\n}\n\n.lesa-ui-priority > *:last-child {\n  margin-right: 0;\n}\n\n.lesa-ui-priority .lesa-ui-subject-emojis a {\n  color: #000;\n}\n\n.lesa-ui-subpriority {\n  border: 1px #eee dashed;\n  font-size: 0.8em;\n}\n\n.lesa-ui-offering {\n  background-color: #222;\n}\n\n.lesa-ui-priority-minor,\n.lesa-ui-subpriority-none,\n.lesa-ui-subpriority-low {\n  background-color: #0066cc;\n}\n\n.lesa-ui-priority-major,\n.lesa-ui-subpriority-medium {\n  background-color: #f2783b;\n}\n\n.lesa-ui-priority-critical,\n.lesa-ui-subpriority-high {\n  background-color: #bf1e2d;\n}\n\n.lesa-ui-priority .lesa-ui-subject-emojis {\n  background-color: #f8f9f9;\n}\n\n.lesa-ui-subject-emojis a {\n  font-size: 1.5em;\n  font-weight: normal;\n  margin-left: 2px;\n  margin-right: 2px;\n}\n\n.rich_text .comment_input .lesa-ui-playbook-reminder,\ndiv[data-test-id=\"editor-view\"] .lesa-ui-playbook-reminder {\n  display: none;\n}\n\n.rich_text .comment_input.is-public .lesa-ui-playbook-reminder:not(:empty),\ndiv[data-test-id=\"editor-view\"] .lesa-ui-playbook-reminder:not(:empty) {\n  background-color: #eef2fa;\n  border: 1px solid #d8dcde;\n  border-radius: 0 3px 0 0 !important;\n  color: #2e5aac;\n  display: block;\n  margin-bottom: 1em;\n  padding: 10px;\n}\n\n.rich_text .comment_input.is-public .lesa-ui-playbook-reminder a,\ndiv[data-test-id=\"editor-view\"] .lesa-ui-playbook-reminder a {\n  text-decoration: underline;\n}\n\n#modals .modal-header,\n#attachments-modal .modal-header {\n  cursor: move;\n}\n\n.fNgWaW {\n  padding: 2px 0px;\n  height: 14px;\n  width: 1px;\n  background: rgb(194, 200, 204);\n  display: flex;\n  margin: 0px 8px;\n}\n\nbutton[data-test-id=\"omnilog-jump-button\"] {\n  display: none;\n}\n\n.tags span a {\n  color: rgb(73, 84, 92);\n  font-weight: normal;\n}\n\n.tags span.important-tag a {\n  color: rebeccapurple;\n  font-weight: 600;\n}\n\n.lesa-ui-group-rows-summary {\n  width: fit-content;\n}\n\ntd[data-test-id=\"ticket-table-cells-subject\"] .lesa-ui-tags {\n  display: flex;\n  flex-wrap: wrap;\n}\n\ntd[data-test-id=\"ticket-table-cells-subject\"] .lesa-ui-tags span {\n  background: rgb(233, 235, 237);\n  border-radius: 0.2em;\n  color: rgb(73, 84, 92);\n  font-size: x-small;\n  margin: 0.2em 0.2em;\n  padding-left: 0.3em;\n  padding-right: 0.3em;\n}\n\ndiv[data-cy-test-id=\"status-badge-state\"] {\n  width: 4em;\n}\n";
+    styleElement.textContent = "\na.downloading {\n  color: #999;\n}\n\na.downloading::after {\n  content: ' (downloading...)';\n  color: #999;\n}\n\na.generating {\n  color: #999;\n}\n\na.generating::after {\n  content: ' (generating...)';\n  color: #999;\n}\n\narticle {\n  border-top: 1px solid #ebebeb;\n}\n\ndiv.lesa-ui-subtitle {\n  display: flex;\n  flex-direction: column;\n}\n\n.lesa-ui-attachments,\n.lesa-ui-knowledge-capture {\n  display: flex;\n  flex-direction: column;\n  margin-bottom: 0.5em;\n}\n\n#attachments-modal .lesa-ui-attachments,\n#description-modal .lesa-ui-description {\n  margin: 0.5em;\n}\n\n#description-modal .event {\n  border-top: 0px;\n}\n\n.lesa-ui-attachment-info {\n  display: grid;\n  grid-gap: 0em 1em;\n  grid-template-columns: 1em auto;\n  margin: 0.5em;\n}\n\n.lesa-ui-attachment-info input {\n  margin-left: 0.5em;\n}\n\n.lesa-ui-attachment-info .lesa-ui-attachment-extra-info {\n  grid-column: 1 / 2 span;\n  padding: 0.2em 0.5em;\n  text-align: right;\n  margin-bottom: 0.5em;\n}\n\n.lesa-ui-attachment-info .lesa-ui-attachment-extra-info:not(:first-child) {\n  margin-top: 1em;\n  border-top: 1px solid lightgray;\n  padding-top: 0.5em;\n}\n\n.lesa-ui-description .lesa-ui-attachment-info .lesa-ui-attachment-extra-info {\n  border-top: 1px solid #eee;\n}\n\n.lesa-ui-attachment-info a {\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n\n.lesa-ui-attachments-bulk-download {\n  margin-top: 0.5em;\n  text-align: right;\n  text-decoration: underline;\n}\n\n.lesa-ui-attachments-label,\n.lesa-ui-knowledge-capture-label {\n  font-weight: 600;\n  margin-right: 1em;\n  white-space: nowrap;\n}\n\n.lesa-ui-knowledge-capture-label:not(:first-child) {\n  margin-top: 1em;\n}\n\n.lesa-ui-knowledge-capture ul {\n  margin-left: 1em;\n}\n\n.lesa-ui-description {\n  font-weight: normal;\n}\n\n.lesa-ui-description > div {\n  margin-bottom: 2em;\n}\n\n.lesa-ui-description .zd-comment,\n.lesa-ui-description .lesa-ui-attachment-info {\n  max-height: 25em;\n  overflow-y: auto;\n}\n\n.lesa-ui-event-highlighted,\narticle.lesa-ui-event-highlighted {\n  background-color: #eee;\n  scroll-margin-top: 1em;\n}\n\n.lesa-ui-form-field {\n  display: flex;\n  flex-direction: column;\n  margin-bottom: 0.5em;\n}\n\n.lesa-ui-permalink {\n  margin-bottom: 1em;\n}\n\n.lesa-ui-orgnotes {\n  color: darkgreen;\n}\n\n.lesa-ui-permalink > input,\n.lesa-ui-form-field.lesa-ui-helpcenter > input {\n  background-color: transparent;\n  border: 0px;\n  font-size: 12px;\n  margin: 0px;\n  padding: 0px;\n  width: 100%;\n}\n\n.lesa-ui-stackedit-icon {\n  height: 16px;\n  width: 16px;\n  padding: 4px;\n}\n\n.mast .editable .lesa-ui-subject {\n  background-color: #fff;\n  font-size: 20px;\n  font-weight: 600;\n  resize: vertical;\n  text-align: left;\n  width: 100%;\n}\n\n.header.mast > .round-avatar {\n  display: none;\n}\n\n.lesa-ui-priority:not(:empty) {\n  margin-top: 6px;\n  margin-bottom: 8px;\n}\n\nspan[data-garden-container-id=\"containers.tooltip\"] {\n  display: inline-flex;\n  align-items: center;\n  column-gap: 4px;\n}\n\n.lesa-ui-heat-score,\n.lesa-ui-priority span {\n  color: #fff;\n  border-radius: 2px;\n  font-size: 10px;\n  font-weight: 600;\n  text-align: center;\n}\n\n.lesa-ui-priority span:not(.lesa-ui-offering) {\n  text-transform: uppercase;\n}\n\n.lesa-ui-heat-score {\n  padding: 0px 4px;\n  line-height: 1.6;\n}\n\n.lesa-ui-priority span {\n  line-height: 16px;\n  margin-right: 8px;\n  padding: 0.5em;\n  width: 6em;\n}\n\n.lesa-ui-priority a {\n  color: #fff;\n  text-decoration: none;\n}\n\n.lesa-ui-priority > *:last-child {\n  margin-right: 0;\n}\n\n.lesa-ui-priority .lesa-ui-subject-emojis a {\n  color: #000;\n}\n\n.lesa-ui-subpriority {\n  border: 1px #eee dashed;\n  font-size: 0.8em;\n}\n\n.lesa-ui-offering {\n  background-color: #222;\n}\n\n.lesa-ui-priority-minor,\n.lesa-ui-subpriority-none,\n.lesa-ui-subpriority-low {\n  background-color: #0066cc;\n}\n\n.lesa-ui-priority-major,\n.lesa-ui-subpriority-medium {\n  background-color: #f2783b;\n}\n\n.lesa-ui-priority-critical,\n.lesa-ui-subpriority-high {\n  background-color: #bf1e2d;\n}\n\n.lesa-ui-priority .lesa-ui-subject-emojis {\n  background-color: #f8f9f9;\n}\n\n.lesa-ui-subject-emojis a {\n  font-size: 1.5em;\n  font-weight: normal;\n  margin-left: 2px;\n  margin-right: 2px;\n}\n\n.rich_text .comment_input .lesa-ui-playbook-reminder,\ndiv[data-test-id=\"editor-view\"] .lesa-ui-playbook-reminder {\n  display: none;\n}\n\n.rich_text .comment_input.is-public .lesa-ui-playbook-reminder:not(:empty),\ndiv[data-test-id=\"editor-view\"] .lesa-ui-playbook-reminder:not(:empty) {\n  background-color: #eef2fa;\n  border: 1px solid #d8dcde;\n  border-radius: 0 3px 0 0 !important;\n  color: #2e5aac;\n  display: block;\n  margin-bottom: 1em;\n  padding: 10px;\n}\n\n.rich_text .comment_input.is-public .lesa-ui-playbook-reminder a,\ndiv[data-test-id=\"editor-view\"] .lesa-ui-playbook-reminder a {\n  text-decoration: underline;\n}\n\n#modals .modal-header,\n#attachments-modal .modal-header {\n  cursor: move;\n}\n\n.fNgWaW {\n  padding: 2px 0px;\n  height: 14px;\n  width: 1px;\n  background: rgb(194, 200, 204);\n  display: flex;\n  margin: 0px 8px;\n}\n\nbutton[data-test-id=\"omnilog-jump-button\"] {\n  display: none;\n}\n\n.tags span a {\n  color: rgb(73, 84, 92);\n  font-weight: normal;\n}\n\n.tags span.important-tag a {\n  color: rebeccapurple;\n  font-weight: 600;\n}\n\n.lesa-ui-group-rows-summary {\n  width: fit-content;\n}\n\ntd[data-test-id=\"ticket-table-cells-subject\"] .lesa-ui-tags {\n  display: flex;\n  flex-wrap: wrap;\n}\n\ntd[data-test-id=\"ticket-table-cells-subject\"] .lesa-ui-tags span {\n  background: rgb(233, 235, 237);\n  border-radius: 0.2em;\n  color: rgb(73, 84, 92);\n  font-size: x-small;\n  margin: 0.2em 0.2em;\n  padding-left: 0.3em;\n  padding-right: 0.3em;\n}\n\ntd[data-test-id=\"generic-table-cells-id\"] span.lesa-ui-tags {\n  background: rgb(233, 235, 237);\n  border-radius: 0.2em;\n  color: rgb(73, 84, 92);\n  font-size: x-small;\n  margin: 0.2em 0.2em;\n  padding-left: 0.3em;\n  padding-right: 0.3em;\n}\n\ndiv[data-cy-test-id=\"status-badge-state\"] {\n  width: 4em;\n}\n";
 }
 var head = document.querySelector('head');
 head.appendChild(styleElement);
@@ -2420,33 +2424,80 @@ function populateTicketTableExtraColumns(tableContainer, tickets) {
     else {
         tickets = JSON.parse(tableContainer.getAttribute('data-tickets') || '[]');
     }
-    for (var i = 0; i < tickets.length; i++) {
-        if (!tickets[i].custom_fields) {
-            continue;
+    if (GM_config.get('DISPLAY_SWARMING_CATEGORIES_ON_LIST')) {
+        for (var i = 0; i < tickets.length; i++) {
+            if (!tickets[i].custom_fields) {
+                continue;
+            }
+            var swarmCategories = getCustomFieldValue(tickets[i], CUSTOM_FIELD_SWARM_CATEGORIES);
+            if (swarmCategories == null) {
+                continue;
+            }
+            var selector = 'td[data-test-id="ticket-table-cells-subject"] a[href="tickets/' + tickets[i].id + '"]';
+            var link = tableContainer.querySelector(selector);
+            if (!link) {
+                continue;
+            }
+            var cell = link.closest('td');
+            var categoriesContainer = cell.querySelector('.lesa-ui-tags');
+            if (categoriesContainer) {
+                continue;
+            }
+            categoriesContainer = document.createElement('div');
+            categoriesContainer.classList.add('lesa-ui-tags');
+            categoriesContainer = swarmCategories.reduce(function (acc, next) {
+                var categoryElement = document.createElement('span');
+                categoryElement.textContent = '+' + next.substring(5);
+                acc.appendChild(categoryElement);
+                return acc;
+            }, categoriesContainer);
+            cell.appendChild(categoriesContainer);
         }
-        var swarmCategories = getCustomFieldValue(tickets[i], CUSTOM_FIELD_SWARM_CATEGORIES);
-        if (swarmCategories == null) {
-            continue;
+    }
+    if (GM_config.get('DISPLAY_SUB_ORGANIZATION_ON_LIST')) {
+        for (var i = 0; i < tickets.length; i++) {
+            var selector = 'td[data-test-id="generic-table-cells-id"]';
+            var cellIds = Array.from(tableContainer.querySelectorAll(selector));
+            var cellId = null;
+            for (var j = 0; j < cellIds.length; j++) {
+                var cellIdText = cellIds[j].textContent;
+                if (cellIdText == null) {
+                    continue;
+                }
+                if (cellIdText.trim() === "#" + tickets[i].id) {
+                    cellId = cellIds[j];
+                }
+            }
+            if (cellId == null) {
+                continue;
+            }
+            var subOrgContainer = cellId.querySelector('.lesa-ui-tags');
+            if (subOrgContainer) {
+                continue;
+            }
+            var ticketTags = tickets[i].tags;
+            if (ticketTags == null) {
+                continue;
+            }
+            for (var j = 0; j < ticketTags.length; j++) {
+                var tag = ticketTags[j];
+                if (tag.startsWith("spain_pod_")) {
+                    var container;
+                    if (GM_config.get('DISPLAY_SWARMING_CATEGORIES_ON_LIST')) {
+                        container = document.createElement('div');
+                        cellId.appendChild(container);
+                    }
+                    else {
+                        container = cellId;
+                        cellId.textContent = cellId.textContent + " ";
+                    }
+                    var tagElement = document.createElement('span');
+                    tagElement.classList.add('lesa-ui-tags');
+                    tagElement.textContent = tag;
+                    container.appendChild(tagElement);
+                }
+            }
         }
-        var selector = 'td[data-test-id="ticket-table-cells-subject"] a[href="tickets/' + tickets[i].id + '"]';
-        var link = tableContainer.querySelector(selector);
-        if (!link) {
-            continue;
-        }
-        var cell = link.closest('td');
-        var categoriesContainer = cell.querySelector('.lesa-ui-tags');
-        if (categoriesContainer) {
-            continue;
-        }
-        categoriesContainer = document.createElement('div');
-        categoriesContainer.classList.add('lesa-ui-tags');
-        categoriesContainer = swarmCategories.reduce(function (acc, next) {
-            var categoryElement = document.createElement('span');
-            categoryElement.textContent = '+' + next.substring(5);
-            acc.appendChild(categoryElement);
-            return acc;
-        }, categoriesContainer);
-        cell.appendChild(categoriesContainer);
     }
 }
 function addTicketTableExtraColumns(tableContainer, requestURL) {
@@ -2760,7 +2811,7 @@ function adjustColumnTextWidth() {
         for (var _b = 0, headers_2 = headers; _b < headers_2.length; _b++) {
             var header = headers_2[_b];
             var textHeader = getTextHeader(header);
-            if (textHeader && (textHeader.nodeValue === 'Product')) {
+            if (textHeader && (textHeader.nodeValue === 'Offering')) {
                 product_column = i;
                 break;
             }
@@ -2777,12 +2828,8 @@ function adjustColumnTextWidth() {
                 continue;
             }
             cell.title = cell.textContent;
-            if (cell.textContent === 'Liferay DXP::Quarterly Release') {
-                cell.textContent = 'DXP::Quarterly';
-                madeResizeChanges = true;
-            }
-            else if (cell.textContent === 'LXC - Self-Managed') {
-                cell.textContent = 'LXC - SM';
+            if (cell.textContent === 'Liferay Self-Hosted::Quarterly Release') {
+                cell.textContent = 'Self-Hosted::Quarterly';
                 madeResizeChanges = true;
             }
             else if (cell.textContent === 'Provisioning Request') {
@@ -2933,6 +2980,39 @@ function updateZendeskUI() {
         updateKnowledgeCenterEditor();
     }
 }
-// Since there's an SPA framework in place that I don't fully understand,
-// attempt to do everything once per second.
-setInterval(updateZendeskUI, 1000);
+GM_config.init({
+    id: 'zendesk_for_tse_config',
+    title: GM_info.script.name + ' Settings',
+    fields: {
+        DISPLAY_SWARMING_CATEGORIES_ON_LIST: {
+            label: 'Display Swarming Skills on ticket rows',
+            type: 'checkbox',
+            "default": true,
+            title: 'Check if you want to display the Swarming Skils on ticket rows below the ticket title in filter viewsCheck if you want to display the Swarming Skils on ticket rows below the ticket title in filter views. This will make rows larger vertically.'
+        },
+        DISPLAY_SUB_ORGANIZATION_ON_LIST: {
+            label: 'Display suborganization information on tickets rows (Spain office only)',
+            type: 'checkbox',
+            "default": false,
+            title: 'Check if you want to display the suborganization information on ticket rows below the ticket title'
+        },
+        EXECUTION_INTERVAL: {
+            label: 'Execution interval (ms)',
+            type: 'number',
+            min: 1,
+            "default": 1000,
+            title: 'The number of milliseconds to wait between each execution of the script'
+        }
+    },
+    events: {
+        init: onInit
+    }
+});
+GM_registerMenuCommand('Settings', function () {
+    GM_config.open();
+});
+function onInit() {
+    // Since there's an SPA framework in place that I don't fully understand,
+    // attempt to do everything once per second.
+    setInterval(updateZendeskUI, GM_config.get('EXECUTION_INTERVAL'));
+}
