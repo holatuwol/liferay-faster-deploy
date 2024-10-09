@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        22.3
+// @version        22.4
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @supportURL     https://github.com/holatuwol/liferay-zendesk-userscript/issues/new
@@ -132,7 +132,7 @@ function getCookieValue(name) {
  * Create a link to the JIRA linked issues.
  */
 function getJiraSearchLink(text, ticketId) {
-    var query = ("\n\"Customer Ticket Permalink\" = \"https://" + document.location.host + document.location.pathname + "\" OR\n\"Zendesk Ticket IDs\" ~ " + ticketId + " OR\n\"Customer Ticket\" = \"https://" + document.location.host + document.location.pathname + "\"\n  ").trim();
+    var query = ("\n\"Customer Ticket Permalink\" = \"https://" + document.location.host + document.location.pathname + "\" OR\n\"Zendesk Ticket IDs\" ~ \"" + ticketId + "\" OR\n\"Zendesk Ticket IDs\" ~ \"https://" + document.location.host + document.location.pathname + "\" OR\n\"Customer Ticket\" = \"https://" + document.location.host + document.location.pathname + "\"\n  ").trim();
     var encodedQuery = encodeURIComponent(query);
     var jiraSearchLinkHREF = 'https://liferay.atlassian.net/issues/?jql=' + encodedQuery;
     return createAnchorTag(text, jiraSearchLinkHREF);
