@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        9.2
+// @version        9.3
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -378,6 +378,7 @@ function addProductVersionFilter() {
         return;
     }
     var versions = ['', '6.x', '7.0', '7.1', '7.2', '7.3', '7.4'];
+    var selectedVersion = null;
     for (var i = 0; i < productVersionSelect.options.length; i++) {
         var option = productVersionSelect.options[i];
         var optionText = option.textContent || '';
@@ -388,6 +389,9 @@ function addProductVersionFilter() {
             else if (optionText.trim() == 'Quarterly Releases') {
                 option.setAttribute('data-liferay-version', '7.4');
             }
+            if (option.selected) {
+                selectedVersion = option.getAttribute('data-liferay-version');
+            }
         }
     }
     var liferayVersionSelect = document.createElement('select');
@@ -395,6 +399,7 @@ function addProductVersionFilter() {
     for (var i = 0; i < versions.length; i++) {
         var option = document.createElement('option');
         option.value = versions[i];
+        option.selected = (selectedVersion == versions[i]);
         option.textContent = versions[i];
         liferayVersionSelect.appendChild(option);
     }
@@ -403,6 +408,79 @@ function addProductVersionFilter() {
     productVersionSelect.addEventListener('change', setTimeout.bind(null, updateProjectVersionOrder, 500));
     var productVersionSelectParentElement = productVersionSelect.parentElement;
     productVersionSelectParentElement.insertBefore(liferayVersionSelect, productVersionSelect);
+    if (selectedVersion) {
+        productVersionSelect.setAttribute('data-liferay-version', selectedVersion);
+        addProjectVersionFilter(productVersionSelect, selectedVersion);
+    }
+}
+function addProjectVersionFilter(productVersionSelect, selectedVersion) {
+    var projectVersionSelect = querySelector('patcherProjectVersionId');
+    if (projectVersionSelect) {
+        return;
+    }
+    var projectVersionSelectFilter = querySelector('patcherProjectVersionIdFilter');
+    if (!projectVersionSelectFilter) {
+        return;
+    }
+    projectVersionSelect = projectVersionSelectFilter.cloneNode(true);
+    if (selectedVersion == '7.4') {
+        for (var i = projectVersionSelect.options.length - 1; i >= 0; i--) {
+            var version = (projectVersionSelect.options[i].textContent || '').trim();
+            if ((version != '') && (version.indexOf('7.4.13-') == -1) && (version.indexOf('.q') == -1)) {
+                projectVersionSelect.options[i].remove();
+            }
+        }
+    }
+    else {
+        var versionString = '-' + selectedVersion.replace('.', '') + '10';
+        for (var i = projectVersionSelect.options.length - 1; i >= 0; i--) {
+            var version = (projectVersionSelect.options[i].textContent || '').trim();
+            if ((version != '') && (version.indexOf(versionString) == -1)) {
+                projectVersionSelect.options[i].remove();
+            }
+        }
+    }
+    var sortedOptions = Array.from(projectVersionSelect.options).sort(compareLiferayVersions);
+    for (var i = 0; i < sortedOptions.length; i++) {
+        projectVersionSelect.appendChild(sortedOptions[i]);
+    }
+    var versionContainer = productVersionSelect.parentElement;
+    versionContainer.appendChild(projectVersionSelect);
+    var advancedSearchElement = document.getElementById('toggle_id_patcher_fix_searchadvancedSearch');
+    var re = new RegExp(ns + 'patcherProjectVersionIdFilter=(\\d+)');
+    var match = re.exec(document.location.search);
+    if (match) {
+        var patcherProjectVersionId = match[1];
+        var option = projectVersionSelect.querySelector('option[value="' + patcherProjectVersionId + '"]');
+        if (option) {
+            option.selected = true;
+            advancedSearchElement.value = 'true';
+        }
+        else {
+            var parameterString = ns + 'patcherProjectVersionIdFilter=' + patcherProjectVersionId + '&';
+            document.location.search = document.location.search.replace(parameterString, '');
+        }
+    }
+    var keywordsElement = document.getElementById('toggle_id_patcher_fix_searchkeywords');
+    re = new RegExp(ns + 'patcherFixName=([^&]+)');
+    match = re.exec(document.location.search);
+    if (match) {
+        keywordsElement.value = match[1];
+    }
+    projectVersionSelect.addEventListener('change', function () {
+        var keywords = keywordsElement.value;
+        document.location.href = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher?' +
+            getQueryString({
+                'advancedSearch': 'true',
+                'andOperator': 'true',
+                'hideOldFixVersions': 'true',
+                'hideOldFixVersionsCheckbox': 'true',
+                'statusFilter': '100',
+                'patcherFixName': keywords,
+                'patcherProductVersionId': productVersionSelect.options[productVersionSelect.selectedIndex].value,
+                'patcherProjectVersionIdFilter': projectVersionSelect.options[projectVersionSelect.selectedIndex].value
+            });
+    });
 }
 /**
  * Converts the tag name into a seven digit version number that can be
@@ -410,7 +488,10 @@ function addProductVersionFilter() {
  * and the remander are the fix pack level.
  */
 function getLiferayVersion(version) {
-    if (version.indexOf('marketplace-') != -1) {
+    if (version.trim() == '') {
+        return 0;
+    }
+    else if (version.indexOf('marketplace-') != -1) {
         var pos = version.indexOf('-private');
         pos = version.lastIndexOf('-', pos == -1 ? version.length : pos - 1);
         var shortVersion = version.substring(pos + 1);
@@ -451,20 +532,20 @@ function getLiferayVersion(version) {
     else if (version.indexOf('-ga1') != -1) {
         var shortVersionMatcher = /^([0-9]*)\.([0-9]*)\.([0-9]*)/.exec(version);
         var shortVersion = shortVersionMatcher[1] + shortVersionMatcher[2];
-        return parseInt(shortVersion) * 1000 + parseInt(shortVersionMatcher[3]);
+        return parseInt(shortVersion) * 100 * 1000 + parseInt(shortVersionMatcher[3]);
     }
     else if (version.indexOf('-u') != -1) {
-        var shortVersionMatcher = /[0-9]*\.[0-9]/.exec(version);
-        var shortVersion = shortVersionMatcher[0].replace('.', '');
+        var shortVersionMatcher = /[0-9]*\.[0-9]\.[0-9]+/.exec(version);
+        var shortVersion = shortVersionMatcher[0].replace(/\./g, '');
         var updateVersionMatcher = /-u([0-9]*)/.exec(version);
         var updateVersion = updateVersionMatcher[1];
-        return parseInt(shortVersion) * 100 * 1000 + parseInt(updateVersion);
+        return parseInt(shortVersion) * 1000 + parseInt(updateVersion);
     }
     else if (version.indexOf('.q') != -1) {
         var shortVersionMatcher = /([0-9][0-9][0-9][0-9])\.q([0-9])\.([0-9]*)/.exec(version);
         var shortVersion = shortVersionMatcher[1] + shortVersionMatcher[2];
         var updateVersion = shortVersionMatcher[3];
-        return parseInt(shortVersion) * 100 + parseInt(updateVersion);
+        return 8000000 + parseInt(shortVersion) * 100 + parseInt(updateVersion);
     }
     else {
         console.log('unrecognized version pattern', version);
@@ -477,8 +558,8 @@ function getLiferayVersion(version) {
  * we get private branches sorted after the equivalent public branch).
  */
 function compareLiferayVersions(a, b) {
-    var aValue = getLiferayVersion(a.textContent || '');
-    var bValue = getLiferayVersion(b.textContent || '');
+    var aValue = getLiferayVersion((a.textContent || '').trim());
+    var bValue = getLiferayVersion((b.textContent || '').trim());
     if (aValue != bValue) {
         return aValue - bValue;
     }
@@ -1434,7 +1515,9 @@ var applyPatcherCustomizations = function () {
         updatePreviousBuildsContent();
     }
     compareBuildFixes();
-    setTimeout(updateFromQueryString, 500);
+    if (document.location.pathname.indexOf('/-/osb_patcher/fixes/create') != -1) {
+        setTimeout(updateFromQueryString, 500);
+    }
 };
 if (exportFunction) {
     applyPatcherCustomizations = exportFunction(applyPatcherCustomizations, window);
