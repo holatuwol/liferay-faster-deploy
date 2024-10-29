@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        22.4
+// @version        22.5
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @supportURL     https://github.com/holatuwol/liferay-zendesk-userscript/issues/new
@@ -2485,7 +2485,7 @@ function populateTicketTableExtraColumns(tableContainer, tickets) {
             }
             for (var j = 0; j < ticketTags.length; j++) {
                 var tag = ticketTags[j];
-                if (tag.startsWith("spain_pod_")) {
+                if (tag.indexOf("_pod_") != -1) {
                     var container;
                     if (GM_config.get('DISPLAY_SWARMING_CATEGORIES_ON_LIST')) {
                         container = document.createElement('div');
@@ -2994,7 +2994,7 @@ GM_config.init({
             "default": true
         },
         DISPLAY_SUB_ORGANIZATION_ON_LIST: {
-            label: '(Spain office only) Check this box if you want to display suborganization information below the ticket title in each row on filter views',
+            label: 'Check this box if you want to display suborganization information below the ticket title in each row on filter views',
             type: 'checkbox',
             "default": false
         },
