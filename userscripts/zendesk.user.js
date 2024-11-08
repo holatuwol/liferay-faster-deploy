@@ -1,14 +1,13 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        22.5
+// @version        22.6
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @supportURL     https://github.com/holatuwol/liferay-zendesk-userscript/issues/new
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/.*/
 // @include        /https:\/\/24475.apps.zdusercontent.com\/24475\/assets\/.*\/issue_creator.html/
 // @grant          unsafeWindow
-// @grant          GM_xmlHttpRequest
 // @grant          GM.xmlHttpRequest
 // @grant          GM_getValue
 // @grant          GM.getValue
@@ -353,7 +352,7 @@ var endOfSoftwareLifeDates = {
     '7.2': new Date('2026-06-03'),
     '7.3': new Date('2027-10-12')
 };
-function addServiceLifeMarker(priorityElement, ticketId, ticketTags, organizationTags) {
+function addServiceLifeMarker(priorityElement, ticketId, ticketTags, organizationTagSet) {
     var versions = getProductVersions(ticketTags);
     if (versions.length == 0) {
         return;
@@ -365,22 +364,22 @@ function addServiceLifeMarker(priorityElement, ticketId, ticketTags, organizatio
     var limitedSupport = (today > limitedSupportDates[version]);
     var endOfSoftwareLife = (today > endOfSoftwareLifeDates[version]);
     var declinedVersions = [];
-    for (var i = 0; i < organizationTags.length; i++) {
-        var tag = organizationTags[i];
-        if ((tag == 'neg_7_0_eps') && (versions.indexOf('7.0') != -1)) {
-            declinedVersions.push('7.0');
-        }
-        else if ((tag == 'neg_7_1_eps') && (versions.indexOf('7.1') != -1)) {
-            declinedVersions.push('7.1');
-        }
-        else if ((tag == 'neg_7_2_eps') && (versions.indexOf('7.2') != -1)) {
-            declinedVersions.push('7.2');
-        }
-        else if ((tag == 'neg_7_3_eps') && (versions.indexOf('7.3') != -1)) {
-            declinedVersions.push('7.3');
-        }
+    if ((versions.indexOf('7.3') != -1) &&
+        (organizationTagSet.has('neg_7_3_eps'))) {
+        declinedVersions.push('7.3');
     }
-    declinedVersions.sort().reverse();
+    if ((versions.indexOf('7.2') != -1) &&
+        (organizationTagSet.has('neg_7_2_eps'))) {
+        declinedVersions.push('7.2');
+    }
+    if ((versions.indexOf('7.1') != -1) &&
+        (organizationTagSet.has('neg_7_1_eps'))) {
+        declinedVersions.push('7.1');
+    }
+    if ((versions.indexOf('7.0') != -1) &&
+        (organizationTagSet.has('neg_7_0_eps'))) {
+        declinedVersions.push('7.0');
+    }
     var extendedPremiumSupport = null;
     if (declinedVersions.length == 0) {
         for (var i = 0; i < ticketTags.length; i++) {
@@ -411,25 +410,25 @@ function addServiceLifeMarker(priorityElement, ticketId, ticketTags, organizatio
         priorityElement.appendChild(serviceLifeElement);
     }
 }
-function getCriticalMarkerText(ticketInfo, tagSet) {
+function getCriticalMarkerText(ticketInfo, ticketTagSet) {
     var subpriority = ticketInfo.ticket.priority || 'none';
     if ((subpriority != 'high') && (subpriority != 'urgent')) {
         return null;
     }
-    if (tagSet.has('premium')) {
+    if (ticketTagSet.has('premium')) {
         return 'premium critical';
     }
-    var criticalMarkers = ['production', 'production_completely_shutdown', 'production_severely_impacted_inoperable'].filter(Set.prototype.has.bind(tagSet));
+    var criticalMarkers = ['production', 'production_completely_shutdown', 'production_severely_impacted_inoperable'].filter(Set.prototype.has.bind(ticketTagSet));
     if (criticalMarkers.length >= 2) {
-        if (tagSet.has('platinum')) {
+        if (ticketTagSet.has('platinum')) {
             return 'platinum critical';
         }
         return 'critical';
     }
     return subpriority;
 }
-function addCriticalMarker(priorityElement, ticketInfo, tagSet) {
-    var markerText = getCriticalMarkerText(ticketInfo, tagSet);
+function addCriticalMarker(priorityElement, ticketInfo, ticketTagSet) {
+    var markerText = getCriticalMarkerText(ticketInfo, ticketTagSet);
     if (markerText == null) {
         return;
     }
@@ -438,23 +437,30 @@ function addCriticalMarker(priorityElement, ticketInfo, tagSet) {
     criticalElement.textContent = markerText;
     priorityElement.appendChild(criticalElement);
 }
-function addCustomerTypeMarkerHelper(priorityElement, tagSet, tag, text) {
-    if (!tagSet.has(tag)) {
+function addOrganizationTagSearchHeader(priorityElement, organizationTagSet, tag, text, cssClass) {
+    if ((tag != null) && !organizationTagSet.has(tag)) {
         return;
     }
     var element = document.createElement('span');
-    element.classList.add('lesa-ui-priority-minor');
-    var query = 'tags:' + tag;
-    var link = document.createElement('a');
-    link.textContent = text;
-    link.href = 'https://' + document.location.host + '/agent/search/1?type=organization&q=' + encodeURIComponent(query);
-    element.appendChild(link);
+    element.classList.add('lesa-ui-' + cssClass);
+    if (tag == null) {
+        element.appendChild(document.createTextNode(text));
+    }
+    else {
+        var query = 'tags:' + tag;
+        var link = document.createElement('a');
+        link.textContent = text;
+        link.href = 'https://' + document.location.host + '/agent/search/1?type=organization&q=' + encodeURIComponent(query);
+        link.setAttribute('title', query);
+        element.appendChild(link);
+    }
     priorityElement.appendChild(element);
 }
-function addCustomerTypeMarker(priorityElement, tagSet) {
-    addCustomerTypeMarkerHelper(priorityElement, tagSet, 'gs_opportunity', 'GS Opportunity');
-    addCustomerTypeMarkerHelper(priorityElement, tagSet, 'service_solution', 'Service Portal Customer');
-    addCustomerTypeMarkerHelper(priorityElement, tagSet, 'commerce_solution', 'Commerce Portal Customer');
+function addCustomerTypeMarker(priorityElement, organizationTagSet) {
+    addOrganizationTagSearchHeader(priorityElement, organizationTagSet, 'tam_services', 'TAM Services', 'priority-critical');
+    addOrganizationTagSearchHeader(priorityElement, organizationTagSet, 'gs_opportunity', 'GS Opportunity', 'priority-minor');
+    addOrganizationTagSearchHeader(priorityElement, organizationTagSet, 'service_solution', 'Service Portal Customer', 'priority-minor');
+    addOrganizationTagSearchHeader(priorityElement, organizationTagSet, 'commerce_solution', 'Commerce Portal Customer', 'priority-minor');
 }
 /**
  * Checks whether the assignee text corresponds to the specified support region.
@@ -499,23 +505,26 @@ function getSupportRegions(assigneeText) {
     }
     return new Set(supportRegions.map(function (x) { return x.toLowerCase(); }));
 }
-function addOfferingMarker(priorityElement, ticketInfo, ticketTags) {
-    var offeringElement = document.createElement('span');
-    offeringElement.classList.add('lesa-ui-offering');
-    offeringElement.setAttribute('title', 'Offering');
+function addOfferingMarker(priorityElement, ticketInfo, ticketTags, organizationTagSet) {
     var offeringText = 'Self-Hosted';
+    var offeringTag = null;
     for (var i = 0; i < ticketTags.length; i++) {
-        if (ticketTags[i].indexOf('lxc_sm') != -1) {
-            offeringText = 'PaaS';
-            break;
-        }
-        else if (ticketTags[i].indexOf('lxc') != -1) {
+        if (ticketTags[i].indexOf('lxc') != -1) {
             offeringText = 'SaaS';
+            offeringTag = ticketTags[i];
             break;
         }
     }
-    offeringElement.textContent = offeringText;
-    priorityElement.appendChild(offeringElement);
+    if (offeringText == 'SaaS') {
+        for (var i = 0; i < ticketTags.length; i++) {
+            if (ticketTags[i].indexOf('lxc_sm') != -1) {
+                offeringText = 'PaaS';
+                offeringTag = ticketTags[i];
+                break;
+            }
+        }
+    }
+    addOrganizationTagSearchHeader(priorityElement, organizationTagSet, offeringTag, offeringText, 'offering');
 }
 var middleEastCountries = new Set([
     'Saudi Arabia', 'United Arab Emirates', 'Qatar', 'Kuwait', 'Bahrein', 'Oman', 'Jordan', 'Iraq', 'Lebanon'
@@ -549,6 +558,7 @@ function addRegionMarker(priorityElement, ticketInfo, ticketContainer) {
         var customerRegionLink = document.createElement('a');
         customerRegionLink.textContent = 'customer region: ' + customerRegion;
         var query = 'support_region:' + customerRegion;
+        customerRegionLink.setAttribute('title', query);
         customerRegionLink.href = 'https://' + document.location.host + '/agent/search/1?type=organization&q=' + encodeURIComponent(query);
         customerRegionElement.appendChild(customerRegionLink);
         priorityElement.appendChild(customerRegionElement);
@@ -613,13 +623,12 @@ function addPriorityMarker(header, conversation, ticketId, ticketInfo) {
     // high priority ticket (production, severely impacted or worse)
     var ticketTags = (ticketInfo && ticketInfo.ticket && ticketInfo.ticket.tags) || [];
     var ticketTagSet = new Set(ticketTags);
-    var organizationTags = (ticketInfo && ticketInfo.organizations) ? ticketInfo.organizations.map(function (it) { return it.tags || []; }).reduce(function (acc, it) { return acc.concat(it); }, []) : [];
-    organizationTags = Array.from(new Set(organizationTags));
-    addOfferingMarker(priorityElement, ticketInfo, ticketTags);
+    var organizationTagSet = new Set((ticketInfo && ticketInfo.organizations) ? ticketInfo.organizations.map(function (it) { return it.tags || []; }).reduce(function (acc, it) { return acc.concat(it); }, []) : []);
+    addOfferingMarker(priorityElement, ticketInfo, ticketTags, organizationTagSet);
     addRegionMarker(priorityElement, ticketInfo, ticketContainer);
-    addServiceLifeMarker(priorityElement, ticketId, ticketTags, organizationTags);
+    addServiceLifeMarker(priorityElement, ticketId, ticketTags, organizationTagSet);
     addCriticalMarker(priorityElement, ticketInfo, ticketTagSet);
-    addCustomerTypeMarker(priorityElement, ticketTagSet);
+    addCustomerTypeMarker(priorityElement, organizationTagSet);
     var emojiContainer = getEmojiAnchorTags(ticketTags);
     if (emojiContainer != null) {
         priorityElement.appendChild(emojiContainer);
