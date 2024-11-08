@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        22.6
+// @version        22.7
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @supportURL     https://github.com/holatuwol/liferay-zendesk-userscript/issues/new
@@ -2494,7 +2494,9 @@ function populateTicketTableExtraColumns(tableContainer, tickets) {
             }
             for (var j = 0; j < ticketTags.length; j++) {
                 var tag = ticketTags[j];
-                if (tag.indexOf("_pod_") != -1) {
+                // Check for specific tag patterns
+                if (tag.indexOf("_pod_") !== -1 || tag.indexOf("_porygon") !== -1 || tag.indexOf("_mewtwo") !== -1 || tag.indexOf("_slowpoke") !== -1) {
+                    // Create or select the container
                     var container;
                     if (GM_config.get('DISPLAY_SWARMING_CATEGORIES_ON_LIST')) {
                         container = document.createElement('div');
@@ -2502,8 +2504,9 @@ function populateTicketTableExtraColumns(tableContainer, tickets) {
                     }
                     else {
                         container = cellId;
-                        cellId.textContent = cellId.textContent + " ";
+                        cellId.textContent += " "; // Append space
                     }
+                    // Create and append the tag element
                     var tagElement = document.createElement('span');
                     tagElement.classList.add('lesa-ui-tags');
                     tagElement.textContent = tag;
