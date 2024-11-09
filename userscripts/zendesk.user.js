@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        22.7
+// @version        22.8
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @supportURL     https://github.com/holatuwol/liferay-zendesk-userscript/issues/new
@@ -799,6 +799,9 @@ function getPatcherPortalAccountsHREF(path, params) {
  * Retrieve the Liferay version from the tags.
  */
 function getProductVersions(tags) {
+    if (tags == null) {
+        return [];
+    }
     var candidates = [];
     for (var i = 0; i < tags.length; i++) {
         var tag = tags[i];
@@ -2034,7 +2037,7 @@ function getSupportOffices(assigneeGroup) {
  */
 function initPatchTicketValues(data) {
     var ticket = data['ticket'];
-    var productVersion = data['ticket.customField:custom_field_360006076471'];
+    var versions = getProductVersions(ticket.tags);
     function setSummary(callback) {
         setReactInputValue('input[data-test-id=summary]', ticket.subject, callback);
     }
@@ -2047,13 +2050,11 @@ function initPatchTicketValues(data) {
         addReactLabelValues('customfield_10133', supportOffices, callback);
     }
     function setAffectsVersion(callback) {
-        var value = (productVersion.indexOf('7_0') != -1) ? '7.0.10' :
-            (productVersion.indexOf('7_1') != -1) ? '7.1.10' :
-                (productVersion.indexOf('7_2') != -1) ? '7.2.10' :
-                    (productVersion.indexOf('7_3') != -1) ? '7.3.10' :
-                        (productVersion.indexOf('7_4') != -1) ? '7.4.13' :
-                            (productVersion.indexOf('lxc') != -1) ? '7.4.13' :
-                                null;
+        var value = (versions.indexOf('7.0') != -1) ? '7.0.10' :
+            (versions.indexOf('7.1') != -1) ? '7.1.10' :
+                (versions.indexOf('7.2') != -1) ? '7.2.10' :
+                    (versions.indexOf('7.3') != -1) ? '7.3.10' :
+                        null;
         if (value) {
             addReactLabelValue('versions', value, callback);
         }
