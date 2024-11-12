@@ -10,6 +10,7 @@ from os.path import abspath, basename, dirname, isdir, isfile, join, relpath
 import pickle
 import re
 import requests
+from requests.auth import HTTPBasicAuth
 import sys
 import time
 from tqdm import tqdm
@@ -53,6 +54,8 @@ def get_namespaced_parameters(portlet_id, parameters):
     return { ('_%s_%s' % (portlet_id, key)) : value for key, value in parameters.items() }
 
 def authenticate(base_url, get_params=None):
+    print('authentication check against', base_url)
+
     r = session.get(base_url, headers=default_headers, stream=True, verify=False)
 
     is_html = r.headers['content-type'].lower().find('text/html') == 0
@@ -70,7 +73,7 @@ def authenticate(base_url, get_params=None):
         if r.text.find('SAMLRequest') != -1:
             print('redirected to a SAML IdP')
             r = saml_request(base_url, r.url, r.text)
-        elif len(r.history) > 0 and r.url.find('p_p_id=') != -1:
+        elif len(r.history) > 0 and ((r.url.find('p_p_id=') != -1 and r.url.find('LoginPortlet') != -1) or r.url.find('p_p_id=58') != -1):
             print('redirected to login portlet')
             url_params = parse.parse_qs(parse.urlparse(r.url).query)
             r = login_portlet(base_url, r.url, url_params, r.text)
@@ -93,7 +96,7 @@ def progress_bar_request(r, f=None):
             f.write(chunk)
 
 def get_liferay_file(base_url, target_file=None, params=None, method='get'):
-    r = make_liferay_request(base_url, params, method)
+    r = make_liferay_request(base_url, params=params, method=method)
 
     if target_file is None:
         filenames = re.findall('filename="([^"]*)"', r.headers.get('content-disposition', ''))
@@ -111,38 +114,42 @@ def get_liferay_file(base_url, target_file=None, params=None, method='get'):
 
     return target_file
 
-def get_liferay_content(base_url, params=None, method='get'):
-    r = make_liferay_request(base_url, params, method)
+def get_liferay_content(base_url, params=None, method='get', allow_redirects=True):
+    r = make_liferay_request(base_url, params=params, method=method, allow_redirects=allow_redirects)
 
     return r.text
 
-def make_liferay_request(base_url, params=None, method='get'):
+def get_full_url(base_url, params):
+    if params is None:
+        return base_url
+
+    query_string = '&'.join(['%s=%s' % (parse.quote(key, ''), parse.quote(value, '')) for key, value in params.items()])
+
+    if base_url.find('?') == -1:
+        return '%s?%s' % (base_url, query_string)
+    else:
+        return '%s&%s' % (base_url, query_string)
+
+def make_liferay_request(base_url, params=None, multipart_params=None, method='get', allow_redirects=True):
     full_url = base_url
 
-    if method == 'get' and params is not None:
-        query_string = '&'.join(['%s=%s' % (parse.quote(key), parse.quote(value)) for key, value in params.items()])
-
-        if base_url.find('?') == -1:
-            full_url = '%s?%s' % (base_url, query_string)
-        else:
-            full_url = '%s&%s' % (base_url, query_string)
+    if params is not None and (method == 'get' or multipart_params is not None):
+        full_url = get_full_url(base_url, params)
+        params = None
 
     print(full_url)
 
-    pos = base_url.find('/api/jsonws/')
-
-    if pos != -1 and params is not None:
-        params['p_auth'] = get_json_auth_token(base_url[0:pos])
-    else:
-        r = authenticate(full_url, params)
-
-        if r.url == full_url:
-            return r
-
     if method == 'get':
-        return session.get(full_url, headers=default_headers, stream=True, verify=False)
+        if base_url.find('files.liferay.com') == -1:
+            return session.get(full_url, headers=default_headers, stream=True, verify=False, allow_redirects=allow_redirects)
+        else:
+            basic_auth_username = username if username.find('@') == -1 else username[:username.find('@')]
+            return session.get(full_url, headers=default_headers, auth=HTTPBasicAuth(basic_auth_username, password), stream=True, verify=False)
     else:
-        return session.post(full_url, data=params, headers=default_headers, verify=False)
+        if multipart_params is None:
+            return session.post(full_url, data=params, headers=default_headers, verify=False, allow_redirects=allow_redirects)
+        else:
+            return session.post(full_url, files=multipart_params, verify=False, allow_redirects=allow_redirects)
 
 def post_liferay_form(response_body):
     soup = BeautifulSoup(response_body, 'html.parser')
@@ -220,7 +227,10 @@ def login_okta(base_url, okta_url):
 
     # Process the SAML response
 
-    return saml_response(base_url, r.url, r.text)
+    if r.status_code == 200:
+        return saml_response(base_url, r.url, r.text)
+    else:
+        return None
 
 def attempt_login_okta(state_token):
     form_params = {
@@ -403,7 +413,7 @@ def get_json_auth_token(base_url):
     return json_auth_token[base_url]
 
 if __name__ == '__main__':
-    make_liferay_request('https://www.liferay.com/c/portal/login')
+    authenticate('https://files.liferay.com/private/')
 
     if len(sys.argv) > 1:
         for file_name in sys.argv[1:]:
