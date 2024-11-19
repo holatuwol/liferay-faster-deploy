@@ -1,23 +1,32 @@
 #!/bin/bash
 
+processbom() {
+  local artifactId=${1}
+  local version=${2}
+
+  curl --silent --show-error --fail \
+    "https://repository.liferay.com/nexus/content/repositories/liferay-public-releases/com/liferay/portal/${artifactId}/${version}/${artifactId}-${version}.pom" > pom.xml
+
+  if [ -s pom.xml ]; then
+    cat pom.xml | xq -r '.project.dependencyManagement.dependencies.dependency[] | .groupId + "," + .artifactId + "," + .version' | grep -vF "release.dxp.api"
+  fi
+
+  rm pom.xml
+}
+
 bundleinfo() {
-  version=${1}
-  filename=bundleinfo-${2}.txt
+  local version=${1}
+  local filename=bundleinfo-${2}.txt
 
   if [ -f ${filename} ]; then
     echo "${filename} has already been generated"
     return 0
   fi
 
-  curl --silent --show-error --fail "https://repository.liferay.com/nexus/content/repositories/liferay-public-releases/com/liferay/portal/release.dxp.bom/${version}/release.dxp.bom-${version}.pom" > pom.xml
-
-  if [ -s pom.xml ]; then
-    cat pom.xml | xq -r '.project.dependencyManagement.dependencies.dependency[] | .groupId + "," + .artifactId + "," + .version' > ${filename}
-  else
-    cat /dev/null > ${filename}
-  fi
-
-  rm pom.xml
+  cat /dev/null > ${filename}
+  processbom release.dxp.bom ${version} >> ${filename}
+  processbom release.dxp.bom.third.party ${version} >> ${filename}
+  processbom release.dxp.bom.compile.only ${version} >> ${filename}
 }
 
 # 7.3 updates
