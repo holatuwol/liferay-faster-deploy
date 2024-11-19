@@ -9,8 +9,15 @@ bundleinfo() {
     return 0
   fi
 
-  curl "https://repository.liferay.com/nexus/content/repositories/liferay-public-releases/com/liferay/portal/release.dxp.bom/${version}/release.dxp.bom-${version}.pom" | \
-    xq -r '.project.dependencyManagement.dependencies.dependency[] | .groupId + "," + .artifactId + "," + .version' > ${filename}
+  curl --silent --show-error --fail "https://repository.liferay.com/nexus/content/repositories/liferay-public-releases/com/liferay/portal/release.dxp.bom/${version}/release.dxp.bom-${version}.pom" > pom.xml
+
+  if [ -s pom.xml ]; then
+    cat pom.xml | xq -r '.project.dependencyManagement.dependencies.dependency[] | .groupId + "," + .artifactId + "," + .version' > ${filename}
+  else
+    cat /dev/null > ${filename}
+  fi
+
+  rm pom.xml
 }
 
 # 7.3 updates
