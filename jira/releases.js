@@ -7,11 +7,11 @@ var releaseVersions = {};
 var releaseDetails = {};
 
 var quarterlies = {
-	'2023.q3': 92,
-	'2023.q4': 102,
-	'2024.q1': 112,
-	'2024.q2': 120,
-	'2024.q3': 125
+	'2023.q3': 7413092,
+	'2023.q4': 7413102,
+	'2024.q1': 7413112,
+	'2024.q2': 7413120,
+	'2024.q3': 7413125
 };
 
 var renderedComponents = {};
@@ -27,6 +27,34 @@ function debounce(callback) {
 		clearTimeout(timer);
 		timer = setTimeout(callback, 100);
 	};
+}
+
+function getLiferayVersion(version) {
+  if (version.trim() == '') {
+    return 0;
+  }
+  else if (version.indexOf('-ga1') != -1) {
+    var shortVersionMatcher = /^([0-9]*)\.([0-9]*)\.([0-9]*)/.exec(version);
+    var shortVersion = shortVersionMatcher[0].replace(/\./g, '');
+    return parseInt(shortVersion) * 1000;
+  }
+  else if (version.indexOf('-u') != -1) {
+    var shortVersionMatcher = /[0-9]*\.[0-9]\.[0-9]+/.exec(version);
+    var shortVersion = shortVersionMatcher[0].replace(/\./g, '');
+    var updateVersionMatcher = /-u([0-9]*)/.exec(version);
+    var updateVersion = updateVersionMatcher[1];
+    return parseInt(shortVersion) * 1000 + parseInt(updateVersion);
+  }
+  else if (version.indexOf('.q') != -1) {
+    var shortVersionMatcher = /([0-9][0-9][0-9][0-9])\.q([0-9])\.([0-9]*)/.exec(version);
+    var shortVersion = shortVersionMatcher[1] + shortVersionMatcher[2];
+    var updateVersion = shortVersionMatcher[3];
+    return 8000000 + parseInt(shortVersion) * 100 + parseInt(updateVersion);
+  }
+  else {
+    console.log('unrecognized version pattern', version);
+    return 0;
+  }
 }
 
 function checkReleaseDetails() {
@@ -159,7 +187,9 @@ function exportReleaseNotesToCSV(ticketKeys) {
 	var select1Value = select1.options[select1.selectedIndex].value;
 	var select2Value = select2.options[select2.selectedIndex].value;
 
-	var fetchVersions = getFetchVersions(select1Value, select2Value);
+	var [versionsToAdd, versionsToRemove] = getFetchVersions(select1Value, select2Value);
+
+	var fetchVersions = new Set([...versionsToAdd, ...versionsToRemove]);
 
 	if (select1Value != select2Value) {
 		fetchVersions.delete(select1Value);
@@ -337,7 +367,7 @@ function generateComponentReleaseNotes(releaseNotesElement, componentName, compo
 	return componentElement;
 };
 
-function generateReleaseNotes(fetchVersions, sourceUpdate, sourceQuarterly, sourcePatch, targetUpdate, targetQuarterly, targetPatch, releaseName) {
+function generateReleaseNotes(fetchVersions, releasesToAdd, releasesToRemove, sourceVersion, targetVersion, releaseName) {
 	if (releaseName) {
 		fetchVersions.delete(releaseName);
 	}
@@ -348,68 +378,18 @@ function generateReleaseNotes(fetchVersions, sourceUpdate, sourceQuarterly, sour
 
 	var tickets = {};
 
-	var sourceVersion, targetVersion;
-
-	if (sourceQuarterly) {
-		sourceVersion = sourceQuarterly + '.' + sourcePatch;
-	}
-	else {
-		sourceVersion = '7.4.13-u' + sourceUpdate;
-	}
-
-	if (targetQuarterly) {
-		targetVersion = targetQuarterly + '.' + targetPatch;
-	}
-	else {
-		targetVersion = '7.4.13-u' + targetUpdate;
-	}
-
 	Object.assign(tickets, releaseDetails[targetVersion]);
 
 	if (sourceVersion != targetVersion) {
-		for (var i = sourceUpdate + 1; i < targetUpdate; i++) {
-			var version = '7.4.13-u' + i;
+		releasesToAdd.forEach(function(version) {
 			Object.assign(tickets, releaseDetails[version]);
-		}
+		});
 
-		if (targetQuarterly) {
-			for (var i = 0; i < targetPatch; i++) {
-				var version = targetQuarterly + '.' + i;
-
-				if (!(version in releaseDetails)) {
-					continue;
-				}
-
-				Object.assign(tickets, releaseDetails[version]);
+		releasesToRemove.forEach(function(version) {
+			for (ticketKey in releaseDetails[version]) {
+				delete tickets[ticketKey];
 			}
-
-		}
-
-		if (sourceQuarterly) {
-			for (var i = 92; i <= sourceUpdate; i++) {
-				var version = '7.4.13-u' + i;
-
-				if (!(version in releaseDetails)) {
-					continue;
-				}
-
-				for (ticketKey in releaseDetails[version]) {
-					delete tickets[ticketKey];
-				}
-			}
-
-			for (var i = 0; i <= sourcePatch; i++) {
-				var version = sourceQuarterly + '.' + i;
-
-				if (!(version in releaseDetails)) {
-					continue;
-				}
-
-				for (ticketKey in releaseDetails[version]) {
-					delete tickets[ticketKey];
-				}
-			}
-		}
+		});
 	}
 
 	generateReleaseNotesHelper(tickets);
@@ -520,39 +500,92 @@ function generateReleaseNotesHelper(tickets) {
 
 function getFetchVersions(sourceVersion, targetVersion) {
 	var sourceUpdate = getUpdate(sourceVersion);
-	var targetUpdate = getUpdate(targetVersion);
-
-	var fetchVersions = new Set();
-
-	for (var i = sourceUpdate; i <= targetUpdate; i++) {
-		fetchVersions.add('7.4.13-u' + i);
-	}
-
-	if (sourceUpdate != targetVersion) {
-		for (var i = 92; i <= sourceUpdate; i++) {
-			fetchVersions.add('7.4.13-u' + i);
-		}
-
-		for (var i = 92; i <= targetUpdate; i++) {
-			fetchVersions.add('7.4.13-u' + i);
-		}
-	}
-
 	var sourceQuarterly = getQuarterly(sourceVersion);
+
+	var previousQuarterly = getPreviousQuarterly(sourceUpdate);
+	var previousQuarterlyUpdate = null;
+
+	if (previousQuarterly != null) {
+		previousQuarterlyUpdate = quarterlies[previousQuarterly];
+	}
+
 	var sourcePatch = getPatch(sourceVersion);
 
-	for (var i = 0; i <= sourcePatch; i++) {
-		fetchVersions.add(sourceQuarterly + '.' + i);
-	}
-
+	var targetUpdate = getUpdate(targetVersion);
 	var targetQuarterly = getQuarterly(targetVersion);
 	var targetPatch = getPatch(targetVersion);
 
-	for (var i = 0; i <= targetPatch; i++) {
-		fetchVersions.add(targetQuarterly + '.' + i);
-	}
+	var releasesToAdd = new Set([targetVersion]);
+	var releasesToRemove = new Set([sourceVersion]);
 
-	return fetchVersions;
+	Array.from(Object.keys(releaseVersions)).forEach(version => {
+		var update = getUpdate(version);
+		var quarterly = getQuarterly(version);
+		var patch = getPatch(version);
+
+		if (update < sourceUpdate) {
+			if (!quarterly) {
+				if ((previousQuarterlyUpdate != null) && update > previousQuarterlyUpdate) {
+					releasesToRemove.add(version);
+				}
+
+				return;
+			}
+
+			if ((quarterly == targetQuarterly) && (patch < targetPatch)) {
+				releasesToAdd.add(version);
+			}
+
+			return;
+		}
+
+		if (update > targetUpdate) {
+			return;
+		}
+
+		// If we're looking at an update, and it's within the expected range, we
+		// add it
+
+		if (!quarterly) {
+			if (update != sourceUpdate) {
+				releasesToAdd.add(version);
+			}
+
+			return;
+		}
+
+
+		// If it's the same as the source quarterly release, then we remove it if
+		// we've upgraded to a new quarterly release and the patch level is earlier
+
+		if (quarterly == sourceQuarterly) {
+			if (sourceQuarterly == targetQuarterly) {
+				return;
+			}
+
+			if (patch <= sourcePatch) {
+				releasesToRemove.add(version);
+			}
+
+			return;
+		}
+
+		// If it's the same as the target quarterly release, then we add it if the
+		// patch level is earlier than the target quarterly release
+
+		if (quarterly == targetQuarterly) {
+			if (patch <= targetPatch) {
+				releasesToAdd.add(version);
+			}
+
+			return;
+		}
+	});
+
+	console.log(releasesToAdd);
+	console.log(releasesToRemove);
+
+	return [releasesToAdd, releasesToRemove];
 };
 
 function getNextQuarterly(update) {
@@ -633,7 +666,12 @@ function getTicketCountString(ticketCount) {
 
 function getUpdate(version) {
 	if (version.indexOf('-u') != -1) {
-		return parseInt(version.substring(version.indexOf('-u') + 2));
+		var baseVersion = parseInt(version.substring(0, 6).substring(0, 6).replaceAll('.', ''));
+		return (baseVersion * 1000) + parseInt(version.substring(version.indexOf('-u') + 2));
+	}
+	else if (version.indexOf('-ga1') != -1) {
+		var baseVersion = parseInt(version.substring(0, 6).substring(0, 6).replaceAll('.', ''));
+		return (baseVersion * 1000);
 	}
 	else {
 		return quarterlies[version.substring(0, 7)];
@@ -655,12 +693,12 @@ function loadReleaseDetails(releaseName, joinCallback) {
 };
 
 function populateReleaseDetails(sourceVersion, targetVersion) {
-	var fetchVersions = getFetchVersions(sourceVersion, targetVersion);
+	var [versionsToAdd, versionsToRemove] = getFetchVersions(sourceVersion, targetVersion);
+
+	var fetchVersions = new Set([...versionsToAdd, ...versionsToRemove]);
 
 	var joinCallback = generateReleaseNotes.bind(
-		null, fetchVersions,
-		getUpdate(sourceVersion), getQuarterly(sourceVersion), getPatch(sourceVersion),
-		getUpdate(targetVersion), getQuarterly(targetVersion), getPatch(targetVersion));
+		null, fetchVersions, versionsToAdd, versionsToRemove, sourceVersion, targetVersion);
 
 	if (fetchVersions.size == 0) {
 		joinCallback();
