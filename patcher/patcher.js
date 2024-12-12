@@ -119,7 +119,10 @@ function setProjectVersionsFromMap(accumulator, next) {
  */
 
 function getLiferayVersion(version) {
-  if (version.indexOf('marketplace-') != -1) {
+  if (version.trim() == '') {
+    return 0;
+  }
+  else if (version.indexOf('marketplace-') != -1) {
     var pos = version.indexOf('-private');
     pos = version.lastIndexOf('-', pos == -1 ? version.length : pos - 1);
     var shortVersion = version.substring(pos + 1);
