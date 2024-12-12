@@ -20,7 +20,8 @@ quarterly_releases = {
     '2023.q4': 102,
     '2024.q1': 112,
     '2024.q2': 120,
-    '2024.q3': 125
+    '2024.q3': 125,
+    '2024.q4': 129,
 }
 
 old_update_threshold = {
@@ -28,7 +29,8 @@ old_update_threshold = {
     '2023.q4': 92,
     '2024.q1': 102,
     '2024.q2': 112,
-    '2024.q3': 120
+    '2024.q3': 120,
+    '2024.q4': 125,
 }
 
 quarterly_updates = { value: key for key, value in quarterly_releases.items() }
@@ -45,12 +47,15 @@ def get_release_cf(release_name):
 
     if release_name.find('.q') != -1:
         release_parts = release_name.split('.')
-        return '%d.%d' % (int(release_parts[0]), int(release_parts[1][1:]) * 100 + int(release_parts[2]))
+        return float('%d.%d' % (int(release_parts[0]), int(release_parts[1][1:]) * 100 + int(release_parts[2])))
+
+    if release_name[:6] != '7.4.13':
+        return -1
 
     return int(release_name.split('-')[1][1:])
 
 def get_release_ulevel(release_name):
-    if release_name == '7.4.13-ga1':
+    if release_name[-3:] == 'ga1':
         return 0
 
     if release_name.find('.q') != -1:
@@ -63,8 +68,15 @@ def get_release_ulevel(release_name):
 
     return int(release_name.split('-')[1][1:])
 
-def release_sort_key(x):
-    return float(get_release_cf(x))
+def get_release_baseline(release_name):
+    return int(release_name[:6].replace('.', ''))
+
+def release_sort_key(release_name):
+    if release_name.find('.q') != -1:
+        release_parts = release_name.split('.')
+        return float('%d.%d' % (8000000 + int(release_parts[0]), int(release_parts[1][1:]) * 100 + int(release_parts[2])))
+
+    return float(get_release_baseline(release_name) * 1000.0 + get_release_ulevel(release_name))
 
 def ticket_sort_key(line):
     issue_key = line.split('\t')[0]
@@ -130,11 +142,11 @@ def get_issue_compact(fixed_issue):
 def get_jira_fixed_issues(release_name, release_ids):
     release_cf = get_release_cf(release_name)
 
-    if release_ids is not None and release_cf != 0:
+    if release_ids is not None and release_cf > 0:
         query = 'fixVersion in (%s) OR (project in ("LPE","LPS","LPD") AND cf[10210] = %s)' % (','.join(release_ids), release_cf)
     elif release_ids is not None:
         query = 'fixVersion in (%s)' % ','.join(release_ids)
-    elif release_cf != 0:
+    elif release_cf > 0:
         query = f'project in ("LPE","LPS","LPD") AND cf[10210] = {release_cf}'
     else:
         print(f'unrecognized release {release_name}')
@@ -219,6 +231,15 @@ def update_releases():
             short_name = '7.4.13-u%d' % release_num
         elif len(name) > 8 and (name[4:6] == '.Q' or name[4:6] == '.q'):
             short_name = name.lower().strip()
+        elif name[:6] == '7.3.10' and name.find(' DXP U') != -1:
+            release_num = int(name[name.rfind('U')+1:])
+            short_name = '7.3.10-u%d' % release_num
+        elif name == '7.3.10 DXP GA1':
+            release_num = 0
+            short_name = '7.3.10-ga1'
+        elif name[:6] == '7.3.10' and name.find(' DXP FP') != -1:
+            release_num = int(name[name.rfind('P')+1:])
+            short_name = '7.3.10-u%d' % release_num
 
         if short_name is not None and get_release_ulevel(short_name) is not None:
             project_releases[project].append(str(release['id']))

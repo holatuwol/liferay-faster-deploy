@@ -145,12 +145,13 @@ def get_issue_changelog(issue_key, last_updated=None):
 
     return changelog
 
-def get_issue_fields(issue_key, fields=[]):
+def get_issue_fields(issue_key, fields=None):
     search_url = f'{jira_base_url}/rest/api/2/issue/{issue_key}'
 
-    payload = {
-        'fields': ','.join(fields)
-    }
+    payload = {}
+
+    if fields is not None:
+        payload['fields'] = ','.join(fields)
 
     r = await_get_request(search_url, payload)
 
