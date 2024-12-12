@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        9.3
+// @version        9.4
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -468,7 +468,6 @@ function addProjectVersionFilter(productVersionSelect, selectedVersion) {
         keywordsElement.value = match[1];
     }
     projectVersionSelect.addEventListener('change', function () {
-        var keywords = keywordsElement.value;
         document.location.href = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher?' +
             getQueryString({
                 'advancedSearch': 'true',
@@ -476,7 +475,7 @@ function addProjectVersionFilter(productVersionSelect, selectedVersion) {
                 'hideOldFixVersions': 'true',
                 'hideOldFixVersionsCheckbox': 'true',
                 'statusFilter': '100',
-                'patcherFixName': keywords,
+                'patcherFixName': '',
                 'patcherProductVersionId': productVersionSelect.options[productVersionSelect.selectedIndex].value,
                 'patcherProjectVersionIdFilter': projectVersionSelect.options[projectVersionSelect.selectedIndex].value
             });
