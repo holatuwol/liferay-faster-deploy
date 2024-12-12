@@ -47,7 +47,13 @@ bundleinfo() {
 			local RELENG_PATH="modules/.releng/${folder}.properties"
 
 			if [ -f ${RELENG_PATH} ]; then
-				BUNDLE_VERSION=$(grep 'artifact.url' modules/.releng/${folder}.properties | cut -d'=' -f 2 | grep -o "/${BUNDLE_NAME}/[^/]*" | cut -d'/' -f 3)
+				BUNDLE_VERSION=$(grep -F 'artifact.url' modules/.releng/${folder}.properties | cut -d'=' -f 2 | grep -o "/${BUNDLE_NAME}/[^/]*" | cut -d'/' -f 3)
+
+				GIT_ID=$(grep -F 'artifact.git.id' modules/.releng/${folder}.properties | cut -d'=' -f 2)
+
+				if [ "" != "$(git diff --name-only ${GIT_ID}..HEAD -- ${folder}/src/ | grep '/packageinfo$')" ]; then
+					BUNDLE_VERSION='release.dxp.api'
+				fi
 			else
 				RELENG_PATH=
 			fi
@@ -136,6 +142,12 @@ bundleinfo() {
 			BUNDLE_GROUP=$(echo "${ARTIFACT_URL}" | grep -o "com/liferay/.*${BUNDLE_NAME}/" | sed "s@/${BUNDLE_NAME}/@@g" | tr '/' '.')
 			BUNDLE_VERSION=$(echo "${ARTIFACT_URL}" | grep -o "/${BUNDLE_NAME}/[^/]*" | cut -d'/' -f 3)
 			PACKAGING=$(echo "${ARTIFACT_URL}" | grep -o "[^\\.]*$")
+
+			GIT_ID=$(grep -F 'artifact.git.id' ${RELENG_PATH} | cut -d'=' -f 2)
+
+			if [ "" != "$(git diff --name-only ${GIT_ID}..HEAD -- ${folder}/src/main/resources/ | grep '/packageinfo$')" ]; then
+				BUNDLE_VERSION='release.dxp.api'
+			fi
 		elif [ -f $folder/bnd.bnd ]; then
 			RELENG_PATH=
 			BUNDLE_VERSION="$(grep '^Bundle-Version' $folder/bnd.bnd | cut -d' ' -f 2-)-SNAPSHOT"
@@ -550,7 +562,7 @@ savetags() {
 
 	git ls-remote -t git@github.com:liferay/liferay-portal.git | \
 		awk '{ print $2 }' | grep "/${1}.[0-9]*-ga[0-9]*$" | \
-		sort | cut -d'/' -f 3 | tee tags_tmp.txt
+		sort -V | cut -d'/' -f 3 | tee tags_tmp.txt
 
 	for tag in $(cat tags_tmp.txt); do
 		fetchtag liferay-portal ${tag}
@@ -570,12 +582,12 @@ savetags() {
 
 	git ls-remote -t git@github.com:liferay/liferay-portal-ee.git | \
 		awk '{ print $2 }' | grep "/${1}.[0-9]*-u[0-9]*$" | \
-		sort | cut -d'/' -f 3 | tee tags_tmp.txt
+		sort -V | cut -d'/' -f 3 | tee tags_tmp.txt
 
 	if [ "7.4" == "${1}" ]; then
 		git ls-remote -t git@github.com:liferay/liferay-portal-ee.git | \
 			awk '{ print $2 }' | grep "/[0-9][0-9]*.q[0-9][0-9]*.[0-9][0-9]*$" | \
-			sort | cut -d'/' -f 3 | tee -a tags_tmp.txt
+			sort -V | cut -d'/' -f 3 | tee -a tags_tmp.txt
 	fi
 
 	for tag in $(cat tags_tmp.txt); do

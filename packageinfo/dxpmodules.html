@@ -25,6 +25,7 @@
 
 <p class="alert alert-warning"><strong>Warning</strong>: This is NOT an official Liferay tool, nor is it supported by Liferay in any way. For Marketplace plugins especially (which are released on a separate schedule from DXP itself), these versions will not be accurate. The official tool can be found here: <a href="https://customer.liferay.com/dxp-release-notes?p_p_id=com_liferay_osb_customer_release_tool_web_portlet_ReleaseToolPortlet&_com_liferay_osb_customer_release_tool_web_portlet_ReleaseToolPortlet_tabs1=module-changes">DXP Release Notes</a>.</p>
 
+<!--
 <h2>Generate a BOM</h2>
 
 <p>This tool stores a lot of metadata that can be used to generate a BOM for a specific version of Liferay. Please use the select options below if you need to do so.</p>
@@ -36,12 +37,13 @@
 <button onclick="generateBOM('bomVersion');">
 	Generate BOMs
 </button>
+-->
 
 <h2>Perform a Comparison</h2>
 
 <p>Compare <select id="includeFilter" name="includeFilter"><option>all artifacts</option><option selected>Liferay artifacts</option><option>third-party artifacts</option></select><select id="changeFilter" name="changeFilter"><option></option><option selected>with version changes</option><option>with API changes</option></select></p>
 
-<p><strong>Note</strong>: Entries with a gray background indicate a version change. Version 0.0.0 means that the module does not exist in that version of DXP. Some artifacts (often from the <code>com.liferay.portal</code> group) are listed as snapshots, because there used to be a disconnect between releasing an artifact and generating a new Liferay fix pack.</p>
+<p><strong>Note</strong>: Entries with a gray background indicate a version change. Version 0.0.0 means that the module does not exist in that version of DXP. Version <code>release.dxp.api</code> means that Liferay changed the package versions without publishing a new module. Some artifacts (often from the <code>com.liferay.portal</code> group) are listed as snapshots, because there used to be a disconnect between releasing an artifact and generating a new Liferay fix pack.</p>
 
 <ul>
 <li>If the version is listed as <code>.1-SNAPSHOT</code> or later, you can use .0 at build time.</li>
