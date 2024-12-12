@@ -168,7 +168,7 @@ if [ "dba" == "${2}" ]; then
 fi
 
 if [ "" == "${ORACLE_VERSION}" ]; then
-	ORACLE_VERSION="container-registry.oracle.com/database/free:23.3.0.0"
+	ORACLE_VERSION="container-registry.oracle.com/database/free:23.4.0.0"
 fi
 
 ORACLE_PDB=orcl

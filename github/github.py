@@ -52,10 +52,17 @@ def open_on_github(needle, selection_start=None, selection_end=None):
 	parent_branch = getparent(False)
 
 	remote_refs = git.for_each_ref('--format=%(refname)', 'refs/remotes/').split('\n')
-	candidate_refs = [remote_ref for remote_ref in remote_refs if remote_ref.find('/upstream') > -1 and remote_ref.find(parent_branch) != -1]
+
+	candidate_refs = [remote_ref for remote_ref in remote_refs if remote_ref.find('/upstream-ce/') > -1 and remote_ref.find(parent_branch) != -1]
 
 	if len(candidate_refs) == 0:
-		candidate_refs = [remote_ref for remote_ref in remote_refs if remote_ref.find('/origin') > -1 and remote_ref.find(parent_branch) != -1]
+		candidate_refs = [remote_ref for remote_ref in remote_refs if remote_ref.find('/upstream-dxp/') > -1 and remote_ref.find(parent_branch) != -1]
+
+	if len(candidate_refs) == 0:
+		candidate_refs = [remote_ref for remote_ref in remote_refs if remote_ref.find('/upstream/') > -1 and remote_ref.find(parent_branch) != -1]
+
+	if len(candidate_refs) == 0:
+		candidate_refs = [remote_ref for remote_ref in remote_refs if remote_ref.find('/origin/') > -1 and remote_ref.find(parent_branch) != -1]
 
 	if len(candidate_refs) == 0:
 		print('Unable to find remote for %s' % parent_branch)

@@ -10,13 +10,20 @@ cd "${PORTAL_SOURCE}"
 ${SCRIPT_FOLDER}/fixupstream
 
 fixpack() {
-	if [ "" == "$(git for-each-ref refs/tags/${2})" ]; then
-		git fetch --no-tags ${1} tags/${2}:refs/tags/${2}
+	if [ "" == "${3}" ]; then
+		if [ "" == "$(git for-each-ref refs/tags/${2})" ]; then
+			git fetch --no-tags ${1} tags/${2}:refs/tags/${2}
+		fi
+	else
+		if [ "" == "$(git for-each-ref refs/tags/${3})" ]; then
+			git fetch --no-tags ${1} tags/${2}:refs/tags/${3}
+		fi
 	fi
 }
 
 UPSTREAM_CE=$(git remote -v | grep -F 'liferay/liferay-portal.git' | awk '{ print $1 }' | head -1)
 UPSTREAM_EE=$(git remote -v | grep -F 'liferay/liferay-portal-ee.git' | awk '{ print $1 }' | head -1)
+UPSTREAM_DXP=$(git remote -v | grep -F 'liferay/liferay-dxp.git' | awk '{ print $1 }' | head -1)
 
 if [ "" != "${UPSTREAM_CE}" ]; then
 	git ls-remote -t git@github.com:liferay/liferay-portal.git > /dev/shm/tags-ce.txt
@@ -66,4 +73,18 @@ if [ "" != "${UPSTREAM_EE}" ]; then
 
 		fixpack git@github.com:liferay/liferay-portal-ee.git ${tag}
 	done
+fi
+
+if [ "" != "${UPSTREAM_DXP}" ]; then
+	git ls-remote -t git@github.com:liferay/liferay-dxp.git > /dev/shm/tags-dxp.txt
+
+	cat /dev/shm/tags-dxp.txt | \
+		awk '{ print $2 }' | grep -e '/[0-9]*.[0-9]*.[0-9]*-u[0-9]*$' | \
+		cut -d'/' -f 3 | sed 's/-u/./g' | sort -t '.' -k 1,1n -k 2,2n -k 3,3n -k 4,4n | sed 's/.\([0-9]*\)$/-u\1/g' | \
+		xargs git fetch --no-tags git@github.com:liferay/liferay-dxp.git
+
+	cat /dev/shm/tags-dxp.txt | \
+		awk '{ print $2 }' | grep -e '/[0-9]*.q[0-9].[0-9]*$' | \
+		cut -d'/' -f 3 | sort -t '.' -k 1,1n -k 2,2 -k 3,3n | \
+		xargs git fetch --no-tags git@github.com:liferay/liferay-dxp.git
 fi
