@@ -132,11 +132,24 @@ patcher() {
 			folder=$(echo ${folder} | sed 's|/src/test/.*$||g')
 		elif [[ ${folder} == */src/testIntegration/* ]]; then
 			folder=$(echo ${folder} | sed 's|/src/testIntegration/.*$||g')
+		elif [[ ${folder} == */test/* ]]; then
+			folder=$(echo ${folder} | sed 's|/test/.*$||g')
 		elif [[ ${folder} == */docroot/* ]]; then
 			folder=$(echo ${folder} | sed 's|/docroot/.*$||g')
 		fi
 
-		if [ ! -f ${folder}/.lfrbuild-portal ]; then
+		local has_lfrbuild_portal=0
+		local check_folder=${folder}
+
+		while [[ ${has_lfrbuild_portal} -eq 0 ]] && [ ${check_folder} != "." ]; do
+			if [ -f ${check_folder}/.lfrbuild-portal ]; then
+				has_lfrbuild_portal=1
+			else
+				check_folder=$(dirname "${check_folder}")
+			fi
+		done
+
+		if [[ ${has_lfrbuild_portal} -eq 0 ]]; then
 			read -p "remove ${folder} changes? " yn
 			case $yn in
 				[Yy]* ) remove_fixes ${folder};;
