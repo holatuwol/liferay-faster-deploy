@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        22.8
+// @version        22.9
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @supportURL     https://github.com/holatuwol/liferay-zendesk-userscript/issues/new
@@ -2090,7 +2090,7 @@ function initZafClient() {
             setTimeout(initJiraTicketValues, 1000);
             return;
         }
-        if (issueTypeMenu.textContent != 'Patch') {
+        if (issueTypeMenu.textContent != 'Customer Issue') {
             setTimeout(initJiraTicketValues, 1000);
             return;
         }
