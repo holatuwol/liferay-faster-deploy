@@ -13,7 +13,8 @@ quarterly_releases = {
     '2023.q4': 102,
     '2024.q1': 112,
     '2024.q2': 120,
-    '2024.q3': 125
+    '2024.q3': 125,
+    '2024.q4': 129,
 }
 
 with open(f'releases.{jira_env}.json', 'r') as f:
