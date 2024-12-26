@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        22.9
+// @version        23.0
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @supportURL     https://github.com/holatuwol/liferay-zendesk-userscript/issues/new
@@ -474,37 +474,6 @@ function isSupportRegion(assigneeText, regionText) {
     }
     return false;
 }
-/**
- * Retrieves the support region
- */
-function getSupportRegions(assigneeText) {
-    var supportRegions = [];
-    if (isSupportRegion(assigneeText, 'AU')) {
-        supportRegions.push('Australia');
-    }
-    if (isSupportRegion(assigneeText, 'BR')) {
-        supportRegions.push('Brazil');
-    }
-    if (isSupportRegion(assigneeText, 'CN')) {
-        supportRegions.push('China');
-    }
-    if (isSupportRegion(assigneeText, 'HU')) {
-        supportRegions.push("Hungary");
-    }
-    if (isSupportRegion(assigneeText, 'IN')) {
-        supportRegions.push('India');
-    }
-    if (isSupportRegion(assigneeText, 'JP')) {
-        supportRegions.push('Japan');
-    }
-    if ((assigneeText.indexOf('Spain Pod') == 0) || (isSupportRegion(assigneeText, 'ES') && !isSupportRegion(assigneeText, 'BR'))) {
-        supportRegions.push('Spain');
-    }
-    if (isSupportRegion(assigneeText, 'US')) {
-        supportRegions.push('US');
-    }
-    return new Set(supportRegions.map(function (x) { return x.toLowerCase(); }));
-}
 function addOfferingMarker(priorityElement, ticketInfo, ticketTags, organizationTagSet) {
     var offeringText = 'Self-Hosted';
     var offeringTag = null;
@@ -550,19 +519,16 @@ function addRegionMarker(priorityElement, ticketInfo, ticketContainer) {
     }
     var customerRegion = organizationFields.support_region;
     var assigneeText = ((assigneeElement && assigneeElement.textContent) || '').trim();
-    var assigneeRegions = getSupportRegions(assigneeText);
     var subpriority = ticketInfo.ticket.priority || 'none';
-    if ((subpriority == 'high') || (subpriority == 'urgent') || !assigneeRegions.has(customerRegion)) {
-        var customerRegionElement = document.createElement('span');
-        customerRegionElement.classList.add('lesa-ui-priority-major');
-        var customerRegionLink = document.createElement('a');
-        customerRegionLink.textContent = 'customer region: ' + customerRegion;
-        var query = 'support_region:' + customerRegion;
-        customerRegionLink.setAttribute('title', query);
-        customerRegionLink.href = 'https://' + document.location.host + '/agent/search/1?type=organization&q=' + encodeURIComponent(query);
-        customerRegionElement.appendChild(customerRegionLink);
-        priorityElement.appendChild(customerRegionElement);
-    }
+    var customerRegionElement = document.createElement('span');
+    customerRegionElement.classList.add('lesa-ui-priority-major');
+    var customerRegionLink = document.createElement('a');
+    customerRegionLink.textContent = 'customer region: ' + customerRegion;
+    var query = 'support_region:' + customerRegion;
+    customerRegionLink.setAttribute('title', query);
+    customerRegionLink.href = 'https://' + document.location.host + '/agent/search/1?type=organization&q=' + encodeURIComponent(query);
+    customerRegionElement.appendChild(customerRegionLink);
+    priorityElement.appendChild(customerRegionElement);
 }
 /**
  * Generates a text string representing the emojis corresponding to the provided list of tags.
@@ -2002,31 +1968,28 @@ function addReactLabelValues(testId, values, callback) {
 /**
  * Retrieve the support offices based on the JIRA ticket.
  */
-function getSupportOffices(assigneeGroup) {
+function getSupportOffices(supportRegion) {
     var supportOffices = [];
-    if (assigneeGroup.indexOf('- AU') != -1) {
+    if (supportRegion == 'australia') {
         supportOffices.push('APAC');
         supportOffices.push('AU/NZ');
     }
-    if (assigneeGroup.indexOf('- BR') != -1) {
+    if (supportRegion == 'brazil') {
         supportOffices.push('Brazil');
     }
-    if (assigneeGroup.indexOf('- CN') != -1) {
-        supportOffices.push('APAC');
-    }
-    if (assigneeGroup.indexOf('- HU') != -1) {
+    if (supportRegion == 'hungary') {
         supportOffices.push('EU');
     }
-    if (assigneeGroup.indexOf('- IN') != -1) {
+    if (supportRegion == 'india') {
         supportOffices.push('India');
     }
-    if (assigneeGroup.indexOf('- JP') != -1) {
+    if (supportRegion == 'japan') {
         supportOffices.push('Japan');
     }
-    if ((assigneeGroup.indexOf('Spain Pod') == 0) || ((assigneeGroup.indexOf(' - ES') != -1) && (assigneeGroup.indexOf('- BR') == -1))) {
+    if (supportRegion == 'spain') {
         supportOffices.push('Spain');
     }
-    if (assigneeGroup.indexOf(' - US') != -1) {
+    if (supportRegion == 'us') {
         supportOffices.push('US');
     }
     return new Set(supportOffices);
@@ -2037,6 +2000,7 @@ function getSupportOffices(assigneeGroup) {
  */
 function initPatchTicketValues(data) {
     var ticket = data['ticket'];
+    var organizationFields = ticket.organization.organizationFields;
     var versions = getProductVersions(ticket.tags);
     function setSummary(callback) {
         setReactInputValue('input[data-test-id=summary]', ticket.subject, callback);
@@ -2044,9 +2008,12 @@ function initPatchTicketValues(data) {
     function setCustomerTicketCreationDate(callback) {
         setReactInputValue('span[data-test-id=customfield_10134] input', new Date(ticket.createdAt), callback);
     }
+    function setBaseline(callback) {
+        setReactInputValue('input[data-test-id=customfield_10172]', organizationFields.account_code, callback);
+    }
     function setSupportOffice(callback) {
-        var assigneeGroup = ticket.assignee.group.name;
-        var supportOffices = Array.from(getSupportOffices(assigneeGroup));
+        var supportRegion = organizationFields.support_region;
+        var supportOffices = Array.from(getSupportOffices(supportRegion));
         addReactLabelValues('customfield_10133', supportOffices, callback);
     }
     function setAffectsVersion(callback) {
@@ -2071,7 +2038,7 @@ function initPatchTicketValues(data) {
             callback();
         }
     }
-    var callOrder = [setSummary, setCustomerTicketCreationDate, setSupportOffice, setAffectsVersion, focusSummary];
+    var callOrder = [setSummary, setCustomerTicketCreationDate, setBaseline, setSupportOffice, setAffectsVersion, focusSummary];
     var nestedFunction = callOrder.reverse().reduce(function (accumulator, x) { return x.bind(null, accumulator); });
     nestedFunction();
 }
