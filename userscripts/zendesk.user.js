@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        23.0
+// @version        23.1
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @supportURL     https://github.com/holatuwol/liferay-zendesk-userscript/issues/new
@@ -1265,6 +1265,7 @@ function addSubjectTextWrap(header, ticketId, ticketInfo) {
  * Generate a knowledge capture container.
  */
 function createKnowledgeCaptureContainer(ticketId, ticketInfo, conversation) {
+    var seenArticles = new Set();
     var fastTrackList = document.createElement('ul');
     if (ticketInfo.audits) {
         var knowledgeCaptureEvents = ticketInfo.audits.map(function (x) {
@@ -1275,20 +1276,30 @@ function createKnowledgeCaptureContainer(ticketId, ticketInfo, conversation) {
             return array.concat(x);
         }, []);
         fastTrackList = knowledgeCaptureEvents.reduce(function (list, x) {
+            var htmlURL = x.body.article.html_url;
+            if (seenArticles.has(htmlURL)) {
+                return list;
+            }
+            seenArticles.add(htmlURL);
             var item = document.createElement('li');
-            item.appendChild(createAnchorTag(x.body.article.title, x.body.article.html_url));
+            item.appendChild(createAnchorTag(x.body.article.title, htmlURL));
             list.appendChild(item);
             return list;
         }, fastTrackList);
     }
     var otherArticleList = document.createElement('ul');
     Array.from(conversation.querySelectorAll('a[href*="/hc/"]')).reduce(function (list, x) {
+        var htmlURL = x.href;
+        if (seenArticles.has(htmlURL)) {
+            return list;
+        }
+        seenArticles.add(htmlURL);
         var item = document.createElement('li');
         if (x.textContent != x.getAttribute('href')) {
             item.appendChild(document.createTextNode(x.textContent + ' - '));
         }
         var link = x.cloneNode(true);
-        link.textContent = link.href;
+        link.textContent = htmlURL;
         item.appendChild(link);
         list.appendChild(item);
         return list;
