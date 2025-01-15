@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        23.2
+// @version        23.3
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @supportURL     https://github.com/holatuwol/liferay-zendesk-userscript/issues/new
@@ -458,7 +458,9 @@ function addOrganizationTagSearchHeader(priorityElement, organizationTagSet, tag
 }
 function addCustomerTypeMarker(priorityElement, organizationTagSet) {
     addOrganizationTagSearchHeader(priorityElement, organizationTagSet, 'tam_services', 'TAM Services', 'priority-critical');
-    addOrganizationTagSearchHeader(priorityElement, organizationTagSet, 'premium_service', 'Trial TAM Services', 'priority-critical');
+    if (!organizationTagSet.has('tam_services')) {
+        addOrganizationTagSearchHeader(priorityElement, organizationTagSet, 'premium_service', 'Trial TAM Services', 'priority-critical');
+    }
     addOrganizationTagSearchHeader(priorityElement, organizationTagSet, 'gs_opportunity', 'GS Opportunity', 'priority-minor');
     addOrganizationTagSearchHeader(priorityElement, organizationTagSet, 'service_solution', 'Service Portal Customer', 'priority-minor');
     addOrganizationTagSearchHeader(priorityElement, organizationTagSet, 'commerce_solution', 'Commerce Portal Customer', 'priority-minor');
