@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        23.4
+// @version        23.5
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @supportURL     https://github.com/holatuwol/liferay-zendesk-userscript/issues/new
@@ -2022,6 +2022,54 @@ function initPatchTicketValues(data) {
     function setCustomerTicketCreationDate(callback) {
         setReactInputValue('span[data-test-id=customfield_10134] input', new Date(ticket.createdAt), callback);
     }
+    function setBaseline(callback) {
+        GM.xmlHttpRequest({
+            'method': 'GET',
+            'url': 'https://patcher.liferay.com/api/jsonws',
+            'headers': {
+                'Cache-Control': 'no-cache, no-store, max-age=0',
+                'Pragma': 'no-cache'
+            },
+            'onload': function (xhr) {
+                var matcher = /Liferay.authToken="([^"]*)"/g.exec(xhr.responseText);
+                if (!matcher) {
+                    setReactInputValue('input[data-test-id=customfield_10172]', '', callback);
+                    return;
+                }
+                var authToken = matcher[1];
+                GM.xmlHttpRequest({
+                    'method': 'POST',
+                    'url': 'https://patcher.liferay.com/api/jsonws/invoke',
+                    'data': new URLSearchParams({
+                        limit: '1',
+                        patcherBuildAccountEntryCode: organizationFields.account_code,
+                        cmd: JSON.stringify({ "/osb-patcher-portlet.accounts/view": {} }),
+                        p_auth: authToken
+                    }),
+                    'headers': {
+                        'Cache-Control': 'no-cache, no-store, max-age=0',
+                        'Pragma': 'no-cache'
+                    },
+                    'onload': function (xhr) {
+                        var json = JSON.parse(xhr.responseText);
+                        if (!json.data || json.data.length == 0) {
+                            setReactInputValue('input[data-test-id=customfield_10172]', '', callback);
+                            return;
+                        }
+                        setReactInputValue('input[data-test-id=customfield_10172]', json.data[0].patcherProjectVersionName, callback);
+                    },
+                    'onerror': function (xhr) {
+                        if (callback) {
+                            setReactInputValue('input[data-test-id=customfield_10172]', '', callback);
+                        }
+                    }
+                });
+            },
+            'onerror': function (xhr) {
+                setReactInputValue('input[data-test-id=customfield_10172]', '', callback);
+            }
+        });
+    }
     function setSupportOffice(callback) {
         var supportRegion = organizationFields.support_region;
         var supportOffices = Array.from(getSupportOffices(supportRegion));
@@ -2049,7 +2097,7 @@ function initPatchTicketValues(data) {
             callback();
         }
     }
-    var callOrder = [setSummary, setCustomerTicketCreationDate, setSupportOffice, setAffectsVersion, focusSummary];
+    var callOrder = [setSummary, setCustomerTicketCreationDate, setBaseline, setSupportOffice, setAffectsVersion, focusSummary];
     var nestedFunction = callOrder.reverse().reduce(function (accumulator, x) { return x.bind(null, accumulator); });
     nestedFunction();
 }
