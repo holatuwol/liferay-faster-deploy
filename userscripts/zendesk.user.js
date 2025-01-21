@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        23.3
+// @version        23.4
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @supportURL     https://github.com/holatuwol/liferay-zendesk-userscript/issues/new
@@ -2022,9 +2022,6 @@ function initPatchTicketValues(data) {
     function setCustomerTicketCreationDate(callback) {
         setReactInputValue('span[data-test-id=customfield_10134] input', new Date(ticket.createdAt), callback);
     }
-    function setBaseline(callback) {
-        setReactInputValue('input[data-test-id=customfield_10172]', organizationFields.account_code, callback);
-    }
     function setSupportOffice(callback) {
         var supportRegion = organizationFields.support_region;
         var supportOffices = Array.from(getSupportOffices(supportRegion));
@@ -2052,7 +2049,7 @@ function initPatchTicketValues(data) {
             callback();
         }
     }
-    var callOrder = [setSummary, setCustomerTicketCreationDate, setBaseline, setSupportOffice, setAffectsVersion, focusSummary];
+    var callOrder = [setSummary, setCustomerTicketCreationDate, setSupportOffice, setAffectsVersion, focusSummary];
     var nestedFunction = callOrder.reverse().reduce(function (accumulator, x) { return x.bind(null, accumulator); });
     nestedFunction();
 }
