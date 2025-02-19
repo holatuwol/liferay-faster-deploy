@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        23.5
+// @version        23.6
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @supportURL     https://github.com/holatuwol/liferay-zendesk-userscript/issues/new
@@ -489,7 +489,7 @@ function addOfferingMarker(priorityElement, ticketInfo, ticketTags, organization
     }
     if (offeringText == 'SaaS') {
         for (var i = 0; i < ticketTags.length; i++) {
-            if (ticketTags[i].indexOf('lxc_sm') != -1) {
+            if (ticketTags[i] === 'lxc_sm') {
                 offeringText = 'PaaS';
                 offeringTag = ticketTags[i];
                 break;
