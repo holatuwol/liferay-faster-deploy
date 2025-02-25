@@ -28,23 +28,25 @@ pushorigin() {
 	for origin_name in ${origin_names}; do
 		echo "Updating ${branch_name} on ${origin_name}"
 
-		if [ "" == "$(git for-each-ref refs/remotes/${origin_name}/${branch_name})" ]; then
-			commit=$(git log --reverse --pretty='%H' ${upstream_name}/${branch_name} | head -1)
-			git push ${origin_name} ${commit}:refs/heads/${branch_name}
-		fi
+		# commit=$(git log --reverse --pretty='%H' ${upstream_name}/${branch_name} | head -1)
+		# echo git push ${origin_name} ${commit}:refs/heads/${branch_name}
+		# GIT_CURL_VERBOSE=1 git push ${origin_name} ${commit}:refs/heads/${branch_name}
 
 		local origin_url=$(git remote -v | grep "^${origin_name}\s" | awk '{ print $2 }' | uniq)
 
 		if [[ "${origin_url}" == git@github.com:* ]]; then
 			local origin_repo=$(echo "${origin_url}" | cut -d':' -f 2 | sed 's/.git$//g')
+			echo gh repo sync ${origin_repo} -b ${branch_name}
 			gh repo sync ${origin_repo} -b ${branch_name}
 		else
 			for commit in $(git log --reverse --pretty='%H' ${origin_name}/${branch_name}..${upstream_name}/${branch_name} | awk 'NR % 10000 == 0'); do
-				git push ${origin_name} ${commit}:refs/heads/${branch_name}
+				echo git push ${origin_name} ${commit}:refs/heads/${branch_name}
+				GIT_CURL_VERBOSE=1 git push ${origin_name} ${commit}:refs/heads/${branch_name}
 			done
 
 			commit=$(git log -1 --pretty='%H' ${upstream_name}/${branch_name})
-			git push ${origin_name} ${commit}:refs/heads/${branch_name}
+			echo git push ${origin_name} ${commit}:refs/heads/${branch_name}
+			GIT_CURL_VERBOSE=1 git push ${origin_name} ${commit}:refs/heads/${branch_name}
 		fi
 	done
 }
