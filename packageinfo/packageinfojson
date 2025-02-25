@@ -2,29 +2,43 @@
 
 SCRIPT_FOLDER=$(dirname $0)
 
+. ${SCRIPT_FOLDER}/packageinfo
+
+if [ "" == "${PACKAGEINFO_ROOT}" ]; then
+	PACKAGEINFO_ROOT="${HOME}/dev/packageinfo"
+fi
+
+if [ "" == "${PORTAL_SOURCE_ROOT}" ]; then
+	PORTAL_SOURCE_ROOT="${HOME}/dev/liferay/master"
+fi
+
 s3upload() {
 	. ${SCRIPT_FOLDER}/s3upload $1
 }
 
-update_all() {
-	if [ "" == "${PACKAGEINFO_ROOT}" ]; then
+restore_backup() {
+	if [ -d ${folder}.x/metadata ]; then
 		return
 	fi
 
+	metadata_zip="metadata-$(echo ${1} | tr -d '.')x.zip"
+	echo "Restoring metadata for ${1} from backup ${metadata_zip}"
+
+	cd ${1}.x
+	mkdir metadata
+	cd metadata
+	aws s3 cp s3://${S3_BUCKET}/${metadata_zip} ${metadata_zip}.gz
+	gunzip ${metadata_zip}.gz
+	unzip ${metadata_zip}
+	rm ${metadata_zip}
+	cd ../..
+}
+
+update_all() {
 	pushd ${PACKAGEINFO_ROOT}
 
 	for folder in ${AVAILABLE_VERSIONS}; do
-		if [ ! -d ${folder}.x/metadata ]; then
-			metadata_zip="metadata-$(echo ${folder} | tr -d '.')x.zip"
-			cd ${folder}.x
-			mkdir metadata
-			cd metadata
-			aws s3 cp s3://mdang.grow/${metadata_zip} ${metadata_zip}.gz
-			gunzip ${metadata_zip}.gz
-			unzip ${metadata_zip}
-			rm ${metadata_zip}
-			cd ../..
-		fi
+		restore_backup ${folder}
 	done
 
 	popd
@@ -35,10 +49,6 @@ update_all() {
 }
 
 update_one() {
-	if [ "" == "${PACKAGEINFO_ROOT}" ]; then
-		return
-	fi
-
 	OUTPUT_FOLDER=/tmp
 
 	pushd ${PORTAL_SOURCE_ROOT}
@@ -49,10 +59,8 @@ update_one() {
 generate_json() {
 	echo 'Generating JSON files...'
 
-	if [ "" != "${PACKAGEINFO_ROOT}" ]; then
-		echo "${AVAILABLE_VERSIONS}" | awk '{ print "'${PACKAGEINFO_ROOT}'/" $1 ".x" }' | xargs python ${SCRIPT_FOLDER}/packageinfojson.py
-		echo "${AVAILABLE_VERSIONS}" | awk '{ print "'${PACKAGEINFO_ROOT}'/" $1 ".x" }' | xargs python ${SCRIPT_FOLDER}/requireschemajson.py
-	fi
+	echo "${AVAILABLE_VERSIONS}" | awk '{ print "'${PACKAGEINFO_ROOT}'/" $1 ".x" }' | xargs python ${SCRIPT_FOLDER}/packageinfojson.py
+	echo "${AVAILABLE_VERSIONS}" | awk '{ print "'${PACKAGEINFO_ROOT}'/" $1 ".x" }' | xargs python ${SCRIPT_FOLDER}/requireschemajson.py
 
 	PORTAL_SOURCE_ROOT=${PORTAL_SOURCE_ROOT} ${SCRIPT_FOLDER}/jsversions > dxpjslibrary.json
 }
@@ -79,10 +87,6 @@ upload_json() {
 		popd > /dev/null
 	done
 
-	if [ "" == "${PACKAGEINFO_ROOT}" ]; then
-		return
-	fi
-
 	pushd /tmp > /dev/null
 
 	for version in ${AVAILABLE_VERSIONS}; do
@@ -97,22 +101,9 @@ upload_json() {
 
 # Make sure the packageinfo files are up to date
 
-if [ "" == "${PACKAGEINFO_ROOT}" ]; then
-	PACKAGEINFO_ROOT="${HOME}/dev/packageinfo"
-fi
-
 AVAILABLE_VERSIONS="$(find ${PACKAGEINFO_ROOT} -mindepth 1 -maxdepth 1 -type d | sed 's@^.*/@@g' | sort | cut -d'.' -f 1,2)"
 
-if [ "" == "${PORTAL_SOURCE_ROOT}" ]; then
-	PORTAL_SOURCE_ROOT="${HOME}/dev/liferay/master"
-fi
-
 if [ "update" == "${1}" ]; then
-	pushd ${PORTAL_SOURCE_ROOT}
-	. $(dirname ${BASH_SOURCE[0]})/../setopts
-	. ${SCRIPT_FOLDER}/packageinfo
-	popd
-
 	if [ "" == "${2}" ]; then
 		update_all
 		generate_json

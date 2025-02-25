@@ -210,9 +210,9 @@ checkfile() {
 
 	if [ "" == "$(git for-each-ref refs/tags/$1)" ] && [ "" == "$(git for-each-ref refs/heads/$1)" ]; then
 		if [[ $1 == fix-pack-* ]] || [[ $1 == marketplace-* ]] || [[ $1 == *-u* ]]; then
-			git fetch --no-tags git@github.com:liferay/liferay-portal-ee.git tags/$1:refs/tags/$1
+			fetchtag liferay-portal-ee $1
 		else
-			git fetch --no-tags git@github.com:liferay/liferay-portal.git tags/$1:refs/tags/$1
+			fetchtag liferay-portal $1
 		fi
 
 		if [ "" == "$(git tag | grep -F "$1")" ]; then

@@ -3,9 +3,10 @@
 processbom() {
   local artifactId=${1}
   local version=${2}
+  local pom_name="${artifactId}/${version}/${artifactId}-${version}.pom"
 
   curl --silent --show-error --fail \
-    "https://repository.liferay.com/nexus/content/repositories/liferay-public-releases/com/liferay/portal/${artifactId}/${version}/${artifactId}-${version}.pom" > pom.xml
+    "https://repository.liferay.com/nexus/content/repositories/liferay-public-releases/com/liferay/portal/${pom_name}" > pom.xml
 
   if [ -s pom.xml ]; then
     cat pom.xml | xq -r '.project.dependencyManagement.dependencies.dependency[] | .groupId + "," + .artifactId + "," + .version' | grep -vF "release.dxp.api"
@@ -23,6 +24,8 @@ bundleinfo() {
     return 0
   fi
 
+  echo "${filename}"
+
   cat /dev/null > ${filename}
   processbom release.dxp.bom ${version} >> ${filename}
   processbom release.dxp.bom.third.party ${version} >> ${filename}
@@ -31,57 +34,78 @@ bundleinfo() {
 
 # 7.3 updates
 
-mkdir -p 7.3.x/metadata
-pushd 7.3.x/metadata
-cat /dev/null > tags.txt
+handle_73() {
+  mkdir -p 7.3.x/metadata
+  pushd 7.3.x/metadata
+  cat /dev/null > tags.txt
 
-bundleinfo 7.3.10 7310-base
-bundleinfo 7.3.10.fp1 7310.u1
-bundleinfo 7.3.10.fp2 7310.u2
-bundleinfo 7.3.10.3 7310.u3
+  bundleinfo 7.3.10 7310-base
+  bundleinfo 7.3.10.fp1 7310.u1
+  bundleinfo 7.3.10.fp2 7310.u2
+  bundleinfo 7.3.10.3 7310.u3
 
-for tag in $(
-  git ls-remote -t git@github.com:liferay/liferay-portal-ee.git | \
-    awk '{ print $2 }' | grep "/7.3.10-u[0-9]*$" | \
-    sort -V | cut -d'/' -f 3 | tee -a tags.txt
-); do
+  for tag in $(cat ../../tags_all.txt | \
+      awk '{ print $2 }' | grep "/7.3.10-u[0-9]*$" | \
+      sort -V | cut -d'/' -f 3 | tee -a tags.txt
+  ); do
 
-  version="$(echo ${tag} | sed 's/-u/.u/g')"
-  filename="$(echo ${tag} | sed 's/\.//g')"
+    version="$(echo ${tag} | sed 's/-u/.u/g')"
+    filename="$(echo ${tag} | sed 's/\.//g')"
 
-  bundleinfo ${version} ${filename}
-done
+    bundleinfo ${version} ${filename}
+  done
 
-popd
+  popd
+}
 
 # 7.4 updates & quarterly releases
 
-mkdir -p 7.4.x/metadata
-pushd 7.4.x/metadata
-cat /dev/null > tags.txt
+handle_74() {
+  mkdir -p 7.4.x/metadata
+  pushd 7.4.x/metadata
+  cat /dev/null > tags.txt
 
-for tag in $(
-  git ls-remote -t git@github.com:liferay/liferay-portal-ee.git | \
-    awk '{ print $2 }' | grep "/7.4.13-u[0-9]*$" | \
-    sort -V | cut -d'/' -f 3 | tee -a tags.txt
-); do
+  for tag in $(cat ../../tags_all.txt | \
+      awk '{ print $2 }' | grep "/7.4.13-u[0-9]*$" | \
+      sort -V | cut -d'/' -f 3 | tee -a tags.txt
+  ); do
 
-  version="$(echo ${tag} | sed 's/-u/.u/g')"
-  filename="$(echo ${tag} | sed 's/\.//g')"
+    version="$(echo ${tag} | sed 's/-u/.u/g')"
+    filename="$(echo ${tag} | sed 's/\.//g')"
 
-  bundleinfo ${version} ${filename}
-done
+    bundleinfo ${version} ${filename}
+  done
 
-for tag in $(
-  git ls-remote -t git@github.com:liferay/liferay-portal-ee.git | \
-    awk '{ print $2 }' | grep "/[0-9][0-9]*.q[0-9][0-9]*.[0-9][0-9]*$" | \
-    sort -V | cut -d'/' -f 3 | tee -a tags.txt
-); do
+  popd
+}
 
-  version="${tag}"
-  filename="7413-${tag}"
+handle_quarterly() {
+  mkdir -p 7.4.x/metadata
+  pushd 7.4.x/metadata
+  cat /dev/null > tags.txt
 
-  bundleinfo ${version} ${filename}
-done
+  for tag in $(cat ../../tags_all.txt | \
+      awk '{ print $2 }' | grep "/[0-9][0-9]*.q[0-9][0-9]*.[0-9][0-9]*$" | \
+      sort -V | cut -d'/' -f 3 | tee -a tags.txt
+  ); do
 
-popd
+    version="${tag}"
+    filename="7413-${tag}"
+
+    bundleinfo ${version} ${filename}
+  done
+
+  popd
+}
+
+git ls-remote -t git@github.com:liferay/liferay-portal-ee.git > tags_all.txt
+
+# handle_73
+# rm -f metadata-7.3.x.zip
+# zip -jqqr metadata-7.3.x.zip 7.3.x/metadata
+
+# handle_74
+
+handle_quarterly
+rm -f metadata-7.4.x.zip
+zip -jqqr metadata-7.4.x.zip 7.4.x/metadata
