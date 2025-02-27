@@ -1,0 +1,97 @@
+<html>
+<head>
+<title>Export Google Cloud Logs</title>
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+<!-- Optional theme -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+
+<!-- Latest compiled and minified JavaScript -->
+<script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+</head>
+<body>
+
+<div class="container" role="main">
+
+<h1>Export Google Cloud Logs</h1>
+
+<div class="form-group">
+	<label for="log">Log file name prefix</label>
+	<input type="text" name="log" value="downloaded-logs" + class="form-control" onkeyup="generateCommands();" />
+
+	<label for="url">Complete URL (from address bar)</label>
+	<textarea onkeyup="generateCommands();" class="form-control" name="url" placeholder="paste in the URL">
+https://console.cloud.google.com/logs/query;query=resource.type%3D%22k8s_container%22%0Aresource.labels.project_id%3D%22liferaycloud-p8%22%0Aresource.labels.location%3D%22asia-northeast1%22%0Aresource.labels.cluster_name%3D%22asia-northeast1-p8-c1%22%0Aresource.labels.namespace_name%3D%22zeovdzjmmnbpuayrat%22%0Alabels.k8s-pod%2FprojectId%3D%22tokyopcp-prd%22%0Alabels.k8s-pod%2FserviceId%3D%22liferay%22%20severity%3E%3DDEFAULT%0AtextPayload:%22HikariPool-1%20-%20Connection%20is%20not%20available%22;storageScope=project;cursorTimestamp=2025-02-18T14:55:38.298953322Z;startTime=2025-02-18T14:00:00.000Z;endTime=2025-02-18T15:00:00.000Z?project=liferaycloud-p8&inv=1&invt=Abqp3Q
+	</textarea>
+
+	<label for="servers">Number of servers to use to gather logs</label>
+	<input type="number" name="servers" min="1" max="20" value="1" class="form-control" onchange="generateCommands();" />
+</div>
+
+<div id="commands">
+</div>
+
+</div>
+
+</body>
+
+<script>
+function highlightClickedElement(e) {
+	window.getSelection().selectAllChildren(e.target);
+}
+
+function generateCommands() {
+	var url = URL.parse(document.querySelector('textarea[name="url"]').value);
+
+	var project = url.searchParams.get('project');
+
+	var pathData = url.pathname.split(';').reduce((acc, next) => {
+		var pos = next.indexOf('=');
+		if (pos == -1) {
+			return acc;
+		}
+		acc[next.substring(0, pos).trim()] = decodeURIComponent(next.substring(pos+1).trim());
+		return acc;
+	}, {});
+
+	var commandsElement = document.getElementById('commands');
+	commandsElement.innerHTML = '';
+
+	var serverCount = parseInt(document.querySelector('input[name="servers"]').value);
+	var logFileNamePrefix = document.querySelector('input[name="log"]').value.trim();
+
+	var startTime = new Date(pathData['startTime']);
+	var endTime = new Date(pathData['endTime']);
+
+	var commandPrefix = 'gcloud logging read --format json --project ' + project + ' \'\n' + pathData['query'];
+
+	var elapsedTime = endTime.getTime() - startTime.getTime();
+	var increment = Math.ceil(elapsedTime / serverCount);
+
+	var startRangeTime = startTime;
+
+	for (var i = 1; i <= serverCount; i++) {
+		var endRangeTime = (i == serverCount) ? endTime : new Date(startRangeTime.getTime() + increment);
+
+		var commandElement = document.createElement('pre');
+		commandElement.setAttribute('contenteditable', true);
+
+		commandElement.textContent = [
+			commandPrefix,
+			'\ntimestamp>="', startRangeTime.toISOString(), '" timestamp', (i == serverCount) ? '<=' : '<', '"',
+			endRangeTime.toISOString(), '"\n\'', ' > ', logFileNamePrefix, '-',
+			startRangeTime.toISOString().replaceAll(/[^0-9]/g, ''), '-',
+			endRangeTime.toISOString().replaceAll(/[^0-9]/g, ''), '.json'
+		].join('');
+
+		commandElement.onclick = highlightClickedElement;
+
+		commandsElement.appendChild(commandElement);
+
+		startRangeTime = endRangeTime;
+	}
+}
+</script>
+</html>
