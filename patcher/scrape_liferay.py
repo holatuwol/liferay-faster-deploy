@@ -310,6 +310,7 @@ def attempt_login_okta(state_token):
             pass
 
     factor = factors[factor_type]
+    print(factor)
 
     links = factor['_links']
     verify_url = links['verify']['href']
@@ -321,6 +322,7 @@ def attempt_login_okta(state_token):
         return None, None
 
     if factor_type != 'push' and response_json['status'] == 'MFA_CHALLENGE':
+        print(response_json)
         while response_json['status'] != 'SUCCESS':
             sys.stderr.write('passcode: ')
             form_params['passCode'] = input()
