@@ -28,6 +28,11 @@ gethotfix() {
 		return 0
 	fi
 
+	if [ -f ${HOME}/Downloads/${FIX_NAME}.zip ]; then
+		cp ${HOME}/Downloads/${FIX_NAME}.zip .
+		return 0
+	fi
+
 	local FILE_URL=
 
 	if [[ ${VERSION} == *.q* ]]; then
