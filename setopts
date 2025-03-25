@@ -4,16 +4,22 @@ buildopts() {
 	JAVA_VERSION=0
 
 	if [ "" != "$(which java 2> /dev/null)" ]; then
-		JAVA_VERSION=$(java -version 2>&1 | head -1 | cut -d'"' -f 2 | cut -d'.' -f 2)
+		LONG_JAVA_VERSION=$(java -version 2>&1 | head -1 | cut -d'"' -f 2)
+
+		if [[ ${LONG_JAVA_VERSION} == 1.* ]]; then
+			JAVA_VERSION=$(echo ${LONG_JAVA_VERSION} | cut -d'.' -f 2)
+		else
+			JAVA_VERSION=$(echo ${LONG_JAVA_VERSION} | cut -d'.' -f 1)
+		fi
 	fi
 
 	ANT_OPTS='-Xms4g -Xmx4g -Xss16m -Drepository.url="https://repository.liferay.com/nexus/content/groups/public"'
 
 	if [[ 8 -gt $JAVA_VERSION ]]; then
 		ANT_OPTS="${ANT_OPTS} -XX:MaxPermSize=512m"
-	else
-		GRADLE_OPTS="${ANT_OPTS}"
 	fi
+
+	GRADLE_OPTS="${ANT_OPTS}"
 
 	export ANT_OPTS GRADLE_OPTS
 }
@@ -26,6 +32,7 @@ checkjava() {
 	MINIMUM_JAVA_VERSION=$(grep javac.source "$GIT_ROOT/build.properties" | cut -d'=' -f 2 | cut -d'.' -f 2)
 
 	if [[ $MINIMUM_JAVA_VERSION -gt $JAVA_VERSION ]]; then
+		echo "Switching from ${JAVA_VERSION} to Java ${MINIMUM_JAVA_VERSION}"
 		javahome $MINIMUM_JAVA_VERSION
 
 		if [ "" != "$(which java 2> /dev/null)" ]; then
