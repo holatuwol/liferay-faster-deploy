@@ -1,12 +1,13 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        23.6
+// @version        23.7
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @supportURL     https://github.com/holatuwol/liferay-zendesk-userscript/issues/new
 // @include        /https:\/\/liferay-?support[0-9]*.zendesk.com\/.*/
 // @include        /https:\/\/24475.apps.zdusercontent.com\/24475\/assets\/.*\/issue_creator.html/
+// @include        /https:\/\/help.liferay.com\/hc\/[^\/]*\/articles\/.*/
 // @grant          unsafeWindow
 // @grant          GM.xmlHttpRequest
 // @grant          GM_getValue
@@ -2244,6 +2245,55 @@ function updateKnowledgeCenterEditor() {
     addArticleFormattingButtons(tinymce);
     addArticleSubmissionListeners(tinymce);
 }
+function updateFastTrackArticle() {
+    if ((document.location.pathname.indexOf('/hc/') != 0) || (document.location.pathname.indexOf('/articles/') == -1)) {
+        return;
+    }
+    var metaElement = document.querySelector('div.article-author .article-meta');
+    if (metaElement == null) {
+        return;
+    }
+    if (metaElement.classList.contains('lesa-ui-article-linked')) {
+        return;
+    }
+    metaElement.classList.add('lesa-ui-article-linked');
+    var articleLinksElement = document.createElement('div');
+    metaElement.appendChild(articleLinksElement);
+    articleLinksElement.classList.add('meta-group', 'secondary-font', 'secondary-text-color');
+    articleLinksElement.style.gap = '0.5em';
+    var articleId = document.location.pathname.substring(document.location.pathname.lastIndexOf('/') + 1);
+    var pos = articleId.indexOf('-');
+    if (pos != -1) {
+        articleId = articleId.substring(0, pos);
+    }
+    var requestURL = document.location.origin + '/api/v2/help_center/articles/' + articleId + '.json';
+    GM.xmlHttpRequest({
+        'method': 'GET',
+        'url': requestURL,
+        'headers': {
+            'Cache-Control': 'no-cache, no-store, max-age=0',
+            'Pragma': 'no-cache'
+        },
+        'responseType': 'blob',
+        'onload': function (xhr) {
+            var payload = JSON.parse(xhr.responseText);
+            var labelNames = ((payload && payload.article && payload.article.label_names) ? payload.article.label_names : []);
+            var ticketIds = labelNames.filter(function (it) { return it.match(/^[0-9]+$/g); });
+            var ticketLinks = ticketIds.map(function (it) { return createAnchorTag('https://liferay-support.zendesk.com/agent/tickets/' + it, 'https://liferay-support.zendesk.com/agent/tickets/' + it); });
+            if (ticketLinks.length > 0) {
+                for (var _i = 0, ticketLinks_1 = ticketLinks; _i < ticketLinks_1.length; _i++) {
+                    var ticketLink = ticketLinks_1[_i];
+                    articleLinksElement.appendChild(ticketLink);
+                }
+            }
+            else {
+                articleLinksElement.remove();
+            }
+        },
+        'onerror': function (xhr) {
+        }
+    });
+}
 function viewsGoToPage(target) {
     if (target <= 0) {
         return;
@@ -3004,7 +3054,10 @@ function isBadgeInPopup(badge) {
 }
 function updateZendeskUI() {
     var pathname = unsafeWindow.location.pathname;
-    if (pathname.indexOf('/agent/') == 0) {
+    if (document.location.hostname == 'help.liferay.com') {
+        updateFastTrackArticle();
+    }
+    else if (pathname.indexOf('/agent/') == 0) {
         checkForConversations();
         checkForSubtitles();
         checkSidebarTags();
