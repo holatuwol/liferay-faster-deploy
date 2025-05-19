@@ -1453,15 +1453,24 @@ function updatePreviousBuildsContent() {
         return new Set(fixesList.split(/\s*,\s*/gi));
     });
     var parentIndices = fixes.map(function (element, index, array) {
-        for (var i = index + 1; i < array.length; i++) {
+        var maxMatchIndex = -1;
+        var maxMatchCount = 0;
+        for (var i = 0; i < array.length; i++) {
+            if (i == index) {
+                continue;
+            }
             if (contentRows[index].cells[5].textContent != contentRows[i].cells[5].textContent) {
                 continue;
             }
             if (Array.from(array[i]).filter(function (it) { return !element.has(it); }).length == 0) {
-                return i;
+                var matchCount = Array.from(array[i]).filter(function (it) { return element.has(it); }).length;
+                if (matchCount > maxMatchCount) {
+                    maxMatchIndex = i;
+                    maxMatchCount = matchCount;
+                }
             }
         }
-        return -1;
+        return maxMatchIndex;
     });
     contentCells.forEach(function (element, index) {
         var parent = parentIndices[index];
