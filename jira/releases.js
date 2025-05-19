@@ -13,6 +13,7 @@ var quarterlies = {
 	'2024.q2': 7413120,
 	'2024.q3': 7413125,
 	'2024.q4': 7413129,
+	'2025.q1': 7413132,
 };
 
 var renderedComponents = {};
@@ -813,7 +814,7 @@ var updateFacets = debounce(function() {
 });
 
 function initUI() {
-	var requestURL = ((document.location.hostname == 'localhost') ? '' : 'https://s3-us-west-2.amazonaws.com/mdang.grow/') + 'releases.json';
+	var requestURL = ((document.location.hostname == 'localhost') ? '' : 'https://s3-us-west-2.amazonaws.com/mdang.grow/') + 'releases.json?t=' + new Date().getTime();
 
 	fetch(requestURL).then(x => x.json()).then(releases => {
 		releaseVersions = releases;
