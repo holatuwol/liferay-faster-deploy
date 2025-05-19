@@ -7,7 +7,7 @@ fetchpr() {
 	local repo_url=git@github.com:${endpoint}.git
 	local pull_id=$(echo $1 | cut -d'/' -f 7)
 
-	curl -H "Authorization: token $(git config github.oauth-token)" -s https://api.github.com/repos/$endpoint/pulls/$pull_id > "$SCRATCH_FILE"
+	curl -H "Authorization: token $(gh auth token)" -s https://api.github.com/repos/$endpoint/pulls/$pull_id > "$SCRATCH_FILE"
 
 	BASE_BRANCH=$(cat "$SCRATCH_FILE" | jq '.base.ref' | cut -d'"' -f 2)
 
