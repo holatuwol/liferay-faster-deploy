@@ -49,10 +49,16 @@ update_all() {
 }
 
 update_one() {
-	OUTPUT_FOLDER=/tmp
+	version=${1}
 
 	pushd ${PORTAL_SOURCE_ROOT}
-	packageinfo_tag $1
+	. $(dirname ${BASH_SOURCE[0]})/../setopts
+
+	GIT_ROOT=${PORTAL_SOURCE_ROOT}
+	OUTPUT_FOLDER="${PACKAGEINFO_ROOT}/7.4.x/metadata"
+
+	fetchtag liferay-portal-ee ${version}
+	packageinfo_tag ${version}
 	popd
 }
 
@@ -110,6 +116,8 @@ if [ "update" == "${1}" ]; then
 		upload_json
 	else
 		update_one ${2}
+		generate_json
+		upload_json
 	fi
 else
 	generate_json
