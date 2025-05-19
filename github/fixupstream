@@ -37,8 +37,4 @@ fixupstream() {
 	return 0
 }
 
-pushorigin() {
-	"$(dirname "${BASH_SOURCE[0]}")/pushorigin" "$1" "$2"
-}
-
 fixupstream $@

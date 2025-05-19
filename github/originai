@@ -21,10 +21,18 @@ fixpack() {
 	fi
 }
 
+pushorigin() {
+	"$(dirname "${BASH_SOURCE[0]}")/pushorigin" "$1" "$2"
+}
+
 UPSTREAM_CE=$(git remote -v | grep -F 'liferay/liferay-portal.git' | awk '{ print $1 }' | head -1)
 UPSTREAM_EE=$(git remote -v | grep -F 'liferay/liferay-portal-ee.git' | awk '{ print $1 }' | head -1)
 
 if [ "" != "${UPSTREAM_CE}" ]; then
+	pushorigin master ${UPSTREAM_CE}
+
+	git fetch --no-tags git@github.com:liferay/liferay-portal.git
+
 	echo git ls-remote -t git@github.com:liferay/liferay-portal.git
 	git ls-remote -t git@github.com:liferay/liferay-portal.git > /dev/shm/tags-ce.txt
 
@@ -44,6 +52,29 @@ if [ "" != "${UPSTREAM_CE}" ]; then
 fi
 
 if [ "" != "${UPSTREAM_EE}" ]; then
+	pushorigin master-private ${UPSTREAM_EE}
+
+	echo git ls-remote -h git@github.com:liferay/liferay-portal-ee.git
+	git ls-remote -h git@github.com:liferay/liferay-portal-ee.git > /dev/shm/heads-ee.txt
+
+	for branch in $(cat /dev/shm/heads-ee.txt | awk '{ print $2 }' | grep '/ee-6\.[012]\.x$' | cut -d'/' -f 3); do
+		pushorigin ${branch} ${UPSTREAM_EE}
+	done
+
+	for branch in $(cat /dev/shm/heads-ee.txt | awk '{ print $2 }' | grep '/7\.[0123]\.x$' | cut -d'/' -f 3); do
+		pushorigin ${branch} ${UPSTREAM_EE}
+	done
+
+	for branch in $(cat /dev/shm/heads-ee.txt | awk '{ print $2 }' | grep '/7\.[0123]\.x-private$' | cut -d'/' -f 3); do
+		pushorigin ${branch} ${UPSTREAM_EE}
+	done
+
+	for branch in $(cat /dev/shm/heads-ee.txt | awk '{ print $2 }' | grep '/release-.*\.q[0-9]$' | cut -d'/' -f 3); do
+		pushorigin ${branch} ${UPSTREAM_EE}
+	done
+
+	git fetch --no-tags git@github.com:liferay/liferay-portal-ee.git
+
 	echo git ls-remote -t git@github.com:liferay/liferay-portal-ee.git
 	git ls-remote -t git@github.com:liferay/liferay-portal-ee.git > /dev/shm/tags-ee.txt
 
