@@ -110,11 +110,17 @@ sendpull() {
 
 	. $(dirname "${BASH_SOURCE[0]}")/../getparent
 
+	upstream_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
+
+	if [ "" == "$upstream_remote" ]; then
+		echo "Unable to identify upstream equivalent of ${BASE_BRANCH}"
+		return 1
+	fi
+
 	remote_name=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/origin[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
 
 	if [ "" == "$remote_name" ]; then
-		echo "Unable to identify origin for ${BASE_BRANCH}"
-		return 1
+		remote_name=${upstream_remote}
 	fi
 
 	if [ "" == "${BASE_BRANCH}" ]; then
@@ -138,13 +144,6 @@ sendpull() {
 	echo "Reviewer: ${reviewer}"
 
 	# Rebase against the upstream variant of the branch
-
-	upstream_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
-
-	if [ "" == "$upstream_remote" ]; then
-		echo "Unable to identify upstream equivalent of ${BASE_BRANCH}"
-		return 1
-	fi
 
 	resetbasebranch
 
@@ -191,7 +190,7 @@ sendpull() {
 
 	# Open a web browser so we can submit the pull request
 
-	current_user=$(git remote -v | grep origin | cut -d':' -f 2 | cut -d'/' -f 1 | sort -u)
+	current_user=$(git remote get-url ${remote_name} | cut -d':' -f 2 | cut -d'/' -f 1 | sort -u)
 	reviewer_repository=$(git remote -v | grep "^${upstream_remote}\s" | awk '{ print $2 }' | uniq | cut -d'/' -f 2 | sed 's/\.git$//g' | uniq)
 
 	if [ "" == "${reviewer_repository}" ]; then
