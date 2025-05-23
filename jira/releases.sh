@@ -12,13 +12,18 @@ fi
 
 aws s3 --profile ${AWS_PROFILE} ls s3://${S3_BUCKET}/releases/ | awk '{ print $4 "\t" $3 }' | sort > 1.txt
 
-cd releases.production
+if [ ! -d releases.production ]; then
+	aws s3 --profile ${AWS_PROFILE} sync s3://${S3_BUCKET}/releases/ releases.production/
 
-for file in *.json; do
-	gzip -c ${file} > ${file}.gz
-done
-
-cd -
+	for file in releases.production/*.json; do
+		mv ${file} ${file}.gz
+		gunzip -c ${file}.gz > ${file}
+	done
+else
+	for file in releases.production/*.json; do
+		gzip -c ${file} > ${file}.gz
+	done
+fi
 
 ls -l releases.production/*.gz | grep -vF '.raw.json' | sed 's/\.gz$//g' | sed 's@releases.production/@@g' | awk '{ print $9 "\t" $5 }' | sort > 2.txt
 

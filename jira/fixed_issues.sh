@@ -12,6 +12,15 @@ fi
 
 aws s3 --profile ${AWS_PROFILE} ls s3://${S3_BUCKET}/fixed_issues/ | awk '{ print $4 "\t" $3 }' | sort > 1.txt
 
+if [ ! -d fixed_issues ]; then
+	aws s3 --profile ${AWS_PROFILE} sync s3://${S3_BUCKET}/fixed_issues/ fixed_issues/
+
+	for file in fixed_issues/*.txt; do
+		mv ${file} ${file}.gz
+		gunzip -c ${file}.gz > ${file}
+	done
+fi
+
 python fixed_issues.py
 
 cd fixed_issues
