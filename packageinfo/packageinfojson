@@ -49,6 +49,14 @@ update_all() {
 }
 
 update_one() {
+	pushd ${PACKAGEINFO_ROOT}
+
+	for folder in ${AVAILABLE_VERSIONS}; do
+		restore_backup ${folder}
+	done
+
+	popd
+
 	version=${1}
 
 	pushd ${PORTAL_SOURCE_ROOT}
@@ -72,11 +80,6 @@ generate_json() {
 }
 
 upload_json() {
-	if [ "" == "${AWS_PROFILE}" ]; then
-		echo 'Please set AWS_PROFILE to upload files'
-		return
-	fi
-
 	if [ "" == "${S3_BUCKET}" ]; then
 		echo 'Please set S3_BUCKET to upload files'
 		return

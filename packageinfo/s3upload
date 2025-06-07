@@ -11,7 +11,7 @@ fi
 
 s3cp() {
 	if [[ "$1" == *.gz ]]; then
-		aws s3 --profile $AWS_PROFILE cp "${1}" "s3://$S3_BUCKET/${1}" --acl public-read --metadata-directive REPLACE
+		aws s3 cp "${1}" "s3://$S3_BUCKET/${1}" --acl public-read --metadata-directive REPLACE
 	else
 		rm -f "${1}.gz"
 		gzip -c "${1}" > "${1}.gz"
