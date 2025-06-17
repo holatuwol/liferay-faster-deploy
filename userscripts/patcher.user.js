@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        9.5
+// @version        9.6
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -850,7 +850,7 @@ function replaceBuild() {
     var fixedInLaterVersionsHTML = '';
     if (branchName.indexOf(".q") != -1) {
         var jql = "key in (" + build.fixes.join(",") + ") and cf[10886] ~ \"" + branchName.substring(0, branchName.lastIndexOf(".")) + ".*\"";
-        fixedInLaterVersionsHTML = "<tr><td colspan=\"2\"><a href=\"https://issues.liferay.com/issues/?jql=" + encodeURIComponent(jql) + "\" target=\"_blank\">check if fixed in newer quarterly releases</a></td></tr>";
+        fixedInLaterVersionsHTML = "<tr><td colspan=\"2\"><a href=\"https://issues.liferay.com/issues/?jql=" + encodeURIComponent(jql) + "\" target=\"_blank\">check if fixed in newer patch level of this quarterly release</a></td></tr>";
     }
     if (childBuildsButton.length == 0) {
         replaceNode(buildNode, '<table class="table table-bordered table-hover"><tbody class="table-data">' + childBuildFixesHTML + fixedInLaterVersionsHTML + '</tbody></table>');
