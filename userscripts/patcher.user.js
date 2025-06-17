@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        9.4
+// @version        9.5
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -797,12 +797,14 @@ function getBuildMetadata(row) {
     var buildLink = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/' + buildId;
     var branchName = (row.cells[3].textContent || '').trim();
     var branchType = branchName.indexOf('-private') != -1 ? 'private' : 'public';
+    var fixesText = row.cells[2].textContent || '';
     return {
         buildId: buildId,
         buildLink: buildLink,
         branchName: branchName,
         branchType: branchType,
-        fixes: getTicketLinks(row.cells[2].textContent || '', ''),
+        fixes: fixesText.split(',').map(function (x) { return x.trim(); }).sort(compareTicket),
+        fixesHTML: getTicketLinks(fixesText, ''),
         patcherFixId: null
     };
 }
@@ -815,7 +817,7 @@ function processChildBuilds(xhr, oldFixesNode) {
     container.innerHTML = xhr.responseText;
     var rows = Array.from(container.querySelectorAll('table tbody tr')).filter(function (row) { return !row.classList.contains('lfr-template'); });
     var childBuildsMetadata = rows.map(getBuildMetadata);
-    var childBuildFixesHTML = childBuildsMetadata.map(function (build) { return '<tr><th class="branch-type">' + getBuildLinkHTML(build) + '</th><td>' + build.fixes + '</td></tr>'; });
+    var childBuildFixesHTML = childBuildsMetadata.map(function (build) { return '<tr><th class="branch-type">' + getBuildLinkHTML(build) + '</th><td>' + build.fixesHTML + '</td><td></td></tr>'; });
     replaceNode(oldFixesNode, '<table class="table table-bordered table-hover"><tbody class="table-data">' + childBuildFixesHTML.join('') + '</tbody></table>');
     replaceGitHashes(childBuildsMetadata);
 }
@@ -834,17 +836,24 @@ function replaceBuild() {
     var projectVersionSelect = querySelector('patcherProjectVersionId');
     var branchName = (projectVersionSelect.options[projectVersionSelect.selectedIndex].textContent || '').trim();
     var branchType = branchName.indexOf('-private') != -1 ? 'private' : 'public';
+    var fixesText = buildNode.innerHTML;
     var build = {
         buildId: buildId,
         buildLink: buildLink,
         branchName: branchName,
         branchType: branchType,
-        fixes: getTicketLinks(buildNode.innerHTML, ''),
+        fixes: fixesText.split(',').map(function (x) { return x.trim(); }).sort(compareTicket),
+        fixesHTML: getTicketLinks(fixesText, ''),
         patcherFixId: null
     };
-    var childBuildFixesHTML = '<tr><th class="branch-type">' + getBuildLinkHTML(build) + '</th><td>' + build.fixes;
+    var childBuildFixesHTML = '<tr><th class="branch-type">' + getBuildLinkHTML(build) + '</th><td>' + build.fixesHTML + "</td></tr>";
+    var fixedInLaterVersionsHTML = '';
+    if (branchName.indexOf(".q") != -1) {
+        var jql = "key in (" + build.fixes.join(",") + ") and cf[10886] ~ \"" + branchName.substring(0, branchName.lastIndexOf(".")) + ".*\"";
+        fixedInLaterVersionsHTML = "<tr><td colspan=\"2\"><a href=\"https://issues.liferay.com/issues/?jql=" + encodeURIComponent(jql) + "\" target=\"_blank\">check if fixed in newer quarterly releases</a></td></tr>";
+    }
     if (childBuildsButton.length == 0) {
-        replaceNode(buildNode, '<table class="table table-bordered table-hover"><tbody class="table-data">' + childBuildFixesHTML + '</tbody></table>');
+        replaceNode(buildNode, '<table class="table table-bordered table-hover"><tbody class="table-data">' + childBuildFixesHTML + fixedInLaterVersionsHTML + '</tbody></table>');
         replaceGitHashes([build]);
     }
     else {
@@ -860,7 +869,7 @@ function replaceBuild() {
         var excludedFixes = originalBuildNode.innerHTML.split(',').map(function (x) { return x.trim(); }).filter(function (x) { return !fixes.has(x); });
         var excludedHTML = excludedFixes.sort(compareTicket).map(getTicketLink.bind(null, 'included-in-baseline')).join(', ');
         var excludedFixesHTML = '<tr><th class="branch-type">excluded</th><td>' + excludedHTML + '</td></tr>';
-        replaceNode(originalBuildNode, '<table class="table table-bordered table-hover"><tbody class="table-data">' + childBuildFixesHTML + excludedFixesHTML + '</tbody></table>');
+        replaceNode(originalBuildNode, '<table class="table table-bordered table-hover"><tbody class="table-data">' + childBuildFixesHTML + excludedFixesHTML + fixedInLaterVersionsHTML + '</tbody></table>');
     }
 }
 /**
@@ -1453,24 +1462,15 @@ function updatePreviousBuildsContent() {
         return new Set(fixesList.split(/\s*,\s*/gi));
     });
     var parentIndices = fixes.map(function (element, index, array) {
-        var maxMatchIndex = -1;
-        var maxMatchCount = 0;
-        for (var i = 0; i < array.length; i++) {
-            if (i == index) {
-                continue;
-            }
+        for (var i = index + 1; i < array.length; i++) {
             if (contentRows[index].cells[5].textContent != contentRows[i].cells[5].textContent) {
                 continue;
             }
             if (Array.from(array[i]).filter(function (it) { return !element.has(it); }).length == 0) {
-                var matchCount = Array.from(array[i]).filter(function (it) { return element.has(it); }).length;
-                if (matchCount > maxMatchCount) {
-                    maxMatchIndex = i;
-                    maxMatchCount = matchCount;
-                }
+                return i;
             }
         }
-        return maxMatchIndex;
+        return -1;
     });
     contentCells.forEach(function (element, index) {
         var parent = parentIndices[index];

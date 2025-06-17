@@ -25,7 +25,7 @@ else
 	done
 fi
 
-ls -l releases.production/*.gz | grep -vF '.raw.json' | sed 's/\.gz$//g' | sed 's@releases.production/@@g' | awk '{ print $9 "\t" $5 }' | sort > 2.txt
+ls -l releases.production/*.gz | sed 's/\.gz$//g' | sed 's@releases.production/@@g' | awk '{ print $9 "\t" $5 }' | sort > 2.txt
 
 diff 1.txt 2.txt | grep '<' | awk '{ print $2 }' > 3.txt
 diff 1.txt 2.txt | grep '>' | awk '{ print $2 }' > 4.txt
