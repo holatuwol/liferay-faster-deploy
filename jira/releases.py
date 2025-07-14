@@ -23,6 +23,7 @@ quarterly_releases = {
     '2024.q3': 125,
     '2024.q4': 129,
     '2025.q1': 132,
+    '2025.q2': 135,
 }
 
 old_update_threshold = {
@@ -33,6 +34,7 @@ old_update_threshold = {
     '2024.q3': 120,
     '2024.q4': 125,
     '2025.q1': 129,
+    '2025.q2': 132,
 }
 
 quarterly_updates = { value: key for key, value in quarterly_releases.items() }
@@ -337,7 +339,8 @@ def check_issue_changelog(issue_key):
 
     for fix_version in past_74_fix_versions:
         if float(fix_version) < 2000:
-            updates.add(int(fix_version))
+            if fix_version.find('.') == -1:
+                updates.add(int(fix_version))
         else:
             quarterlies.add(fix_version)
 
@@ -348,7 +351,7 @@ def check_issue_changelog(issue_key):
             elif fix_version.find('7.4.13 DXP U') == 0:
                 update_fixed_issues[int(fix_version[12:])].remove(issue_key)
             elif fix_version.find('.q') != -1:
-                if issue_key in quarterly_fixed_issues[fix_version]:
+                if fix_version in quarterly_fixed_issues and issue_key in quarterly_fixed_issues[fix_version]:
                     quarterly_fixed_issues[fix_version].remove(issue_key)
 
     for fix_version in past_fix_versions:

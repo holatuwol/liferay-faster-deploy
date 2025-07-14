@@ -14,6 +14,7 @@ var quarterlies = {
 	'2024.q3': 7413125,
 	'2024.q4': 7413129,
 	'2025.q1': 7413132,
+	'2025.q2': 7413135,
 };
 
 var renderedComponents = {};
@@ -562,6 +563,10 @@ function getFetchVersions(sourceVersion, targetVersion) {
 
 		if (quarterly == sourceQuarterly) {
 			if (sourceQuarterly == targetQuarterly) {
+				if (patch < targetPatch) {
+					releasesToAdd.add(version);
+				}
+
 				return;
 			}
 
@@ -576,7 +581,7 @@ function getFetchVersions(sourceVersion, targetVersion) {
 		// patch level is earlier than the target quarterly release
 
 		if (quarterly == targetQuarterly) {
-			if (patch <= targetPatch) {
+			if (patch < targetPatch) {
 				releasesToAdd.add(version);
 			}
 
@@ -814,7 +819,7 @@ var updateFacets = debounce(function() {
 });
 
 function initUI() {
-	var requestURL = ((document.location.hostname == 'localhost') ? '' : 'https://s3-us-west-2.amazonaws.com/mdang.grow/') + 'releases.json?t=' + new Date().getTime();
+	var requestURL = (document.location.hostname == 'localhost') ? 'releases.json' : ('https://s3-us-west-2.amazonaws.com/mdang.grow/releases.json?t=' + new Date().getTime());
 
 	fetch(requestURL).then(x => x.json()).then(releases => {
 		releaseVersions = releases;
