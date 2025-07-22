@@ -3204,18 +3204,19 @@ GM_config.init({
             label: 'Check this box if you want to display a green circle emoji instead of the eye icon',
             type: 'checkbox',
             "default": true
+        },    
+        DISPLAY_INTERNAL_COMMENTS_COLLAPSED_ON_LIST: {
+            label: 'Check this box if you want to collapse internal comments by default',
+            type: 'checkbox',
+            "default": false
         },
         EXECUTION_INTERVAL: {
             label: 'Enter the number of milliseconds to wait between each iteration of the script UI checking loop',
             type: 'number',
             min: 100,
             "default": 1000
-        },
-        DISPLAY_INTERNAL_COMMENTS_COLLAPSED_ON_LIST: {
-            label: 'Check this box if you want to collapse internal comments by default',
-            type: 'checkbox',
-            "default": false
         }
+    
     },
     css: "\n#zendesk_for_tse_config #zendesk_for_tse_config_wrapper #zendesk_for_tse_config_header {\n  font-size: x-large;\n  font-weight: 600;\n  margin: 1em;\n}\n\n#zendesk_for_tse_config #zendesk_for_tse_config_wrapper .section_header_holder {\n  display: grid;\n  grid-template-columns: 5em auto;\n  grid-gap: 0.5em;\n}\n\n#zendesk_for_tse_config #zendesk_for_tse_config_wrapper .section_header_holder .config_var {\n  display: contents;\n}\n\n#zendesk_for_tse_config #zendesk_for_tse_config_wrapper .section_header_holder .config_var label {\n  justify-self: start;\n  font-size: large;\n  font-weight: normal;\n}\n\n#zendesk_for_tse_config #zendesk_for_tse_config_wrapper .section_header_holder .config_var input {\n  font-size: medium;\n  text-align: end;\n  max-width: 4em;\n  align-self: start;\n  justify-self: end;\n}\n",
     events: {
