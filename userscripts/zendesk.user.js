@@ -1243,7 +1243,6 @@ function addSortButton(conversation, header) {
     buttons.prepend(button);
 }
 
-
 /**
  * Add collapse internal info
  */
@@ -1267,22 +1266,21 @@ function addCollapseInternalInfo(header) {
 
     var buttons = header.children[1];
     var isCollapsed = getCookieCustom('_lesa-ui-collapse-info') || GM_config.get('DISPLAY_INTERNAL_COMMENTS_COLLAPSED_ON_LIST');
-    var firstLoad = true;
-    console.log("collapsed1: "+isCollapsed);
+    var collapsedBool = (isCollapsed === true || isCollapsed === 'true');
+
     const targets = document.querySelectorAll('[type="internal"]');
     collapseInternalInfoElement.addEventListener("click", () => {
-        isCollapsed = !isCollapsed;
-        setCookieCustom('_lesa-ui-collapse-info',isCollapsed);
+        collapsedBool = !collapsedBool;
+        setCookieCustom('_lesa-ui-collapse-info',collapsedBool);
         targets.forEach(el => {
-          el.classList.toggle('collapsed', isCollapsed);
+          el.classList.toggle('collapsed', collapsedBool);
         });
     });
 
-
     targets.forEach(el => {
-      console.log(el.className)
-      el.classList.toggle('collapsed', isCollapsed);
+        el.classList.toggle('collapsed', collapsedBool);
     });
+
     buttons.prepend(collapseInternalInfoElement);
 }
 
