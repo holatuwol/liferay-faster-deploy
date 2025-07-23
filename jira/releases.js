@@ -501,96 +501,115 @@ function generateReleaseNotesHelper(tickets) {
 	});
 };
 
-function getFetchVersions(sourceVersion, targetVersion) {
-	var sourceUpdate = getUpdate(sourceVersion);
-	var sourceQuarterly = getQuarterly(sourceVersion);
+function isVersionToAdd(sourceUpdate, sourceQuarterly, sourcePatch, targetUpdate, targetQuarterly, targetPatch, version) {
+	// If the version range is swapped (earlier release listed first), then
+	// nothing will match.
 
-	var previousQuarterly = getPreviousQuarterly(sourceUpdate);
-	var previousQuarterlyUpdate = null;
-
-	if (previousQuarterly != null) {
-		previousQuarterlyUpdate = quarterlies[previousQuarterly];
+	if (sourceUpdate > targetUpdate) {
+		return false;
 	}
 
-	var sourcePatch = getPatch(sourceVersion);
+	if (sourceQuarterly && targetQuarterly && sourceQuarterly > targetQuarterly) {
+		return false;
+	}
 
-	var targetUpdate = getUpdate(targetVersion);
-	var targetQuarterly = getQuarterly(targetVersion);
-	var targetPatch = getPatch(targetVersion);
+	var update = getUpdate(version);
+	var quarterly = getQuarterly(version);
+	var patch = getPatch(version);
 
-	var releasesToAdd = new Set([targetVersion]);
-	var releasesToRemove = new Set([sourceVersion]);
+	// If the starting and ending are from different updates, then we don't need
+	// to fetch tickets from the starting update.
 
-	Array.from(Object.keys(releaseVersions)).forEach(version => {
-		var update = getUpdate(version);
-		var quarterly = getQuarterly(version);
-		var patch = getPatch(version);
+	if (sourceUpdate != targetUpdate && update == sourceUpdate) {
+		return false;
+	}
 
-		if (update < sourceUpdate) {
-			if (!quarterly) {
-				if ((previousQuarterlyUpdate != null) && update > previousQuarterlyUpdate) {
-					releasesToRemove.add(version);
-				}
+	// If the starting and ending are the same quarterly release, then we only
+	// fetch tickets from the same quarterly release that fall within the patch
+	// version range.
 
-				return;
-			}
+	if (sourceQuarterly && sourceQuarterly == targetQuarterly) {
+		return quarterly != targetQuarterly ? false :
+			 sourcePatch == targetPatch ? patch == sourcePatch :
+				quarterly == targetQuarterly && patch > sourcePatch && patch <= targetPatch;
+	}
 
-			if ((quarterly == targetQuarterly) && (patch < targetPatch)) {
-				releasesToAdd.add(version);
-			}
+	// If it is an older update baseline than our starting point, or a newer
+	// update baseline than our ending point, then we do not use those tickets.
 
-			return;
-		}
+	if (update < sourceUpdate || update > targetUpdate) {
+		return false;
+	}
 
-		if (update > targetUpdate) {
-			return;
-		}
+	// If we're looking at a quarterly release, then we ignore it unless it's
+	// the same as the ending point's quarterly release, and it is within the
+	// patch version range.
 
-		// If we're looking at an update, and it's within the expected range, we
-		// add it
+	if (quarterly) {
+		return quarterly === targetQuarterly && patch <= targetPatch;
+	}
 
-		if (!quarterly) {
-			if (update != sourceUpdate) {
-				releasesToAdd.add(version);
-			}
+	// We're now looking at an update that falls within the version range, so
+	// we will always fetch it.
 
-			return;
-		}
+	return true;
+}
 
+function isVersionToRemove(sourceUpdate, sourceQuarterly, sourcePatch, targetUpdate, targetQuarterly, targetPatch, version) {
+	// If the version range is swapped (earlier release listed first), then
+	// nothing will match.
 
-		// If it's the same as the source quarterly release, then we remove it if
-		// we've upgraded to a new quarterly release and the patch level is earlier
+	if (sourceUpdate > targetUpdate) {
+		return false;
+	}
 
-		if (quarterly == sourceQuarterly) {
-			if (sourceQuarterly == targetQuarterly) {
-				if (patch < targetPatch) {
-					releasesToAdd.add(version);
-				}
+	if (sourceQuarterly && targetQuarterly && sourceQuarterly > targetQuarterly) {
+		return false;
+	}
 
-				return;
-			}
+	var update = getUpdate(version);
+	var quarterly = getQuarterly(version);
+	var patch = getPatch(version);
 
-			if (patch <= sourcePatch) {
-				releasesToRemove.add(version);
-			}
+	// If the starting point and ending point are the same quarterly release,
+	// then we aren't fetching anything extra, so we have nothing to remove.	
 
-			return;
-		}
+	if (sourceUpdate == targetUpdate && sourceQuarterly == targetQuarterly) {
+		return false;
+	}
 
-		// If it's the same as the target quarterly release, then we add it if the
-		// patch level is earlier than the target quarterly release
+	// If the starting point is a quarterly release, then we need to remove any
+	// tickets fixed since the GA of the quarterly release, because those are
+	// likely duplicated.
 
-		if (quarterly == targetQuarterly) {
-			if (patch < targetPatch) {
-				releasesToAdd.add(version);
-			}
+	if (sourceQuarterly) {
+		return quarterly == sourceQuarterly && patch <= sourcePatch;
+	}
 
-			return;
-		}
-	});
+	// If the ending point is a quarterly release and the starting point was a
+	// regular update, then we aren't fetching anything extra, so we have nothing
+	// to remove.
 
-	console.log(releasesToAdd);
-	console.log(releasesToRemove);
+	return false;
+}
+
+function getFetchVersions(sourceVersion, targetVersion) {
+	var releasesToAdd = new Set(Array.from(Object.keys(releaseVersions)).filter(
+		isVersionToAdd.bind(
+			null,
+			getUpdate(sourceVersion), getQuarterly(sourceVersion), getPatch(sourceVersion),
+			getUpdate(targetVersion), getQuarterly(targetVersion), getPatch(targetVersion))
+		));
+
+	var releasesToRemove = new Set(Array.from(Object.keys(releaseVersions)).filter(
+		isVersionToRemove.bind(
+			null,
+			getUpdate(sourceVersion), getQuarterly(sourceVersion), getPatch(sourceVersion),
+			getUpdate(targetVersion), getQuarterly(targetVersion), getPatch(targetVersion))
+		));
+
+	console.log('adding tickets from', releasesToAdd);
+	console.log('removing tickets from', releasesToRemove);
 
 	return [releasesToAdd, releasesToRemove];
 };
@@ -636,26 +655,6 @@ function getPatch(version) {
 	else {
 		return parseInt(version.substring(8));
 	}
-};
-
-function getPreviousQuarterly(update) {
-	var maxYear = new Date().getUTCFullYear();
-
-	for (var i = maxYear; i >= 2023; i--) {
-		for (var j = 4; j > 0; j--) {
-			var quarterlyName = i + '.q' + j;
-
-			if (!(quarterlyName in quarterlies)) {
-				continue;
-			}
-
-			if (update > quarterlies[quarterlyName]) {
-				return quarterlyName;
-			}
-		}
-	}
-
-	return null;
 };
 
 function getQuarterly(version) {

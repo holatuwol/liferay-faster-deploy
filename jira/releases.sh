@@ -1,8 +1,7 @@
 #!/bin/bash
 
 if [ "" == "${AWS_PROFILE}" ]; then
-	echo AWS_PROFILE environment variable not set
-	exit 1
+	AWS_PROFILE=default
 fi
 
 if [ "" == "${S3_BUCKET}" ]; then
