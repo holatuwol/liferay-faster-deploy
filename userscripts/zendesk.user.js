@@ -3098,7 +3098,7 @@ function isBadgeInPopup(badge) {
  * Close all tabs button
  */
 function closeAllTabs() {
-    const tablist = document.querySelector('[data-test-id="header-tablist"]');
+     const tablist = document.querySelector('[data-test-id="header-tablist"]');
 
     const visibleCloseButtons = Array.from(document.querySelectorAll('[data-test-id="close-button"]'))
     .filter(btn => {
@@ -3106,16 +3106,16 @@ function closeAllTabs() {
         return style.display !== 'none' && style.visibility !== 'hidden' && btn.offsetParent !== null;
     });
 
-    if (tablist && visibleCloseButtons.length > 0 && !document.querySelector('#cerrar-todos-tab-btn')) {
+    if (tablist && visibleCloseButtons.length > 0 && !document.querySelector('#close-all-tab-btn')) {
         const newDiv = document.createElement('div');
         newDiv.className = 'sc-19uji9v-0 dcLIks';
 
         const button = document.createElement('button');
-        button.id = 'cerrar-todos-tab-btn';
+        button.id = 'close-all-tab-btn';
         button.type = 'button';
         button.setAttribute('aria-haspopup', 'false');
         button.setAttribute('aria-expanded', 'false');
-        button.setAttribute('data-test-id', 'cerrar-todos-tabs-button');
+        button.setAttribute('data-test-id', 'close-all-tabs-button');
         button.className = 'sc-1yqwijl-0 fSkeuV';
 
         const innerDiv = document.createElement('div');
@@ -3139,7 +3139,7 @@ function closeAllTabs() {
 
         const span = document.createElement('span');
         span.className = 'sc-10vdpwu-0 hysyZs';
-        span.textContent = 'Cerrar todos';
+        span.textContent = 'Close all';
 
         innerDiv.appendChild(icon);
         innerDiv.appendChild(span);
