@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        24.2
+// @version        24.4
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @supportURL     https://github.com/holatuwol/liferay-zendesk-userscript/issues/new
@@ -31,8 +31,7 @@ if (window.location.hostname == '24475.apps.zdusercontent.com') {
     styleElement.textContent = "\nbody {\n  overflow-y: hidden;\n}\n";
 }
 else {
-    styleElement.textContent = "\na.downloading {\n  color: #999;\n}\n\na.downloading::after {\n  content: ' (downloading...)';\n  color: #999;\n}\n\na.generating {\n  color: #999;\n}\n\na.generating::after {\n  content: ' (generating...)';\n  color: #999;\n}\n\narticle {\n  border-top: 1px solid #ebebeb;\n}\n\ndiv.lesa-ui-subtitle {\n  display: flex;\n  flex-direction: column;\n}\n\n.lesa-ui-attachments,\n.lesa-ui-knowledge-capture {\n  display: flex;\n  flex-direction: column;\n  margin-bottom: 0.5em;\n}\n\n#attachments-modal .lesa-ui-attachments,\n#description-modal .lesa-ui-description {\n  margin: 0.5em;\n}\n\n#description-modal .event {\n  border-top: 0px;\n}\n\n.lesa-ui-attachment-info {\n  display: grid;\n  grid-gap: 0em 1em;\n  grid-template-columns: 1em auto;\n  margin: 0.5em;\n}\n\n.lesa-ui-attachment-info input {\n  margin-left: 0.5em;\n}\n\n.lesa-ui-attachment-info .lesa-ui-attachment-extra-info {\n  grid-column: 1 / 2 span;\n  padding: 0.2em 0.5em;\n  text-align: right;\n  margin-bottom: 0.5em;\n}\n\n.lesa-ui-attachment-info .lesa-ui-attachment-extra-info:not(:first-child) {\n  margin-top: 1em;\n  border-top: 1px solid lightgray;\n  padding-top: 0.5em;\n}\n\n.lesa-ui-description .lesa-ui-attachment-info .lesa-ui-attachment-extra-info {\n  border-top: 1px solid #eee;\n}\n\n.lesa-ui-attachment-info a {\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n\n.lesa-ui-attachments-bulk-download {\n  margin-top: 0.5em;\n  text-align: right;\n  text-decoration: underline;\n}\n\n.lesa-ui-attachments-label,\n.lesa-ui-knowledge-capture-label {\n  font-weight: 600;\n  margin-right: 1em;\n  white-space: nowrap;\n}\n\n.lesa-ui-knowledge-capture-label:not(:first-child) {\n  margin-top: 1em;\n}\n\n.lesa-ui-knowledge-capture ul {\n  margin-left: 1em;\n}\n\n.lesa-ui-description {\n  font-weight: normal;\n}\n\n.lesa-ui-description > div {\n  margin-bottom: 2em;\n}\n\n.lesa-ui-description .zd-comment,\n.lesa-ui-description .lesa-ui-attachment-info {\n  max-height: 25em;\n  overflow-y: auto;\n}\n\n.lesa-ui-event-highlighted,\narticle.lesa-ui-event-highlighted {\n  background-color: #eee;\n  scroll-margin-top: 1em;\n}\n\n.lesa-ui-form-field {\n  display: flex;\n  flex-direction: column;\n  margin-bottom: 0.5em;\n}\n\n.lesa-ui-permalink {\n  margin-bottom: 1em;\n}\n\n.lesa-ui-orgnotes {\n  color: darkgreen;\n}\n\n.lesa-ui-permalink > input,\n.lesa-ui-form-field.lesa-ui-helpcenter > input {\n  background-color: transparent;\n  border: 0px;\n  font-size: 12px;\n  margin: 0px;\n  padding: 0px;\n  width: 100%;\n}\n\n.lesa-ui-stackedit-icon {\n  height: 16px;\n  width: 16px;\n  padding: 4px;\n}\n\n.mast .editable .lesa-ui-subject {\n  background-color: #fff;\n  font-size: 20px;\n  font-weight: 600;\n  resize: vertical;\n  text-align: left;\n  width: 100%;\n}\n\n.header.mast > .round-avatar {\n  display: none;\n}\n\n.lesa-ui-priority:not(:empty) {\n  margin-top: 6px;\n  margin-bottom: 8px;\n}\n\nspan[data-garden-container-id=\"containers.tooltip\"] {\n  display: inline-flex;\n  align-items: center;\n  column-gap: 4px;\n}\n\n.lesa-ui-heat-score,\n.lesa-ui-priority span {\n  color: #fff;\n  border-radius: 2px;\n  font-size: 10px;\n  font-weight: 600;\n  text-align: center;\n}\n\n.lesa-ui-priority span:not(.lesa-ui-offering) {\n  text-transform: uppercase;\n}\n\n.lesa-ui-heat-score {\n  padding: 0px 4px;\n  line-height: 1.6;\n}\n\n.lesa-ui-priority span {\n  line-height: 16px;\n  margin-right: 8px;\n  padding: 0.5em;\n  width: 6em;\n}\n\n.lesa-ui-priority a {\n  color: #fff;\n  text-decoration: none;\n}\n\n.lesa-ui-priority > *:last-child {\n  margin-right: 0;\n}\n\n.lesa-ui-priority .lesa-ui-subject-emojis a {\n  color: #000;\n}\n\n.lesa-ui-subpriority {\n  border: 1px #eee dashed;\n  font-size: 0.8em;\n}\n\n.lesa-ui-offering {\n  background-color: #222;\n}\n\n.lesa-ui-quickwin {\n  background-color: #037f52;\n}\n\ntr.quickwin {\n  background-color: #eef8f4;\n}\n\n.lesa-ui-priority-minor,\n.lesa-ui-subpriority-none,\n.lesa-ui-subpriority-low {\n  background-color: #0066cc;\n}\n\n.lesa-ui-priority-major,\n.lesa-ui-subpriority-medium {\n  background-color: #f2783b;\n}\n\n.lesa-ui-priority-critical,\n.lesa-ui-subpriority-high {\n  background-color: #bf1e2d;\n}\n\n.lesa-ui-subject-emojis-container {\n  display: flex;\n  flex-direction: row;\n  align-items: flex-end;\n}\n\n\n.lesa-ui-subject-emojis {\n  background-color: #f8f9f9;\n  margin-right: 0.5em;\n  font-size: 1rem;\n}\n\n.lesa-ui-subject-emojis a {\n  font-size: 1.5em;\n  font-weight: normal;\n  margin-left: 2px;\n  margin-right: 2px;\n}\n\n.rich_text .comment_input .lesa-ui-playbook-reminder,\ndiv[data-test-id=\"editor-view\"] .lesa-ui-playbook-reminder {\n  display: none;\n}\n\n.rich_text .comment_input.is-public .lesa-ui-playbook-reminder:not(:empty),\ndiv[data-test-id=\"editor-view\"] .lesa-ui-playbook-reminder:not(:empty) {\n  background-color: #eef2fa;\n  border: 1px solid #d8dcde;\n  border-radius: 0 3px 0 0 !important;\n  color: #2e5aac;\n  display: block;\n  margin-bottom: 1em;\n  padding: 10px;\n}\n\n.rich_text .comment_input.is-public .lesa-ui-playbook-reminder a,\ndiv[data-test-id=\"editor-view\"] .lesa-ui-playbook-reminder a {\n  text-decoration: underline;\n}\n\n#modals .modal-header,\n#attachments-modal .modal-header {\n  cursor: move;\n}\n\n.fNgWaW {\n  padding: 2px 0px;\n  height: 14px;\n  width: 1px;\n  background: rgb(194, 200, 204);\n  display: flex;\n  margin: 0px 8px;\n}\n\nbutton[data-test-id=\"omnilog-jump-button\"] {\n  display: none;\n}\n\n.tags span a {\n  color: rgb(73, 84, 92);\n  font-weight: normal;\n}\n\n.tags span.important-tag a {\n  color: rebeccapurple;\n  font-weight: 600;\n}\n\n.lesa-ui-group-rows-summary {\n  width: fit-content;\n}\n\ntd[data-test-id=\"ticket-table-cells-subject\"] .lesa-ui-tags {\n  display: flex;\n  flex-wrap: wrap;\n}\n\ntd[data-test-id=\"ticket-table-cells-subject\"] .lesa-ui-tags span {\n  background: rgb(233, 235, 237);\n  border-radius: 0.2em;\n  color: rgb(73, 84, 92);\n  font-size: x-small;\n  margin: 0.2em 0.2em;\n  padding-left: 0.3em;\n  padding-right: 0.3em;\n}\n\ntd[data-test-id=\"generic-table-cells-id\"] span.lesa-ui-tags {\n  background: rgb(233, 235, 237);\n  border-radius: 0.2em;\n  color: rgb(73, 84, 92);\n  font-size: x-small;\n  margin: 0.2em 0.2em;\n  padding-left: 0.3em;\n  padding-right: 0.3em;\n}\n\ndiv[data-cy-test-id=\"status-badge-state\"] {\n  width: 4em;\n}\n\ndiv[data-test-id=\"ticket_table_tooltip-header-ticket-info\"] > * > div[data-cy-test-id=\"status-badge-state\"],\ndiv[data-test-id=\"header-tab-tooltip\"] > * > * > div[data-cy-test-id=\"status-badge-state\"],\ndiv[data-cy-test-id=\"submit_button-menu\"] > * > * > div[data-cy-test-id=\"status-badge-state\"] {\n  width: auto;\n}\n";
-    styleElement.textContent += '[type="internal"] { transition: max-height 0.3s ease, padding 0.3s ease;  overflow: hidden;  max-height: 100%;}[type="internal"].collapsed {  max-height: 0 !important;  padding: 0 !important;  opacity: 0;  pointer-events: none;}'
+    styleElement.textContent = "\na.downloading {\n  color: #999;\n}\n\na.downloading::after {\n  content: ' (downloading...)';\n  color: #999;\n}\n\na.generating {\n  color: #999;\n}\n\na.generating::after {\n  content: ' (generating...)';\n  color: #999;\n}\n\narticle {\n  border-top: 1px solid #ebebeb;\n}\n\ndiv.lesa-ui-subtitle {\n  display: flex;\n  flex-direction: column;\n}\n\n.lesa-ui-attachments,\n.lesa-ui-knowledge-capture {\n  display: flex;\n  flex-direction: column;\n  margin-bottom: 0.5em;\n}\n\n#attachments-modal .lesa-ui-attachments,\n#description-modal .lesa-ui-description {\n  margin: 0.5em;\n}\n\n#description-modal .event {\n  border-top: 0px;\n}\n\n.lesa-ui-attachment-info {\n  display: grid;\n  grid-gap: 0em 1em;\n  grid-template-columns: 1em auto;\n  margin: 0.5em;\n}\n\n.lesa-ui-attachment-info input {\n  margin-left: 0.5em;\n}\n\n.lesa-ui-attachment-info .lesa-ui-attachment-extra-info {\n  grid-column: 1 / 2 span;\n  padding: 0.2em 0.5em;\n  text-align: right;\n  margin-bottom: 0.5em;\n}\n\n.lesa-ui-attachment-info .lesa-ui-attachment-extra-info:not(:first-child) {\n  margin-top: 1em;\n  border-top: 1px solid lightgray;\n  padding-top: 0.5em;\n}\n\n.lesa-ui-description .lesa-ui-attachment-info .lesa-ui-attachment-extra-info {\n  border-top: 1px solid #eee;\n}\n\n.lesa-ui-attachment-info a {\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n\n.lesa-ui-attachments-bulk-download {\n  margin-top: 0.5em;\n  text-align: right;\n  text-decoration: underline;\n}\n\n.lesa-ui-attachments-label,\n.lesa-ui-knowledge-capture-label {\n  font-weight: 600;\n  margin-right: 1em;\n  white-space: nowrap;\n}\n\n.lesa-ui-knowledge-capture-label:not(:first-child) {\n  margin-top: 1em;\n}\n\n.lesa-ui-knowledge-capture ul {\n  margin-left: 1em;\n}\n\n.lesa-ui-description {\n  font-weight: normal;\n}\n\n.lesa-ui-description > div {\n  margin-bottom: 2em;\n}\n\n.lesa-ui-description .zd-comment,\n.lesa-ui-description .lesa-ui-attachment-info {\n  max-height: 25em;\n  overflow-y: auto;\n}\n\n.lesa-ui-event-highlighted,\narticle.lesa-ui-event-highlighted {\n  background-color: #eee;\n  scroll-margin-top: 1em;\n}\n\n.lesa-ui-form-field {\n  display: flex;\n  flex-direction: column;\n  margin-bottom: 0.5em;\n}\n\n.lesa-ui-permalink {\n  margin-bottom: 1em;\n}\n\n.lesa-ui-orgnotes {\n  color: darkgreen;\n}\n\n.lesa-ui-permalink > input,\n.lesa-ui-form-field.lesa-ui-helpcenter > input {\n  background-color: transparent;\n  border: 0px;\n  font-size: 12px;\n  margin: 0px;\n  padding: 0px;\n  width: 100%;\n}\n\n.lesa-ui-stackedit-icon {\n  height: 16px;\n  width: 16px;\n  padding: 4px;\n}\n\n.mast .editable .lesa-ui-subject {\n  background-color: #fff;\n  font-size: 20px;\n  font-weight: 600;\n  resize: vertical;\n  text-align: left;\n  width: 100%;\n}\n\n.header.mast > .round-avatar {\n  display: none;\n}\n\n.lesa-ui-priority:not(:empty) {\n  margin-top: 6px;\n  margin-bottom: 8px;\n}\n\nspan[data-garden-container-id=\"containers.tooltip\"] {\n  display: inline-flex;\n  align-items: center;\n  column-gap: 4px;\n}\n\n.lesa-ui-heat-score,\n.lesa-ui-priority span {\n  color: #fff;\n  border-radius: 2px;\n  font-size: 10px;\n  font-weight: 600;\n  text-align: center;\n}\n\n.lesa-ui-priority span:not(.lesa-ui-offering) {\n  text-transform: uppercase;\n}\n\n.lesa-ui-heat-score {\n  padding: 0px 4px;\n  line-height: 1.6;\n}\n\n.lesa-ui-priority span {\n  line-height: 16px;\n  margin-right: 8px;\n  padding: 0.5em;\n  width: 6em;\n}\n\n.lesa-ui-priority a {\n  color: #fff;\n  text-decoration: none;\n}\n\n.lesa-ui-priority > *:last-child {\n  margin-right: 0;\n}\n\n.lesa-ui-priority .lesa-ui-subject-emojis a {\n  color: #000;\n}\n\n.lesa-ui-subpriority {\n  border: 1px #eee dashed;\n  font-size: 0.8em;\n}\n\n.lesa-ui-offering {\n  background-color: #222;\n}\n\n.lesa-ui-quickwin {\n  background-color: #037f52;\n}\n\ntr.quickwin {\n  background-color: #eef8f4;\n}\n\n.lesa-ui-priority-minor,\n.lesa-ui-subpriority-none,\n.lesa-ui-subpriority-low {\n  background-color: #0066cc;\n}\n\n.lesa-ui-priority-major,\n.lesa-ui-subpriority-medium {\n  background-color: #f2783b;\n}\n\n.lesa-ui-priority-critical,\n.lesa-ui-subpriority-high {\n  background-color: #bf1e2d;\n}\n\n.lesa-ui-subject-emojis-container {\n  display: flex;\n  flex-direction: row;\n  align-items: flex-end;\n}\n\n\n.lesa-ui-subject-emojis {\n  background-color: #f8f9f9;\n  margin-right: 0.5em;\n  font-size: 1rem;\n}\n\n.lesa-ui-subject-emojis a {\n  font-size: 1.5em;\n  font-weight: normal;\n  margin-left: 2px;\n  margin-right: 2px;\n}\n\n.rich_text .comment_input .lesa-ui-playbook-reminder,\ndiv[data-test-id=\"editor-view\"] .lesa-ui-playbook-reminder {\n  display: none;\n}\n\n.rich_text .comment_input.is-public .lesa-ui-playbook-reminder:not(:empty),\ndiv[data-test-id=\"editor-view\"] .lesa-ui-playbook-reminder:not(:empty) {\n  background-color: #eef2fa;\n  border: 1px solid #d8dcde;\n  border-radius: 0 3px 0 0 !important;\n  color: #2e5aac;\n  display: block;\n  margin-bottom: 1em;\n  padding: 10px;\n}\n\n.rich_text .comment_input.is-public .lesa-ui-playbook-reminder a,\ndiv[data-test-id=\"editor-view\"] .lesa-ui-playbook-reminder a {\n  text-decoration: underline;\n}\n\n#modals .modal-header,\n#attachments-modal .modal-header {\n  cursor: move;\n}\n\n.fNgWaW {\n  padding: 2px 0px;\n  height: 14px;\n  width: 1px;\n  background: rgb(194, 200, 204);\n  display: flex;\n  margin: 0px 8px;\n}\n\nbutton[data-test-id=\"omnilog-jump-button\"] {\n  display: none;\n}\n\n.tags span a {\n  color: rgb(73, 84, 92);\n  font-weight: normal;\n}\n\n.tags span.important-tag a {\n  color: rebeccapurple;\n  font-weight: 600;\n}\n\n.lesa-ui-group-rows-summary {\n  width: fit-content;\n}\n\ntd[data-test-id=\"ticket-table-cells-subject\"] .lesa-ui-tags {\n  display: flex;\n  flex-wrap: wrap;\n}\n\ntd[data-test-id=\"ticket-table-cells-subject\"] .lesa-ui-tags span {\n  background: rgb(233, 235, 237);\n  border-radius: 0.2em;\n  color: rgb(73, 84, 92);\n  font-size: x-small;\n  margin: 0.2em 0.2em;\n  padding-left: 0.3em;\n  padding-right: 0.3em;\n}\n\ntd[data-test-id=\"generic-table-cells-id\"] span.lesa-ui-tags {\n  background: rgb(233, 235, 237);\n  border-radius: 0.2em;\n  color: rgb(73, 84, 92);\n  font-size: x-small;\n  margin: 0.2em 0.2em;\n  padding-left: 0.3em;\n  padding-right: 0.3em;\n}\n\ndiv[data-cy-test-id=\"status-badge-state\"] {\n  width: 4em;\n}\n\ndiv[data-test-id=\"ticket_table_tooltip-header-ticket-info\"] > * > div[data-cy-test-id=\"status-badge-state\"],\ndiv[data-test-id=\"header-tab-tooltip\"] > * > * > div[data-cy-test-id=\"status-badge-state\"],\ndiv[data-cy-test-id=\"submit_button-menu\"] > * > * > div[data-cy-test-id=\"status-badge-state\"] {\n  width: auto;\n}\n\n[type=\"internal\"] {\n  transition: max-height 0.3s ease, padding 0.3s ease;\n  overflow: hidden;\n  max-height: 100%;\n}\n  \n[type=\"internal\"].collapsed {\n  max-height: 0 !important;\n  padding: 0 !important;\n  opacity: 0;\n  pointer-events: none;\n}\n";
 }
 var head = document.querySelector('head');
 head.appendChild(styleElement);
@@ -1242,65 +1241,6 @@ function addSortButton(conversation, header) {
     };
     buttons.prepend(button);
 }
-
-/**
- * Add collapse internal info
- */
-function addCollapseInternalInfo(header) {
-
-    var collapseInternalInfoElement = document.createElement('button');
-    collapseInternalInfoElement.setAttribute('data-test-id', 'collapse-internal-comments');
-    collapseInternalInfoElement.classList.add('lesa-ui-collapseInternalInfoElement');
-    collapseInternalInfoElement.classList.add('eUFUgT');
-    collapseInternalInfoElement.classList.add('iQoDao');
-    collapseInternalInfoElement.classList.add('lnpbol');
-
-      collapseInternalInfoElement.textContent = "";
-
-    var imgCollapse  = document.createElement('img');
-    imgCollapse.setAttribute('src', 'https://www.tiny.cloud/docs/tinymce/latest/_images/icons/flip-vertically.svg');
-    imgCollapse.setAttribute('alt', 'Collapse internal Info');
-
-    collapseInternalInfoElement.prepend(imgCollapse);
-
-
-    var buttons = header.children[1];
-    var isCollapsed = getCookieCustom('_lesa-ui-collapse-info') || GM_config.get('DISPLAY_INTERNAL_COMMENTS_COLLAPSED_ON_LIST');
-    var collapsedBool = (isCollapsed === true || isCollapsed === 'true');
-
-    const targets = document.querySelectorAll('[type="internal"]');
-    collapseInternalInfoElement.addEventListener("click", () => {
-        collapsedBool = !collapsedBool;
-        setCookieCustom('_lesa-ui-collapse-info',collapsedBool);
-        targets.forEach(el => {
-          el.classList.toggle('collapsed', collapsedBool);
-        });
-    });
-
-    targets.forEach(el => {
-        el.classList.toggle('collapsed', collapsedBool);
-    });
-
-    buttons.prepend(collapseInternalInfoElement);
-}
-
-function getCookieCustom(name) {
-  const cookieArr = document.cookie.split("; ");
-  for (let cookie of cookieArr) {
-    const [key, value] = cookie.split("=");
-    if (key === name) {
-      return decodeURIComponent(value);
-    }
-  }
-  return null;
-}
-function setCookieCustom(name, value) {
-  const years = 10;
-  const expires = new Date(Date.now() + years * 365 * 24 * 60 * 60 * 1000).toUTCString();
-  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/`;
-}
-
-
 /**
  * Replaces the input field for the 'subject' with something with line wrapping
  * so that we can see the entire subject (untruncated).
@@ -1432,6 +1372,53 @@ function isDummyComment(ticketInfo, comment) {
 function getCustomFieldValue(ticketInfo, fieldId) {
     var matchingFields = ticketInfo.custom_fields.filter(function (it) { return it.id == fieldId; });
     return matchingFields.length == 0 ? null : matchingFields[0].value;
+}
+/**
+ * Add collapse internal info
+ */
+function addCollapseInternalInfo(header) {
+    var collapseInternalInfoElement = document.createElement('button');
+    collapseInternalInfoElement.setAttribute('data-test-id', 'collapse-internal-comments');
+    collapseInternalInfoElement.classList.add('lesa-ui-collapseInternalInfoElement');
+    collapseInternalInfoElement.classList.add('eUFUgT');
+    collapseInternalInfoElement.classList.add('iQoDao');
+    collapseInternalInfoElement.classList.add('lnpbol');
+    collapseInternalInfoElement.textContent = "";
+    var imgCollapse = document.createElement('img');
+    imgCollapse.setAttribute('src', 'https://www.tiny.cloud/docs/tinymce/latest/_images/icons/flip-vertically.svg');
+    imgCollapse.setAttribute('alt', 'Collapse internal Info');
+    collapseInternalInfoElement.prepend(imgCollapse);
+    var buttons = header.children[1];
+    var isCollapsed = getCookieCustom('_lesa-ui-collapse-info') || GM_config.get('DISPLAY_INTERNAL_COMMENTS_COLLAPSED_ON_LIST');
+    var collapsedBool = (isCollapsed === true || isCollapsed === 'true');
+    var targets = document.querySelectorAll('[type="internal"]');
+    collapseInternalInfoElement.addEventListener("click", function () {
+        collapsedBool = !collapsedBool;
+        setCookieCustom('_lesa-ui-collapse-info', String(collapsedBool));
+        targets.forEach(function (el) {
+            el.classList.toggle('collapsed', collapsedBool);
+        });
+    });
+    targets.forEach(function (el) {
+        el.classList.toggle('collapsed', collapsedBool);
+    });
+    buttons.prepend(collapseInternalInfoElement);
+}
+function getCookieCustom(name) {
+    var cookieArr = document.cookie.split("; ");
+    for (var _i = 0, cookieArr_1 = cookieArr; _i < cookieArr_1.length; _i++) {
+        var cookie = cookieArr_1[_i];
+        var _a = cookie.split("="), key = _a[0], value = _a[1];
+        if (key === name) {
+            return decodeURIComponent(value);
+        }
+    }
+    return null;
+}
+function setCookieCustom(name, value) {
+    var years = 10;
+    var expires = new Date(Date.now() + years * 365 * 24 * 60 * 60 * 1000).toUTCString();
+    document.cookie = name + "=" + encodeURIComponent(value) + "; expires=" + expires + "; path=/";
 }
 /**
  * Add a ticket description and a complete list of attachments to the top of the page.
@@ -3159,60 +3146,82 @@ function isBadgeInPopup(badge) {
  * Close all tabs button
  */
 function closeAllTabs() {
-     const tablist = document.querySelector('[data-test-id="header-tablist"]');
-
-    const visibleCloseButtons = Array.from(document.querySelectorAll('[data-test-id="close-button"]'))
-    .filter(btn => {
-        const style = window.getComputedStyle(btn);
-        return style.display !== 'none' && style.visibility !== 'hidden' && btn.offsetParent !== null;
-    });
-
-    if (tablist && visibleCloseButtons.length > 0 && !document.querySelector('#close-all-tab-btn')) {
-        const newDiv = document.createElement('div');
-        newDiv.className = 'sc-19uji9v-0 dcLIks';
-
-        const button = document.createElement('button');
-        button.id = 'close-all-tab-btn';
-        button.type = 'button';
-        button.setAttribute('aria-haspopup', 'false');
-        button.setAttribute('aria-expanded', 'false');
-        button.setAttribute('data-test-id', 'close-all-tabs-button');
-        button.className = 'sc-1yqwijl-0 fSkeuV';
-
-        const innerDiv = document.createElement('div');
-        innerDiv.style.display = 'flex';
-        innerDiv.style.alignItems = 'center';
-        innerDiv.style.gap = '6px';
-
-        const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        icon.setAttribute('width', '12');
-        icon.setAttribute('height', '12');
-        icon.setAttribute('viewBox', '0 0 12 12');
-        icon.setAttribute('aria-hidden', 'true');
-        icon.setAttribute('focusable', 'false');
-        icon.classList.add('sc-y7z43x-0', 'gGJlIS');
-
-        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        path.setAttribute('stroke', 'currentColor');
-        path.setAttribute('stroke-linecap', 'round');
-        path.setAttribute('d', 'M3 9L9 3M9 9L3 3');
-        icon.appendChild(path);
-
-        const span = document.createElement('span');
-        span.className = 'sc-10vdpwu-0 hysyZs';
-        span.textContent = 'Close all';
-
-        innerDiv.appendChild(icon);
-        innerDiv.appendChild(span);
-        button.appendChild(innerDiv);
-        newDiv.appendChild(button);
-        tablist.appendChild(newDiv);
-
-         button.addEventListener('click', () => {
-            if (confirm("Are you sure you want to proceed?")) {
-                document.querySelectorAll('[data-test-id="close-button"]').forEach(btn => btn.click());
-                button.remove();
+    var tablist = document.querySelector('[data-test-id="header-tablist"]');
+    if (tablist) {
+        var updateCloseAllButton_1 = function () {
+            // Get all visible and non-collapsed close buttons
+            var visibleCloseButtons = Array.from(document.querySelectorAll('[data-test-id="close-button"]')).filter(function (btn) {
+                var tab = btn.closest('[data-test-id="header-tab"]');
+                return tab && tab.offsetParent !== null && !tab.classList.contains('collapsed');
+            });
+            var existingButton = document.querySelector('#close-all-tabs-btn');
+            // If no visible tabs and button exists → remove the button
+            if (visibleCloseButtons.length === 0) {
+                if (existingButton) {
+                    var existingButtonContainer = existingButton.closest('div');
+                    if (existingButtonContainer) {
+                        existingButtonContainer.remove();
+                    }
+                }
+                return;
             }
+            // If the button is already present → do nothing
+            if (existingButton)
+                return;
+            // Create the wrapper div
+            var wrapper = document.createElement('div');
+            wrapper.className = 'sc-19uji9v-0 dcLIks'; // same styling as native tab button container
+            // Create the button
+            var button = document.createElement('button');
+            button.id = 'close-all-tabs-btn';
+            button.type = 'button';
+            button.setAttribute('data-test-id', 'close-all-tabs-button');
+            button.className = 'sc-1yqwijl-0 fSkeuV';
+            // Inner structure (icon + label)
+            var content = document.createElement('div');
+            content.style.display = 'flex';
+            content.style.alignItems = 'center';
+            content.style.gap = '6px';
+            var icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            icon.setAttribute('width', '12');
+            icon.setAttribute('height', '12');
+            icon.setAttribute('viewBox', '0 0 12 12');
+            icon.setAttribute('aria-hidden', 'true');
+            icon.setAttribute('focusable', 'false');
+            icon.classList.add('sc-y7z43x-0', 'gGJlIS');
+            var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.setAttribute('stroke', 'currentColor');
+            path.setAttribute('stroke-linecap', 'round');
+            path.setAttribute('d', 'M3 9L9 3M9 9L3 3');
+            icon.appendChild(path);
+            var label = document.createElement('span');
+            label.className = 'sc-10vdpwu-0 hysyZs';
+            label.textContent = 'Close all';
+            content.appendChild(icon);
+            content.appendChild(label);
+            button.appendChild(content);
+            wrapper.appendChild(button);
+            tablist.appendChild(wrapper);
+            button.addEventListener('click', function () {
+                if (confirm('Are you sure you want to close all tabs?')) {
+                    var freshCloseButtons = Array.from(document.querySelectorAll('[data-test-id="close-button"]')).filter(function (btn) {
+                        var tab = btn.closest('[data-test-id="header-tab"]');
+                        return tab && tab.offsetParent !== null && !tab.classList.contains('collapsed');
+                    });
+                    freshCloseButtons.forEach(function (btn) { return btn.click(); });
+                    wrapper.remove();
+                }
+            });
+        };
+        // Run once initially
+        updateCloseAllButton_1();
+        // Observe tab list for changes
+        var observer = new MutationObserver(function () { return updateCloseAllButton_1(); });
+        observer.observe(tablist, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['class', 'style', 'aria-selected', 'aria-hidden']
         });
     }
 }
@@ -3264,7 +3273,7 @@ GM_config.init({
             label: 'Check this box if you want to display a green circle emoji instead of the eye icon',
             type: 'checkbox',
             "default": true
-        },    
+        },
         DISPLAY_INTERNAL_COMMENTS_COLLAPSED_ON_LIST: {
             label: 'Check this box if you want to collapse internal comments by default',
             type: 'checkbox',
@@ -3276,7 +3285,6 @@ GM_config.init({
             min: 100,
             "default": 1000
         }
-    
     },
     css: "\n#zendesk_for_tse_config #zendesk_for_tse_config_wrapper #zendesk_for_tse_config_header {\n  font-size: x-large;\n  font-weight: 600;\n  margin: 1em;\n}\n\n#zendesk_for_tse_config #zendesk_for_tse_config_wrapper .section_header_holder {\n  display: grid;\n  grid-template-columns: 5em auto;\n  grid-gap: 0.5em;\n}\n\n#zendesk_for_tse_config #zendesk_for_tse_config_wrapper .section_header_holder .config_var {\n  display: contents;\n}\n\n#zendesk_for_tse_config #zendesk_for_tse_config_wrapper .section_header_holder .config_var label {\n  justify-self: start;\n  font-size: large;\n  font-weight: normal;\n}\n\n#zendesk_for_tse_config #zendesk_for_tse_config_wrapper .section_header_holder .config_var input {\n  font-size: medium;\n  text-align: end;\n  max-width: 4em;\n  align-self: start;\n  justify-self: end;\n}\n",
     events: {
