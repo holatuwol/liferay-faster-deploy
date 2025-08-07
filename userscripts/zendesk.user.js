@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           ZenDesk for TSEs
 // @namespace      holatuwol
-// @version        24.5
+// @version        24.6
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/zendesk.user.js
 // @supportURL     https://github.com/holatuwol/liferay-zendesk-userscript/issues/new
@@ -3187,12 +3187,7 @@ function closeAllTabs() {
     tablist.appendChild(wrapper);
     button.addEventListener('click', function () {
         if (confirm('Are you sure you want to close all tabs?')) {
-            var freshCloseButtons = Array.from(document.querySelectorAll('[data-test-id="close-button"]')).filter(function (btn) {
-                var tab = btn.closest('[data-test-id="header-tab"]');
-                return tab && tab.offsetParent !== null && !tab.classList.contains('collapsed');
-            });
-            freshCloseButtons.forEach(function (btn) { return btn.click(); });
-            wrapper.remove();
+            tablist.querySelectorAll('[data-test-id="close-button"]:not(.collapsed)').forEach(function (btn) { return btn.click(); });
         }
     });
     var updateVisibleTabCount = function () {
