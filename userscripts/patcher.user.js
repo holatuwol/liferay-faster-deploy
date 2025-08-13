@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        9.6
+// @version        9.7
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -1097,7 +1097,7 @@ function highlightAnalysisNeededBuilds() {
 }
 function getMissingTicketList(lsvTickets) {
     var fixPack = getFixPack();
-    if (!fixPack) {
+    if (!fixPack || fixPack.name.indexOf('marketplace-') == 0) {
         return [[], [], [], []];
     }
     var tagName = ((fixPack.name.indexOf('portal-') == 0) || (fixPack.name.indexOf('fix-pack-base-6210') == 0)) ? fixPack.name : fixPack.tag;
