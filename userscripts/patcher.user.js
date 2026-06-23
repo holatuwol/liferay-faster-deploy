@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        9.7
+// @version        9.9
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -14,7 +14,168 @@
  * https://github.com/holatuwol/liferay-patcher-userscript
  */ 
 var styleElement = document.createElement('style');
-styleElement.textContent = "\na.included-in-baseline,\na.included-in-baseline:hover {\n  color: #ddd;\n  text-decoration: line-through;\n}\n\n.nowrap {\n  white-space: nowrap;\n}\n\n#_1_WAR_osbpatcherportlet_patcherProductVersionId,\n#_1_WAR_osbpatcherportlet_patcherProjectVersionId {\n  width: auto;\n}\n\n#_1_WAR_osbpatcherportlet_patcherProductVersionId option {\n  display: none;\n}\n\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"6.x\"] option[data-liferay-version=\"6.x\"],\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"7.0\"] option[data-liferay-version=\"7.0\"],\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"7.1\"] option[data-liferay-version=\"7.1\"],\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"7.2\"] option[data-liferay-version=\"7.2\"],\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"7.3\"] option[data-liferay-version=\"7.3\"],\n#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version=\"7.4\"] option[data-liferay-version=\"7.4\"] {\n  display: block;\n}\n\ntextarea[inputcssclass=\"osb-patcher-input-wide\"] {\n  height: 3em;\n  width: 60em;\n}\n\np[inputcssclass=\"osb-patcher-input-wide\"] {\n  display: inline-block;\n  padding: 4px 6px;\n  margin-right: 5px;\n  width: 60em;\n}\n\n#_1_WAR_osbpatcherportlet_patcherBuildName {\n  height: 5em;\n}\n\n.control-group.field-wrapper .table,\n.control-group.input-select-wrapper .table,\n.control-group.input-String-wrapper .table,\n.control-group.input-text-wrapper .table {\n  margin-bottom: 0.5em;\n}\n\n#security-fixes .show-details,\n#ticket-suggestions .show-details {\n  background-color: #fff;\n  font-size: x-small;\n  line-height: 0.5em;\n  text-align: right;\n}\n\n.compact .verbose,\n.verbose .compact {\n  display: none !important;\n}\n\nth.branch-type,\nth.branch-type a {\n  font-weight: bold;\n  width: 5em;\n}\n\n.control-group.field-wrapper,\n.control-group.input-select-wrapper,\n.control-group.input-String-wrapper,\n.control-group.input-text-wrapper {\n  display: flex;\n  margin-bottom: 0.1em;\n}\n\n.control-group .control-group.field-wrapper,\n.control-group .control-group.input-select-wrapper,\n.control-group .control-group.input-String-wrapper,\n.control-group .control-group.input-text-wrapper,\n.popover .control-group.field-wrapper,\n.popover .control-group.input-select-wrapper,\n.popover .control-group.input-String-wrapper,\n.popover .control-group.input-text-wrapper {\n  display: block;\n}\n\n#toggle_id_patcher_fix_searchadvancedBodyNode .control-group.field-wrapper,\n#toggle_id_patcher_fix_searchadvancedBodyNode .control-group.input-select-wrapper,\n#toggle_id_patcher_fix_searchadvancedBodyNode .control-group.input-String-wrapper,\n#toggle_id_patcher_fix_searchadvancedBodyNode .control-group.input-text-wrapper {\n  display: block;\n}\n\na[href*=\"https://grow.liferay.com/\"] {\n  padding-left: 0.5em;\n}\n\na[href*=\"https://test-5-2.liferay.com/\"] {\n  padding-right: 0.5em;\n}\n\na[href*=\"http://files.liferay.com/\"],\na[href*=\"https://files.liferay.com/\"] {\n  font-size: x-large;\n}\n\n.control-group.field-wrapper .control-label,\n.control-group.input-select-wrapper .control-label,\n.control-group.input-String-wrapper .control-label,\n.control-group.input-text-wrapper .control-label {\n  font-weight: bold;\n  min-width: 20em;\n  width: 20em;\n}\n\n#security-fixes dl {\n  margin-block-start: 0em;\n  margin-block-end: 0em;\n  margin-bottom: 0px;\n}\n\n/**\n * http://vrl.cs.brown.edu/color\n * 4 colors, lightness between 25 and 85, add alpha of 0.3\n */\n\ntr.qa-analysis-needed.version-6210 td {\n  background-color: rgba(79,140,157,0.3) !important;\n}\n\ntr.qa-analysis-needed.version-7010 td {\n  background-color: rgba(75,214,253,0.3) !important;\n}\n\ntr.qa-analysis-needed.version-7110 td {\n  background-color: rgba(101,52,102,0.3) !important;\n}\n\ntr.qa-analysis-needed.version-7210 td {\n  background-color: rgba(131,236,102,0.3) !important;\n}\n\ntr.qa-analysis-unneeded {\n  opacity: 0.3;\n}\n\n.shortened-content {\n  margin: 0.5em !important;\n}\n\n.shortened-content .fix-item::before {\n  content: ', ';\n}\n\n.shortened-content .fix-item a {\n  white-space: nowrap;\n}\n";
+styleElement.textContent = `
+a.included-in-baseline,
+a.included-in-baseline:hover {
+  color: #ddd;
+  text-decoration: line-through;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+#_1_WAR_osbpatcherportlet_patcherProductVersionId,
+#_1_WAR_osbpatcherportlet_patcherProjectVersionId {
+  width: auto;
+}
+
+#_1_WAR_osbpatcherportlet_patcherProductVersionId option {
+  display: none;
+}
+
+#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version="6.x"] option[data-liferay-version="6.x"],
+#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version="7.0"] option[data-liferay-version="7.0"],
+#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version="7.1"] option[data-liferay-version="7.1"],
+#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version="7.2"] option[data-liferay-version="7.2"],
+#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version="7.3"] option[data-liferay-version="7.3"],
+#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version="7.4"] option[data-liferay-version="7.4"] {
+  display: block;
+}
+
+textarea[inputcssclass="osb-patcher-input-wide"] {
+  height: 3em;
+  width: 60em;
+}
+
+p[inputcssclass="osb-patcher-input-wide"] {
+  display: inline-block;
+  padding: 4px 6px;
+  margin-right: 5px;
+  width: 60em;
+}
+
+#_1_WAR_osbpatcherportlet_patcherBuildName {
+  height: 5em;
+}
+
+.control-group.field-wrapper .table,
+.control-group.input-select-wrapper .table,
+.control-group.input-String-wrapper .table,
+.control-group.input-text-wrapper .table {
+  margin-bottom: 0.5em;
+}
+
+#security-fixes .show-details,
+#ticket-suggestions .show-details {
+  background-color: #fff;
+  font-size: x-small;
+  line-height: 0.5em;
+  text-align: right;
+}
+
+.compact .verbose,
+.verbose .compact {
+  display: none !important;
+}
+
+th.branch-type,
+th.branch-type a {
+  font-weight: bold;
+  width: 5em;
+}
+
+.control-group.field-wrapper,
+.control-group.input-select-wrapper,
+.control-group.input-String-wrapper,
+.control-group.input-text-wrapper {
+  display: flex;
+  margin-bottom: 0.1em;
+}
+
+.control-group .control-group.field-wrapper,
+.control-group .control-group.input-select-wrapper,
+.control-group .control-group.input-String-wrapper,
+.control-group .control-group.input-text-wrapper,
+.popover .control-group.field-wrapper,
+.popover .control-group.input-select-wrapper,
+.popover .control-group.input-String-wrapper,
+.popover .control-group.input-text-wrapper {
+  display: block;
+}
+
+#toggle_id_patcher_fix_searchadvancedBodyNode .control-group.field-wrapper,
+#toggle_id_patcher_fix_searchadvancedBodyNode .control-group.input-select-wrapper,
+#toggle_id_patcher_fix_searchadvancedBodyNode .control-group.input-String-wrapper,
+#toggle_id_patcher_fix_searchadvancedBodyNode .control-group.input-text-wrapper {
+  display: block;
+}
+
+a[href*="https://grow.liferay.com/"] {
+  padding-left: 0.5em;
+}
+
+a[href*="https://test-5-2.liferay.com/"] {
+  padding-right: 0.5em;
+}
+
+a[href*="http://files.liferay.com/"],
+a[href*="https://files.liferay.com/"] {
+  font-size: x-large;
+}
+
+.control-group.field-wrapper .control-label,
+.control-group.input-select-wrapper .control-label,
+.control-group.input-String-wrapper .control-label,
+.control-group.input-text-wrapper .control-label {
+  font-weight: bold;
+  min-width: 20em;
+  width: 20em;
+}
+
+#security-fixes dl {
+  margin-block-start: 0em;
+  margin-block-end: 0em;
+  margin-bottom: 0px;
+}
+
+/**
+ * http://vrl.cs.brown.edu/color
+ * 4 colors, lightness between 25 and 85, add alpha of 0.3
+ */
+
+tr.qa-analysis-needed.version-6210 td {
+  background-color: rgba(79,140,157,0.3) !important;
+}
+
+tr.qa-analysis-needed.version-7010 td {
+  background-color: rgba(75,214,253,0.3) !important;
+}
+
+tr.qa-analysis-needed.version-7110 td {
+  background-color: rgba(101,52,102,0.3) !important;
+}
+
+tr.qa-analysis-needed.version-7210 td {
+  background-color: rgba(131,236,102,0.3) !important;
+}
+
+tr.qa-analysis-unneeded {
+  opacity: 0.3;
+}
+
+.shortened-content {
+  margin: 0.5em !important;
+}
+
+.shortened-content .fix-item::before {
+  content: ', ';
+}
+
+.shortened-content .fix-item a {
+  white-space: nowrap;
+}
+`;
 document.head.appendChild(styleElement);
 var AUI = unsafeWindow.AUI;
 var Liferay = unsafeWindow.Liferay;
@@ -22,11 +183,43 @@ var _1_WAR_osbpatcherportlet_productVersionOnChange = unsafeWindow._1_WAR_osbpat
 var portletId = '1_WAR_osbpatcherportlet';
 var ns = '_' + portletId + '_';
 /**
+ * Standard implementation of debounce.
+ */
+function debounce(func, delay) {
+    let timeoutId;
+    return function (...args) {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(function () {
+            func.apply(this, args);
+        }, delay);
+    };
+}
+/**
+ * Utility function to wait for the given parent to have the given selector available.
+ */
+async function waitForElement(selector) {
+    return new Promise(function (resolve) {
+        var observerCallback = debounce(function () {
+            const result = selector.indexOf(ns) != -1 ? document.querySelector(selector) : querySelector(selector);
+            if (result) {
+                observer.disconnect();
+                resolve(result);
+            }
+        }, 500);
+        const observer = new MutationObserver(observerCallback);
+        observerCallback([], observer);
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true,
+        });
+    });
+}
+/**
  * Utility function to convert an object into a query string with namespaced
  * parameter names.
  */
 function getQueryString(params) {
-    return Object.keys(params).map(function (key) { return (key.indexOf('p_p_') == 0 ? key : (ns + key)) + '=' + params[key]; }).join('&');
+    return Object.keys(params).map(key => (key.indexOf('p_p_') == 0 ? key : (ns + key)) + '=' + params[key]).join('&');
 }
 /**
  * Shorthand for fetching an element with a namespaced ID.
@@ -144,7 +337,7 @@ function compareTicket(a, b) {
  * Converts the provided list of tickets into a nice HTML version.
  */
 function getTicketLinks(text, className) {
-    return text.split(',').map(function (x) { return x.trim(); }).sort(compareTicket).map(getTicketLink.bind(null, className)).join(', ');
+    return text.split(',').map(x => x.trim()).sort(compareTicket).map(getTicketLink.bind(null, className)).join(', ');
 }
 /**
  * Replaces any links that would have opened in a modal dialog / popup
@@ -266,7 +459,7 @@ function get62FixPack(versionId) {
     }
     var baseTag = '';
     var value = oldNode ? oldNode.value : '';
-    var fixPackName = value.split(',').filter(function (x) { return x.indexOf('portal-') == 0; })[0];
+    var fixPackName = value.split(',').filter(x => x.indexOf('portal-') == 0)[0];
     if (fixPackName) {
         var xhr1 = new XMLHttpRequest();
         xhr1.open('GET', fixPackListURL, false);
@@ -275,8 +468,8 @@ function get62FixPack(versionId) {
             var container1 = document.implementation.createHTMLDocument().documentElement;
             container1.innerHTML = xhr1.responseText;
             var fixPackURL = Array.from(container1.querySelectorAll('table tbody tr td a'))
-                .filter(function (x) { return (x.textContent || '').trim() == fixPackName; })
-                .map(function (x) { return x.getAttribute('href'); })[0];
+                .filter(x => (x.textContent || '').trim() == fixPackName)
+                .map(x => x.getAttribute('href'))[0];
             var xhr2 = new XMLHttpRequest();
             xhr2.open('GET', fixPackURL, false);
             xhr2.onload = function () {
@@ -660,7 +853,7 @@ function processBuildFixes(xhr) {
     // https://stackoverflow.com/questions/20583396/queryselectorall-to-html-from-another-page
     var container = document.implementation.createHTMLDocument().documentElement;
     container.innerHTML = xhr.responseText;
-    var prefixFixRows = Array.from(container.querySelectorAll('table tbody tr')).filter(function (row) { return !row.classList.contains('lfr-template'); });
+    var prefixFixRows = Array.from(container.querySelectorAll('table tbody tr')).filter(row => !row.classList.contains('lfr-template'));
     var previousFixes = prefixFixRows.reduce(getBuildFix, new Map());
     var headerRow = document.querySelector('table thead tr');
     var headerCell = document.createElement('th');
@@ -668,13 +861,13 @@ function processBuildFixes(xhr) {
     headerRow.cells[3].innerText = 'Current';
     headerRow.cells[3].after(headerCell);
     var tbody = document.querySelector('table tbody');
-    var currentFixRows = Array.from(tbody.querySelectorAll('tr')).filter(function (row) { return !row.classList.contains('lfr-template'); });
+    var currentFixRows = Array.from(tbody.querySelectorAll('tr')).filter(row => !row.classList.contains('lfr-template'));
     for (var i = 0; i < currentFixRows.length; i++) {
         var row = currentFixRows[i];
         var fixName = row.cells[2].innerText.trim();
         var currentFixVersion = row.cells[3].innerText.trim();
         var previousFixVersion = previousFixes.get(fixName) || '';
-        previousFixes["delete"](fixName);
+        previousFixes.delete(fixName);
         var dataCell = document.createElement('td');
         dataCell.innerText = previousFixVersion;
         row.cells[3].after(dataCell);
@@ -803,7 +996,7 @@ function getBuildMetadata(row) {
         buildLink: buildLink,
         branchName: branchName,
         branchType: branchType,
-        fixes: fixesText.split(',').map(function (x) { return x.trim(); }).sort(compareTicket),
+        fixes: fixesText.split(',').map(x => x.trim()).sort(compareTicket),
         fixesHTML: getTicketLinks(fixesText, ''),
         patcherFixId: null
     };
@@ -815,9 +1008,9 @@ function processChildBuilds(xhr, oldFixesNode) {
     // https://stackoverflow.com/questions/20583396/queryselectorall-to-html-from-another-page
     var container = document.implementation.createHTMLDocument().documentElement;
     container.innerHTML = xhr.responseText;
-    var rows = Array.from(container.querySelectorAll('table tbody tr')).filter(function (row) { return !row.classList.contains('lfr-template'); });
+    var rows = Array.from(container.querySelectorAll('table tbody tr')).filter(row => !row.classList.contains('lfr-template'));
     var childBuildsMetadata = rows.map(getBuildMetadata);
-    var childBuildFixesHTML = childBuildsMetadata.map(function (build) { return '<tr><th class="branch-type">' + getBuildLinkHTML(build) + '</th><td>' + build.fixesHTML + '</td><td></td></tr>'; });
+    var childBuildFixesHTML = childBuildsMetadata.map(build => '<tr><th class="branch-type">' + getBuildLinkHTML(build) + '</th><td>' + build.fixesHTML + '</td><td></td></tr>');
     replaceNode(oldFixesNode, '<table class="table table-bordered table-hover"><tbody class="table-data">' + childBuildFixesHTML.join('') + '</tbody></table>');
     replaceGitHashes(childBuildsMetadata);
 }
@@ -829,8 +1022,8 @@ function replaceBuild() {
     if (!buildNode || !buildNode.readOnly) {
         return;
     }
-    var fixes = new Set(buildNode.innerHTML.split(',').map(function (x) { return x.trim(); }));
-    var childBuildsButton = Array.from(document.querySelectorAll('button')).filter(function (x) { return (x.textContent || '').trim() == 'View Child Builds'; });
+    var fixes = new Set(buildNode.innerHTML.split(',').map(x => x.trim()));
+    var childBuildsButton = Array.from(document.querySelectorAll('button')).filter(x => (x.textContent || '').trim() == 'View Child Builds');
     var buildId = document.location.pathname.substring(document.location.pathname.lastIndexOf('/') + 1);
     var buildLink = 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/' + buildId;
     var projectVersionSelect = querySelector('patcherProjectVersionId');
@@ -842,7 +1035,7 @@ function replaceBuild() {
         buildLink: buildLink,
         branchName: branchName,
         branchType: branchType,
-        fixes: fixesText.split(',').map(function (x) { return x.trim(); }).sort(compareTicket),
+        fixes: fixesText.split(',').map(x => x.trim()).sort(compareTicket),
         fixesHTML: getTicketLinks(fixesText, ''),
         patcherFixId: null
     };
@@ -866,7 +1059,7 @@ function replaceBuild() {
     }
     var originalBuildNode = querySelector('patcherBuildOriginalName');
     if (originalBuildNode) {
-        var excludedFixes = originalBuildNode.innerHTML.split(',').map(function (x) { return x.trim(); }).filter(function (x) { return !fixes.has(x); });
+        var excludedFixes = originalBuildNode.innerHTML.split(',').map(x => x.trim()).filter(x => !fixes.has(x));
         var excludedHTML = excludedFixes.sort(compareTicket).map(getTicketLink.bind(null, 'included-in-baseline')).join(', ');
         var excludedFixesHTML = '<tr><th class="branch-type">excluded</th><td>' + excludedHTML + '</td></tr>';
         replaceNode(originalBuildNode, '<table class="table table-bordered table-hover"><tbody class="table-data">' + childBuildFixesHTML + excludedFixesHTML + fixedInLaterVersionsHTML + '</tbody></table>');
@@ -1021,19 +1214,19 @@ function replaceLesaLink(target) {
             ticketId = oldNode.value;
         }
         if (jiraSearchLinkHREF == null) {
-            var query = "\"Customer Ticket Permalink\" = \"" + ticketHREF + "\" OR \"Zendesk Ticket IDs\" ~ " + ticketId + " OR \"Customer Ticket\" = \"" + ticketId + "\" OR \"Customer Ticket\" = \"" + ticketHREF + "\"";
+            var query = `"Customer Ticket Permalink" = "${ticketHREF}" OR "Zendesk Ticket IDs" ~ ${ticketId} OR "Customer Ticket" = "${ticketId}" OR "Customer Ticket" = "${ticketHREF}"`;
             var encodedQuery = encodeURIComponent(query);
             jiraSearchLinkHREF = 'https://liferay.atlassian.net/issues/?jql=' + encodedQuery;
         }
         var newNode;
         if (ticketHREF == jiraSearchLinkHREF) {
-            newNode = ticketId + " | <a href=\"" + jiraSearchLinkHREF + "\" target=\"_blank\">JIRA ticket</a>";
+            newNode = `${ticketId} | <a href="${jiraSearchLinkHREF}" target="_blank">JIRA ticket</a>`;
         }
         else if (ticketHREF.indexOf('https://web.liferay.com/') == 0) {
-            newNode = ticketId + " | <a href=\"" + ticketHREF + "\" target=\"_blank\">LESA ticket</a> | <a href=\"" + jiraSearchLinkHREF + "\" target=\"_blank\">JIRA tickets</a>";
+            newNode = `${ticketId} | <a href="${ticketHREF}" target="_blank">LESA ticket</a> | <a href="${jiraSearchLinkHREF}" target="_blank">JIRA tickets</a>`;
         }
         else {
-            newNode = ticketId + " | <a href=\"" + ticketHREF + "\" target=\"_blank\">zendesk ticket</a> | <a href=\"" + jiraSearchLinkHREF + "\" target=\"_blank\">JIRA tickets</a>";
+            newNode = `${ticketId} | <a href="${ticketHREF}" target="_blank">zendesk ticket</a> | <a href="${jiraSearchLinkHREF}" target="_blank">JIRA tickets</a>`;
         }
         replaceNode(oldNode, newNode);
     }
@@ -1112,7 +1305,7 @@ function getMissingTicketList(lsvTickets) {
     else {
         buildName = buildNameNode.value.split(',');
     }
-    var ticketList = new Set(buildName.map(function (x) { return x.trim(); }));
+    var ticketList = new Set(buildName.map(x => x.trim()));
     var missingTicketList = [[], [], [], [], []];
     var fixPackNumber = 0;
     if (buildNumber == '6210') {
@@ -1141,7 +1334,7 @@ function getMissingTicketTableRow(lsvTickets, missingTickets, severity) {
     }
     if ((severity == 1) || (severity == 2)) {
         lsvList.push('<span class="compact">');
-        lsvList.push(missingTickets.map(function (x) { return getTicketLink('', x, x); }).join(', '));
+        lsvList.push(missingTickets.map(x => getTicketLink('', x, x)).join(', '));
         lsvList.push('</span>');
         lsvList.push('<div class="verbose" contenteditable onfocus="', 'var selection = window.getSelection();', 'var range = document.createRange();', 'range.selectNodeContents(this);', 'selection.removeAllRanges();', 'selection.addRange(range);', '"><dl>');
         missingTickets
@@ -1170,7 +1363,7 @@ function getMissingTicketTableRow(lsvTickets, missingTickets, severity) {
         lsvList.push('</dl></div>');
     }
     else {
-        lsvList.push('<span class="compact">', '' + missingTickets.length, missingTickets.length == 1 ? ' ticket' : ' tickets', '</span><span class="verbose">', missingTickets.length == 0 ? 'none' : missingTickets.map(function (x) { return getTicketLink('', x, x); }).join(', '), '</span>');
+        lsvList.push('<span class="compact">', '' + missingTickets.length, missingTickets.length == 1 ? ' ticket' : ' tickets', '</span><span class="verbose">', missingTickets.length == 0 ? 'none' : missingTickets.map(x => getTicketLink('', x, x)).join(', '), '</span>');
     }
     lsvList.push('</td></tr>');
     return lsvList.join('');
@@ -1266,7 +1459,7 @@ function addEngineerComments() {
 var pastTicketsCache = {};
 function getHotfixShortNames(hotfixes) {
     debugger;
-    return hotfixes.map(function (it) {
+    return hotfixes.map(it => {
         return (it.indexOf('.q') != -1) ?
             it.substring(it.indexOf('-hotfix') + 1, it.length - 4) :
             it.indexOf('build-') == 0 ? it : it.substring(it.indexOf('-') + 1, it.lastIndexOf('-'));
@@ -1291,8 +1484,8 @@ function checkFixesFromPreviousBuilds(accountNode, buildNameNode, projectNode, p
     var pastTickets = pastTicketsCache[accountBuildsURL] || {};
     var currentTickets = new Set((buildNameNode.value || '').split(/\s*,\s*/g));
     var missingTickets = Array.from(Object.keys(pastTickets)).
-        filter(function (it) { return !currentTickets.has(it); }).
-        sort(function (a, b) {
+        filter(it => !currentTickets.has(it)).
+        sort((a, b) => {
         var splitA = a.split('-');
         var splitB = b.split('-');
         return splitA[0] != splitB[0] ? splitA[0] > splitB[0] ? 1 : -1 :
@@ -1307,7 +1500,7 @@ function checkFixesFromPreviousBuilds(accountNode, buildNameNode, projectNode, p
     buildsListParagraph.appendChild(buildsListLink);
     previousBuildsInput.appendChild(buildsListParagraph);
     if (missingTickets.length > 0) {
-        var ticketsListParagraph = missingTickets.reduce(function (acc, next, i) {
+        var ticketsListParagraph = missingTickets.reduce((acc, next, i) => {
             if (i > 0) {
                 acc.appendChild(document.createTextNode(', '));
             }
@@ -1363,7 +1556,7 @@ function updateFixesFromPreviousBuilds(accountNode, buildNameNode, projectNode, 
         var container = document.implementation.createHTMLDocument().documentElement;
         container.innerHTML = xhr.responseText;
         pastTicketsCache[accountBuildsURL] = Array.from(container.querySelectorAll('td > a[title]')).
-            reduce(function (acc, next) {
+            reduce((acc, next) => {
             var row = next.closest('tr');
             if ((row.cells[2].textContent || '').trim().toLowerCase() == 'ignore') {
                 return acc;
@@ -1440,33 +1633,30 @@ function getFixesFromPreviousBuilds() {
     }
     return previousBuildsContainer;
 }
-function updatePreviousBuildsContent() {
+async function updatePreviousBuildsContent() {
     if (document.location.pathname.indexOf('/accounts/view') == -1) {
         return;
     }
-    var buildsContainer = querySelector('patcherBuildsSearchContainer');
-    if (!buildsContainer) {
-        return;
-    }
+    var buildsContainer = await waitForElement('patcherBuildsSearchContainer');
     var contentRows = Array.from(buildsContainer.querySelectorAll('tbody tr'));
-    var contentCells = contentRows.map(function (element) { return element.cells[6]; });
-    var fixes = contentCells.map(function (element) {
+    var contentCells = contentRows.map((element) => element.cells[6]);
+    var fixes = contentCells.map((element) => {
         var fixesLink = element.querySelector('a');
         var fixesList = fixesLink ? fixesLink.getAttribute('title') || '' : '';
         return new Set(fixesList.split(/\s*,\s*/gi));
     });
-    var parentIndices = fixes.map(function (element, index, array) {
+    var parentIndices = fixes.map((element, index, array) => {
         for (var i = index + 1; i < array.length; i++) {
             if (contentRows[index].cells[5].textContent != contentRows[i].cells[5].textContent) {
                 continue;
             }
-            if (Array.from(array[i]).filter(function (it) { return !element.has(it); }).length == 0) {
+            if (Array.from(array[i]).filter(it => !element.has(it)).length == 0) {
                 return i;
             }
         }
         return -1;
     });
-    contentCells.forEach(function (element, index) {
+    contentCells.forEach((element, index) => {
         var parent = parentIndices[index];
         if (parent == -1) {
             return;
@@ -1475,7 +1665,7 @@ function updatePreviousBuildsContent() {
         shortContentElement.classList.add('shortened-content');
         shortContentElement.appendChild(document.createTextNode((contentRows[parent].cells[12].textContent || '').trim() ||
             (contentRows[parent].cells[7].textContent || '').toLowerCase() + ' build ' + (contentRows[parent].cells[1].textContent || '').trim()));
-        Array.from(fixes[index]).filter(function (it) { return !fixes[parent].has(it); }).forEach(function (it) {
+        Array.from(fixes[index]).filter(it => !fixes[parent].has(it)).forEach(it => {
             var fixSpan = document.createElement('span');
             fixSpan.classList.add('fix-item');
             var fixLink = document.createElement('a');
