@@ -1,12 +1,14 @@
 #!/bin/bash
 
+SCRIPT_FOLDER=$(dirname $0)
+source ${SCRIPT_FOLDER}/../bin/activate
+
 if [ "" == "${AWS_PROFILE}" ]; then
-	AWS_PROFILE=default
+	AWS_PROFILE='default'
 fi
 
 if [ "" == "${S3_BUCKET}" ]; then
-	echo S3_BUCKET environment variable not set
-	exit 1
+	S3_BUCKET='mdang.grow'
 fi
 
 aws s3 --profile ${AWS_PROFILE} ls s3://${S3_BUCKET}/releases/ | awk '{ print $4 "\t" $3 }' | sort > 1.txt

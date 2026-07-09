@@ -1,15 +1,14 @@
 #!/bin/bash
 
 SCRIPT_FOLDER=$(dirname $0)
-
-. ${SCRIPT_FOLDER}/packageinfo
+source ${SCRIPT_FOLDER}/packageinfo
 
 if [ "" == "${PACKAGEINFO_ROOT}" ]; then
 	PACKAGEINFO_ROOT="${HOME}/dev/packageinfo"
 fi
 
 if [ "" == "${PORTAL_SOURCE_ROOT}" ]; then
-	PORTAL_SOURCE_ROOT="${HOME}/dev/liferay/master"
+	PORTAL_SOURCE_ROOT="${HOME}/dev/projects/liferay-portal"
 fi
 
 s3upload() {
@@ -74,6 +73,7 @@ generate_json() {
 	echo 'Generating JSON files...'
 
 	echo "${AVAILABLE_VERSIONS}" | awk '{ print "'${PACKAGEINFO_ROOT}'/" $1 ".x" }' | xargs python ${SCRIPT_FOLDER}/packageinfojson.py
+
 	echo "${AVAILABLE_VERSIONS}" | awk '{ print "'${PACKAGEINFO_ROOT}'/" $1 ".x" }' | xargs python ${SCRIPT_FOLDER}/requireschemajson.py
 
 	PORTAL_SOURCE_ROOT=${PORTAL_SOURCE_ROOT} ${SCRIPT_FOLDER}/jsversions > dxpjslibrary.json
@@ -85,7 +85,7 @@ upload_json() {
 		return
 	fi
 
-	for file in dxppackages dxpmodules dxpschemas dxpjslibrary mpmodules; do
+	for file in dxppackages dxpmodules dxpschemas dxpjslibrary; do
 		s3upload ${file}.json
 
 		pushd $(dirname ${BASH_SOURCE[0]}) > /dev/null
@@ -118,7 +118,10 @@ if [ "update" == "${1}" ]; then
 		generate_json
 		upload_json
 	else
-		update_one ${2}
+		for version in ${@:2}; do
+			update_one ${version}
+		done
+
 		generate_json
 		upload_json
 	fi

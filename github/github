@@ -1,5 +1,8 @@
 #!/bin/bash
 
+SCRIPT_FOLDER=$(dirname $0)
+source ${SCRIPT_FOLDER}/../bin/activate
+
 github() {
 	python "$(dirname "${BASH_SOURCE[0]}")/github.py" $@
 }

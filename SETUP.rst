@@ -25,7 +25,6 @@ These scripts make use of the following Python libraries:
 * ``beautifulsoup4``: https://www.crummy.com/software/BeautifulSoup/
 * ``dateparser``: https://dateparser.readthedocs.io/en/stable/
 * ``humanize``: https://github.com/jmoiron/humanize
-* ``jupyter``: http://jupyter.org/
 * ``pandas``: http://pandas.pydata.org/
 * ``requests``: http://docs.python-requests.org/en/master/
 * ``semver``: https://pypi.python.org/pypi/semver
@@ -36,5 +35,7 @@ You can install all of these packages using the following commands:
 
 .. code-block:: bash
 
-	conda install -y beautifulsoup4 humanize jupyter pandas requests ujson
-	pip install 1password dateparser semver yq
+	cd /path/to/repository
+	python3 -m venv ${PWD}
+	source bin/activate
+	pip install -r requirements.txt

@@ -1,5 +1,8 @@
 #!/bin/bash
 
+SCRIPT_FOLDER=$(dirname $0)
+source ${SCRIPT_FOLDER}/../bin/activate
+
 bootstrap() {
 	if [[ $1 == marketplace-* ]] || [[ $1 == *-private ]]; then
 		return 0
@@ -510,6 +513,14 @@ releng() {
 
 		echo "${folder},${RELENG_SUITE},${RELENG_TITLE},${RELENG_VERSION}" >> ${OUTPUT_FILE}
 	done
+}
+
+portalschema() {
+	if ! checkfile $1 requireschema; then
+		return 0
+	fi
+
+	echo "Generating portal schema versions for $1: ${OUTPUT_FILE}"
 }
 
 requireschema() {

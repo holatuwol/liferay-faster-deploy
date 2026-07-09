@@ -1,5 +1,8 @@
 #!/bin/bash
 
+SCRIPT_FOLDER=$(dirname $0)
+source ${SCRIPT_FOLDER}/../bin/activate
+
 remove_fixes() {
 	if [ "" != "$(git diff --name-only ${BASE_TAG}..HEAD | grep -F "${1}")" ]; then
 		git diff --name-only ${BASE_TAG}..HEAD | grep -F "${1}" | xargs git checkout ${BASE_TAG} --

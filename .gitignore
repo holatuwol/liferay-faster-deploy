@@ -1,3 +1,8 @@
 *.pyc
+*.code-workspace
 __pycache__
 .ipynb_checkpoints
+.lock
+bin
+lib
+lib64
