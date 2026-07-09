@@ -25,18 +25,24 @@ quarterly_releases = {
     '2025.q1': 132,
     '2025.q2': 135,
     '2025.q3': 138,
+    '2025.q4': 143,
+    '2026.q1': 147,
+    '2026.q2': 149,
 }
 
 old_update_threshold = {
     '2023.q3': 92,
-    '2023.q4': 92,
-    '2024.q1': 102,
-    '2024.q2': 112,
-    '2024.q3': 120,
-    '2024.q4': 125,
-    '2025.q1': 129,
-    '2025.q2': 132,
-    '2025.q3': 135,
+    '2023.q4': quarterly_releases['2023.q3'],
+    '2024.q1': quarterly_releases['2023.q4'],
+    '2024.q2': quarterly_releases['2024.q1'],
+    '2024.q3': quarterly_releases['2024.q2'],
+    '2024.q4': quarterly_releases['2024.q3'],
+    '2025.q1': quarterly_releases['2024.q4'],
+    '2025.q2': quarterly_releases['2025.q1'],
+    '2025.q3': quarterly_releases['2025.q2'],
+    '2025.q4': quarterly_releases['2025.q3'],
+    '2026.q1': quarterly_releases['2025.q4'],
+    '2026.q2': quarterly_releases['2026.q1'],
 }
 
 quarterly_updates = { value: key for key, value in quarterly_releases.items() }
@@ -200,9 +206,10 @@ def get_jira_fixed_issues(release_name, release_ids):
         lsv_issues = get_issues(lsv_issue_query, None, render=True)
 
         for lsv_issue_key, lsv_issue in lsv_issues.items():
-            if lsv_issue['fields']['customfield_10563'] is not None:
-                cve_issues.append(lsv_issue['fields']['customfield_10563'])
-                release_issues[lsv_issue['fields']['customfield_10563']] = lsv_issue
+            cve_issue = lsv_issue['fields']['customfield_10563']
+            if cve_issue is not None and cve_issue[:4] != 'CWE-':
+                cve_issues.append(cve_issue)
+                release_issues[cve_issue] = lsv_issue
 
     if len(secure_issue_keys) > 0:
         print('Found [%s] = [%s] = [%s] for %s' % (','.join(secure_issue_keys), ','.join(lsv_issue_keys.keys()), ','.join(cve_issues), release_name))
