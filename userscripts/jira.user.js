@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name JIRA with Less Scrolling
 // @namespace holatuwol
-// @version 1.0
+// @version 1.1
 // @match https://liferay.atlassian.net/browse/*
 // @require https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.30.1/moment.min.js
 // @grant none
@@ -208,10 +208,44 @@ async function addJumpToHeader() {
 	select.appendChild(createOption('issue-links', 'Linked work items'));
 
 	comments.forEach(comment => {
-		select.appendChild(createOption(comment.id, 'Comment on ' + moment(comment.created).format('YYYY-MM-DD HH:mm') + ', by ' + comment.author?.displayName));
+		select.appendChild(createOption(comment.id, 'Comment at ' + moment(comment.created).format('YYYY-MM-DD HH:mm') + ', by ' + comment.author?.displayName));
 	});
+}
+
+async function addLinksToOtherSystems() {
+	const [accountCodeElement] = await Promise.all([
+		waitForElement(document.body, 'div[data-testid="issue.views.field.single-line-text.read-view.customfield_12570"], div[data-testid="issue.views.field.single-line-text.read-view.customfield_10163"]'),
+	]);
+
+    const accountCode = accountCodeElement.textContent;
+    accountCodeElement.replaceChildren();
+
+	var newAccountCode = appendElement(accountCodeElement, 'div', 'lesa-account-code', addLinksToOtherSystems);
+    newAccountCode.appendChild(document.createTextNode(accountCode));
+
+    var accountCodeLinks = document.createElement('div');
+    accountCodeLinks.classList.add('lesa-account-code-links');
+    accountCodeLinks.style.fontSize = 'smaller';
+    newAccountCode.appendChild(accountCodeLinks);
+
+    var patcherLink = document.createElement('a');
+    patcherLink.textContent = 'patcher';
+    patcherLink.setAttribute('href', 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/accounts?p_p_id=1_WAR_osbpatcherportlet&_1_WAR_osbpatcherportlet_accountEntryCode=' + accountCode);
+    patcherLink.setAttribute('target', '_blank');
+
+    accountCodeLinks.appendChild(patcherLink);
+
+    accountCodeLinks.appendChild(document.createTextNode(' | '));
+
+    var jiraSearchLink = document.createElement('a');
+    jiraSearchLink.textContent = 'tickets';
+    jiraSearchLink.setAttribute('href', 'https://liferay.atlassian.net/issues?jql=' + encodeURIComponent(`cf[12570] ~ '${accountCode}' or cf[10163] ~ '${accountCode}' order by created desc`));
+    jiraSearchLink.setAttribute('target', '_blank');
+
+    accountCodeLinks.appendChild(jiraSearchLink);
 }
 
 await Promise.all([
 	addJumpToHeader(),
+    addLinksToOtherSystems(),
 ]);
