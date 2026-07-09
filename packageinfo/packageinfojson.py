@@ -336,7 +336,3 @@ dxp_file_metadata = sorted(
 
 generate_metadata_files(
 	dxp_file_metadata, 'dxpmodules.json', 'dxppackages.json', None, ['commerce'])
-
-generate_metadata_files(
-	dxp_file_metadata, 'mpmodules.json', None, ['commerce'], None)
-

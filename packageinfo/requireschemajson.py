@@ -137,5 +137,3 @@ marketplace_file_metadata = sorted(
 	]),
 	key=lambda x: x[2]
 )
-
-generate_metadata_files(marketplace_file_metadata, 'mpschemas.json', False)
