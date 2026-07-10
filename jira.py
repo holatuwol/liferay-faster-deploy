@@ -146,20 +146,28 @@ def get_issue_changelog(issue_key, last_updated=None):
 
     return changelog
 
-def get_issue_fields(issue_key, fields=None):
+def get_issue_fields(issue_key, fields=None, render=False):
     search_url = f'{jira_base_url}/rest/api/2/issue/{issue_key}'
 
     payload = {}
 
     if fields is not None:
         payload['fields'] = ','.join(fields)
+    
+    if render:
+        payload['expand'] = 'renderedFields'
 
     r = await_get_request(search_url, payload)
 
     if r.status_code != 200:
         return {}
 
-    return r.json()['fields']
+    response_json = r.json()
+    
+    if render:
+        return response_json['renderedFields']
+    else:
+        return response_json['fields']
 
 def get_releases(project):
     start_at = 0

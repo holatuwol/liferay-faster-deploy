@@ -6,7 +6,7 @@ import sys
 
 sys.path.insert(0, dirname(dirname(abspath(inspect.getfile(inspect.currentframe())))))
 
-from jira import await_get_request, get_issues, jira_base_url
+from jira import await_get_request, get_issue_fields, get_issues, jira_base_url
 
 def extract_comment(comment_json):
     comment = {
@@ -31,7 +31,9 @@ def get_servicedesk_issue(issue_key):
 
     if exists(issue_file):
         with open(issue_file, 'r', encoding='utf8') as f:
-            return json.load(f)
+            issue = json.load(f)
+
+        return issue
 
     r = await_get_request(f"{jira_base_url}/rest/servicedeskapi/request/{issue_key}", {})
 
@@ -81,6 +83,16 @@ def get_servicedesk_issue(issue_key):
     
     with open(issue_file, 'w', encoding='utf8') as f:
         json.dump(issue, f)
+
+    if len(comments) == 0:
+        return issue
+
+    if issue['createdDate'] != comments[0]['createdDate']:
+        comments.insert(0, {
+            'author': issue['reporter'],
+            'createdDate': issue['createdDate'],
+            'body': get_issue_fields(issue_key, ['description'], True)['description'],
+        })
 
     return issue
 
