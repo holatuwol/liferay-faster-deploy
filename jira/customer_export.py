@@ -83,9 +83,6 @@ def get_servicedesk_issue(issue_key, issue_fields):
 
         comments.extend([extract_comment(x) for x in response_json['values'] if x['public']])
     
-    with open(issue_file, 'w', encoding='utf8') as f:
-        json.dump(issue, f)
-
     if len(comments) == 0:
         return issue
 
@@ -96,16 +93,18 @@ def get_servicedesk_issue(issue_key, issue_fields):
             'body': get_issue_fields(issue_key, ['description'], True)['description'],
         })
 
+    with open(issue_file, 'w', encoding='utf8') as f:
+        json.dump(issue, f)
+
     return issue
 
 assert(len(sys.argv) == 2 and len(sys.argv) > 0)
 
 account_key = sys.argv[1]
 
-if account_key[:5] == 'LRHC-':
-    issues = { account_key: None }
-else:
-    issues = { issue_key: issue_response['fields'] for issue_key, issue_response in get_issues(f"project = 'LRHC' and (cf[12570] ~ '{account_key}' or cf[10163] ~ '{account_key}') order by created desc", ['key', 'updated'], [], False).items() }
+jql = f"key = '{account_key}'" if account_key[:5] == 'LRHC-' else f"project = 'LRHC' and (cf[12570] ~ '{account_key}' or cf[10163] ~ '{account_key}') order by created desc"
+
+issues = { issue_key: issue_response['fields'] for issue_key, issue_response in get_issues(jql, ['key', 'updated'], [], False).items() }
 
 servicedesk_issues = [get_servicedesk_issue(issue_key, issue_fields) for issue_key, issue_fields in issues.items()]
 
