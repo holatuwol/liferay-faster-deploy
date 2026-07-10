@@ -93,7 +93,11 @@ def release_sort_key(release_name):
 def ticket_sort_key(line):
     issue_key = line.split('\t')[0]
     last_dash = issue_key.rfind('-')
-    return (issue_key[:last_dash], int(issue_key[last_dash+1:]))
+    try:
+        return (issue_key[:last_dash], int(issue_key[last_dash+1:]))
+    except:
+        print(line)
+        exit(1)
 
 def get_iso_time(jira_time):
     if jira_time == '':
@@ -175,8 +179,8 @@ def get_jira_fixed_issues(release_name, release_ids):
     fixed_issues = get_issues(query, None, render=True)
 
     if len(fixed_issues) == 0:
-    	print('No issues found with query %s' % query)
-    	return release_issues
+        print('No issues found with query %s' % query)
+        return release_issues
 
     secure_issue_keys = []
 
@@ -207,9 +211,25 @@ def get_jira_fixed_issues(release_name, release_ids):
 
         for lsv_issue_key, lsv_issue in lsv_issues.items():
             cve_issue = lsv_issue['fields']['customfield_10563']
-            if cve_issue is not None and cve_issue[:4] != 'CWE-':
+            if cve_issue is None:
+                continue
+
+            if cve_issue[:4] == 'CWE-':
+                continue
+
+            if cve_issue[:4] == 'CVE-':
                 cve_issues.append(cve_issue)
                 release_issues[cve_issue] = lsv_issue
+                continue
+    
+            if lsv_issue_key == 'LSV-1684':
+                for hard_coded_cve_issue in ['CVE-2026-22735', 'CVE-2026-22737', 'CVE-2026-22740', 'CVE-2026-22741', 'CVE-2026-41838', 'CVE-2026-41839', 'CVE-2026-41840', 'CVE-2026-41841', 'CVE-2026-41842', 'CVE-2026-41843', 'CVE-2026-41844', 'CVE-2026-41845', 'CVE-2026-41846', 'CVE-2026-41848', 'CVE-2026-41850', 'CVE-2026-41851', 'CVE-2026-41852', 'CVE-2026-41853', 'CVE-2026-41854']:
+                    cve_issues.append(hard_coded_cve_issue)
+                    release_issues[hard_coded_cve_issue] = lsv_issue
+                continue
+
+            print(lsv_issue_key)
+            exit(1)
 
     if len(secure_issue_keys) > 0:
         print('Found [%s] = [%s] = [%s] for %s' % (','.join(secure_issue_keys), ','.join(lsv_issue_keys.keys()), ','.join(cve_issues), release_name))
