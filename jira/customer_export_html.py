@@ -125,11 +125,53 @@ html_doc = f"""<!doctype html>
   .no-comments {{ color: var(--muted); font-style: italic; }}
   .back-to-top {{ margin-bottom: 0; margin-top: 1rem; font-size: 0.85rem; }}
   .back-to-top a {{ color: var(--accent); }}
+  .filter-bar {{
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1.25rem;
+    margin-bottom: 1.25rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--card-bg);
+  }}
+  .filter-group {{ display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }}
+  .filter-label {{
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-right: 0.15rem;
+  }}
+  .chip-group {{ display: flex; flex-wrap: wrap; gap: 0.4rem; }}
+  .chip {{
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--fg);
+    border-radius: 999px;
+    padding: 0.3rem 0.75rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+    user-select: none;
+  }}
+  .chip:hover {{ border-color: var(--accent); }}
+  .chip.active {{ background: var(--accent); border-color: var(--accent); color: #fff; }}
+  .chip-clear {{ margin-left: auto; background: transparent; color: var(--muted); }}
 </style>
 </head>
 <body>
   <h1>{account_key} Customer Ticket Export</h1>
   <p class="subtitle" id="ticket-count"></p>
+
+  <div class="filter-bar">
+    <div class="filter-group">
+      <span class="filter-label">Created</span>
+      <div id="date-chips" class="chip-group"></div>
+    </div>
+    <button type="button" id="clear-filters" class="chip chip-clear">Clear filters</button>
+  </div>
 
   <h2 id="toc">Table of Contents</h2>
   <div class="toc-wrap">
@@ -187,7 +229,7 @@ html_doc = f"""<!doctype html>
     var comments = t.comments || [];
 
     tocRows.push(
-      "<tr>" +
+      '<tr data-created="' + (t.createdDate || "") + '">' +
         '<td data-sort="' + esc(key) + '"><a href="#ticket-' + anchor + '">' + esc(key) + "</a></td>" +
         "<td>" + reporter + "</td>" +
         "<td>" + summary + "</td>" +
@@ -216,7 +258,7 @@ html_doc = f"""<!doctype html>
     }}
 
     sections.push(
-      '<section class="ticket" id="ticket-' + anchor + '">' +
+      '<section class="ticket" id="ticket-' + anchor + '" data-created="' + (t.createdDate || "") + '">' +
         "<h2>" + esc(key) + "</h2>" +
         '<table class="fields">' +
           "<tr><th>Issue Key</th><td>" + esc(key) + "</td></tr>" +
@@ -267,6 +309,77 @@ html_doc = f"""<!doctype html>
       rows.forEach(function(row) {{ tbody.appendChild(row); }});
     }});
   }});
+
+  // --- Filters: created-date chips ---
+  var DATE_RANGES = [
+    {{ key: "7", label: "Last 7 days" }},
+    {{ key: "14", label: "Last 14 days" }},
+    {{ key: "30", label: "Last 30 days" }},
+    {{ key: "60", label: "Last 60 days" }},
+    {{ key: "90", label: "Last 90 days" }},
+    {{ key: "180", label: "Last 180 days" }},
+    {{ key: "365", label: "Last 1 year" }},
+    {{ key: "all", label: "All time" }},
+  ];
+
+  var activeDateRange = "30";
+  var now = Date.now();
+  var DAY_MS = 86400000;
+
+  function matchesDateRange(createdMs, rangeKey) {{
+    if (rangeKey === "all") return true;
+    if (createdMs == null || createdMs === "") return false;
+    var days = (now - Number(createdMs)) / DAY_MS;
+    if (rangeKey === "7") return days <= 7;
+    if (rangeKey === "14") return days <= 14;
+    if (rangeKey === "30") return days <= 30;
+    if (rangeKey === "60") return days <= 60;
+    if (rangeKey === "90") return days <= 90;
+    if (rangeKey === "180") return days <= 180;
+    if (rangeKey === "365") return days <= 365;
+    return true;
+  }}
+
+  var dateChipsEl = document.getElementById("date-chips");
+  DATE_RANGES.forEach(function(range) {{
+    var chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "chip" + (range.key === activeDateRange ? " active" : "");
+    chip.textContent = range.label;
+    chip.dataset.rangeKey = range.key;
+    chip.addEventListener("click", function() {{
+      activeDateRange = range.key;
+      dateChipsEl.querySelectorAll(".chip").forEach(function(c) {{ c.classList.toggle("active", c === chip); }});
+      applyFilters();
+    }});
+    dateChipsEl.appendChild(chip);
+  }});
+
+  document.getElementById("clear-filters").addEventListener("click", function() {{
+    activeDateRange = "all";
+    dateChipsEl.querySelectorAll(".chip").forEach(function(c) {{ c.classList.toggle("active", c.dataset.rangeKey === "all"); }});
+    applyFilters();
+  }});
+
+  function applyFilters() {{
+    var visibleCount = 0;
+
+    tbody.querySelectorAll("tr").forEach(function(row) {{
+      var visible = matchesDateRange(row.dataset.created, activeDateRange);
+      row.style.display = visible ? "" : "none";
+      if (visible) visibleCount++;
+    }});
+
+    document.querySelectorAll(".ticket").forEach(function(section) {{
+      var visible = matchesDateRange(section.dataset.created, activeDateRange);
+      section.style.display = visible ? "" : "none";
+    }});
+
+    document.getElementById("ticket-count").textContent =
+      visibleCount === tickets.length ? tickets.length + " tickets" : visibleCount + " of " + tickets.length + " tickets";
+  }}
+
+  applyFilters();
 }})();
 </script>
 </body>
