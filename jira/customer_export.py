@@ -26,14 +26,15 @@ def extract_comment(comment_json):
 
     return comment
 
-def get_servicedesk_issue(issue_key):
+def get_servicedesk_issue(issue_key, issue_fields):
     issue_file = f"customer_export/{issue_key}.json"
 
     if exists(issue_file):
         with open(issue_file, 'r', encoding='utf8') as f:
             issue = json.load(f)
 
-        return issue
+        if 'updated' in issue and issue['updated'] == issue_fields['updated']:
+            return issue
 
     r = await_get_request(f"{jira_base_url}/rest/servicedeskapi/request/{issue_key}", {})
 
@@ -49,6 +50,7 @@ def get_servicedesk_issue(issue_key):
         'createdDate': response_json['createdDate']['epochMillis'],
         'status': response_json['currentStatus']['status'],
         'statusDate': response_json['currentStatus']['statusDate']['epochMillis'],
+        'updated': issue_fields['updated'],
     }
 
     payload = {
@@ -101,11 +103,11 @@ assert(len(sys.argv) == 2 and len(sys.argv) > 0)
 account_key = sys.argv[1]
 
 if account_key[:5] == 'LRHC-':
-    issue_keys = [account_key]
+    issues = { account_key: None }
 else:
-    issue_keys = get_issues(f"project = 'LRHC' and (cf[12570] ~ '{account_key}' or cf[10163] ~ '{account_key}') order by created desc", ['key'], [], False).keys()
+    issues = { issue_key: issue_response['fields'] for issue_key, issue_response in get_issues(f"project = 'LRHC' and (cf[12570] ~ '{account_key}' or cf[10163] ~ '{account_key}') order by created desc", ['key', 'updated'], [], False).items() }
 
-servicedesk_issues = [get_servicedesk_issue(issue_key) for issue_key in issue_keys]
+servicedesk_issues = [get_servicedesk_issue(issue_key, issue_fields) for issue_key, issue_fields in issues.items()]
 
 public_servicedesk_issues = [issue for issue in servicedesk_issues if len(issue['comments']) > 0]
 
