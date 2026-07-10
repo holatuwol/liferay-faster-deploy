@@ -158,7 +158,6 @@ html_doc = f"""<!doctype html>
   }}
   .chip:hover {{ border-color: var(--accent); }}
   .chip.active {{ background: var(--accent); border-color: var(--accent); color: #fff; }}
-  .chip-clear {{ margin-left: auto; background: transparent; color: var(--muted); }}
 </style>
 </head>
 <body>
@@ -170,7 +169,6 @@ html_doc = f"""<!doctype html>
       <span class="filter-label">Created</span>
       <div id="date-chips" class="chip-group"></div>
     </div>
-    <button type="button" id="clear-filters" class="chip chip-clear">Clear filters</button>
   </div>
 
   <h2 id="toc">Table of Contents</h2>
@@ -261,9 +259,8 @@ html_doc = f"""<!doctype html>
       '<section class="ticket" id="ticket-' + anchor + '" data-created="' + (t.createdDate || "") + '">' +
         "<h2>" + esc(key) + "</h2>" +
         '<table class="fields">' +
-          "<tr><th>Issue Key</th><td>" + esc(key) + "</td></tr>" +
-          "<tr><th>Reporter</th><td>" + reporter + "</td></tr>" +
           "<tr><th>Summary</th><td>" + summary + "</td></tr>" +
+          "<tr><th>Reporter</th><td>" + reporter + "</td></tr>" +
           "<tr><th>Created Date</th><td>" + esc(created) + "</td></tr>" +
           "<tr><th>Status</th><td>" + status + "</td></tr>" +
           "<tr><th>Status Date</th><td>" + esc(statusDate) + "</td></tr>" +
@@ -353,12 +350,6 @@ html_doc = f"""<!doctype html>
       applyFilters();
     }});
     dateChipsEl.appendChild(chip);
-  }});
-
-  document.getElementById("clear-filters").addEventListener("click", function() {{
-    activeDateRange = "all";
-    dateChipsEl.querySelectorAll(".chip").forEach(function(c) {{ c.classList.toggle("active", c.dataset.rangeKey === "all"); }});
-    applyFilters();
   }});
 
   function applyFilters() {{
