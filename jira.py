@@ -1,10 +1,7 @@
-from base64 import b64encode
-import inspect
+from datetime import datetime, timedelta, timezone
 import json
-from os.path import abspath, dirname, exists
+from os.path import exists
 import requests
-from requests.auth import HTTPBasicAuth
-import sys
 import time
 
 import git
@@ -40,12 +37,20 @@ def await_response(response_generator):
         time.sleep(retry_after + 1)
 
         r = response_generator()
+    
+    if 'X-RateLimit-NearLimit' in r.headers:
+        print(r.headers)
+
+        now = datetime.now(timezone.utc)
+        next_hour = (now + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+
+        retry_after = (next_hour - now).total_seconds()
+        print('Retrying in %d seconds...' % retry_after)
+        time.sleep(retry_after + 1)
 
     return r
 
 def get_issues(jql, fields=[], expand=[], render=False):
-    start_at = 0
-
     if render:
         expand = expand + ['renderedFields']
 
@@ -204,6 +209,3 @@ def get_releases(project):
         releases.extend(response_json['values'])
 
     return releases
-
-if __name__ == '__main__':
-    print(get_issue_changelog('TOPIN-108'))
