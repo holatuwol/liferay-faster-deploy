@@ -111,7 +111,7 @@ html_doc = f"""<!doctype html>
     vertical-align: top;
   }}
   table.fields th {{ width: 12rem; color: var(--muted); font-weight: 600; }}
-  .comments {{ display: flex; flex-direction: column; gap: 0.75rem; }}
+  .comments {{ display: flex; flex-direction: column-reverse; gap: 0.75rem; }}
   .comment {{
     border: 1px solid var(--border);
     border-radius: 6px;
@@ -203,7 +203,7 @@ html_doc = f"""<!doctype html>
           <th class="sortable">Reporter</th>
           <th class="sortable">Summary</th>
           <th class="sortable">Created Date</th>
-          <th class="sortable">Updated Date</th>
+          <th class="sortable">Last Comment</th>
           <th class="sortable">Status</th>
         </tr>
       </thead>
@@ -230,10 +230,8 @@ html_doc = f"""<!doctype html>
 
   function fmtDate(ms) {{
     if (ms == null) return "";
-    var d = new Date(ms);
-    function pad(n) {{ return String(n).padStart(2, "0"); }}
-    return d.getUTCFullYear() + "-" + pad(d.getUTCMonth() + 1) + "-" + pad(d.getUTCDate()) +
-      " " + pad(d.getUTCHours()) + ":" + pad(d.getUTCMinutes()) + " UTC";
+    var tzOffset = new Date().getTimezoneOffset() * 60000;
+    return (new Date(ms - tzOffset)).toISOString().slice(0, -1).replace('T', ' ');
   }}
 
   var tocRows = [];
@@ -245,18 +243,19 @@ html_doc = f"""<!doctype html>
     var reporter = t.accountCode ? `${{esc(t.accountCode)}} (${{esc(t.reporter)}})` : esc(t.reporter);
     var summary = esc(t.summary);
     var created = fmtDate(t.createdDate);
-    var updatedMs = t.updated ? new Date(t.updated).getTime() : null;
-    var updated = fmtDate(updatedMs);
     var status = esc(t.status);
     var comments = t.comments || [];
+    var commentDates = comments.map(function(c) {{ return c.createdDate; }}).filter(function(d) {{ return d != null; }});
+    var lastCommentMs = commentDates.length ? Math.max.apply(null, commentDates) : null;
+    var lastComment = fmtDate(lastCommentMs);
 
     tocRows.push(
-      '<tr data-created="' + (t.createdDate || "") + '" data-updated="' + (updatedMs || "") + '">' +
+      '<tr data-created="' + (t.createdDate || "") + '" data-last-comment="' + (lastCommentMs || "") + '">' +
         '<td data-sort="' + esc(key) + '"><a href="#ticket-' + anchor + '">' + esc(key) + "</a></td>" +
         '<td data-sort="' + esc(reporter) + '">' + reporter + '</td>' +
         "<td>" + summary + "</td>" +
         '<td data-sort="' + (t.createdDate || "") + '">' + esc(created) + "</td>" +
-        '<td data-sort="' + (updatedMs || "") + '">' + esc(updated) + "</td>" +
+        '<td data-sort="' + (lastCommentMs || "") + '">' + esc(lastComment) + "</td>" +
         "<td>" + status + "</td>" +
       "</tr>"
     );
@@ -280,13 +279,12 @@ html_doc = f"""<!doctype html>
     }}
 
     sections.push(
-      '<section class="ticket" id="ticket-' + anchor + '" data-created="' + (t.createdDate || "") + '" data-updated="' + (updatedMs || "") + '">' +
+      '<section class="ticket" id="ticket-' + anchor + '" data-created="' + (t.createdDate || "") + '" data-last-comment="' + (lastCommentMs || "") + '">' +
         "<h2>" + esc(key) + "</h2>" +
         '<table class="fields">' +
           "<tr><th>Summary</th><td>" + summary + "</td></tr>" +
           "<tr><th>Reporter</th><td>" + reporter + "</td></tr>" +
           "<tr><th>Created Date</th><td>" + esc(created) + "</td></tr>" +
-          "<tr><th>Updated Date</th><td>" + esc(updated) + "</td></tr>" +
           "<tr><th>Status</th><td>" + status + "</td></tr>" +
         "</table>" +
         '<details class="comments-toggle" open>' +
@@ -341,13 +339,15 @@ html_doc = f"""<!doctype html>
     }});
   }});
 
-  // --- Filters: pick a date field (Created or Updated), then a single date range ---
+  // --- Filters: pick a date field (Created or Last Comment), then a single date range ---
   var FILTER_FIELDS = [
     {{ key: "created", label: "Created" }},
-    {{ key: "updated", label: "Updated" }},
+    {{ key: "lastComment", label: "Last Comment" }},
   ];
 
   var DATE_RANGES = [
+    {{ key: "1", label: "Last day" }},
+    {{ key: "3", label: "Last 3 days" }},
     {{ key: "7", label: "Last 7 days" }},
     {{ key: "14", label: "Last 14 days" }},
     {{ key: "30", label: "Last 30 days" }},
@@ -365,6 +365,8 @@ html_doc = f"""<!doctype html>
     if (rangeKey === "all") return true;
     if (ms == null || ms === "") return false;
     var days = (now - Number(ms)) / DAY_MS;
+    if (rangeKey === "1") return days <= 1;
+    if (rangeKey === "3") return days <= 3;
     if (rangeKey === "7") return days <= 7;
     if (rangeKey === "14") return days <= 14;
     if (rangeKey === "30") return days <= 30;
@@ -375,8 +377,8 @@ html_doc = f"""<!doctype html>
     return true;
   }}
 
-  var activeFilterField = "updated";
-  var activeDateRange = "30";
+  var activeFilterField = "lastComment";
+  var activeDateRange = "1";
 
   var filterFieldChipsEl = document.getElementById("filter-field-chips");
   FILTER_FIELDS.forEach(function(field) {{

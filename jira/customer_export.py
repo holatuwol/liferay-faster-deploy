@@ -8,4 +8,4 @@ account_key = sys.argv[1]
 if account_key[:5] == 'LRHC-':
     export_service_desk_issues(f"key = '{account_key}'", None, ['accountCode', 'public'])
 else:
-    export_service_desk_issues(f"project = 'LRHC' and cf[12570] ~ '{account_key}' order by created desc", f"customer_export/{account_key}.json", ['accountCode', 'public'])
+    export_service_desk_issues(f"project = 'LRHC' and cf[12570] ~ '{account_key}' order by created desc", f"customer_export/{account_key}.json", ['accountCode', 'public', 'updated'])
