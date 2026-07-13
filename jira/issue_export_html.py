@@ -92,7 +92,7 @@ html_doc = f"""<!doctype html>
   }}
   #toc-table th.sortable[aria-sort="ascending"]::after {{ content: "\\2191"; color: var(--accent); }}
   #toc-table th.sortable[aria-sort="descending"]::after {{ content: "\\2193"; color: var(--accent); }}
-  #toc-table tr:nth-child(even) {{ background: var(--row-alt); }}
+  #toc-table tr:nth-child(even of :not(.hidden)) {{ background: var(--row-alt); }}
   #toc-table a {{ color: var(--accent); text-decoration: none; font-weight: 600; }}
   #toc-table a:hover {{ text-decoration: underline; }}
   .ticket {{
@@ -172,6 +172,7 @@ html_doc = f"""<!doctype html>
   }}
   .chip:hover {{ border-color: var(--accent); }}
   .chip.active {{ background: var(--accent); border-color: var(--accent); color: #fff; }}
+  .hidden {{ display: none; }}
 </style>
 </head>
 <body>
@@ -424,12 +425,16 @@ html_doc = f"""<!doctype html>
 
     tbody.querySelectorAll("tr").forEach(function(row) {{
       var visible = matchesActiveFilter(row);
-      row.style.display = visible ? "" : "none";
+      if (visible == row.classList.contains('hidden')) {{
+          row.classList.toggle('hidden');
+      }}
       if (visible) visibleCount++;
     }});
 
     document.querySelectorAll(".ticket").forEach(function(section) {{
-      section.style.display = matchesActiveFilter(section) ? "" : "none";
+      if (matchesActiveFilter(section) == section.classList.contains('hidden')) {{
+        section.classList.toggle('hidden');
+      }}
     }});
 
     document.getElementById("ticket-count").textContent =
