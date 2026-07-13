@@ -1,9 +1,10 @@
 import json
 import sys
 
-account_key = sys.argv[1]
+cache_file = sys.argv[1]
+export_title = sys.argv[2]
 
-with open(f"customer_export/{account_key}.json", "r", encoding="utf8") as f:
+with open(cache_file, "r", encoding="utf8") as f:
     data = json.load(f)
 
 last_comment_date = max(
@@ -21,7 +22,7 @@ html_doc = f"""<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>{account_key} Customer Ticket Export</title>
+<title>Ticket Export for {export_title}</title>
 <style>
   :root {{
     color-scheme: light dark;
@@ -117,12 +118,25 @@ html_doc = f"""<!doctype html>
     padding: 0.6rem 0.9rem;
     background: var(--bg);
   }}
+  .comment[data-public="false"] {{ background: #FEF7C8; color: #1a1a1a; }}
+  .comment[data-public="false"] .comment-meta {{ color: #5f6368; }}
+  .comment[data-public="false"] .comment-author {{ color: #1a1a1a; }}
   .comment-meta {{ font-size: 0.85rem; color: var(--muted); margin-bottom: 0.35rem; }}
   .comment-author {{ font-weight: 600; color: var(--fg); }}
   .comment-body {{ font-size: 0.95rem; overflow-wrap: anywhere; }}
   .comment-body p:first-child {{ margin-top: 0; }}
   .comment-body p:last-child {{ margin-bottom: 0; }}
   .no-comments {{ color: var(--muted); font-style: italic; }}
+  .comments-toggle {{ margin-bottom: 1rem; }}
+  .comments-toggle summary {{
+    font-size: 1.17em;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+    padding: 0.15rem 0;
+  }}
+  .comments-toggle summary:hover {{ color: var(--accent); }}
+  .comments-toggle .comments {{ margin-top: 0.75rem; }}
   .back-to-top {{ margin-bottom: 0; margin-top: 1rem; font-size: 0.85rem; }}
   .back-to-top a {{ color: var(--accent); }}
   .filter-bar {{
@@ -161,13 +175,21 @@ html_doc = f"""<!doctype html>
 </style>
 </head>
 <body>
-  <h1>{account_key} Customer Ticket Export</h1>
+  <h1>Ticket Export for {export_title}</h1>
   <p class="subtitle" id="ticket-count"></p>
 
   <div class="filter-bar">
     <div class="filter-group">
-      <span class="filter-label">Created</span>
-      <div id="date-chips" class="chip-group"></div>
+      <span class="filter-label">Filter by</span>
+      <div id="filter-field-chips" class="chip-group"></div>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Date range</span>
+      <div id="date-range-chips" class="chip-group"></div>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Comments</span>
+      <button type="button" id="toggle-comments-btn" class="chip">Collapse all</button>
     </div>
   </div>
 
@@ -180,8 +202,8 @@ html_doc = f"""<!doctype html>
           <th class="sortable">Reporter</th>
           <th class="sortable">Summary</th>
           <th class="sortable">Created Date</th>
+          <th class="sortable">Updated Date</th>
           <th class="sortable">Status</th>
-          <th class="sortable">Status Date</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -219,21 +241,22 @@ html_doc = f"""<!doctype html>
   tickets.forEach(function(t) {{
     var key = t.issueKey || "";
     var anchor = esc(key);
-    var reporter = esc(t.reporter);
+    var reporter = t.accountCode ? `${{esc(t.accountCode)}} (${{esc(t.reporter)}})` : esc(t.reporter);
     var summary = esc(t.summary);
     var created = fmtDate(t.createdDate);
+    var updatedMs = t.updated ? new Date(t.updated).getTime() : null;
+    var updated = fmtDate(updatedMs);
     var status = esc(t.status);
-    var statusDate = fmtDate(t.statusDate);
     var comments = t.comments || [];
 
     tocRows.push(
-      '<tr data-created="' + (t.createdDate || "") + '">' +
+      '<tr data-created="' + (t.createdDate || "") + '" data-updated="' + (updatedMs || "") + '">' +
         '<td data-sort="' + esc(key) + '"><a href="#ticket-' + anchor + '">' + esc(key) + "</a></td>" +
-        "<td>" + reporter + "</td>" +
+        '<td data-sort="' + esc(reporter) + '">' + reporter + '</td>' +
         "<td>" + summary + "</td>" +
         '<td data-sort="' + (t.createdDate || "") + '">' + esc(created) + "</td>" +
+        '<td data-sort="' + (updatedMs || "") + '">' + esc(updated) + "</td>" +
         "<td>" + status + "</td>" +
-        '<td data-sort="' + (t.statusDate || "") + '">' + esc(statusDate) + "</td>" +
       "</tr>"
     );
 
@@ -244,7 +267,7 @@ html_doc = f"""<!doctype html>
         var cDate = fmtDate(c.createdDate);
         var cBody = c.body || "";
         commentHtml.push(
-          '<div class="comment">' +
+          '<div class="comment" data-public="' + (c.public === false ? "false" : "true") + '">' +
             '<div class="comment-meta"><span class="comment-author">' + cAuthor +
               '</span> &middot; <span class="comment-date">' + esc(cDate) + "</span></div>" +
             '<div class="comment-body">' + cBody + "</div>" +
@@ -256,17 +279,19 @@ html_doc = f"""<!doctype html>
     }}
 
     sections.push(
-      '<section class="ticket" id="ticket-' + anchor + '" data-created="' + (t.createdDate || "") + '">' +
+      '<section class="ticket" id="ticket-' + anchor + '" data-created="' + (t.createdDate || "") + '" data-updated="' + (updatedMs || "") + '">' +
         "<h2>" + esc(key) + "</h2>" +
         '<table class="fields">' +
           "<tr><th>Summary</th><td>" + summary + "</td></tr>" +
           "<tr><th>Reporter</th><td>" + reporter + "</td></tr>" +
           "<tr><th>Created Date</th><td>" + esc(created) + "</td></tr>" +
+          "<tr><th>Updated Date</th><td>" + esc(updated) + "</td></tr>" +
           "<tr><th>Status</th><td>" + status + "</td></tr>" +
-          "<tr><th>Status Date</th><td>" + esc(statusDate) + "</td></tr>" +
         "</table>" +
-        "<h3>Comments (" + comments.length + ")</h3>" +
-        '<div class="comments">' + commentHtml.join("") + "</div>" +
+        '<details class="comments-toggle" open>' +
+          "<summary>Comments (" + comments.length + ")</summary>" +
+          '<div class="comments">' + commentHtml.join("") + "</div>" +
+        "</details>" +
         '<p class="back-to-top"><a href="#toc">&uarr; Back to table of contents</a></p>' +
       "</section>"
     );
@@ -275,6 +300,14 @@ html_doc = f"""<!doctype html>
   document.getElementById("ticket-count").textContent = tickets.length + " tickets";
   document.querySelector("#toc-table tbody").innerHTML = tocRows.join("");
   document.getElementById("tickets").innerHTML = sections.join("");
+
+  document.querySelector("#toc-table tbody").addEventListener("click", function(event) {{
+    var link = event.target.closest('a[href^="#ticket-"]');
+    if (!link) return;
+    var section = document.getElementById(link.getAttribute("href").slice(1));
+    var details = section && section.querySelector(".comments-toggle");
+    if (details) details.open = true;
+  }});
 
   var table = document.getElementById("toc-table");
   var tbody = table.querySelector("tbody");
@@ -307,7 +340,12 @@ html_doc = f"""<!doctype html>
     }});
   }});
 
-  // --- Filters: created-date chips ---
+  // --- Filters: pick a date field (Created or Updated), then a single date range ---
+  var FILTER_FIELDS = [
+    {{ key: "created", label: "Created" }},
+    {{ key: "updated", label: "Updated" }},
+  ];
+
   var DATE_RANGES = [
     {{ key: "7", label: "Last 7 days" }},
     {{ key: "14", label: "Last 14 days" }},
@@ -319,14 +357,13 @@ html_doc = f"""<!doctype html>
     {{ key: "all", label: "All time" }},
   ];
 
-  var activeDateRange = "30";
   var now = Date.now();
   var DAY_MS = 86400000;
 
-  function matchesDateRange(createdMs, rangeKey) {{
+  function matchesDateRange(ms, rangeKey) {{
     if (rangeKey === "all") return true;
-    if (createdMs == null || createdMs === "") return false;
-    var days = (now - Number(createdMs)) / DAY_MS;
+    if (ms == null || ms === "") return false;
+    var days = (now - Number(ms)) / DAY_MS;
     if (rangeKey === "7") return days <= 7;
     if (rangeKey === "14") return days <= 14;
     if (rangeKey === "30") return days <= 30;
@@ -337,7 +374,25 @@ html_doc = f"""<!doctype html>
     return true;
   }}
 
-  var dateChipsEl = document.getElementById("date-chips");
+  var activeFilterField = "updated";
+  var activeDateRange = "30";
+
+  var filterFieldChipsEl = document.getElementById("filter-field-chips");
+  FILTER_FIELDS.forEach(function(field) {{
+    var chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "chip" + (field.key === activeFilterField ? " active" : "");
+    chip.textContent = field.label;
+    chip.dataset.fieldKey = field.key;
+    chip.addEventListener("click", function() {{
+      activeFilterField = field.key;
+      filterFieldChipsEl.querySelectorAll(".chip").forEach(function(c) {{ c.classList.toggle("active", c === chip); }});
+      applyFilters();
+    }});
+    filterFieldChipsEl.appendChild(chip);
+  }});
+
+  var dateRangeChipsEl = document.getElementById("date-range-chips");
   DATE_RANGES.forEach(function(range) {{
     var chip = document.createElement("button");
     chip.type = "button";
@@ -346,24 +401,35 @@ html_doc = f"""<!doctype html>
     chip.dataset.rangeKey = range.key;
     chip.addEventListener("click", function() {{
       activeDateRange = range.key;
-      dateChipsEl.querySelectorAll(".chip").forEach(function(c) {{ c.classList.toggle("active", c === chip); }});
+      dateRangeChipsEl.querySelectorAll(".chip").forEach(function(c) {{ c.classList.toggle("active", c === chip); }});
       applyFilters();
     }});
-    dateChipsEl.appendChild(chip);
+    dateRangeChipsEl.appendChild(chip);
   }});
+
+  var toggleCommentsBtn = document.getElementById("toggle-comments-btn");
+  var commentsExpanded = true;
+  toggleCommentsBtn.addEventListener("click", function() {{
+    commentsExpanded = !commentsExpanded;
+    document.querySelectorAll(".comments-toggle").forEach(function(details) {{ details.open = commentsExpanded; }});
+    toggleCommentsBtn.textContent = commentsExpanded ? "Collapse all" : "Expand all";
+  }});
+
+  function matchesActiveFilter(el) {{
+    return matchesDateRange(el.dataset[activeFilterField], activeDateRange);
+  }}
 
   function applyFilters() {{
     var visibleCount = 0;
 
     tbody.querySelectorAll("tr").forEach(function(row) {{
-      var visible = matchesDateRange(row.dataset.created, activeDateRange);
+      var visible = matchesActiveFilter(row);
       row.style.display = visible ? "" : "none";
       if (visible) visibleCount++;
     }});
 
     document.querySelectorAll(".ticket").forEach(function(section) {{
-      var visible = matchesDateRange(section.dataset.created, activeDateRange);
-      section.style.display = visible ? "" : "none";
+      section.style.display = matchesActiveFilter(section) ? "" : "none";
     }});
 
     document.getElementById("ticket-count").textContent =
@@ -377,7 +443,7 @@ html_doc = f"""<!doctype html>
 </html>
 """
 
-with open(f"customer_export/{account_key}.html", "w", encoding="utf8") as f:
+with open(f"{cache_file[:-5]}.html", "w", encoding="utf8") as f:
     f.write(html_doc)
 
-print(f"Wrote export for {account_key} ({len(data)} tickets), last comment was at {last_comment_date}")
+print(f"Wrote export for {cache_file} ({len(data)} tickets), last comment was at {last_comment_date}")

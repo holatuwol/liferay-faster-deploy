@@ -1,5 +1,7 @@
 customer_export
 fixed_issues
+issue_export
+participant_export
 
 releases.html.gz
 releases.json
