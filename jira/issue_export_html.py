@@ -137,6 +137,7 @@ html_doc = f"""<!doctype html>
   }}
   .comments-toggle summary:hover {{ color: var(--accent); }}
   .comments-toggle .comments {{ margin-top: 0.75rem; }}
+  .comment-filter-bar {{ margin-top: 0.6rem; }}
   .back-to-top {{ margin-bottom: 0; margin-top: 1rem; font-size: 0.85rem; }}
   .back-to-top a {{ color: var(--accent); }}
   .filter-bar {{
@@ -190,6 +191,7 @@ html_doc = f"""<!doctype html>
     </div>
     <div class="filter-group">
       <span class="filter-label">Comments</span>
+      <div id="comment-range-chips" class="chip-group"></div>
       <button type="button" id="toggle-comments-btn" class="chip">Collapse all</button>
     </div>
   </div>
@@ -234,111 +236,6 @@ html_doc = f"""<!doctype html>
     return (new Date(ms - tzOffset)).toISOString().slice(0, -1).replace('T', ' ');
   }}
 
-  var tocRows = [];
-  var sections = [];
-
-  tickets.forEach(function(t) {{
-    var key = t.issueKey || "";
-    var anchor = esc(key);
-    var reporter = t.accountCode ? `${{esc(t.accountCode)}} (${{esc(t.reporter)}})` : esc(t.reporter);
-    var summary = esc(t.summary);
-    var created = fmtDate(t.createdDate);
-    var status = esc(t.status);
-    var comments = t.comments || [];
-    var commentDates = comments.map(function(c) {{ return c.createdDate; }}).filter(function(d) {{ return d != null; }});
-    var lastCommentMs = commentDates.length ? Math.max.apply(null, commentDates) : null;
-    var lastComment = fmtDate(lastCommentMs);
-
-    tocRows.push(
-      '<tr data-created="' + (t.createdDate || "") + '" data-last-comment="' + (lastCommentMs || "") + '">' +
-        '<td data-sort="' + esc(key) + '"><a href="#ticket-' + anchor + '">' + esc(key) + "</a></td>" +
-        '<td data-sort="' + esc(reporter) + '">' + reporter + '</td>' +
-        "<td>" + summary + "</td>" +
-        '<td data-sort="' + (t.createdDate || "") + '">' + esc(created) + "</td>" +
-        '<td data-sort="' + (lastCommentMs || "") + '">' + esc(lastComment) + "</td>" +
-        "<td>" + status + "</td>" +
-      "</tr>"
-    );
-
-    var commentHtml = [];
-    if (comments.length) {{
-      comments.forEach(function(c) {{
-        var cAuthor = esc(c.author);
-        var cDate = fmtDate(c.createdDate);
-        var cBody = c.body || "";
-        commentHtml.push(
-          '<div class="comment" data-public="' + (c.public === false ? "false" : "true") + '">' +
-            '<div class="comment-meta"><span class="comment-author">' + cAuthor +
-              '</span> &middot; <span class="comment-date">' + esc(cDate) + "</span></div>" +
-            '<div class="comment-body">' + cBody + "</div>" +
-          "</div>"
-        );
-      }});
-    }} else {{
-      commentHtml.push('<p class="no-comments">No comments.</p>');
-    }}
-
-    sections.push(
-      '<section class="ticket" id="ticket-' + anchor + '" data-created="' + (t.createdDate || "") + '" data-last-comment="' + (lastCommentMs || "") + '">' +
-        "<h2>" + esc(key) + "</h2>" +
-        '<table class="fields">' +
-          "<tr><th>Summary</th><td>" + summary + "</td></tr>" +
-          "<tr><th>Reporter</th><td>" + reporter + "</td></tr>" +
-          "<tr><th>Created Date</th><td>" + esc(created) + "</td></tr>" +
-          "<tr><th>Status</th><td>" + status + "</td></tr>" +
-        "</table>" +
-        '<details class="comments-toggle" open>' +
-          "<summary>Comments (" + comments.length + ")</summary>" +
-          '<div class="comments">' + commentHtml.join("") + "</div>" +
-        "</details>" +
-        '<p class="back-to-top"><a href="#toc">&uarr; Back to table of contents</a></p>' +
-      "</section>"
-    );
-  }});
-
-  document.getElementById("ticket-count").textContent = tickets.length + " tickets";
-  document.querySelector("#toc-table tbody").innerHTML = tocRows.join("");
-  document.getElementById("tickets").innerHTML = sections.join("");
-
-  document.querySelector("#toc-table tbody").addEventListener("click", function(event) {{
-    var link = event.target.closest('a[href^="#ticket-"]');
-    if (!link) return;
-    var section = document.getElementById(link.getAttribute("href").slice(1));
-    var details = section && section.querySelector(".comments-toggle");
-    if (details) details.open = true;
-  }});
-
-  var table = document.getElementById("toc-table");
-  var tbody = table.querySelector("tbody");
-  var headers = table.querySelectorAll("th.sortable");
-  var collator = new Intl.Collator(undefined, {{ numeric: true, sensitivity: "base" }});
-
-  headers.forEach(function(th, index) {{
-    th.addEventListener("click", function() {{
-      var ascending = th.getAttribute("aria-sort") !== "ascending";
-      headers.forEach(function(h) {{ h.removeAttribute("aria-sort"); }});
-      th.setAttribute("aria-sort", ascending ? "ascending" : "descending");
-
-      var rows = Array.prototype.slice.call(tbody.querySelectorAll("tr"));
-      rows.sort(function(rowA, rowB) {{
-        var cellA = rowA.cells[index];
-        var cellB = rowB.cells[index];
-        var valueA = cellA.getAttribute("data-sort") || cellA.textContent.trim();
-        var valueB = cellB.getAttribute("data-sort") || cellB.textContent.trim();
-        var numA = parseFloat(valueA);
-        var numB = parseFloat(valueB);
-        var result;
-        if (valueA !== "" && valueB !== "" && !isNaN(numA) && !isNaN(numB)) {{
-          result = numA - numB;
-        }} else {{
-          result = collator.compare(valueA, valueB);
-        }}
-        return ascending ? result : -result;
-      }});
-      rows.forEach(function(row) {{ tbody.appendChild(row); }});
-    }});
-  }});
-
   // --- Filters: pick a date field (Created or Last Comment), then a single date range ---
   var FILTER_FIELDS = [
     {{ key: "created", label: "Created" }},
@@ -377,6 +274,141 @@ html_doc = f"""<!doctype html>
     return true;
   }}
 
+  var commentFilterChipsHtml = DATE_RANGES.map(function(range) {{
+    return '<button type="button" class="chip comment-filter-chip' + (range.key === "all" ? " active" : "") +
+      '" data-range-key="' + range.key + '">' + range.label + "</button>";
+  }}).join("");
+
+  var tocRows = [];
+  var sections = [];
+
+  tickets.forEach(function(t) {{
+    var key = t.issueKey || "";
+    var anchor = esc(key);
+    var reporter = t.accountCode ? `${{esc(t.accountCode)}} (${{esc(t.reporter)}})` : esc(t.reporter);
+    var summary = esc(t.summary);
+    var created = fmtDate(t.createdDate);
+    var status = esc(t.status);
+    var comments = t.comments || [];
+    var commentDates = comments.map(function(c) {{ return c.createdDate; }}).filter(function(d) {{ return d != null; }});
+    var lastCommentMs = commentDates.length ? Math.max.apply(null, commentDates) : null;
+    var lastComment = fmtDate(lastCommentMs);
+
+    tocRows.push(
+      '<tr data-created="' + (t.createdDate || "") + '" data-last-comment="' + (lastCommentMs || "") + '">' +
+        '<td data-sort="' + esc(key) + '"><a href="#ticket-' + anchor + '">' + esc(key) + "</a></td>" +
+        '<td data-sort="' + esc(reporter) + '">' + reporter + '</td>' +
+        "<td>" + summary + "</td>" +
+        '<td data-sort="' + (t.createdDate || "") + '">' + esc(created) + "</td>" +
+        '<td data-sort="' + (lastCommentMs || "") + '">' + esc(lastComment) + "</td>" +
+        "<td>" + status + "</td>" +
+      "</tr>"
+    );
+
+    var commentHtml = [];
+    if (comments.length) {{
+      comments.forEach(function(c) {{
+        var cAuthor = esc(c.author);
+        var cDate = fmtDate(c.createdDate);
+        var cBody = c.body || "";
+        commentHtml.push(
+          '<div class="comment" data-public="' + (c.public === false ? "false" : "true") +
+            '" data-created="' + (c.createdDate || "") + '">' +
+            '<div class="comment-meta"><span class="comment-author">' + cAuthor +
+              '</span> &middot; <span class="comment-date">' + esc(cDate) + "</span></div>" +
+            '<div class="comment-body">' + cBody + "</div>" +
+          "</div>"
+        );
+      }});
+    }} else {{
+      commentHtml.push('<p class="no-comments">No comments.</p>');
+    }}
+
+    sections.push(
+      '<section class="ticket" id="ticket-' + anchor + '" data-created="' + (t.createdDate || "") + '" data-last-comment="' + (lastCommentMs || "") + '">' +
+        "<h2>" + esc(key) + "</h2>" +
+        '<table class="fields">' +
+          "<tr><th>Summary</th><td>" + summary + "</td></tr>" +
+          "<tr><th>Reporter</th><td>" + reporter + "</td></tr>" +
+          "<tr><th>Created Date</th><td>" + esc(created) + "</td></tr>" +
+          "<tr><th>Status</th><td>" + status + "</td></tr>" +
+        "</table>" +
+        '<details class="comments-toggle" open>' +
+          "<summary>Comments (" + comments.length + ")</summary>" +
+          (comments.length ? '<div class="comment-filter-bar chip-group">' + commentFilterChipsHtml + '</div>' : "") +
+          '<div class="comments">' + commentHtml.join("") + "</div>" +
+        "</details>" +
+        '<p class="back-to-top"><a href="#toc">&uarr; Back to table of contents</a></p>' +
+      "</section>"
+    );
+  }});
+
+  document.getElementById("ticket-count").textContent = tickets.length + " tickets";
+  document.querySelector("#toc-table tbody").innerHTML = tocRows.join("");
+  document.getElementById("tickets").innerHTML = sections.join("");
+
+  document.querySelector("#toc-table tbody").addEventListener("click", function(event) {{
+    var link = event.target.closest('a[href^="#ticket-"]');
+    if (!link) return;
+    var section = document.getElementById(link.getAttribute("href").slice(1));
+    var details = section && section.querySelector(".comments-toggle");
+    if (details) details.open = true;
+  }});
+
+  function applyCommentRangeToBar(bar, rangeKey) {{
+    bar.querySelectorAll(".comment-filter-chip").forEach(function(c) {{ c.classList.toggle("active", c.dataset.rangeKey === rangeKey); }});
+
+    var commentsEl = bar.nextElementSibling;
+    var totalCount = 0;
+    var visibleCount = 0;
+    commentsEl.querySelectorAll(".comment").forEach(function(c) {{
+      totalCount++;
+      var visible = matchesDateRange(c.dataset.created, rangeKey);
+      c.classList.toggle("hidden", !visible);
+      if (visible) visibleCount++;
+    }});
+
+    bar.closest("details").querySelector("summary").textContent =
+      "Comments (" + (rangeKey === "all" ? totalCount : visibleCount + " of " + totalCount) + ")";
+  }}
+
+  document.getElementById("tickets").addEventListener("click", function(event) {{
+    var chip = event.target.closest(".comment-filter-chip");
+    if (!chip) return;
+    applyCommentRangeToBar(chip.parentElement, chip.dataset.rangeKey);
+  }});
+
+  var table = document.getElementById("toc-table");
+  var tbody = table.querySelector("tbody");
+  var headers = table.querySelectorAll("th.sortable");
+  var collator = new Intl.Collator(undefined, {{ numeric: true, sensitivity: "base" }});
+
+  headers.forEach(function(th, index) {{
+    th.addEventListener("click", function() {{
+      var ascending = th.getAttribute("aria-sort") !== "ascending";
+      headers.forEach(function(h) {{ h.removeAttribute("aria-sort"); }});
+      th.setAttribute("aria-sort", ascending ? "ascending" : "descending");
+
+      var rows = Array.prototype.slice.call(tbody.querySelectorAll("tr"));
+      rows.sort(function(rowA, rowB) {{
+        var cellA = rowA.cells[index];
+        var cellB = rowB.cells[index];
+        var valueA = cellA.getAttribute("data-sort") || cellA.textContent.trim();
+        var valueB = cellB.getAttribute("data-sort") || cellB.textContent.trim();
+        var numA = parseFloat(valueA);
+        var numB = parseFloat(valueB);
+        var result;
+        if (valueA !== "" && valueB !== "" && !isNaN(numA) && !isNaN(numB)) {{
+          result = numA - numB;
+        }} else {{
+          result = collator.compare(valueA, valueB);
+        }}
+        return ascending ? result : -result;
+      }});
+      rows.forEach(function(row) {{ tbody.appendChild(row); }});
+    }});
+  }});
+
   var activeFilterField = "lastComment";
   var activeDateRange = "1";
 
@@ -408,6 +440,22 @@ html_doc = f"""<!doctype html>
       applyFilters();
     }});
     dateRangeChipsEl.appendChild(chip);
+  }});
+
+  var commentRangeChipsEl = document.getElementById("comment-range-chips");
+  var activeCommentRange = "all";
+  DATE_RANGES.forEach(function(range) {{
+    var chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "chip" + (range.key === activeCommentRange ? " active" : "");
+    chip.textContent = range.label;
+    chip.dataset.rangeKey = range.key;
+    chip.addEventListener("click", function() {{
+      activeCommentRange = range.key;
+      commentRangeChipsEl.querySelectorAll(".chip").forEach(function(c) {{ c.classList.toggle("active", c === chip); }});
+      document.querySelectorAll(".comment-filter-bar").forEach(function(bar) {{ applyCommentRangeToBar(bar, range.key); }});
+    }});
+    commentRangeChipsEl.appendChild(chip);
   }});
 
   var toggleCommentsBtn = document.getElementById("toggle-comments-btn");
