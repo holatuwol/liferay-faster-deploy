@@ -1,4 +1,5 @@
 import inspect
+import json
 from os.path import abspath, dirname
 import sys
 from issue_export import export_service_desk_issues
@@ -16,6 +17,9 @@ r = await_get_request(f"{jira_base_url}/rest/api/3/user/search?query={user_name}
 assert(r.status_code == 200)
 
 account_json = r.json()
+
+with open(f"participant_export/{user_name}[account].json", 'w', encoding='utf-8') as f:
+    json.dump(account_json, f)
 
 assert(len(account_json) == 1)
 

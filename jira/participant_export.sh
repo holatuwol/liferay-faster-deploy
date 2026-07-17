@@ -7,4 +7,6 @@ mkdir -p issue_export participant_export
 
 python participant_export.py "$1"
 
-python issue_export_html.py "participant_export/$1.json" "$2"
+display_name=$(cat "participant_export/${1}[account].json" | jq -r '.[].displayName')
+
+python issue_export_html.py "participant_export/${1}.json" "${display_name}"

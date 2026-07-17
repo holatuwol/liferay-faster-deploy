@@ -34,7 +34,7 @@ def get_servicedesk_issue(issue_key, issue_fields):
     requires_update = True
 
     if exists(issue_file):
-        with open(issue_file, 'r', encoding='utf8') as f:
+        with open(issue_file, 'r', encoding='utf-8') as f:
             issue = json.load(f)
 
         if 'updated' not in issue:
@@ -68,6 +68,7 @@ def get_servicedesk_issue(issue_key, issue_fields):
     if requires_update:
         payload = {
             'start': 0,
+            'orderBy': 'created',
             'expand': 'renderedBody',
         }
 
@@ -114,7 +115,7 @@ def get_servicedesk_issue(issue_key, issue_fields):
 
         issue['accountCode'] = issue_fields['customfield_12570']
 
-        if issue['createdDate'] != comments[0]['createdDate']:
+        if len(comments) == 0 or issue['createdDate'] != comments[0]['createdDate']:
             comments.insert(0, {
                 'author': issue['reporter'],
                 'createdDate': issue['createdDate'],
@@ -122,7 +123,7 @@ def get_servicedesk_issue(issue_key, issue_fields):
                 'public': len([x for x in comments if x['public']]) > 0,
             })
 
-    with open(issue_file, 'w', encoding='utf8') as f:
+    with open(issue_file, 'w', encoding='utf-8') as f:
         json.dump(issue, f)
 
     return issue
@@ -157,5 +158,5 @@ def export_service_desk_issues(jql, cache_file, exclude_fields):
     if cache_file is None:
         print(json.dumps(servicedesk_issues))
     else:
-        with open(cache_file, 'w', encoding='utf8') as f:
+        with open(cache_file, 'w', encoding='utf-8') as f:
             json.dump(servicedesk_issues, f)
