@@ -206,6 +206,7 @@ html_doc = f"""<!doctype html>
           <th class="sortable">Summary</th>
           <th class="sortable">Created Date</th>
           <th class="sortable">Last Comment</th>
+          <th class="sortable">Comments</th>
           <th class="sortable">Status</th>
         </tr>
       </thead>
@@ -279,6 +280,41 @@ html_doc = f"""<!doctype html>
       '" data-range-key="' + range.key + '">' + range.label + "</button>";
   }}).join("");
 
+  // --- Optional columns: only shown/rendered when present on at least one ticket ---
+  var EXTRA_FIELDS = [
+    {{ key: "priority", label: "Priority" }},
+    {{ key: "longTermResolution", label: "Long-Term Resolution" }},
+    {{ key: "heatScore", label: "Heat Score" }},
+    {{ key: "irTime", label: "IR Time" }},
+    {{ key: "crTime", label: "CR Time" }},
+  ];
+
+  var availableExtraFields = EXTRA_FIELDS.filter(function(f) {{
+    return tickets.some(function(t) {{ return f.key in t; }});
+  }});
+
+  function formatFieldValue(value) {{
+    if (value == null) return "";
+    if (typeof value === "object") {{
+      var v = value.value != null ? value.value : value.name;
+      if (v == null) return "";
+      if (value.child && value.child.value != null) v += " / " + value.child.value;
+      return v;
+    }}
+    if (typeof value === "number") return Number.isInteger(value) ? String(value) : value.toFixed(2);
+    return String(value);
+  }}
+
+  if (availableExtraFields.length) {{
+    var tocHeadRow = document.querySelector("#toc-table thead tr");
+    availableExtraFields.forEach(function(f) {{
+      var th = document.createElement("th");
+      th.className = "sortable";
+      th.textContent = f.label;
+      tocHeadRow.appendChild(th);
+    }});
+  }}
+
   var tocRows = [];
   var sections = [];
 
@@ -294,6 +330,11 @@ html_doc = f"""<!doctype html>
     var lastCommentMs = commentDates.length ? Math.max.apply(null, commentDates) : null;
     var lastComment = fmtDate(lastCommentMs);
 
+    var tocExtraCells = availableExtraFields.map(function(f) {{
+      var formatted = formatFieldValue(t[f.key]);
+      return '<td data-sort="' + esc(formatted) + '">' + esc(formatted) + "</td>";
+    }}).join("");
+
     tocRows.push(
       '<tr data-created="' + (t.createdDate || "") + '" data-last-comment="' + (lastCommentMs || "") + '">' +
         '<td data-sort="' + esc(key) + '"><a href="#ticket-' + anchor + '">' + esc(key) + "</a></td>" +
@@ -301,7 +342,9 @@ html_doc = f"""<!doctype html>
         "<td>" + summary + "</td>" +
         '<td data-sort="' + (t.createdDate || "") + '">' + esc(created) + "</td>" +
         '<td data-sort="' + (lastCommentMs || "") + '">' + esc(lastComment) + "</td>" +
+        '<td data-sort="' + comments.length + '">' + comments.length + "</td>" +
         "<td>" + status + "</td>" +
+        tocExtraCells +
       "</tr>"
     );
 
@@ -324,6 +367,10 @@ html_doc = f"""<!doctype html>
       commentHtml.push('<p class="no-comments">No comments.</p>');
     }}
 
+    var detailExtraRows = EXTRA_FIELDS.filter(function(f) {{ return f.key in t; }}).map(function(f) {{
+      return "<tr><th>" + esc(f.label) + "</th><td>" + esc(formatFieldValue(t[f.key])) + "</td></tr>";
+    }}).join("");
+
     sections.push(
       '<section class="ticket" id="ticket-' + anchor + '" data-created="' + (t.createdDate || "") + '" data-last-comment="' + (lastCommentMs || "") + '">' +
         "<h2>" + esc(key) + "</h2>" +
@@ -332,6 +379,7 @@ html_doc = f"""<!doctype html>
           "<tr><th>Reporter</th><td>" + reporter + "</td></tr>" +
           "<tr><th>Created Date</th><td>" + esc(created) + "</td></tr>" +
           "<tr><th>Status</th><td>" + status + "</td></tr>" +
+          detailExtraRows +
         "</table>" +
         '<details class="comments-toggle" open>' +
           "<summary>Comments (" + comments.length + ")</summary>" +

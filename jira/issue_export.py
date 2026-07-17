@@ -27,6 +27,20 @@ def extract_comment(comment_json):
 
     return comment
 
+def get_string_value(obj):
+    if not isinstance(obj, dict):
+        return obj
+
+    if 'child' in obj:
+        return ((obj['value'] + ' - ') if 'value' in obj else '') + get_string_value(obj['child'])
+    if 'value' in obj:
+        return obj['value']
+    if 'name' in obj:
+        return obj['name']
+
+    print(obj)
+    assert(False)
+
 def get_servicedesk_issue(issue_key, issue_fields):
     issue_file = f"issue_export/{issue_key}.json"
 
@@ -104,16 +118,32 @@ def get_servicedesk_issue(issue_key, issue_fields):
     if len(issue['comments']) > 0 and issue['createdDate'] != issue['comments'][0]['createdDate']:
         print(f"{issue_key} requires update due to the description not being saved as the first comment")
         requires_fields = True
-    
-    for extra_field in ['accountCode']:
-        if extra_field not in issue:
+
+    extra_fields = {
+        'accountCode': 'customfield_12570',
+        'priority': 'priority',
+        'heatScore': 'customfield_10168',
+        'irTime': 'customfield_14749',
+    }
+
+    optional_extra_fields = {
+        'longTermResolution': 'customfield_12561',
+        'crTime': 'customfield_14750',
+    }
+
+    for extra_field in extra_fields.keys():
+        if extra_field not in issue or issue[extra_field] is None:
             print(f"{issue_key} requires update due to missing field {extra_field}")
             requires_fields = True
 
     if requires_fields:
-        issue_fields = get_issue_fields(issue_key, ['description', 'customfield_12570'], True)
+        issue_fields = get_issue_fields(issue_key, ['description', *extra_fields.values(), *optional_extra_fields.values()], True)
 
-        issue['accountCode'] = issue_fields['customfield_12570']
+        for localKey, jiraKey in extra_fields.items():
+            issue[localKey] = get_string_value(issue_fields[jiraKey])
+
+        for localKey, jiraKey in optional_extra_fields.items():
+            issue[localKey] = get_string_value(issue_fields[jiraKey])
 
         if len(comments) == 0 or issue['createdDate'] != comments[0]['createdDate']:
             comments.insert(0, {

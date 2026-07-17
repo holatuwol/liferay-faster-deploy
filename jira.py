@@ -168,9 +168,16 @@ def get_issue_fields(issue_key, fields=None, render=False):
         return {}
 
     response_json = r.json()
-    
+
     if render:
-        return response_json['renderedFields']
+        rendered_fields = response_json['renderedFields']
+        unrendered_fields = response_json['fields']
+
+        for key in rendered_fields:
+            if rendered_fields[key] is None:
+                rendered_fields[key] = unrendered_fields[key]
+        
+        return rendered_fields
     else:
         return response_json['fields']
 
