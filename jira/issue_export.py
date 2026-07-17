@@ -37,17 +37,24 @@ def get_servicedesk_issue(issue_key, issue_fields):
     if exists(issue_file):
         with open(issue_file, 'r', encoding='utf8') as f:
             issue = json.load(f)
-        
-        if 'updated' in issue and issue['updated'] == issue_fields['updated']:
+
+        if 'updated' not in issue:        
+            print(f"{issue_key} requires update due to not having an updated field")
+        elif issue['updated'] != issue_fields['updated']:
+            print(f"{issue_key} requires update due to {issue['updated']} != {issue_fields['updated']}")
+        else:
             requires_update = False
         
         if len(issue['comments']) > 0 and issue['createdDate'] != issue['comments'][0]['createdDate']:
+            print(f"{issue_key} requires update due to the description not being saved as the first comment")
             requires_fields = True
         
         for extra_field in ['accountCode']:
             if extra_field not in issue:
+                print(f"{issue_key} requires update due to missing field {extra_field}")
                 requires_fields = True
     else:
+        print(f"{issue_key} requires update due to having no cache file {issue_file}")
         requires_fields = True
 
     if issue is None or requires_update:
