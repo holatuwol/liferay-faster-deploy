@@ -1,6 +1,7 @@
 #!/bin/bash
 
-SCRIPT_FOLDER=$(dirname ${BASH_SOURCE[0]})
+SCRIPT_FOLDER=$(dirname $0)
+source ${SCRIPT_FOLDER}/../bin/activate
 
 findbuildurl() {
 	. "${SCRIPT_FOLDER}/findbuildurl" $@
@@ -13,5 +14,6 @@ webbrowser() {
 findbuildurl $@
 
 if [ "" != "${BUILD_URL}" ]; then
+	echo "${BUILD_URL}"
 	webbrowser "${BUILD_URL}"
 fi

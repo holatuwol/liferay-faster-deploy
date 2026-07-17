@@ -3,62 +3,75 @@
 SCRIPT_FOLDER=$(dirname ${BASH_SOURCE[0]})
 
 gethotfix() {
-	local VERSION=
+	FIX_PATH=
 
-	FIX_NAME=
+	if [ -f gradle.properties ] && [ "" != "$(grep '^lr.docker.environment.hotfix.urls=' gradle.properties)" ]; then
+		FIX_PATH="configs/common/patching/$(grep '^lr.docker.environment.hotfix.urls=' gradle.properties | grep -o '[^/]*.zip$')"
 
-	if [[ ${1} == *.q* ]]; then
-		VERSION=$(echo ${1} | grep -o '[0-9]*\.q[0-9]\.[0-9]*')
-		FIX_NAME=liferay-dxp-${VERSION}-$(echo ${1} | grep -o 'hotfix-[0-9]*')
-	elif [[ ${1} == http* ]]; then
-		FIX_NAME=$(echo "${1}" | grep -o 'liferay-hotfix-[^\.]*')
-		VERSION=$(echo ${FIX_NAME} | cut -d'-' -f 4 | sed 's/\([0-9]\)\([0-9]\)\([0-9][0-9]\)/\1.\2.\3/')
-	elif [[ ${1} == liferay* ]]; then
-		VERSION=$(echo ${1} | cut -d'-' -f 4 | sed 's/\([0-9]\)\([0-9]\)\([0-9][0-9]\)/\1.\2.\3/')
-		FIX_NAME=${1}
-	elif [[ ${1} == hotfix* ]]; then
-		VERSION=$(echo ${1} | cut -d'-' -f 3 | sed 's/\([0-9]\)\([0-9]\)\([0-9][0-9]\)/\1.\2.\3/')
-		FIX_NAME="liferay-${1}"
-	else
-		VERSION=$(echo $2 | cut -d'-' -f 2 | sed 's/\([0-9]\)\([0-9]\)\([0-9][0-9]\)/\1.\2.\3/')
-		FIX_NAME="liferay-hotfix-${1}-$2"
-	fi
+		if [ -f "${FIX_PATH}" ]; then
+			return 0
+		fi
 
-	if [ -f ${FIX_NAME}.zip ]; then
-		return 0
-	fi
-
-	if [ -f ${HOME}/Downloads/${FIX_NAME}.zip ]; then
-		cp ${HOME}/Downloads/${FIX_NAME}.zip .
-		return 0
-	fi
-
-	local FILE_URL="gs://liferay-releases-hotfix/${VERSION}/hotfix/${FIX_NAME}.zip"
-
-	echo "Downloading ${FIX_NAME} to check fixpack_documentation.xml"
-	echo ${FILE_URL}
-	echo
-
-	if ! gcloud auth print-access-token; then
-		gcloud auth login
+		FIX_PATH=
 		return 1
 	fi
 
-	gcloud storage cp ${FILE_URL} ${HOME}/Downloads/${FIX_NAME}.zip
-	cp ${HOME}/Downloads/${FIX_NAME}.zip .
+	local FIX_VERSION=
+
+	if [[ "${1}" == *hotfix* ]]; then
+		FIX_VERSION="$(echo ${1} | sed 's/-hotfix-.*//g' | sed 's/^[^0-9]*//g')"
+	else
+		FIX_VERSION="${1}"
+	fi
+
+	FIX_VERSION=$(curl -s "https://hotfixes.liferay.com/" | grep -o '<a href="[0-9][^"]*">' | cut -d'"' -f 2 | cut -d'/' -f 1 | fzf --query="${FIX_VERSION}" --exact --select-1)
+
+	if [ "" == "${FIX_VERSION}" ]; then
+		FIX_PATH=
+		return 1
+	fi
+
+	local FIX_NAME=
+
+	if [[ "${1}" == *hotfix* ]]; then
+		FIX_NAME="$(echo ${1} | grep -o 'hotfix-.*$')"
+	else
+		FIX_NAME="${2}"
+	fi
+
+	FIX_NAME=$(curl -s "https://hotfixes.liferay.com/${FIX_VERSION}/" | grep -o '<a href="[^"]*">' | cut -d'"' -f 2 | fzf --query="${FIX_NAME}" --exact --select-1)
+
+	if [ "" == "${FIX_NAME}" ]; then
+		FIX_PATH=
+		return 1
+	fi
+
+	FIX_PATH="${HOME}/Downloads/${FIX_NAME}"
+
+	if [ -f "${FIX_PATH}" ]; then
+		return 0
+	fi
+
+	local FIX_URL="https://hotfixes.liferay.com/${FIX_VERSION}/${FIX_NAME}"
+	echo "${FIX_URL}"
+	curl --progress-bar "${FIX_URL}" --output "${FIX_PATH}"
 }
 
 findbuildurl() {
 	gethotfix $@
 
-	local BUILD_ID=$(unzip -p ${FIX_NAME}.zip fixpack_documentation.xml 2>/dev/null | grep -F '<build-id>' | cut -d'>' -f 2 | cut -d'<' -f 1)
+	if [ "" == "${FIX_PATH}" ] || [ ! -f "${FIX_PATH}" ]; then
+		return 1
+	fi
+
+	local BUILD_ID=$(unzip -p "${FIX_PATH}" fixpack_documentation.xml 2>/dev/null | grep -F '<build-id>' | cut -d'>' -f 2 | cut -d'<' -f 1)
 
 	if [ "" == "${BUILD_ID}" ]; then
-		BUILD_ID=$(unzip -p ${FIX_NAME}.zip fixpack_documentation.json 2>/dev/null | jq '.build.id' | cut -d'"' -f 2)
+		BUILD_ID=$(unzip -p "${FIX_PATH}" fixpack_documentation.json 2>/dev/null | jq '.build.id' | cut -d'"' -f 2)
 	fi
 
 	if [ "" == "${BUILD_ID}" ]; then
-		BUILD_ID=$(unzip -p ${FIX_NAME}.zip hotfix.json 2>/dev/null | jq '.build.id' | cut -d'"' -f 2)
+		BUILD_ID=$(unzip -p "${FIX_PATH}" hotfix.json 2>/dev/null | jq '.build.id' | cut -d'"' -f 2)
 	fi
 
 	if [ "" == "${BUILD_ID}" ]; then
