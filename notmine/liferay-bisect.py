@@ -75,7 +75,7 @@ var notableHashes = %s;
 </body></html>
         ''' % (css_content, json_content, js_content)
 
-    with open(os.path.join(dir_path, filename),'w' if write else 'a', encoding='UTF-8') as file:
+    with open(os.path.join(dir_path, filename),'w' if write else 'a', encoding='utf-8') as file:
         file.write(html_content)
 
 
