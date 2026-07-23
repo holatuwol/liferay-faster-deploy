@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Serverless HAR Timing Comparison Dashboard</title>
+    <style>
+        :root {
+            --bg-primary: #f8f9fa;
+            --bg-card: #ffffff;
+            --text-main: #212529;
+            --text-secondary: #6c757d;
+            --border-color: #dee2e6;
+            --primary: #0d6efd;
+            --primary-hover: #0b5ed7;
+            --success-soft: #d1e7dd;
+            --success-text: #0f5132;
+            --danger-soft: #f8d7da;
+            --danger-text: #842029;
+            --warning-soft: #fff3cd;
+            --warning-text: #664d03;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-primary);
+            color: var(--text-main);
+            line-height: 1.5;
+        }
+
+        .container {
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 25px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            margin: 0 0 5px 0;
+            font-size: 28px;
+            color: #1a1a1a;
+        }
+
+        .metadata {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        /* Drop Zones Section */
+        .upload-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .dropzone-card {
+            background-color: var(--bg-card);
+            border: 2px dashed #b5c0cd;
+            border-radius: 8px;
+            padding: 30px 20px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            position: relative;
+        }
+
+        .dropzone-card.dragover {
+            border-color: var(--primary);
+            background-color: #f1f7ff;
+        }
+
+        .dropzone-card.success-upload {
+            border-color: #4cd964;
+            background-color: #f4fbf5;
+        }
+
+        .dropzone-card h3 {
+            margin: 0 0 8px 0;
+            font-size: 18px;
+            color: #495057;
+        }
+
+        .dropzone-card p {
+            margin: 0;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .dropzone-card input[type="file"] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .file-info {
+            margin-top: 10px;
+            font-weight: bold;
+            font-size: 14px;
+            color: #2b2d42;
+            word-break: break-all;
+        }
+
+        /* Reset Button */
+        .btn-reset {
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background-color: #fff;
+            cursor: pointer;
+            transition: background-color 0.15s;
+        }
+
+        .btn-reset:hover {
+            background-color: #f1f3f5;
+        }
+
+        /* Main Dashboard (Hidden by default until uploads finish) */
+        #dashboard-wrapper {
+            display: none;
+        }
+
+        /* Summary Cards */
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+        }
+
+        .card h3 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+        }
+
+        .card .value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #111;
+        }
+
+        /* Controls Section */
+        .controls-section {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin: 0 0 12px 0;
+            color: #444;
+        }
+
+        .search-box {
+            display: flex;
+            margin-bottom: 20px;
+        }
+
+        .search-box input {
+            flex-grow: 1;
+            padding: 10px 15px;
+            font-size: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .search-box input:focus {
+            border-color: var(--primary);
+        }
+
+        /* Domain Pills */
+        .domain-pills-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .pill {
+            font-size: 13px;
+            font-weight: 500;
+            padding: 6px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            background-color: var(--bg-card);
+            color: var(--text-main);
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .pill:hover {
+            background-color: #e9ecef;
+            border-color: #ced4da;
+        }
+
+        .pill.active {
+            background-color: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+        .pill .badge {
+            font-size: 10px;
+            background-color: rgba(0, 0, 0, 0.08);
+            color: var(--text-secondary);
+            border-radius: 10px;
+            padding: 2px 6px;
+            transition: all 0.2s ease;
+        }
+
+        .pill.active .badge {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: #fff;
+        }
+
+        /* Column Selector */
+        .column-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .col-checkbox-label {
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+            cursor: pointer;
+            padding: 6px 12px;
+            background-color: #f1f3f5;
+            border: 1px solid #ced4da;
+            border-radius: 20px;
+            user-select: none;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+
+        .col-checkbox-label:hover {
+            background-color: #e9ecef;
+        }
+
+        .col-checkbox-label input {
+            margin-right: 6px;
+            cursor: pointer;
+        }
+
+        .col-checkbox-label.active {
+            background-color: #e7f5ff;
+            border-color: #a5d8ff;
+            color: #004b87;
+        }
+
+        /* Tabs */
+        .tabs-header {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 15px;
+            gap: 10px;
+        }
+
+        .tab-button {
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            color: var(--text-secondary);
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .tab-button:hover {
+            color: var(--text-main);
+        }
+
+        .tab-button.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        /* Table Dashboard */
+        .table-container {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+            position: relative;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        th, td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: #f1f3f5;
+            color: #495057;
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            box-shadow: inset 0 -1px 0 var(--border-color);
+            white-space: nowrap;
+            transition: background-color 0.2s;
+        }
+
+        th:hover {
+            background-color: #e9ecef;
+        }
+
+        th.sorted-asc::after {
+            content: " ▲";
+            font-size: 11px;
+            color: var(--primary);
+        }
+
+        th.sorted-desc::after {
+            content: " ▼";
+            font-size: 11px;
+            color: var(--primary);
+        }
+
+        tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .url-cell {
+            max-width: 450px;
+            word-break: break-all;
+            font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+            font-size: 13px;
+        }
+
+        /* Text Alignment */
+        .align-right {
+            text-align: right;
+        }
+        .align-center {
+            text-align: center;
+        }
+
+        /* Colors for cells */
+        .cell-slower {
+            background-color: var(--danger-soft);
+            color: var(--danger-text);
+            font-weight: bold;
+        }
+
+        .cell-faster {
+            background-color: var(--success-soft);
+            color: var(--success-text);
+            font-weight: bold;
+        }
+
+        .cell-minor-diff {
+            background-color: var(--warning-soft);
+            color: var(--warning-text);
+        }
+
+        .slow-only-row {
+            color: #495057;
+        }
+
+        .text-muted {
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        /* Onboarding placeholder */
+        .onboarding-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+            color: var(--text-secondary);
+            margin-bottom: 25px;
+        }
+
+        .onboarding-card h2 {
+            margin: 0 0 10px 0;
+            color: #495057;
+            font-size: 22px;
+        }
+
+        .footer {
+            margin-top: 30px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <h1>HAR Timing Comparison Dashboard</h1>
+                <div class="metadata">
+                    Fully browser-side tool to parse, compare, and analyze HTTP Archives (HAR).
+                </div>
+            </div>
+            <button class="btn-reset" onclick="resetDashboard()">Reset Dashboard</button>
+        </header>
+
+        <!-- Drop Zones Section -->
+        <div class="upload-section">
+            <div class="dropzone-card" id="dropzone-slow">
+                <h3>Slow HAR File</h3>
+                <p>Drag & drop your "slow" session HAR file here, or click to browse</p>
+                <input type="file" id="input-slow-har" accept=".har,application/json">
+                <div class="file-info" id="info-slow">No file uploaded</div>
+            </div>
+            <div class="dropzone-card" id="dropzone-normal">
+                <h3>Normal HAR File</h3>
+                <p>Drag & drop your "normal" session HAR file here, or click to browse</p>
+                <input type="file" id="input-normal-har" accept=".har,application/json">
+                <div class="file-info" id="info-normal">No file uploaded</div>
+            </div>
+        </div>
+
+        <!-- Onboarding Placeholder -->
+        <div class="onboarding-card" id="onboarding-view">
+            <h2>Start Your Timing Analysis</h2>
+            <p>Please upload both the slow and normal HAR files above to automatically generate your interactive comparison.</p>
+        </div>
+
+        <!-- Main Dashboard Wrapper -->
+        <div id="dashboard-wrapper">
+            <!-- Summary Cards -->
+            <div class="summary-cards">
+                <div class="card">
+                    <h3>Total URLs in Slow</h3>
+                    <div class="value" id="stat-slow-total">0</div>
+                </div>
+                <div class="card">
+                    <h3>Matching with Normal</h3>
+                    <div class="value" id="stat-matched-total">0</div>
+                </div>
+                <div class="card">
+                    <h3>Avg Wait Diff (Matched)</h3>
+                    <div class="value" id="stat-avg-wait-diff">0.00 ms</div>
+                </div>
+                <div class="card">
+                    <h3>Slow is Slower On</h3>
+                    <div class="value" id="stat-slow-slower-count" style="color: var(--danger-text);">0 URLs</div>
+                </div>
+            </div>
+
+            <!-- Controls Section -->
+            <div class="controls-section">
+                <div class="search-box">
+                    <input type="text" id="search-input" placeholder="Search by URL pattern or domain...">
+                </div>
+
+                <div class="section-title">Filter by Domain</div>
+                <div class="domain-pills-container" id="domain-pills-container">
+                    <!-- Javascript will render domain pills here -->
+                </div>
+
+                <div class="section-title">Show / Hide Columns</div>
+                <div class="column-selector" id="col-selector-container">
+                    <!-- Javascript will render checkboxes here -->
+                </div>
+            </div>
+
+            <!-- Tab Headers -->
+            <div class="tabs-header">
+                <button class="tab-button active" onclick="switchTab('exact')">Exact URL Matches</button>
+                <button class="tab-button" onclick="switchTab('base')">Base URL Matches (No Query Params)</button>
+            </div>
+
+            <!-- Table Dashboard -->
+            <div class="table-container">
+                <table>
+                    <thead id="table-head">
+                        <!-- Javascript will render headers here -->
+                    </thead>
+                    <tbody id="table-body">
+                        <!-- Javascript will render data rows here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="footer">
+            Drag and drop files to start &bull; Securely processes entirely inside your browser.
+        </div>
+    </div>
+
+    <script>
+        // Store raw HAR JSON files loaded in browser
+        let slowHarJson = null;
+        let normalHarJson = null;
+
+        // Final Compared Data Lists
+        let exactData = [];
+        let baseData = [];
+
+        // Active States
+        let currentTab = 'exact'; // 'exact' or 'base'
+        let sortColumn = 'wait_diff';
+        let sortDirection = 'desc'; // 'asc' or 'desc'
+        let searchQuery = '';
+        let activeDomains = new Set();
+
+        // Column Groups Definition (combines slow, normal, and diff columns under single options)
+        const columnGroups = [
+            {
+                id: 'key',
+                label: 'URL Key',
+                columns: ['key'],
+                visible: true
+            },
+            {
+                id: 'counts',
+                label: 'Request Counts',
+                columns: ['slow_count', 'normal_count'],
+                visible: true
+            },
+            {
+                id: 'wait',
+                label: 'Server Wait Time (TTFB)',
+                columns: ['slow_avg_wait', 'normal_avg_wait', 'wait_diff'],
+                visible: true
+            },
+            {
+                id: 'blocked',
+                label: 'Connection Blocked (Queue)',
+                columns: ['slow_avg_blocked', 'normal_avg_blocked', 'blocked_diff'],
+                visible: false
+            },
+            {
+                id: 'queueing',
+                label: 'Blocked Queueing (Chrome)',
+                columns: ['slow_avg_queueing', 'normal_avg_queueing', 'queueing_diff'],
+                visible: false
+            },
+            {
+                id: 'dns',
+                label: 'DNS Resolution',
+                columns: ['slow_avg_dns', 'normal_avg_dns', 'dns_diff'],
+                visible: false
+            },
+            {
+                id: 'connect',
+                label: 'TCP Connection',
+                columns: ['slow_avg_connect', 'normal_avg_connect', 'connect_diff'],
+                visible: false
+            },
+            {
+                id: 'ssl',
+                label: 'SSL/TLS Handshake',
+                columns: ['slow_avg_ssl', 'normal_avg_ssl', 'ssl_diff'],
+                visible: false
+            },
+            {
+                id: 'send',
+                label: 'Send Request',
+                columns: ['slow_avg_send', 'normal_avg_send', 'send_diff'],
+                visible: false
+            },
+            {
+                id: 'receive',
+                label: 'Receive Response',
+                columns: ['slow_avg_receive', 'normal_avg_receive', 'receive_diff'],
+                visible: false
+            },
+            {
+                id: 'total_time',
+                label: 'Total Duration',
+                columns: ['slow_avg_time', 'normal_avg_time', 'time_diff'],
+                visible: true
+            }
+        ];
+
+        // Column Definitions (Spelled Out fully. Wait and Total visible by default; others hidden by default for cleaner UX)
+        const columns = [
+            { id: 'key', label: 'Matched URL Key', visible: true, align: 'left', isUrl: true },
+            { id: 'slow_count', label: 'Slow Count', visible: true, align: 'center' },
+            { id: 'normal_count', label: 'Normal Count', visible: true, align: 'center' },
+            
+            // Server Wait Time / TTFB (Visible by default)
+            { id: 'slow_avg_wait', label: 'Slow Avg Wait (ms)', visible: true, align: 'right' },
+            { id: 'normal_avg_wait', label: 'Normal Avg Wait (ms)', visible: true, align: 'right' },
+            { id: 'wait_diff', label: 'Wait Diff (ms)', visible: true, align: 'right', isDiff: true },
+            
+            // Connection Blocked Queue (Hidden by default)
+            { id: 'slow_avg_blocked', label: 'Slow Avg Blocked (ms)', visible: false, align: 'right' },
+            { id: 'normal_avg_blocked', label: 'Normal Avg Blocked (ms)', visible: false, align: 'right' },
+            { id: 'blocked_diff', label: 'Blocked Diff (ms)', visible: false, align: 'right', isDiff: true },
+            
+            // Chrome Blocked Queueing (Hidden by default)
+            { id: 'slow_avg_queueing', label: 'Slow Avg Blocked Queueing (ms)', visible: false, align: 'right' },
+            { id: 'normal_avg_queueing', label: 'Normal Avg Blocked Queueing (ms)', visible: false, align: 'right' },
+            { id: 'queueing_diff', label: 'Blocked Queueing Diff (ms)', visible: false, align: 'right', isDiff: true },
+
+            // DNS Resolution (Hidden by default)
+            { id: 'slow_avg_dns', label: 'Slow Avg DNS (ms)', visible: false, align: 'right' },
+            { id: 'normal_avg_dns', label: 'Normal Avg DNS (ms)', visible: false, align: 'right' },
+            { id: 'dns_diff', label: 'DNS Diff (ms)', visible: false, align: 'right', isDiff: true },
+
+            // TCP Connection (Hidden by default)
+            { id: 'slow_avg_connect', label: 'Slow Avg Connect (ms)', visible: false, align: 'right' },
+            { id: 'normal_avg_connect', label: 'Normal Avg Connect (ms)', visible: false, align: 'right' },
+            { id: 'connect_diff', label: 'Connect Diff (ms)', visible: false, align: 'right', isDiff: true },
+
+            // SSL/TLS Handshake (Hidden by default)
+            { id: 'slow_avg_ssl', label: 'Slow Avg SSL (ms)', visible: false, align: 'right' },
+            { id: 'normal_avg_ssl', label: 'Normal Avg SSL (ms)', visible: false, align: 'right' },
+            { id: 'ssl_diff', label: 'SSL Diff (ms)', visible: false, align: 'right', isDiff: true },
+
+            // Send HTTP Request (Hidden by default)
+            { id: 'slow_avg_send', label: 'Slow Avg Send (ms)', visible: false, align: 'right' },
+            { id: 'normal_avg_send', label: 'Normal Avg Send (ms)', visible: false, align: 'right' },
+            { id: 'send_diff', label: 'Send Diff (ms)', visible: false, align: 'right', isDiff: true },
+
+            // Receive HTTP Response (Hidden by default)
+            { id: 'slow_avg_receive', label: 'Slow Avg Receive (ms)', visible: false, align: 'right' },
+            { id: 'normal_avg_receive', label: 'Normal Avg Receive (ms)', visible: false, align: 'right' },
+            { id: 'receive_diff', label: 'Receive Diff (ms)', visible: false, align: 'right', isDiff: true },
+
+            // Total Request Duration (Visible by default)
+            { id: 'slow_avg_time', label: 'Slow Avg Total Time (ms)', visible: true, align: 'right' },
+            { id: 'normal_avg_time', label: 'Normal Avg Total Time (ms)', visible: true, align: 'right' },
+            { id: 'time_diff', label: 'Total Time Diff (ms)', visible: true, align: 'right', isDiff: true }
+        ];
+
+        // Setup Drag & Drop Event Listeners
+        function initDragAndDrop(zoneId, inputId, infoId, onFileLoaded) {
+            const zone = document.getElementById(zoneId);
+            const input = document.getElementById(inputId);
+            const info = document.getElementById(infoId);
+
+            // Click to browse
+            zone.addEventListener('click', () => {
+                input.click();
+            });
+
+            zone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                zone.classList.add('dragover');
+            });
+
+            zone.addEventListener('dragleave', () => {
+                zone.classList.remove('dragover');
+            });
+
+            zone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                zone.classList.remove('dragover');
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    processFile(e.dataTransfer.files[0]);
+                }
+            });
+
+            input.addEventListener('change', (e) => {
+                if (e.target.files && e.target.files.length > 0) {
+                    processFile(e.target.files[0]);
+                }
+            });
+
+            function processFile(file) {
+                info.innerText = "Loading " + file.name + "...";
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const parsed = JSON.parse(e.target.result);
+                        if (!parsed.log || !parsed.log.entries) {
+                            throw new Error("File is not a valid HAR archive (missing log.entries array).");
+                        }
+                        
+                        // Check if file loaded successfully
+                        zone.classList.add('success-upload');
+                        info.innerHTML = `&#10004; ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+                        onFileLoaded(parsed);
+                    } catch (err) {
+                        zone.classList.remove('success-upload');
+                        info.innerText = "Error: " + err.message;
+                    }
+                };
+                reader.onerror = () => {
+                    zone.classList.remove('success-upload');
+                    info.innerText = "Failed to read file.";
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        // Clean URL to Base URL
+        function getBaseUrl(url) {
+            try {
+                const parsed = new URL(url);
+                return `${parsed.protocol}//${parsed.host}${parsed.pathname}`;
+            } catch (e) {
+                return url.split('?')[0];
+            }
+        }
+
+        // Extract domain from URL
+        function getDomain(url) {
+            try {
+                const parsed = new URL(url);
+                return parsed.hostname;
+            } catch (e) {
+                const match = url.match(/^(?:https?:\/\/)?(?:www\.)?([^\/?:#]+)/i);
+                return match ? match[1] : 'unknown';
+            }
+        }
+
+        // Lightweight fuzzy match helper
+        function fuzzyMatch(text, query) {
+            if (!query) return true;
+            const terms = query.toLowerCase().trim().split(/\s+/);
+            const lowerText = text.toLowerCase();
+            
+            return terms.every(term => {
+                let termIdx = 0;
+                let textIdx = 0;
+                while (termIdx < term.length && textIdx < lowerText.length) {
+                    if (lowerText[textIdx] === term[termIdx]) {
+                        termIdx++;
+                    }
+                    textIdx++;
+                }
+                return termIdx === term.length;
+            });
+        }
+
+        // Safe timing convert float
+        function safeFloat(val) {
+            if (val === undefined || val === null || val < 0) {
+                return 0.0;
+            }
+            return parseFloat(val);
+        }
+
+        // HAR Loader and Aggregation
+        function loadAndAggregate(harJson, keyType = 'exact') {
+            const entries = harJson.log ? harJson.log.entries || [] : [];
+            const groups = {};
+            
+            entries.forEach(entry => {
+                const req = entry.request || {};
+                const url = req.url || '';
+                if (!url) return;
+                
+                const key = keyType === 'exact' ? url : getBaseUrl(url);
+                if (!groups[key]) {
+                    groups[key] = [];
+                }
+                
+                const timings = entry.timings || {};
+                groups[key].push({
+                    timingWait: timings.wait,
+                    timingBlocked: timings.blocked,
+                    timingBlockedQueueing: timings._blocked_queueing,
+                    timingDns: timings.dns,
+                    timingConnect: timings.connect,
+                    timingSsl: timings.ssl,
+                    timingSend: timings.send,
+                    timingReceive: timings.receive,
+                    timingTime: entry.time
+                });
+            });
+
+            const stats = {};
+            for (const [key, items] of Object.entries(groups)) {
+                const count = items.length;
+                let waitSum = 0, blockedSum = 0, queueingSum = 0, dnsSum = 0, connectSum = 0, sslSum = 0, sendSum = 0, receiveSum = 0, timeSum = 0;
+                
+                items.forEach(item => {
+                    waitSum += safeFloat(item.timingWait);
+                    blockedSum += safeFloat(item.timingBlocked);
+                    queueingSum += safeFloat(item.timingBlockedQueueing);
+                    dnsSum += safeFloat(item.timingDns);
+                    connectSum += safeFloat(item.timingConnect);
+                    sslSum += safeFloat(item.timingSsl);
+                    sendSum += safeFloat(item.timingSend);
+                    receiveSum += safeFloat(item.timingReceive);
+                    timeSum += safeFloat(item.timingTime);
+                });
+
+                stats[key] = {
+                    count: count,
+                    avg_wait: waitSum / count,
+                    avg_blocked: blockedSum / count,
+                    avg_queueing: queueingSum / count,
+                    avg_dns: dnsSum / count,
+                    avg_connect: connectSum / count,
+                    avg_ssl: sslSum / count,
+                    avg_send: sendSum / count,
+                    avg_receive: receiveSum / count,
+                    avg_time: timeSum / count
+                };
+            }
+            return stats;
+        }
+
+        // Core Comparison Engine
+        function compareMetrics(slowStats, normalStats) {
+            const comparison = [];
+            
+            for (const [key, slow] of Object.entries(slowStats)) {
+                const normal = normalStats[key];
+                
+                if (normal !== undefined) {
+                    const wait_diff = slow.avg_wait - normal.avg_wait;
+                    const blocked_diff = slow.avg_blocked - normal.avg_blocked;
+                    const queueing_diff = slow.avg_queueing - normal.avg_queueing;
+                    const dns_diff = slow.avg_dns - normal.avg_dns;
+                    const connect_diff = slow.avg_connect - normal.avg_connect;
+                    const ssl_diff = slow.avg_ssl - normal.avg_ssl;
+                    const send_diff = slow.avg_send - normal.avg_send;
+                    const receive_diff = slow.avg_receive - normal.avg_receive;
+                    const time_diff = slow.avg_time - normal.avg_time;
+                    
+                    comparison.push({
+                        key: key,
+                        domain: getDomain(key),
+                        slow_count: slow.count,
+                        normal_count: normal.count,
+                        slow_avg_wait: slow.avg_wait,
+                        normal_avg_wait: normal.avg_wait,
+                        wait_diff: wait_diff,
+                        slow_avg_blocked: slow.avg_blocked,
+                        normal_avg_blocked: normal.avg_blocked,
+                        blocked_diff: blocked_diff,
+                        slow_avg_queueing: slow.avg_queueing,
+                        normal_avg_queueing: normal.avg_queueing,
+                        queueing_diff: queueing_diff,
+                        slow_avg_dns: slow.avg_dns,
+                        normal_avg_dns: normal.avg_dns,
+                        dns_diff: dns_diff,
+                        slow_avg_connect: slow.avg_connect,
+                        normal_avg_connect: normal.avg_connect,
+                        connect_diff: connect_diff,
+                        slow_avg_ssl: slow.avg_ssl,
+                        normal_avg_ssl: normal.avg_ssl,
+                        ssl_diff: ssl_diff,
+                        slow_avg_send: slow.avg_send,
+                        normal_avg_send: normal.avg_send,
+                        send_diff: send_diff,
+                        slow_avg_receive: slow.avg_receive,
+                        normal_avg_receive: normal.avg_receive,
+                        receive_diff: receive_diff,
+                        slow_avg_time: slow.avg_time,
+                        normal_avg_time: normal.avg_time,
+                        time_diff: time_diff
+                    });
+                } else {
+                    comparison.push({
+                        key: key,
+                        domain: getDomain(key),
+                        slow_count: slow.count,
+                        normal_count: null,
+                        slow_avg_wait: slow.avg_wait,
+                        normal_avg_wait: null,
+                        wait_diff: null,
+                        slow_avg_blocked: slow.avg_blocked,
+                        normal_avg_blocked: null,
+                        blocked_diff: null,
+                        slow_avg_queueing: slow.avg_queueing,
+                        normal_avg_queueing: null,
+                        queueing_diff: null,
+                        slow_avg_dns: slow.avg_dns,
+                        normal_avg_dns: null,
+                        dns_diff: null,
+                        slow_avg_connect: slow.avg_connect,
+                        normal_avg_connect: null,
+                        connect_diff: null,
+                        slow_avg_ssl: slow.avg_ssl,
+                        normal_avg_ssl: null,
+                        ssl_diff: null,
+                        slow_avg_send: slow.avg_send,
+                        normal_avg_send: null,
+                        send_diff: null,
+                        slow_avg_receive: slow.avg_receive,
+                        normal_avg_receive: null,
+                        receive_diff: null,
+                        slow_avg_time: slow.avg_time,
+                        normal_avg_time: null,
+                        time_diff: null
+                    });
+                }
+            }
+            return comparison;
+        }
+
+        // Trigger Comparison once both files are uploaded
+        function checkAndProcessComparisons() {
+            if (slowHarJson && normalHarJson) {
+                exactData = compareMetrics(loadAndAggregate(slowHarJson, 'exact'), loadAndAggregate(normalHarJson, 'exact'));
+                baseData = compareMetrics(loadAndAggregate(slowHarJson, 'base'), loadAndAggregate(normalHarJson, 'base'));
+
+                // Show Dashboard and Hide onboarding
+                document.getElementById('onboarding-view').style.display = 'none';
+                document.getElementById('dashboard-wrapper').style.display = 'block';
+
+                // Render Dashboard components
+                renderColumnSelector();
+                renderDomainPills();
+                updateSummaryCards();
+                renderTable();
+            }
+        }
+
+        // Reset Dashboard State
+        function resetDashboard() {
+            slowHarJson = null;
+            normalHarJson = null;
+            exactData = [];
+            baseData = [];
+            searchQuery = '';
+            activeDomains.clear();
+            document.getElementById('search-input').value = '';
+
+            document.getElementById('onboarding-view').style.display = 'block';
+            document.getElementById('dashboard-wrapper').style.display = 'none';
+
+            // Reset Dropzone visual state
+            const dzSlow = document.getElementById('dropzone-slow');
+            const dzNormal = document.getElementById('dropzone-normal');
+            dzSlow.classList.remove('success-upload');
+            dzNormal.classList.remove('success-upload');
+
+            document.getElementById('info-slow').innerText = "No file uploaded";
+            document.getElementById('info-normal').innerText = "No file uploaded";
+
+            // Clear inputs
+            document.getElementById('input-slow-har').value = '';
+            document.getElementById('input-normal-har').value = '';
+        }
+
+        // Switch Tabs
+        function switchTab(tabId) {
+            currentTab = tabId;
+            activeDomains.clear();
+            
+            // Toggle active classes on tab buttons
+            const buttons = document.querySelectorAll('.tab-button');
+            buttons.forEach(btn => {
+                if (btn.getAttribute('onclick').includes(tabId)) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+
+            // Reset sort key to wait_diff since it's the primary timing metric
+            sortColumn = 'wait_diff';
+            sortDirection = 'desc';
+
+            renderDomainPills();
+            updateSummaryCards();
+            renderTable();
+        }
+
+        // Toggle Column Group Visibility
+        function toggleColumnGroup(groupId) {
+            const group = columnGroups.find(g => g.id === groupId);
+            if (group) {
+                group.visible = !group.visible;
+                // Sync the individual columns visible states
+                group.columns.forEach(colId => {
+                    const col = columns.find(c => c.id === colId);
+                    if (col) {
+                        col.visible = group.visible;
+                    }
+                });
+                renderColumnSelector();
+                renderTable();
+            }
+        }
+
+        // Render Column Selector UI using combined groups
+        function renderColumnSelector() {
+            const container = document.getElementById('col-selector-container');
+            container.innerHTML = '';
+
+            columnGroups.forEach(group => {
+                const label = document.createElement('label');
+                label.className = 'col-checkbox-label' + (group.visible ? ' active' : '');
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.checked = group.visible;
+                checkbox.addEventListener('change', () => toggleColumnGroup(group.id));
+
+                label.appendChild(checkbox);
+                label.appendChild(document.createTextNode(group.label));
+                container.appendChild(label);
+            });
+        }
+
+        // Handle Sort Clicking
+        function handleSort(colId) {
+            if (sortColumn === colId) {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortColumn = colId;
+                sortDirection = 'desc'; // default to absolute descending slow endpoints
+            }
+            renderTable();
+        }
+
+        // Extract domains and count their occurrences in the current active dataset
+        function getDomainStats() {
+            const data = currentTab === 'exact' ? exactData : baseData;
+            const stats = {};
+            data.forEach(item => {
+                const domain = item.domain || 'unknown';
+                stats[domain] = (stats[domain] || 0) + 1;
+            });
+            // Return sorted by count desc, then domain name asc
+            return Object.entries(stats)
+                .map(([domain, count]) => ({ domain, count }))
+                .sort((a, b) => b.count - a.count || a.domain.localeCompare(b.domain));
+        }
+
+        // Render Domain Pills Filter UI
+        function renderDomainPills() {
+            const container = document.getElementById('domain-pills-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const domainStats = getDomainStats();
+            if (domainStats.length === 0) {
+                container.innerHTML = '<span class="text-muted">No domains available</span>';
+                return;
+            }
+
+            // Render 'All' Pill
+            const allPill = document.createElement('button');
+            allPill.className = 'pill' + (activeDomains.size === 0 ? ' active' : '');
+            allPill.innerHTML = `All <span class="badge">${currentTab === 'exact' ? exactData.length : baseData.length}</span>`;
+            allPill.addEventListener('click', () => toggleDomainFilter('all'));
+            container.appendChild(allPill);
+
+            // Render Individual Domain Pills
+            domainStats.forEach(({ domain, count }) => {
+                const pill = document.createElement('button');
+                const isActive = activeDomains.has(domain);
+                pill.className = 'pill' + (isActive ? ' active' : '');
+                pill.innerHTML = `${domain} <span class="badge">${count}</span>`;
+                pill.addEventListener('click', () => toggleDomainFilter(domain));
+                container.appendChild(pill);
+            });
+        }
+
+        // Toggle domain from the active filters list
+        function toggleDomainFilter(domain) {
+            if (domain === 'all') {
+                activeDomains.clear();
+            } else {
+                if (activeDomains.has(domain)) {
+                    activeDomains.delete(domain);
+                } else {
+                    activeDomains.add(domain);
+                }
+            }
+            renderDomainPills();
+            updateSummaryCards();
+            renderTable();
+        }
+
+        // Update Summary Cards based on current active dataset and filters
+        function updateSummaryCards() {
+            const data = currentTab === 'exact' ? exactData : baseData;
+            
+            let filteredData = data;
+            if (activeDomains.size > 0) {
+                filteredData = filteredData.filter(item => activeDomains.has(item.domain));
+            }
+            if (searchQuery.trim() !== '') {
+                filteredData = filteredData.filter(item => fuzzyMatch(item.key, searchQuery));
+            }
+
+            const totalSlow = filteredData.length;
+            const matched = filteredData.filter(item => item.normal_count !== null);
+            const matchedCount = matched.length;
+
+            let waitDiffSum = 0;
+            let slowSlowerCount = 0;
+
+            matched.forEach(item => {
+                waitDiffSum += item.wait_diff;
+                if (item.wait_diff > 0) {
+                    slowSlowerCount++;
+                }
+            });
+
+            const avgWaitDiff = matchedCount > 0 ? (waitDiffSum / matchedCount) : 0;
+
+            document.getElementById('stat-slow-total').innerText = totalSlow;
+            document.getElementById('stat-matched-total').innerText = matchedCount;
+            document.getElementById('stat-avg-wait-diff').innerText = avgWaitDiff.toFixed(2) + " ms";
+            document.getElementById('stat-slow-slower-count').innerText = slowSlowerCount + " URLs";
+        }
+
+        // Render Table Component
+        function renderTable() {
+            const data = currentTab === 'exact' ? exactData : baseData;
+            const tableHead = document.getElementById('table-head');
+            const tableBody = document.getElementById('table-body');
+
+            // 1. Filter Data
+            let filteredData = data;
+            if (activeDomains.size > 0) {
+                filteredData = filteredData.filter(item => activeDomains.has(item.domain));
+            }
+            if (searchQuery.trim() !== '') {
+                filteredData = filteredData.filter(item => fuzzyMatch(item.key, searchQuery));
+            }
+
+            // 2. Sort Data
+            filteredData.sort((a, b) => {
+                let valA = a[sortColumn];
+                let valB = b[sortColumn];
+
+                // Handle missing values (slow-only items should sort to the bottom)
+                if (valA === null && valB === null) return 0;
+                if (valA === null) return 1;
+                if (valB === null) return -1;
+
+                let comparison = 0;
+                if (typeof valA === 'string') {
+                    comparison = valA.localeCompare(valB);
+                } else {
+                    // Numeric comparison - sort by absolute difference or value
+                    if (sortColumn.endsWith('_diff')) {
+                        comparison = Math.abs(valA) - Math.abs(valB);
+                    } else {
+                        comparison = valA - valB;
+                    }
+                }
+
+                return sortDirection === 'asc' ? comparison : -comparison;
+            });
+
+            // 3. Render Header
+            tableHead.innerHTML = '';
+            const trHead = document.createElement('tr');
+            columns.forEach(col => {
+                if (!col.visible) return;
+
+                const th = document.createElement('th');
+                th.innerText = col.label;
+                th.className = col.align === 'center' ? 'align-center' : (col.align === 'right' ? 'align-right' : '');
+                
+                // Active Sort Classes
+                if (sortColumn === col.id) {
+                    th.className += ' sorted-' + sortDirection;
+                }
+
+                th.addEventListener('click', () => handleSort(col.id));
+                trHead.appendChild(th);
+            });
+            tableHead.appendChild(trHead);
+
+            // 4. Render Body Rows
+            tableBody.innerHTML = '';
+            if (filteredData.length === 0) {
+                const tr = document.createElement('tr');
+                const td = document.createElement('td');
+                td.colSpan = columns.filter(c => c.visible).length;
+                td.className = 'align-center text-muted';
+                td.innerText = 'No matching URLs found.';
+                tr.appendChild(td);
+                tableBody.appendChild(tr);
+                return;
+            }
+
+            filteredData.forEach(item => {
+                const tr = document.createElement('tr');
+                if (item.normal_count === null) {
+                    tr.className = 'slow-only-row';
+                }
+
+                columns.forEach(col => {
+                    if (!col.visible) return;
+
+                    const td = document.createElement('td');
+                    const val = item[col.id];
+
+                    // Class definitions
+                    let classes = [];
+                    if (col.align === 'center') classes.push('align-center');
+                    if (col.align === 'right') classes.push('align-right');
+
+                    if (col.isUrl) {
+                        classes.push('url-cell');
+                        td.innerText = val;
+                    } else if (val === null) {
+                        td.innerHTML = '<span class="text-muted">-</span>';
+                    } else {
+                        // Numeric Formatting
+                        if (typeof val === 'number') {
+                            if (col.id.endsWith('_count')) {
+                                td.innerText = val;
+                            } else {
+                                td.innerText = val.toFixed(3);
+                            }
+                        } else {
+                            td.innerText = val;
+                        }
+                    }
+
+                    if (classes.length > 0) {
+                        td.className = classes.join(' ');
+                    }
+                    tr.appendChild(td);
+                });
+                tableBody.appendChild(tr);
+            });
+        }
+
+        // Initialize drag-and-drop and change listeners
+        initDragAndDrop('dropzone-slow', 'input-slow-har', 'info-slow', (harData) => {
+            slowHarJson = harData;
+            checkAndProcessComparisons();
+        });
+
+        initDragAndDrop('dropzone-normal', 'input-normal-har', 'info-normal', (harData) => {
+            normalHarJson = harData;
+            checkAndProcessComparisons();
+        });
+
+        // Initialize Search Listener
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            searchQuery = e.target.value;
+            renderTable();
+        });
+    </script>
+</body>
+</html>
