@@ -1,22 +1,16 @@
-function getParameter(name) {
-	if (!location.search) {
-		return '';
-	}
-
-	var re = new RegExp('[?&]' + name + '=([^&]*)');
-	var m = re.exec(location.search);
-	return m ? m[1] : '';
-};
-
 var versionInfoList = null;
 var modifyState = history.pushState ? history.pushState.bind(history) : null;
 
 var select0 = document.getElementById('bomVersion');
 
-var select1 = document.getElementById('sourceVersion');
-var select1Value = getParameter('sourceVersion');
-var select2 = document.getElementById('targetVersion');
-var select2Value = getParameter('targetVersion') || select1Value;
+var versionSelects = initVersionSelects();
+var select1 = versionSelects.select1;
+var select1Value = versionSelects.select1Value;
+var select2 = versionSelects.select2;
+var select2Value = versionSelects.select2Value;
+var sourceVersionFilter = versionSelects.sourceVersionFilter;
+var targetVersionFilter = versionSelects.targetVersionFilter;
+
 var nameFilter = document.getElementById('nameFilter');
 nameFilter.value = getParameter('nameFilter');
 
@@ -33,6 +27,8 @@ if (includeFilter) {
 	}
 
 	includeFilter.selectedIndex = selectedIndex;
+
+	$(includeFilter).chosen({width: '200px'});
 }
 
 var changeFilter = document.getElementById('changeFilter');
@@ -49,34 +45,6 @@ if (changeFilter) {
 
 	changeFilter.selectedIndex = selectedIndex;
 }
-
-var servicePacks = {
-	'7010-de-07': 1,
-	'7010-de-12': 2,
-	'7010-de-14': 3,
-	'7010-de-22': 4,
-	'7010-de-30': 5,
-	'7010-de-32': 6,
-	'7010-de-40': 7,
-	'7010-de-50': 8,
-	'7010-de-60': 9,
-	'7010-de-70': 10,
-	'7010-de-80': 11,
-	'7010-de-87': 12,
-	'7010-de-90': 13,
-	'7010-de-93': 14,
-	'7010-de-96': 15,
-	'7010-de-99': 16,
-	'7010-de-102': 17,
-	'7110-dxp-5': 1,
-	'7110-dxp-10': 2,
-	'7110-dxp-15': 3,
-	'7110-dxp-17': 4,
-	'7110-dxp-20': 5,
-	'7210-dxp-2': 1,
-	'7210-dxp-5': 2,
-	'7210-dxp-8': 3
-};
 
 var repositoryURLs = {
 	'public': 'https://repository-cdn.liferay.com/nexus/content/repositories/liferay-public-releases/',
@@ -290,10 +258,6 @@ function addBOMs(selectValue, zip, script) {
 	return artifactId + '-' + versionIds[0] + '.zip';
 };
 
-function isPermaLink(element) {
-	return element.getAttribute('data-original-title') == 'Permalink'
-};
-
 function checkVersionInfo() {
 	// https://stackoverflow.com/questions/12508225/how-do-we-update-url-or-query-strings-using-javascript-jquery-without-reloading
 
@@ -369,11 +333,9 @@ function checkVersionInfo() {
 
 	var name1 = 'version_' + select1.options[select1.selectedIndex].value;
 	var tagName1 = getTagName(select1.options[select1.selectedIndex].value);
-	var header1 = select1.options[select1.selectedIndex].innerHTML;
 
 	var name2 = 'version_' + select2.options[select2.selectedIndex].value;
 	var tagName2 = getTagName(select2.options[select2.selectedIndex].value);
-	var header2 = select1.options[select2.selectedIndex].innerHTML;
 
 	if (changeFilter && (name1 == name2)) {
 		changeFilter.selectedIndex = 0;
@@ -615,69 +577,16 @@ request.onreadystatechange = function() {
 			var option = document.createElement('option');
 
 			option.value = x;
-			option.innerHTML = x in servicePacks ? (x + ' (sp' + servicePacks[x] + ')') : x;
+			option.innerHTML = getFixPackDisplayText(x);
 			select.appendChild(option);
 
 			return select;
 		};
 
-		var setIndex = function(select, x) {
-			for (var i = 0; i < select.options.length; i++) {
-				if (select.options[i].value == x) {
-					select.selectedIndex = i;
-					return;
-				}
-			}
-
-			select.selectedIndex = select.options.length - 1;
-		};
-
-		var getBaseVersion = function(a) {
-			return parseInt(a.substring(0, a.indexOf('-')));
-		}
-
-		var getFixPackVersion = function(a) {
-			var fixPackVersion = a.substring(a.lastIndexOf('-') + 1);
-
-			if (fixPackVersion == 'base') {
-				return 0;
-			}
-
-			if (fixPackVersion.indexOf('ga') == 0) {
-				return parseInt(fixPackVersion.substring(2));
-			}
-
-			while (fixPackVersion.indexOf('0') == 0) {
-				fixPackVersion = fixPackVersion.substring(1);
-			}
-
-			if (fixPackVersion.indexOf('u') == 0) {
-				return parseInt(fixPackVersion.substring(1));
-			}
-
-			if (fixPackVersion.indexOf('.q') != -1) {
-				return fixPackVersion;
-			}
-
-			return parseInt(fixPackVersion);
-		}
-
 		var fixPackIds = Object.keys(versionInfoList[0])
 			.filter(x => x.indexOf(prefix) == 0)
 			.map(x => x.substring(prefix.length))
-			.sort(function(a, b) {
-				var x1 = getBaseVersion(a);
-				var x2 = getBaseVersion(b);
-
-				if (x1 != x2) {
-					return x1 - x2;
-				}
-
-				x1 = getFixPackVersion(a);
-				x2 = getFixPackVersion(b);
-
-				return x1 > x2 ? 1 : -1;
-			});
+			.sort(compareFixPackIds);
 
 		if (select0) {
 			fixPackIds.reduce(addFixPack, select0);
@@ -688,6 +597,9 @@ request.onreadystatechange = function() {
 
 		setIndex(select1, select1Value);
 		setIndex(select2, select2Value);
+
+		$(select1).trigger('chosen:updated');
+		$(select2).trigger('chosen:updated');
 
 		select1.onchange = checkVersionInfo;
 		select2.onchange = checkVersionInfo;
@@ -700,6 +612,19 @@ request.onreadystatechange = function() {
 
 		if (includeFilter) {
 			includeFilter.onchange = checkVersionInfo;
+		}
+
+		if (sourceVersionFilter && targetVersionFilter) {
+			populateVersionFilterSelect(sourceVersionFilter, fixPackIds);
+			populateVersionFilterSelect(targetVersionFilter, fixPackIds);
+
+			sourceVersionFilter.onchange = function() {
+				applyVersionFilter(sourceVersionFilter, select1, fixPackIds, addFixPack, setIndex, checkVersionInfo);
+			};
+
+			targetVersionFilter.onchange = function() {
+				applyVersionFilter(targetVersionFilter, select2, fixPackIds, addFixPack, setIndex, checkVersionInfo);
+			};
 		}
 
 		checkVersionInfo();

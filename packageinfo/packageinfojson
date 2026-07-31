@@ -79,6 +79,31 @@ generate_json() {
 	PORTAL_SOURCE_ROOT=${PORTAL_SOURCE_ROOT} ${SCRIPT_FOLDER}/jsversions > dxpjslibrary.json
 }
 
+upload_html() {
+	if [ "" == "${S3_BUCKET}" ]; then
+		echo 'Please set S3_BUCKET to upload files'
+		return
+	fi
+
+	pushd $(dirname ${BASH_SOURCE[0]}) > /dev/null
+
+	s3upload common.js
+	local COMMON_JS_MODIFIED=$(date -r common.js '+%s')
+
+	for file in dxppackages dxpmodules dxpschemas dxpjslibrary elasticsearch; do
+		s3upload ${file}.js
+
+		local FILE_JS_MODIFIED=$(date -r ${file}.js '+%s')
+
+		sed -i '/<script src="common.js/s@"common.js.*"@"common.js?t='${COMMON_JS_MODIFIED}'"@g' ${file}.html
+		sed -i '/<script src="'${file}'.js/s@"'${file}'.js.*"@"'${file}'.js?t='${FILE_JS_MODIFIED}'"@g' ${file}.html
+
+		s3upload ${file}.html
+	done	
+
+	popd > /dev/null
+}
+
 upload_json() {
 	if [ "" == "${S3_BUCKET}" ]; then
 		echo 'Please set S3_BUCKET to upload files'
@@ -87,14 +112,9 @@ upload_json() {
 
 	for file in dxppackages dxpmodules dxpschemas dxpjslibrary; do
 		s3upload ${file}.json
-
-		pushd $(dirname ${BASH_SOURCE[0]}) > /dev/null
-
-		s3upload ${file}.html
-		s3upload ${file}.js
-
-		popd > /dev/null
 	done
+
+	upload_html
 
 	pushd /tmp > /dev/null
 
@@ -125,6 +145,8 @@ if [ "update" == "${1}" ]; then
 		generate_json
 		upload_json
 	fi
+elif [ "html" == "${1}" ]; then
+	upload_html
 else
 	generate_json
 	upload_json

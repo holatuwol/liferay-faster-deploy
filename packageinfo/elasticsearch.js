@@ -176,6 +176,9 @@ var versionSelect = Object.keys(fixPacks).reduce(function(select, x) {
 
 var fixPackSelect = document.getElementById('fixpack');
 
+$(versionSelect).chosen({width: '200px'});
+$(fixPackSelect).chosen({width: '200px'});
+
 function getFixPackLabel(version, i) {
 	if (i == 0) {
 		return version + '.10';
@@ -210,6 +213,8 @@ function updateFixPackSelect() {
 	for (var i = fixPackSelect.options.length - 1; i > fixPacks[versionName]; i--) {
 		fixPackSelect.options[i].remove();
 	}
+
+	$(fixPackSelect).trigger('chosen:updated');
 
 	updateCompatibilityMatrix();
 }

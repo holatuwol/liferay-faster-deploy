@@ -11,11 +11,8 @@
 <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
 
+<!-- inline styles -->
 <style>
-	#summary td {
-		white-space: nowrap;
-	}
-
 	.table.dxp .ce,
 	.table.ce .dxp {
 		display: none;
@@ -25,10 +22,12 @@
 	.table.ce-71 tbody tr,
 	.table.ce-72 tbody tr,
 	.table.ce-73 tbody tr,
+	.table.ce-74 tbody tr,
 	.table.dxp-70 tbody tr,
 	.table.dxp-71 tbody tr,
 	.table.dxp-72 tbody tr,
-	.table.dxp-73 tbody tr {
+	.table.dxp-73 tbody tr,
+	.table.dxp-74 tbody tr {
 		display: none;
 	}
 
@@ -36,10 +35,12 @@
 	.table.ce-71 tbody tr.ce-71,
 	.table.ce-72 tbody tr.ce-72,
 	.table.ce-73 tbody tr.ce-73,
+	.table.ce-74 tbody tr.ce-74,
 	.table.dxp-70 tbody tr.dxp-70,
 	.table.dxp-71 tbody tr.dxp-71,
 	.table.dxp-72 tbody tr.dxp-72,
-	.table.dxp-73 tbody tr.dxp-73 {
+	.table.dxp-73 tbody tr.dxp-73,
+	.table.dxp-74 tbody tr.dxp-74 {
 		display: table-row;
 	}
 </style>
@@ -100,31 +101,6 @@
 
 <p class="alert alert-warning"><strong>Warning</strong>: This is NOT an official Liferay tool, nor is it supported by Liferay in any way. This does a source code analysis of the code that exists at the tag for the specified release.</p>
 
-<h2>Perform a Comparison</h2>
-
-<p><strong>Note</strong>: Entries with a gray background indicate a version change. Version 0.0.0 means that the Javascript library does not exist in that version of DXP.</p>
-
-<table class="table">
-<thead>
-<th style="width: 100%">
-<input id="nameFilter" name="nameFilter" type="text" placeholder="filter by artifact or package name" style="width: 100%" />
-</th>
-<th>
-<select id="sourceVersion" name="sourceVersion">
-	<option value="7000-ga1" selected>7000-ga1</option>
-</select>
-</th>
-<th>
-<select id="targetVersion" name="targetVersion">
-	<option value="7000-ga1" selected>7000-ga1</option>
-</select>
-</th>
-</tr>
-</thead>
-<tbody id="summary">
-</tbody>
-</table>
-
 <h2>Complete Version History</h2>
 
 <table class="table">
@@ -138,11 +114,13 @@
 				<option value="ce-71">7.1 CE Only</option>
 				<option value="ce-72">7.2 CE Only</option>
 				<option value="ce-73">7.3 CE Only</option>
+				<option value="ce-74">7.4 CE Only</option>
 				<option value="dxp">DXP Only</option>
 				<option value="dxp-70">7.0 DXP Only</option>
 				<option value="dxp-71">7.1 DXP Only</option>
 				<option value="dxp-72">7.2 DXP Only</option>
 				<option value="dxp-73">7.3 DXP Only</option>
+				<option value="dxp-74">7.4 DXP Only</option>
 			</select>
 		</td>
 	</tr>
@@ -155,8 +133,8 @@
 
 </body>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js" integrity="sha384-FZY+KSLVXVyc1qAlqH9oCx1JEOlQh6iXfw3o2n3Iy32qGjXmUPWT9I0Z9e9wxYe3" crossorigin="anonymous"></script>
-<script src="dxpjslibrary.js"></script>
+<script src="common.js?t=1785477369"></script>
+<script src="dxpjslibrary.js?t=1785480294"></script>
 
 <!--
 <script src="https://s3-us-west-2.amazonaws.com/mdang.grow/dxpjslibrary.js"></script>

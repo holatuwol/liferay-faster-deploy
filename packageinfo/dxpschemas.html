@@ -11,6 +11,10 @@
 <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
 
+<!-- Chosen: https://harvesthq.github.io/chosen/ -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.8.7/chosen.min.css" integrity="sha512-yVvxUQV0QESBt1SyZbNJMAwyKvFTLMyXSyBHDO4BG5t7k/Lw34tyqlSDlKIrIENIzCl+RVUNjmCPG+V/GMesRw==" crossorigin="anonymous">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.8.7/chosen.jquery.min.js" integrity="sha512-rMGGF4wg1R73ehtnxXBt5mbUfN9JUJwbk21KMlnLZDJh7BkPmeovBuddZCENJddHYYMkCh9hPFnPmS9sspki8g==" crossorigin="anonymous"></script>
+
 </head>
 
 <body>
@@ -35,11 +39,17 @@
 <input id="nameFilter" name="nameFilter" type="text" placeholder="filter by artifact or package name" style="width: 100%" />
 </th>
 <th>
+<select id="sourceVersionFilter" name="sourceVersionFilter">
+	<option value="">All Versions</option>
+</select>
 <select id="sourceVersion" name="sourceVersion">
 	<option value="7000-ga1" selected>7000-ga1</option>
 </select>
 </th>
 <th>
+<select id="targetVersionFilter" name="targetVersionFilter">
+	<option value="">All Versions</option>
+</select>
 <select id="targetVersion" name="targetVersion">
 	<option value="7000-ga1" selected>7000-ga1</option>
 </select>
@@ -78,7 +88,8 @@
 </body>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js" integrity="sha384-FZY+KSLVXVyc1qAlqH9oCx1JEOlQh6iXfw3o2n3Iy32qGjXmUPWT9I0Z9e9wxYe3" crossorigin="anonymous"></script>
-<script src="dxpschemas.js"></script>
+<script src="common.js?t=1785477369"></script>
+<script src="dxpschemas.js?t=1785478604"></script>
 
 <!--
 <script src="https://s3-us-west-2.amazonaws.com/mdang.grow/dxpschemas.js"></script>
