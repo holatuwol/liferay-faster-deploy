@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        10.0
+// @version        10.1
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -1816,21 +1816,14 @@ function getFixesFromPreviousBuilds() {
     }
     return previousBuildsContainer;
 }
-async function updatePreviousBuildsContent() {
-    if (document.location.pathname.indexOf('/accounts/view') == -1) {
-        return;
-    }
-    var buildsContainer = await waitForElement('patcherBuildsSearchContainer');
-    var contentRows = Array.from(buildsContainer.querySelectorAll('tbody tr'));
-    var contentCells = contentRows.map((element) => element.cells[6]);
-    var fixes = contentCells.map((element) => {
-        var fixesLink = element.querySelector('a');
-        var fixesList = fixesLink ? fixesLink.getAttribute('title') || '' : '';
-        return new Set(fixesList.split(/\s*,\s*/gi));
-    });
-    var parentIndices = fixes.map((element, index, array) => {
+function getBuildLabel(row) {
+    return (row.cells[12].textContent || '').trim() ||
+        (row.cells[7].textContent || '').toLowerCase() + ' build ' + (row.cells[1].textContent || '').trim();
+}
+function getClosestBuildParentIndices(fixes, projectVersions) {
+    return fixes.map((element, index, array) => {
         for (var i = index + 1; i < array.length; i++) {
-            if (contentRows[index].cells[5].textContent != contentRows[i].cells[5].textContent) {
+            if (projectVersions[index] != projectVersions[i]) {
                 continue;
             }
             if (Array.from(array[i]).filter(it => !element.has(it)).length == 0) {
@@ -1839,6 +1832,31 @@ async function updatePreviousBuildsContent() {
         }
         return -1;
     });
+}
+function createFixItemElement(ticket, includedInBaseline) {
+    var fixSpan = document.createElement('span');
+    fixSpan.classList.add('fix-item');
+    var fixLink = document.createElement('a');
+    fixLink.textContent = ticket;
+    fixLink.href = 'https://liferay.atlassian.net/browse/' + ticket;
+    fixLink.target = '_blank';
+    if (includedInBaseline) {
+        fixLink.classList.add('included-in-baseline');
+    }
+    fixSpan.appendChild(fixLink);
+    return fixSpan;
+}
+function renderBuildComparisons(contentRows, contentCells, fixes, projectVersions, baselineValue) {
+    contentCells.forEach((element) => {
+        var existingSummary = element.querySelector('.shortened-content');
+        if (existingSummary) {
+            existingSummary.remove();
+        }
+    });
+    var baselineIndex = (baselineValue == 'closest') ? -1 : parseInt(baselineValue);
+    var parentIndices = (baselineIndex == -1) ?
+        getClosestBuildParentIndices(fixes, projectVersions) :
+        fixes.map((_element, index) => (index == baselineIndex) ? -1 : baselineIndex);
     contentCells.forEach((element, index) => {
         var parent = parentIndices[index];
         if (parent == -1) {
@@ -1846,20 +1864,57 @@ async function updatePreviousBuildsContent() {
         }
         var shortContentElement = document.createElement('p');
         shortContentElement.classList.add('shortened-content');
-        shortContentElement.appendChild(document.createTextNode((contentRows[parent].cells[12].textContent || '').trim() ||
-            (contentRows[parent].cells[7].textContent || '').toLowerCase() + ' build ' + (contentRows[parent].cells[1].textContent || '').trim()));
+        if (projectVersions[index] != projectVersions[parent]) {
+            shortContentElement.appendChild(document.createTextNode('comparison not possible (project version differs from ' + getBuildLabel(contentRows[parent]) + ')'));
+            element.append(shortContentElement);
+            return;
+        }
+        shortContentElement.appendChild(document.createTextNode(getBuildLabel(contentRows[parent])));
         Array.from(fixes[index]).filter(it => !fixes[parent].has(it)).forEach(it => {
-            var fixSpan = document.createElement('span');
-            fixSpan.classList.add('fix-item');
-            var fixLink = document.createElement('a');
-            fixLink.textContent = it;
-            fixLink.href = 'https://liferay.atlassian.net/browse/' + it;
-            fixLink.target = '_blank';
-            fixSpan.appendChild(fixLink);
-            shortContentElement.appendChild(fixSpan);
+            shortContentElement.appendChild(createFixItemElement(it, false));
         });
+        if (baselineIndex != -1) {
+            Array.from(fixes[parent]).filter(it => !fixes[index].has(it)).forEach(it => {
+                shortContentElement.appendChild(createFixItemElement(it, true));
+            });
+        }
         element.append(shortContentElement);
     });
+}
+async function updatePreviousBuildsContent() {
+    if (document.location.pathname.indexOf('/accounts/view') == -1) {
+        return;
+    }
+    var buildsContainer = await waitForElement('patcherBuildsSearchContainer');
+    var contentHeader = await waitForElement('patcherBuildsSearchContainer_col-content');
+    var contentRows = Array.from(buildsContainer.querySelectorAll('tbody tr'));
+    var contentCells = contentRows.map((element) => element.cells[6]);
+    var fixes = contentCells.map((element) => {
+        var fixesLink = element.querySelector('a');
+        var fixesList = fixesLink ? fixesLink.getAttribute('title') || '' : '';
+        return new Set(fixesList.split(/\s*,\s*/gi));
+    });
+    var projectVersions = contentRows.map((row) => (row.cells[5].textContent || '').trim());
+    var baselineLabel = document.createElement('label');
+    baselineLabel.setAttribute('for', ns + 'patcherBuildsBaselineSelect');
+    baselineLabel.textContent = 'Content (comparison)';
+    var baselineSelect = document.createElement('select');
+    baselineSelect.id = ns + 'patcherBuildsBaselineSelect';
+    var closestBuildOption = document.createElement('option');
+    closestBuildOption.value = 'closest';
+    closestBuildOption.textContent = 'most similar build';
+    baselineSelect.appendChild(closestBuildOption);
+    contentRows.forEach((row, index) => {
+        var buildOption = document.createElement('option');
+        buildOption.value = '' + index;
+        buildOption.textContent = getBuildLabel(row);
+        baselineSelect.appendChild(buildOption);
+    });
+    baselineSelect.addEventListener('change', function () {
+        renderBuildComparisons(contentRows, contentCells, fixes, projectVersions, baselineSelect.value);
+    });
+    contentHeader.appendChild(baselineSelect);
+    renderBuildComparisons(contentRows, contentCells, fixes, projectVersions, baselineSelect.value);
 }
 // Run all the changes we need to the page.
 var applyPatcherCustomizations = function () {
