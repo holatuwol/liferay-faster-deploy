@@ -132,7 +132,7 @@ def get_servicedesk_issue(issue_key, issue_fields):
     }
 
     for extra_field in extra_fields.keys():
-        if extra_field not in issue or issue[extra_field] is None:
+        if extra_field not in issue or (extra_field != 'heatScore' and issue[extra_field] is None):
             print(f"{issue_key} requires update due to missing field {extra_field}")
             requires_fields = True
 
