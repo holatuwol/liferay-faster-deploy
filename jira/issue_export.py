@@ -1,8 +1,11 @@
 from bs4 import BeautifulSoup
+from datetime import datetime
 import inspect
 import json
+from os import makedirs
 from os.path import abspath, dirname, exists
 import sys
+import zoneinfo
 
 sys.path.insert(0, dirname(dirname(abspath(inspect.getfile(inspect.currentframe())))))
 
@@ -65,7 +68,8 @@ def get_servicedesk_issue(issue_key, issue_fields):
         r = await_get_request(f"{jira_base_url}/rest/servicedeskapi/request/{issue_key}", {})
 
         if r.status_code != 200:
-            return {}
+            print(f"Unable to retrieve issue {issue_key}")
+            return None
 
         response_json = r.json()
 
@@ -122,27 +126,24 @@ def get_servicedesk_issue(issue_key, issue_fields):
     extra_fields = {
         'accountCode': 'customfield_12570',
         'priority': 'priority',
-        'heatScore': 'customfield_10168',
-        'irTime': 'customfield_14749',
     }
 
     optional_extra_fields = {
         'longTermResolution': 'customfield_12561',
         'crTime': 'customfield_14750',
+        'irTime': 'customfield_14749',
+        'heatScore': 'customfield_10168',
     }
 
     for extra_field in extra_fields.keys():
-        if extra_field not in issue or (extra_field != 'heatScore' and issue[extra_field] is None):
-            print(f"{issue_key} requires update due to missing field {extra_field}")
+        if extra_field not in issue or issue[extra_field] is None:
+            print(f"{issue_key} requires update due to missing or empty field {extra_field}")
             requires_fields = True
 
     if requires_fields:
         issue_fields = get_issue_fields(issue_key, ['description', *extra_fields.values(), *optional_extra_fields.values()], True)
 
-        for localKey, jiraKey in extra_fields.items():
-            issue[localKey] = get_string_value(issue_fields[jiraKey])
-
-        for localKey, jiraKey in optional_extra_fields.items():
+        for localKey, jiraKey in [*extra_fields.items(), *optional_extra_fields.items()]:
             issue[localKey] = get_string_value(issue_fields[jiraKey])
 
         if len(comments) == 0 or issue['createdDate'] != comments[0]['createdDate']:
@@ -159,6 +160,9 @@ def get_servicedesk_issue(issue_key, issue_fields):
     return issue
 
 def get_exported_service_desk_issue(issue, exclude_fields):
+    if issue is None:
+        return None
+
     for exclude_field in exclude_fields:
         if exclude_field in issue:
             del issue[exclude_field]
@@ -174,8 +178,45 @@ def get_exported_service_desk_issue(issue, exclude_fields):
     
     return issue
     
+def get_issue_updated(issue, target_tz):
+    if 'issueKey' not in issue:
+        print(issue)
+        return None
+
+    issue_key = issue['issueKey']
+    issue_file = f'issue_export/{issue_key}.json'
+
+    if not exists(issue_file):
+        return None
+
+    with open(issue_file, 'r', encoding='utf-8') as f:
+        cached_issue = json.load(f)
+
+    if 'updated' not in cached_issue:
+        return None
+
+    jira_timestamp = cached_issue['updated']
+    fixed_timestamp = jira_timestamp[:-2] + ":" + jira_timestamp[-2:]
+
+    dt_source = datetime.fromisoformat(fixed_timestamp)
+    dt_target = dt_source.astimezone(target_tz)
+
+    return dt_target.strftime("%Y-%m-%d %H:%M")
 
 def export_service_desk_issues(jql, cache_file, exclude_fields):
+    r = await_get_request(f"{jira_base_url}/rest/api/3/myself", {})
+
+    if r.status_code != 200:
+        return {}
+
+    response_json = r.json()
+    target_tz = zoneinfo.ZoneInfo(response_json['timeZone'])
+
+    jql = f"{jql} and updated < '{datetime.now().astimezone(target_tz).strftime("%Y-%m-%d %H:%M")}'"
+
+    if jql.find('order by') == -1:
+        jql = f"{jql} order by created asc"
+
     issues = { issue_key: issue_response['fields'] for issue_key, issue_response in get_issues(jql, ['key', 'updated'], [], False).items() }
 
     servicedesk_issues = [
@@ -183,10 +224,14 @@ def export_service_desk_issues(jql, cache_file, exclude_fields):
             for issue_key, issue_fields in issues.items()
     ]
 
-    servicedesk_issues = [x for x in servicedesk_issues if x is not None]
+    servicedesk_issues = sorted([x for x in servicedesk_issues if x is not None], key=lambda x: x['issueKey'])
 
     if cache_file is None:
         print(json.dumps(servicedesk_issues))
     else:
         with open(cache_file, 'w', encoding='utf-8') as f:
             json.dump(servicedesk_issues, f)
+
+if __name__ == '__main__':
+    makedirs('custom_export', exist_ok=True)
+    export_service_desk_issues(sys.argv[2], f"custom_export/{sys.argv[1]}.json", ['updated'])

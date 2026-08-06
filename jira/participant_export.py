@@ -25,4 +25,4 @@ assert(len(account_json) == 1)
 
 account_id = account_json[0]['accountId']
 
-export_service_desk_issues(f"project = 'LRHC' and assignee was {account_id} order by created desc", f"participant_export/{user_name}.json", ['updated'])
+export_service_desk_issues(f"project = 'LRHC' and assignee was {account_id}", f"participant_export/{user_name}.json", ['updated'])
