@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Customer Portal Quarterly Release Downloads Filter
 // @namespace    holatuwol
-// @version      0.2
+// @version      0.3
 // @updateURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/customer_portal.user.js
 // @match        https://customer.liferay.com/downloads*
 // @grant        unsafeWindow
@@ -19,8 +19,40 @@
     if (document.location.search.indexOf('_com_liferay_osb_customer_downloads_display_web_DownloadsDisplayPortlet_delta=') == -1) {
         var paginationResults = document.querySelector('#_com_liferay_osb_customer_downloads_display_web_DownloadsDisplayPortlet_journalArticlesSearchContainerPageIteratorBottom .pagination-results').textContent;
         var total = Math.max(...Array.from(paginationResults.matchAll(/[0-9]+/g)).map(it => parseInt(it[0])));
-        document.location.href = document.location.href + '&_com_liferay_osb_customer_downloads_display_web_DownloadsDisplayPortlet_delta=' + total;
-        return;
+
+        if (total > 20) {
+            var spinnerOverlay = document.createElement('div');
+            spinnerOverlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                background-color: rgba(255, 255, 255, 0.7); /* Semi-transparent background */
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 9999; /* Ensures it sits above other content */
+                transition: opacity 0.2s ease-in-out;
+            `;
+
+            var spinner = document.createElement('div');
+            spinner.style.cssText = `
+                width: 48px;
+                height: 48px;
+                border: 5px solid #f3f3f3;
+                border-top: 5px solid #3498db; /* Color of spinning arc */
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+            `;
+
+            spinnerOverlay.appendChild(spinner);
+
+            document.body.appendChild(spinnerOverlay);
+
+            document.location.href = document.location.href + '&_com_liferay_osb_customer_downloads_display_web_DownloadsDisplayPortlet_delta=' + total;
+            return;
+        }
     }
 
     function initFilter() {
