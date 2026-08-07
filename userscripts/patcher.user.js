@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        10.2
+// @version        10.3
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -164,18 +164,9 @@ tr.qa-analysis-unneeded {
 }
 `;
 document.head.appendChild(styleElement);
-/**
- * These rules only make sense on the create fix page, since they depend
- * on the data-liferay-version attributes that addProductVersionFilter
- * tags the product version select and its options with, and that only
- * happens on the create fix page. Applying them elsewhere (e.g. build
- * creation) would hide every option in the product version select with
- * nothing to reveal them, since nothing tags it with a
- * data-liferay-version attribute there.
- */
-if (isCreateFixPage()) {
-    var createFixStyleElement = document.createElement('style');
-    createFixStyleElement.textContent = `
+if (document.location.pathname.indexOf('/create') != -1) {
+    var createStyleElement = document.createElement('style');
+    createStyleElement.textContent = `
 #_1_WAR_osbpatcherportlet_patcherProductVersionId option {
   display: none;
 }
@@ -189,7 +180,7 @@ if (isCreateFixPage()) {
   display: block;
 }
 `;
-    document.head.appendChild(createFixStyleElement);
+    document.head.appendChild(createStyleElement);
 }
 var AUI = unsafeWindow.AUI;
 var Liferay = unsafeWindow.Liferay;
@@ -567,12 +558,6 @@ function replaceReadOnlySelect(name, text, link) {
         replaceNode(select, select.options[select.selectedIndex].textContent || 'unknown');
     }
 }
-/**
- * Returns whether the current page is the "create fix" page.
- */
-function isCreateFixPage() {
-    return document.location.pathname.indexOf('/-/osb_patcher/fixes/create') != -1;
-}
 var liferayVersions = ['', '6.x', '7.0', '7.1', '7.2', '7.3', '7.4'];
 /**
  * Determines the broad Liferay version (e.g. '7.4') that a product
@@ -635,7 +620,7 @@ function addProductVersionFilter() {
         replaceReadOnlySelect('patcherProjectVersionId', branchName, 'https://github.com/liferay/liferay-portal-ee/tree/' + patcherTagName);
         return;
     }
-    if (!isCreateFixPage()) {
+    if (document.location.pathname.indexOf('/create') == -1) {
         return;
     }
     var selectedVersion = null;
@@ -706,6 +691,7 @@ function addProjectVersionFilterInput(projectVersionSelect) {
     var projectVersionSelectParentElement = projectVersionSelect.parentElement;
     projectVersionSelectParentElement.insertBefore(projectVersionFilterInput, projectVersionSelect);
     filterProjectVersionSelect(projectVersionSelect, '');
+    Liferay.fire('projectVersionIdReady');
 }
 function addProjectVersionFilter(productVersionSelect, selectedVersion) {
     var projectVersionSelect = querySelector('patcherProjectVersionId');
@@ -2060,6 +2046,10 @@ async function updatePreviousBuildsContent() {
 // Run all the changes we need to the page.
 var applyPatcherCustomizations = function () {
     highlightAnalysisNeededBuilds();
+    if ((document.location.pathname.indexOf('/-/osb_patcher/fixes/create') != -1) ||
+        (document.location.pathname.indexOf('/-/osb_patcher/builds/create') != -1)) {
+        Liferay.on('projectVersionIdReady', updateFromQueryString);
+    }
     var activeTab = document.querySelector('.tab.active');
     if (activeTab && ((activeTab.textContent || '').trim() != 'QA Builds')) {
         rearrangeColumns();
@@ -2093,9 +2083,6 @@ var applyPatcherCustomizations = function () {
     // filter input of its own.
     sortProjectVersionIdFilterSelects();
     compareBuildFixes();
-    if (document.location.pathname.indexOf('/-/osb_patcher/fixes/create') != -1) {
-        setTimeout(updateFromQueryString, 500);
-    }
 };
 if (exportFunction) {
     applyPatcherCustomizations = exportFunction(applyPatcherCustomizations, window);
