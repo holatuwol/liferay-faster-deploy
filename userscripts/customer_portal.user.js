@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Customer Portal Quarterly Release Downloads Filter
 // @namespace    holatuwol
-// @version      0.1
+// @version      0.2
 // @updateURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/customer_portal.user.js
 // @match        https://customer.liferay.com/downloads*
 // @grant        unsafeWindow
@@ -110,7 +110,7 @@
         // Filter visible releases or navigate to next pagination page if 0 matches found
         function applyFilterOrNavigate(query) {
             const searchTerm = query.toLowerCase().trim();
-            const rows = Array.from(document.querySelectorAll('tr, tbody tr, .download-item, [class*="download"]'));
+            const rows = Array.from(document.querySelectorAll('tbody tr, .download-item, [class*="download"]'));
             let visibleCount = 0;
 
             rows.forEach(row => {
