@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Customer Portal Quarterly Release Downloads Filter
 // @namespace    holatuwol
-// @version      0.4
+// @version      0.5
 // @updateURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/customer_portal.user.js
 // @match        https://customer.liferay.com/downloads*
 // @grant        unsafeWindow
@@ -9,6 +9,16 @@
 /**
  * Vibe-coded using Ask Gemini with a Chrome browser window opened to https://customer.liferay.com/downloads
  */
+function debounce(func, delay) {
+  let timeoutId;
+  return (...args) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => {
+      func(...args);
+    }, delay);
+  };
+}
+
 (function () {
     'use strict';
 
@@ -182,7 +192,20 @@
 
         // Apply saved filter if reloading page
         if (activeTarget) {
-            applyFilterOrNavigate(activeTarget);
+            const portlet = document.getElementById('portlet_com_liferay_osb_customer_downloads_display_web_DownloadsDisplayPortlet');
+            const resultsTable = portlet.querySelector('table[data-searchcontainerid="_com_liferay_osb_customer_downloads_display_web_DownloadsDisplayPortlet_journalArticlesSearchContainer"]');
+
+            if (resultsTable == null) {
+                const waitForResultsTable = new MutationObserver(debounce(function() {
+                    const resultsTable = portlet.querySelector('table[data-searchcontainerid="_com_liferay_osb_customer_downloads_display_web_DownloadsDisplayPortlet_journalArticlesSearchContainer"]');
+                    if (resultsTable) {
+                        applyFilterOrNavigate(activeTarget);
+                        waitForResultsTable.disconnect();
+                    }
+                }, 300));
+
+                waitForResultsTable.observe(portlet, {childList: true, subtree: true});
+            }
         }
     }
 
