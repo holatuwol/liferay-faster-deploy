@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Customer Portal Quarterly Release Downloads Filter
 // @namespace    holatuwol
-// @version      0.3
+// @version      0.4
 // @updateURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/customer_portal.user.js
 // @match        https://customer.liferay.com/downloads*
 // @grant        unsafeWindow
@@ -142,19 +142,18 @@
         // Filter visible releases or navigate to next pagination page if 0 matches found
         function applyFilterOrNavigate(query) {
             const searchTerm = query.toLowerCase().trim();
-            const rows = Array.from(document.querySelectorAll('tbody tr, .download-item, [class*="download"]'));
+            const titles = Array.from(document.querySelectorAll('table[data-searchcontainerid="_com_liferay_osb_customer_downloads_display_web_DownloadsDisplayPortlet_journalArticlesSearchContainer"] tbody tr h3.section-title a'));
             let visibleCount = 0;
 
-            rows.forEach(row => {
-                const text = (row.innerText || row.textContent).toLowerCase();
+            titles.forEach(title => {
+                const text = (title.textContent).toLowerCase();
+                const row = title.closest('tr');
                 // Match against release titles
-                if (text.includes('dxp') || text.includes('release') || text.includes('quarterly')) {
-                    if (!searchTerm || text.includes(searchTerm)) {
-                        row.style.display = '';
-                        visibleCount++;
-                    } else {
-                        row.style.display = 'none';
-                    }
+                if (!searchTerm || text.includes(searchTerm)) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
                 }
             });
         }
