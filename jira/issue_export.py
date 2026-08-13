@@ -119,8 +119,8 @@ def get_servicedesk_issue(issue_key, issue_fields):
 
     requires_fields = False
 
-    if len(issue['comments']) > 0 and issue['createdDate'] != issue['comments'][0]['createdDate']:
-        print(f"{issue_key} requires update due to the description not being saved as the first comment")
+    if len(comments) > 0 and issue['createdDate'] != comments[0]['createdDate']:
+        print(f"{issue_key} requires update due to the description not being saved as the first comment ({issue['createdDate']} vs. {issue['comments'][0]['createdDate']})")
         requires_fields = True
 
     extra_fields = {
