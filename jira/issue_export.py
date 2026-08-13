@@ -1,8 +1,9 @@
 from bs4 import BeautifulSoup
 from datetime import datetime
+import gzip
 import inspect
 import json
-from os import makedirs
+from os import makedirs, remove
 from os.path import abspath, dirname, exists
 import sys
 import zoneinfo
@@ -229,7 +230,10 @@ def export_service_desk_issues(jql, cache_file, exclude_fields):
     if cache_file is None:
         print(json.dumps(servicedesk_issues))
     else:
-        with open(cache_file, 'w', encoding='utf-8') as f:
+        if exists(cache_file):
+            remove(cache_file)
+
+        with gzip.open(f"{cache_file}.gz", 'wt', encoding='utf-8') as f:
             json.dump(servicedesk_issues, f)
 
 if __name__ == '__main__':

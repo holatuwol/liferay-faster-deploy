@@ -1,22 +1,20 @@
+import base64
+import gzip
 import json
+from os.path import exists
 import sys
 
 cache_file = sys.argv[1]
 export_title = sys.argv[2]
 
-with open(cache_file, "r", encoding="utf8") as f:
-    data = json.load(f)
+if exists(f"{cache_file}.gz"):
+  with open(f"{cache_file}.gz", 'rb') as f:
+    ticket_bytes = f.read()
+else:
+  with open(f"{cache_file}", 'rb') as f:
+    ticket_bytes = gzip.compress(f.read())
 
-last_comment_date = max(
-    (c.get("createdDate") for t in data for c in t.get("comments", []) if c.get("createdDate") is not None),
-    default=None,
-)
-
-# Embed the raw ticket data as JSON inside a <script type="application/json"> tag
-# and let the browser render the TOC table and ticket sections client-side.
-# Escaping "<" prevents "</script>" (or "<!--") in ticket content from breaking
-# out of the script tag; "<" is a valid JSON string escape for "<".
-ticket_json = json.dumps(data).replace("<", "\\u003c")
+ticket_base64 = base64.b64encode(ticket_bytes).decode('utf-8')
 
 html_doc = f"""<!doctype html>
 <html lang="en">
@@ -217,10 +215,13 @@ html_doc = f"""<!doctype html>
   <h2>Tickets</h2>
   <div id="tickets"></div>
 
-<script id="ticket-data" type="application/json">{ticket_json}</script>
+<script id="ticket-data" type="text/plain">{ticket_base64}</script>
 <script>
-(function() {{
-  var tickets = JSON.parse(document.getElementById("ticket-data").textContent);
+(async function() {{
+  var compressedStream = new Blob([Uint8Array.fromBase64(document.getElementById("ticket-data").textContent)]).stream();
+  var decompressedStream = compressedStream.pipeThrough(new DecompressionStream('gzip'));
+  var ticketsResponse = new Response(decompressedStream);
+  var tickets = JSON.parse(await ticketsResponse.text());
 
   function esc(s) {{
     return (s == null ? "" : String(s))
@@ -546,7 +547,19 @@ html_doc = f"""<!doctype html>
 </html>
 """
 
-with open(f"{cache_file[:-5]}.html", "w", encoding="utf8") as f:
+with open(f"{cache_file[:-5]}.html", "w", encoding="utf-8") as f:
     f.write(html_doc)
+
+if exists(f"{cache_file}.gz"):
+  with gzip.open(f"{cache_file}.gz", "rt", encoding="utf-8") as f:
+      data = json.load(f)
+else:
+  with open(cache_file, "r", encoding="utf-8") as f:
+      data = json.load(f)
+
+last_comment_date = max(
+    (c.get("createdDate") for t in data for c in t.get("comments", []) if c.get("createdDate") is not None),
+    default=None,
+)
 
 print(f"Wrote export for {cache_file} ({len(data)} tickets), last comment was at {last_comment_date}")
