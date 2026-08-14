@@ -1,218 +1,252 @@
 // ==UserScript==
-// @name         Customer Portal Quarterly Release Downloads Filter
-// @namespace    holatuwol
-// @version      0.5
-// @updateURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/customer_portal.user.js
-// @match        https://customer.liferay.com/downloads*
-// @grant        unsafeWindow
+// @name		 Customer Portal Quarterly Release Downloads Filter
+// @namespace	holatuwol
+// @version	  0.6
+// @updateURL	https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/customer_portal.user.js
+// @match		https://customer.liferay.com/downloads*
+// @grant		unsafeWindow
 // ==/UserScript==
 /**
  * Vibe-coded using Ask Gemini with a Chrome browser window opened to https://customer.liferay.com/downloads
  */
-function debounce(func, delay) {
-  let timeoutId;
-  return (...args) => {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => {
-      func(...args);
-    }, delay);
-  };
-}
 
 (function () {
-    'use strict';
+	'use strict';
 
-    if (document.location.search.indexOf('_com_liferay_osb_customer_downloads_display_web_DownloadsDisplayPortlet_productAssetCategoryId=122235468') == -1) {
-        return;
-    }
+	var portletId = 'com_liferay_osb_customer_downloads_display_web_DownloadsDisplayPortlet';
+	var ns = `_${portletId}_`;
+	var params = new URLSearchParams(document.location.search);
 
-    if (document.location.search.indexOf('_com_liferay_osb_customer_downloads_display_web_DownloadsDisplayPortlet_delta=') == -1) {
-        var paginationResults = document.querySelector('#_com_liferay_osb_customer_downloads_display_web_DownloadsDisplayPortlet_journalArticlesSearchContainerPageIteratorBottom .pagination-results').textContent;
-        var total = Math.max(...Array.from(paginationResults.matchAll(/[0-9]+/g)).map(it => parseInt(it[0])));
+	function debounce(func, delay) {
+		let timeoutId;
+		return (...args) => {
+			clearTimeout(timeoutId);
+			timeoutId = setTimeout(() => {
+				func(...args);
+			}, delay);
+		};
+	}
 
-        if (total > 20) {
-            var spinnerOverlay = document.createElement('div');
-            spinnerOverlay.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100vw;
-                height: 100vh;
-                background-color: rgba(255, 255, 255, 0.7); /* Semi-transparent background */
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                z-index: 9999; /* Ensures it sits above other content */
-                transition: opacity 0.2s ease-in-out;
-            `;
+	function getSearchParam(key) {
+		return params.has(key) ? params.get(key) : params.get(ns + key);
+	}
 
-            var spinner = document.createElement('div');
-            spinner.style.cssText = `
-                width: 48px;
-                height: 48px;
-                border: 5px solid #f3f3f3;
-                border-top: 5px solid #3498db; /* Color of spinning arc */
-                border-radius: 50%;
-                animation: spin 1s linear infinite;
-            `;
+	function showAllResults() {
+		if (getSearchParam('delta')) {
+			return true;
+		}
 
-            spinnerOverlay.appendChild(spinner);
+		var paginationResults = document.querySelector(`#${ns}journalArticlesSearchContainerPageIteratorBottom .pagination-results`)?.textContent;
 
-            document.body.appendChild(spinnerOverlay);
+		if (!paginationResults) {
+			return true;
+		}
 
-            document.location.href = document.location.href + '&_com_liferay_osb_customer_downloads_display_web_DownloadsDisplayPortlet_delta=' + total;
-            return;
-        }
-    }
+		var pages = paginationResults.matchAll(/[0-9]+/g);
 
-    function initFilter() {
-        // Prevent duplicate injection
-        if (document.getElementById('liferay-release-filter-wrapper')) return;
+		if (!pages) {
+			return true;
+		}
 
-        // Container to inject controls
-        const mainContainer = document.querySelector('.portlet-body') || document.body;
+		var total = Math.max(...Array.from(pages).map(it => parseInt(it[0])));
 
-        // Create UI controls wrapper
-        const filterWrapper = document.createElement('div');
-        filterWrapper.id = 'liferay-release-filter-wrapper';
-        filterWrapper.style.cssText = `
-            background: #ffffff;
-            padding: 14px 18px;
-            margin: 15px 0 25px 0;
-            border-radius: 8px;
-            border: 1px solid #d0d7de;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
-            font-family: system-ui, -apple-system, sans-serif;
-        `;
+		if (total <= 20) {
+			return true;
+		}
 
-        // Input field for dynamic typing
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.placeholder = 'Filter or target release (e.g., 2023.Q4)...';
-        input.style.cssText = `
-            padding: 6px 12px;
-            border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            font-size: 14px;
-            min-width: 250px;
-            outline: none;
-        `;
+		var spinnerOverlay = document.createElement('div');
+		spinnerOverlay.style.cssText = `
+				position: fixed;
+				top: 0;
+				left: 0;
+				width: 100vw;
+				height: 100vh;
+				background-color: rgba(255, 255, 255, 0.7); /* Semi-transparent background */
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				z-index: 9999; /* Ensures it sits above other content */
+				transition: opacity 0.2s ease-in-out;
+			`;
 
-        // Container for presets
-        const buttonGroup = document.createElement('div');
-        buttonGroup.style.cssText = 'display: flex; gap: 6px; flex-wrap: wrap; align-items: center;';
+		var spinner = document.createElement('div');
+		spinner.style.cssText = `
+				width: 48px;
+				height: 48px;
+				border: 5px solid #f3f3f3;
+				border-top: 5px solid #3498db; /* Color of spinning arc */
+				border-radius: 50%;
+				animation: spin 1s linear infinite;
+			`;
 
-        var presets = document.location.search.indexOf('_com_liferay_osb_customer_downloads_display_web_DownloadsDisplayPortlet_fileTypeAssetCategoryId=122589696') != -1 ?
-            ['All'].concat(Array.from(new Set(Array.from(document.querySelectorAll('.section-title')).map(it => /[0-9]+\.Q[1-4]/g.exec(it.textContent?.trim())).filter(it => it).map(it => it[0]))).sort().reverse()) : [];
+		spinnerOverlay.appendChild(spinner);
 
-        // Retrieve active stored filter across page reloads
-        const activeTarget = sessionStorage.getItem('liferay_active_filter') || '';
-        input.value = activeTarget;
+		document.body.appendChild(spinnerOverlay);
 
-        presets.forEach(text => {
-            const btn = document.createElement('button');
-            btn.textContent = text;
-            const isSelected = (activeTarget === text) || (!activeTarget && text === 'All');
+		document.location.href = `${document.location.href}&${ns}delta=${total}`;
+		return false;
+	}
 
-            btn.style.cssText = `
-                padding: 5px 10px;
-                border: 1px solid #00539C;
-                background-color: ${isSelected ? '#00539C' : '#ffffff'};
-                color: ${isSelected ? '#ffffff' : '#00539C'};
-                border-radius: 4px;
-                cursor: pointer;
-                font-size: 12px;
-                font-weight: 600;
-                transition: background-color 0.15s, color 0.15s;
-            `;
+	function initFilter() {
+		if (!showAllResults()) return;
 
-            btn.onclick = () => {
-                const targetVal = text === 'All' ? '' : text;
-                sessionStorage.setItem('liferay_active_filter', targetVal);
-                input.value = targetVal;
+		// Prevent duplicate injection
+		if (document.getElementById('liferay-release-filter-wrapper')) return;
 
-                // Update UI active styles
-                Array.from(buttonGroup.children).forEach(b => {
-                    b.style.backgroundColor = '#ffffff';
-                    b.style.color = '#00539C';
-                });
-                btn.style.backgroundColor = '#00539C';
-                btn.style.color = '#ffffff';
+		// Container to inject controls
+		const mainContainer = document.querySelector('.portlet-body') || document.body;
 
-                applyFilterOrNavigate(targetVal);
-            };
+		// Create UI controls wrapper
+		const filterWrapper = document.createElement('div');
+		filterWrapper.id = 'liferay-release-filter-wrapper';
+		filterWrapper.style.cssText = `
+			background: #ffffff;
+			padding: 14px 18px;
+			margin: 15px 0 25px 0;
+			border-radius: 8px;
+			border: 1px solid #d0d7de;
+			box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+			display: flex;
+			align-items: center;
+			gap: 12px;
+			flex-wrap: wrap;
+			font-family: system-ui, -apple-system, sans-serif;
+		`;
 
-            buttonGroup.appendChild(btn);
-        });
+		// Input field for dynamic typing
+		const input = document.createElement('input');
+		input.type = 'text';
+		input.placeholder = 'Filter or target release (e.g., 2023.Q4)...';
+		input.style.cssText = `
+			padding: 6px 12px;
+			border: 1px solid #cbd5e1;
+			border-radius: 6px;
+			font-size: 14px;
+			min-width: 250px;
+			outline: none;
+		`;
 
-        // Filter visible releases or navigate to next pagination page if 0 matches found
-        function applyFilterOrNavigate(query) {
-            const searchTerm = query.toLowerCase().trim();
-            const titles = Array.from(document.querySelectorAll('table[data-searchcontainerid="_com_liferay_osb_customer_downloads_display_web_DownloadsDisplayPortlet_journalArticlesSearchContainer"] tbody tr h3.section-title a'));
-            let visibleCount = 0;
+		// Container for presets
+		const buttonGroup = document.createElement('div');
+		buttonGroup.style.cssText = 'display: flex; gap: 6px; flex-wrap: wrap; align-items: center;';
 
-            titles.forEach(title => {
-                const text = (title.textContent).toLowerCase();
-                const row = title.closest('tr');
-                // Match against release titles
-                if (!searchTerm || text.includes(searchTerm)) {
-                    row.style.display = '';
-                    visibleCount++;
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-        }
+		var productAssetCategoryId = getSearchParam('productAssetCategoryId');
+		var fileTypeAssetCategoryId = getSearchParam('fileTypeAssetCategoryId');
 
-        input.oninput = (e) => {
-            sessionStorage.setItem('liferay_active_filter', e.target.value);
-            applyFilterOrNavigate(e.target.value);
-        };
+		var presets = [];
+		var activeTarget = '';
 
-        // Assemble controls
-        const label = document.createElement('span');
-        label.style.cssText = 'font-weight: 600; font-size: 13px; color: #334155;';
-        label.textContent = 'Quick Release Filter:';
+		if (productAssetCategoryId == '122235468') {
+			if (fileTypeAssetCategoryId == '122589696') {
+				presets = ['All'].concat(Array.from(new Set(Array.from(document.querySelectorAll('.section-title')).map(it => /[0-9]+\.Q[1-4]/g.exec(it.textContent?.trim())).filter(it => it).map(it => it[0]))).sort().reverse());
+			}
 
-        filterWrapper.appendChild(label);
-        filterWrapper.appendChild(input);
-        filterWrapper.appendChild(buttonGroup);
+			activeTarget = sessionStorage.getItem('liferay_active_filter') || '';
+			input.value = activeTarget;
+		}
 
-        // Inject right above table/list
-        const targetElement = document.querySelector('table') || document.querySelector('.table') || mainContainer.firstChild;
-        if (targetElement && targetElement.parentNode) {
-            targetElement.parentNode.insertBefore(filterWrapper, targetElement);
-        } else {
-            mainContainer.prepend(filterWrapper);
-        }
+		// Retrieve active stored filter across page reloads
 
-        // Apply saved filter if reloading page
-        if (activeTarget) {
-            const portlet = document.getElementById('portlet_com_liferay_osb_customer_downloads_display_web_DownloadsDisplayPortlet');
-            const resultsTable = portlet.querySelector('table[data-searchcontainerid="_com_liferay_osb_customer_downloads_display_web_DownloadsDisplayPortlet_journalArticlesSearchContainer"]');
+		presets.forEach(text => {
+			const btn = document.createElement('button');
+			btn.textContent = text;
+			const isSelected = (activeTarget === text) || (!activeTarget && text === 'All');
 
-            if (resultsTable == null) {
-                const waitForResultsTable = new MutationObserver(debounce(function() {
-                    const resultsTable = portlet.querySelector('table[data-searchcontainerid="_com_liferay_osb_customer_downloads_display_web_DownloadsDisplayPortlet_journalArticlesSearchContainer"]');
-                    if (resultsTable) {
-                        applyFilterOrNavigate(activeTarget);
-                        waitForResultsTable.disconnect();
-                    }
-                }, 300));
+			btn.style.cssText = `
+				padding: 5px 10px;
+				border: 1px solid #00539C;
+				background-color: ${isSelected ? '#00539C' : '#ffffff'};
+				color: ${isSelected ? '#ffffff' : '#00539C'};
+				border-radius: 4px;
+				cursor: pointer;
+				font-size: 12px;
+				font-weight: 600;
+				transition: background-color 0.15s, color 0.15s;
+			`;
 
-                waitForResultsTable.observe(portlet, {childList: true, subtree: true});
-            }
-        }
-    }
+			btn.onclick = () => {
+				const targetVal = text === 'All' ? '' : text;
+				sessionStorage.setItem('liferay_active_filter', targetVal);
+				input.value = targetVal;
 
-    // Run when DOM is ready
-    if (document.readyState === 'interactive' || document.readyState === 'complete') {
-        initFilter();
-    } else {
-        document.addEventListener('DOMContentLoaded', initFilter);
-    }
+				// Update UI active styles
+				Array.from(buttonGroup.children).forEach(b => {
+					b.style.backgroundColor = '#ffffff';
+					b.style.color = '#00539C';
+				});
+				btn.style.backgroundColor = '#00539C';
+				btn.style.color = '#ffffff';
+
+				applyFilterOrNavigate(targetVal);
+			};
+
+			buttonGroup.appendChild(btn);
+		});
+
+		// Filter visible releases or navigate to next pagination page if 0 matches found
+		function applyFilterOrNavigate(query) {
+			const searchTerm = query.toLowerCase().trim();
+			const titles = Array.from(document.querySelectorAll(`table[data-searchcontainerid="${ns}journalArticlesSearchContainer"] tbody tr h3.section-title a`));
+			let visibleCount = 0;
+
+			titles.forEach(title => {
+				const text = (title.textContent).toLowerCase();
+				const row = title.closest('tr');
+				// Match against release titles
+				if (!searchTerm || text.includes(searchTerm)) {
+					row.style.display = '';
+					visibleCount++;
+				} else {
+					row.style.display = 'none';
+				}
+			});
+		}
+
+		input.oninput = (e) => {
+			sessionStorage.setItem('liferay_active_filter', e.target.value);
+			applyFilterOrNavigate(e.target.value);
+		};
+
+		// Assemble controls
+		const label = document.createElement('span');
+		label.style.cssText = 'font-weight: 600; font-size: 13px; color: #334155;';
+		label.textContent = 'Quick Release Filter:';
+
+		filterWrapper.appendChild(label);
+		filterWrapper.appendChild(input);
+		filterWrapper.appendChild(buttonGroup);
+
+		// Inject right above table/list
+		const targetElement = document.querySelector('table') || document.querySelector('.table') || mainContainer.firstChild;
+		if (targetElement && targetElement.parentNode) {
+			targetElement.parentNode.insertBefore(filterWrapper, targetElement);
+		} else {
+			mainContainer.prepend(filterWrapper);
+		}
+
+		// Apply saved filter if reloading page
+		if (activeTarget) {
+			const portlet = document.getElementById(`portlet_${portletId}`);
+			const resultsTable = portlet.querySelector(`table[data-searchcontainerid="${ns}journalArticlesSearchContainer"]`);
+
+			if (resultsTable == null) {
+				const waitForResultsTable = new MutationObserver(debounce(function() {
+					const resultsTable = portlet.querySelector(`table[data-searchcontainerid="${ns}journalArticlesSearchContainer"]`);
+					if (resultsTable) {
+						applyFilterOrNavigate(activeTarget);
+						waitForResultsTable.disconnect();
+					}
+				}, 300));
+
+				waitForResultsTable.observe(portlet, {childList: true, subtree: true});
+			}
+		}
+	}
+
+	// Run when DOM is ready
+	if (document.readyState === 'interactive' || document.readyState === 'complete') {
+		initFilter();
+	} else {
+		document.addEventListener('DOMContentLoaded', initFilter);
+	}
 })();
