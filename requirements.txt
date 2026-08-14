@@ -3,9 +3,9 @@ awscli==1.45.7
 beautifulsoup4==4.14.3
 dateparser==1.4.0
 humanize==4.15.0
+orjson==3.11.9
 pandas==3.0.3
 requests==2.34.1
 semver==3.0.4
 tqdm==4.68.3
-ujson==5.12.1
 yq==3.4.3

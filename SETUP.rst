@@ -25,10 +25,10 @@ These scripts make use of the following Python libraries:
 * ``beautifulsoup4``: https://www.crummy.com/software/BeautifulSoup/
 * ``dateparser``: https://dateparser.readthedocs.io/en/stable/
 * ``humanize``: https://github.com/jmoiron/humanize
+* ``orjson``: https://pypi.org/project/orjson/
 * ``pandas``: http://pandas.pydata.org/
 * ``requests``: http://docs.python-requests.org/en/master/
 * ``semver``: https://pypi.python.org/pypi/semver
-* ``ujson``: https://pypi.python.org/pypi/ujson
 * ``yq``: https://yq.readthedocs.io/en/latest/
 
 You can install all of these packages using the following commands:

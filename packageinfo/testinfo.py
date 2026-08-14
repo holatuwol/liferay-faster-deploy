@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
 from bs4 import BeautifulSoup
+import orjson as json
 import os
 import sys
-import ujson as json
 
 sys.path.insert(1, os.path.join(sys.path[0], '..'))
 import git

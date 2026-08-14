@@ -7,6 +7,7 @@ import dateparser
 from datetime import date, datetime
 import hashlib
 import numpy as np
+import orjson as json
 import os
 import pandas as pd
 import pytz
@@ -15,7 +16,6 @@ import requests
 import six
 import sys
 import subprocess
-import ujson as json
 
 today = date.today()
 now = datetime.now(pytz.utc)
