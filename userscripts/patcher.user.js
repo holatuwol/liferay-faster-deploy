@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        10.4
+// @version        10.5
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -247,7 +247,6 @@ function getSelectedValue(target) {
  * Replaces a GMT date with a date in the user's current time zone, according to
  * their web browser.
  */
-var usMonths = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 function replaceDate(target) {
     var labelNode = document.querySelector('label[for="' + ns + target + '"]');
     if (!labelNode) {
@@ -258,21 +257,14 @@ function replaceDate(target) {
         return;
     }
     var dateNode = containerNode.childNodes[2];
-    var englishUtcStr = dateNode.textContent;
-    if (!englishUtcStr) {
+    var oldDateText = dateNode.textContent;
+    if (!oldDateText) {
         return;
     }
-    var [usMonthStr, dayStr, yearStr, hourStr, minuteStr, secondStr, ampmStr] = englishUtcStr.trim().split(/[\s:,]+/);
-    var month = usMonths.indexOf(usMonthStr.toLowerCase());
-    var hour24 = parseInt(hourStr);
-    if (ampmStr == 'AM' && hour24 == 12) {
-        hour24 = 0;
+    var dateString = new Date(oldDateText.trim() + ' UTC').toString();
+    if (dateString.indexOf(':') != -1) {
+        dateNode.textContent = dateString;
     }
-    if (ampmStr == 'PM' && hour24 < 12) {
-        hour24 += 12;
-    }
-    var date = new Date(Date.UTC(parseInt(yearStr), month, parseInt(dayStr), hour24, parseInt(minuteStr), parseInt(secondStr)));
-    dateNode.textContent = date.toString();
 }
 /**
  * Utility function replace the specified input element with the given HTML
