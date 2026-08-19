@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        10.5
+// @version        10.6
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -366,22 +366,6 @@ function replacePopupWindowLinks() {
     }
 }
 /**
- * Update the link to "Use as Build Template" to include additional
- * parameters so that they can be auto-selected.
- */
-function addBaselineToBuildTemplate() {
-    var baselineLinks = Array.from(document.querySelectorAll('.taglib-text-icon'))
-        .filter(function (x) { return (x.textContent || '').toLowerCase() == 'use as build template'; });
-    if (baselineLinks.length != 1) {
-        return;
-    }
-    var buildTemplateAnchor = baselineLinks[0].parentElement;
-    buildTemplateAnchor.href += '&' + getQueryString({
-        'patcherProductVersionId': getSelectedValue('patcherProductVersionId'),
-        'patcherProjectVersionId': getSelectedValue('patcherProjectVersionId')
-    });
-}
-/**
  * Replaces any links to a jenkins fix pack builder result with a link that
  * ends with '/consoleText' to take you directly to the build log.
  */
@@ -690,9 +674,16 @@ function addProjectVersionFilterInput(projectVersionSelect) {
     projectVersionFilterInput.addEventListener('input', function () {
         filterProjectVersionSelect(projectVersionSelect, projectVersionFilterInput.value);
     });
+    var projectSelectedValue = projectVersionSelect.selectedIndex > -1 ? projectVersionSelect.options[projectVersionSelect.selectedIndex].value : null;
     var projectVersionSelectParentElement = projectVersionSelect.parentElement;
     projectVersionSelectParentElement.insertBefore(projectVersionFilterInput, projectVersionSelect);
     filterProjectVersionSelect(projectVersionSelect, '');
+    if (projectSelectedValue) {
+        var projectSelectedOption = projectVersionSelect.querySelector('option[value="' + projectSelectedValue + '"]');
+        if (projectSelectedOption) {
+            projectSelectedOption.selected = true;
+        }
+    }
     Liferay.fire('projectVersionIdReady');
 }
 function addProjectVersionFilter(productVersionSelect, selectedVersion) {
@@ -2057,7 +2048,6 @@ var applyPatcherCustomizations = function () {
         rearrangeColumns();
         replaceJenkinsLinks();
         replacePopupWindowLinks();
-        addBaselineToBuildTemplate();
         replaceHotfixLink('debug');
         replaceHotfixLink('hotfix');
         replaceHotfixLink('ignore');
