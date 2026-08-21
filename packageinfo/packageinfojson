@@ -90,7 +90,7 @@ upload_html() {
 	s3upload common.js
 	local COMMON_JS_MODIFIED=$(date -r common.js '+%s')
 
-	for file in dxppackages dxpmodules dxpschemas dxpjslibrary elasticsearch; do
+	for file in dxppackages dxpmodules dxpschemas dxpjslibrary; do
 		s3upload ${file}.js
 
 		local FILE_JS_MODIFIED=$(date -r ${file}.js '+%s')
