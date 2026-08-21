@@ -28,6 +28,7 @@ quarterly_releases = {
     '2025.q4': 143,
     '2026.q1': 147,
     '2026.q2': 149,
+    '2026.q3': 152,
 }
 
 old_update_threshold = {
@@ -43,6 +44,7 @@ old_update_threshold = {
     '2025.q4': quarterly_releases['2025.q3'],
     '2026.q1': quarterly_releases['2025.q4'],
     '2026.q2': quarterly_releases['2026.q1'],
+    '2026.q3': quarterly_releases['2026.q2'],
 }
 
 quarterly_updates = { value: key for key, value in quarterly_releases.items() }
