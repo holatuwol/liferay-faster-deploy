@@ -1,0 +1,2776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual HAR Comparison & Root-Cause Tool</title>
+    <style>
+        :root {
+            --bg-primary: #f8f9fa;
+            --bg-card: #ffffff;
+            --border-color: #e2e8f0;
+            --text-primary: #1a202c;
+            --text-secondary: #4a5568;
+            --primary-color: #3182ce;
+            --primary-hover: #2b6cb0;
+            
+            --status-2xx: #48bb78;
+            --status-3xx: #dd6b20;
+            --status-4xx: #e53e3e;
+            --status-5xx: #9b2c2c;
+            --status-other: #718096;
+            
+            --match-exact: #e6ffed;
+            --match-clean: #e6f6ff;
+            --match-path: #fefcbf;
+            --match-none: #ffeef0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.5;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* UPLOAD SCREEN */
+        #upload-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            padding: 40px 20px;
+            overflow-y: auto;
+        }
+
+        .upload-container {
+            max-width: 800px;
+            width: 100%;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            padding: 40px;
+        }
+
+        .upload-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .upload-header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1a202c;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .upload-header p {
+            color: var(--text-secondary);
+            font-size: 15px;
+        }
+
+        .upload-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .upload-box {
+            border: 2px dashed #cbd5e0;
+            border-radius: 8px;
+            padding: 32px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            background-color: #f7fafc;
+            position: relative;
+        }
+
+        .upload-box:hover {
+            border-color: var(--primary-color);
+            background-color: #ebf8ff;
+        }
+
+        .upload-box input[type="file"] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .upload-box svg {
+            width: 48px;
+            height: 48px;
+            stroke: #a0aec0;
+            transition: stroke 0.2s;
+        }
+
+        .upload-box:hover svg {
+            stroke: var(--primary-color);
+        }
+
+        .upload-box.loaded {
+            border-color: var(--status-2xx);
+            background-color: #f0fff4;
+        }
+
+        .upload-box.loaded svg {
+            stroke: var(--status-2xx);
+        }
+
+        .file-info {
+            font-size: 13px;
+            color: var(--text-secondary);
+            word-break: break-all;
+        }
+
+        .btn-compare {
+            display: block;
+            width: 100%;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            text-align: center;
+        }
+
+        .btn-compare:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-compare:disabled {
+            background-color: #cbd5e0;
+            cursor: not-allowed;
+        }
+
+        /* MAIN APP INTERFACE */
+        #app-screen {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        header {
+            background-color: #1a202c;
+            color: white;
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 10;
+        }
+
+        header h1 {
+            font-size: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .loaded-files-label {
+            font-size: 12px;
+            color: #cbd5e0;
+            font-family: monospace;
+        }
+
+        .btn-reset {
+            background-color: #4a5568;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 500;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn-reset:hover {
+            background-color: #2d3748;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 4px;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: #a0aec0;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover {
+            color: white;
+            background-color: #2d3748;
+        }
+
+        .tab-btn.active {
+            color: white;
+            background-color: var(--primary-color);
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .tab-content {
+            display: none;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            padding: 24px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* DASHBOARD VIEW */
+        .dashboard-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .file-summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            padding: 20px;
+        }
+
+        .card h2 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-subtitle {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: normal;
+            word-break: break-all;
+            max-width: 60%;
+            text-align: right;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stat-box {
+            background-color: var(--bg-primary);
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .stat-val {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .stat-lbl {
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            margin-top: 4px;
+        }
+
+        .domain-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .domain-table th, .domain-table td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .domain-table th {
+            background-color: var(--bg-primary);
+            font-weight: 600;
+        }
+
+        .domain-table tr:hover {
+            background-color: #f7fafc;
+        }
+
+        .domain-badge-warning {
+            background-color: #feebc8;
+            color: #c05621;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .domain-discrepancy-card {
+            background-color: #fffaf0;
+            border-color: #feebc8;
+        }
+
+        .discrepancy-list {
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .disc-item {
+            background-color: white;
+            border: 1px solid #fbd38d;
+            border-left: 4px solid #dd6b20;
+            padding: 10px 16px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-family: monospace;
+        }
+
+        /* EXPLORER VIEW (SPLIT SCREEN) */
+        .explorer-layout {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 380px;
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            background-color: var(--bg-card);
+        }
+
+        .sidebar-search {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            background-color: var(--bg-primary);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .sidebar-search input, .sidebar-search select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .request-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .req-item {
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .req-item:hover {
+            background-color: #f7fafc;
+        }
+
+        .req-item.active {
+            background-color: #ebf8ff;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .req-item.has-size-diff {
+            background-color: #fffaf0;
+        }
+
+        .req-item.has-size-diff:hover {
+            background-color: #fff5e6;
+        }
+
+        .req-item.has-size-diff.active {
+            background-color: #ebf8ff;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .size-diff-badge {
+            font-size: 9px;
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-weight: 600;
+            background-color: #fff3bf;
+            color: #d9480f;
+            border: 1px solid #ffe3e3;
+        }
+
+        .req-meta-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .req-method-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .badge {
+            font-size: 10px;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        .badge-method {
+            background-color: #e2e8f0;
+            color: #4a5568;
+        }
+
+        .badge-status {
+            color: white;
+        }
+
+        .status-2xx { background-color: var(--status-2xx); }
+        .status-3xx { background-color: var(--status-3xx); }
+        .status-4xx { background-color: var(--status-4xx); }
+        .status-5xx { background-color: var(--status-5xx); }
+        .status-0 { background-color: var(--status-other); }
+
+        .req-url-text {
+            font-family: monospace;
+            font-size: 12px;
+            word-break: break-all;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 100%;
+        }
+
+        .req-info-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .match-badge {
+            font-size: 9px;
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+        .m-exact { background-color: var(--match-exact); color: #22863a; border: 1px solid #c3e6cb; }
+        .m-clean_url { background-color: var(--match-clean); color: #0366d6; border: 1px solid #b3d8ff; }
+        .m-path { background-color: var(--match-path); color: #735c0f; border: 1px solid #ffeeba; }
+        .m-unmatched_good { background-color: var(--match-exact); color: #22863a; border: 1px solid #c3e6cb; }
+        .m-unmatched_bad { background-color: var(--match-none); color: #cb2431; border: 1px solid #f9d6d9; }
+
+        /* DETAILS PANE */
+        .details-pane {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow-y: auto;
+            background-color: var(--bg-card);
+        }
+
+        .placeholder-pane {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-secondary);
+            padding: 40px;
+            text-align: center;
+        }
+
+        .placeholder-pane svg {
+            width: 64px;
+            height: 64px;
+            stroke: #a0aec0;
+            margin-bottom: 16px;
+        }
+
+        .details-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border-color);
+            background-color: #f7fafc;
+        }
+
+        .details-header h2 {
+            font-size: 16px;
+            font-family: monospace;
+            word-break: break-all;
+            margin-bottom: 8px;
+        }
+
+        .details-header-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            font-size: 13px;
+        }
+
+        .meta-detail-box {
+            background-color: white;
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            border-radius: 4px;
+        }
+
+        .meta-lbl {
+            font-size: 10px;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            margin-bottom: 2px;
+        }
+
+        .meta-val {
+            font-weight: 600;
+        }
+
+        .sections-tabs {
+            background-color: var(--bg-primary);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            padding: 0 24px;
+        }
+
+        .sec-tab-btn {
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            padding: 12px 20px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            cursor: pointer;
+        }
+
+        .sec-tab-btn.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+
+        .compare-section {
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .side-by-side {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            align-items: stretch;
+        }
+
+        .comparison-col {
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .col-header {
+            background-color: var(--bg-primary);
+            padding: 8px 16px;
+            font-weight: bold;
+            font-size: 13px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .col-header.good-h { border-top: 4px solid var(--status-2xx); }
+        .col-header.bad-h { border-top: 4px solid var(--status-4xx); }
+
+        .col-content {
+            padding: 16px;
+            flex: 1;
+            overflow-x: auto;
+            font-size: 13px;
+        }
+
+        .kv-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .kv-table td {
+            padding: 6px 8px;
+            border-bottom: 1px solid #f7fafc;
+            vertical-align: top;
+            font-family: monospace;
+            font-size: 12px;
+            word-break: break-all;
+        }
+
+        .kv-table td.k {
+            font-weight: bold;
+            color: var(--text-secondary);
+            width: 35%;
+        }
+
+        .diff-container {
+            width: 100%;
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            margin-top: 10px;
+            background-color: white;
+        }
+
+        /* DIFF TABLE STYLING */
+        table.diff {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12px;
+            border-collapse: collapse;
+            width: 100%;
+            table-layout: fixed;
+        }
+
+        table.diff tr {
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        table.diff td {
+            padding: 4px 8px;
+            vertical-align: top;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+
+        table.diff td.diff-num {
+            background-color: #f7fafc;
+            color: #a0aec0;
+            text-align: right;
+            width: 45px;
+            user-select: none;
+            border-right: 1px solid #e2e8f0;
+            font-size: 11px;
+        }
+
+        .diff_add {
+            background-color: #e6ffed !important;
+            color: #22863a !important;
+        }
+
+        .diff_sub {
+            background-color: #ffeef0 !important;
+            color: #cb2431 !important;
+        }
+
+        .diff_empty {
+            background-color: #fafbfc !important;
+        }
+
+        .diff_whitespace {
+            background-color: #f7fafc !important;
+            color: var(--text-primary) !important;
+        }
+
+        .diff-char-delete {
+            background-color: #fefcbf !important;
+            border-bottom: 1px dashed #dd6b20;
+            color: #9c4221 !important;
+            font-weight: bold;
+            border-radius: 2px;
+            padding: 1px 0;
+        }
+
+        .diff-char-add {
+            background-color: #fefcbf !important;
+            border-bottom: 1px dashed #319795;
+            color: #234e52 !important;
+            font-weight: bold;
+            border-radius: 2px;
+            padding: 1px 0;
+        }
+
+        .diff-warning {
+            background-color: #fffaf0;
+            border: 1px solid #fbd38d;
+            color: #c05621;
+            padding: 8px 16px;
+            border-radius: 4px;
+            margin-bottom: 12px;
+            font-size: 13px;
+        }
+
+        .post-body-text {
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+            background-color: #f7fafc;
+            padding: 12px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            overflow: auto;
+            max-height: 250px;
+        }
+        
+        .no-diff {
+            padding: 40px;
+            text-align: center;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        /* TIMINGS VIEW */
+        .timing-bar-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .timing-bar-row {
+            display: grid;
+            grid-template-columns: 110px 1fr 70px;
+            align-items: center;
+            font-size: 12px;
+        }
+
+        .t-bar {
+            height: 12px;
+            border-radius: 3px;
+        }
+        .t-blocked { background-color: #a0aec0; }
+        .t-dns { background-color: #319795; }
+        .t-connect { background-color: #d69e2e; }
+        .t-send { background-color: #3182ce; }
+        .t-wait { background-color: #dd6b20; }
+        .t-receive { background-color: #38a169; }
+
+        .timeline-legend {
+            display: flex;
+            gap: 12px;
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            justify-content: center;
+            background-color: var(--bg-primary);
+            padding: 6px;
+            border-radius: 4px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- UPLOAD SCREEN -->
+    <div id="upload-screen">
+        <div class="upload-container">
+            <div class="upload-header">
+                <h1><span>🔍</span> Visual HAR Comparison & Root-Cause Tool</h1>
+                <p>Upload a "Good" page load HAR and a "Bad" page load HAR to explore element discrepancies and view side-by-side response HTML diffs.</p>
+            </div>
+            
+            <div class="upload-grid">
+                <!-- GOOD HAR -->
+                <div class="upload-box" id="good-upload-box">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <strong>Upload Good HAR</strong>
+                    <span class="file-info" id="good-file-info">Drag & drop or click to choose .har file</span>
+                    <input type="file" id="good-file-input" accept=".har">
+                </div>
+
+                <!-- BAD HAR -->
+                <div class="upload-box" id="bad-upload-box">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <strong>Upload Bad HAR</strong>
+                    <span class="file-info" id="bad-file-info">Drag & drop or click to choose .har file</span>
+                    <input type="file" id="bad-file-input" accept=".har">
+                </div>
+            </div>
+
+            <button class="btn-compare" id="btn-compare" disabled>Compare Files</button>
+        </div>
+    </div>
+
+    <!-- MAIN APP SCREEN -->
+    <div id="app-screen">
+        <header>
+            <h1>
+                <span>🔍</span> HAR Comparison Root-Cause Analyzer
+            </h1>
+            <div class="header-controls">
+                <span class="loaded-files-label" id="header-files-label"></span>
+                <button class="btn-reset" onclick="resetApp()">Load Different Files</button>
+                <div class="nav-tabs">
+                    <button class="tab-btn active" id="tab-btn-explorer" onclick="switchTab('explorer')">Interactive Diff Explorer</button>
+                    <button class="tab-btn" id="tab-btn-dashboard" onclick="switchTab('dashboard')">Additional Statistics</button>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <!-- DASHBOARD TAB -->
+            <div id="dashboard-tab" class="tab-content">
+                <div class="dashboard-container">
+                    <div class="file-summary-grid">
+                        <!-- GOOD FILE -->
+                        <div class="card" id="good-file-card">
+                            <h2>
+                                <span style="color: var(--status-2xx)">🟢 GOOD PAGE LOAD</span>
+                                <span class="card-subtitle" id="good-file-name">-</span>
+                            </h2>
+                            <div class="stat-grid">
+                                <div class="stat-box">
+                                    <div class="stat-val" id="good-total-req">-</div>
+                                    <div class="stat-lbl">Total Requests</div>
+                                </div>
+                                <div class="stat-box">
+                                    <div class="stat-val" id="good-success-rate" style="color: var(--status-2xx)">-%</div>
+                                    <div class="stat-lbl">Success Rate</div>
+                                </div>
+                                <div class="stat-box">
+                                    <div class="stat-val" id="good-redirects" style="color: var(--status-3xx)">-</div>
+                                    <div class="stat-lbl">Redirects (3xx)</div>
+                                </div>
+                                <div class="stat-box">
+                                    <div class="stat-val" id="good-errors" style="color: var(--status-4xx)">-</div>
+                                    <div class="stat-lbl">Errors (4xx+)</div>
+                                </div>
+                            </div>
+                            <h3>Domain Request Distribution</h3>
+                            <table class="domain-table" id="good-domain-table">
+                                <thead>
+                                    <tr>
+                                        <th>Domain</th>
+                                        <th>Requests</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Dynamic -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- BAD FILE -->
+                        <div class="card" id="bad-file-card">
+                            <h2>
+                                <span style="color: var(--status-4xx)">🔴 BAD PAGE LOAD</span>
+                                <span class="card-subtitle" id="bad-file-name">-</span>
+                            </h2>
+                            <div class="stat-grid">
+                                <div class="stat-box">
+                                    <div class="stat-val" id="bad-total-req">-</div>
+                                    <div class="stat-lbl">Total Requests</div>
+                                </div>
+                                <div class="stat-box">
+                                    <div class="stat-val" id="bad-success-rate" style="color: var(--status-2xx)">-%</div>
+                                    <div class="stat-lbl">Success Rate</div>
+                                </div>
+                                <div class="stat-box">
+                                    <div class="stat-val" id="bad-redirects" style="color: var(--status-3xx)">-</div>
+                                    <div class="stat-lbl">Redirects (3xx)</div>
+                                </div>
+                                <div class="stat-box">
+                                    <div class="stat-val" id="bad-errors" style="color: var(--status-4xx)">-</div>
+                                    <div class="stat-lbl">Errors (4xx+)</div>
+                                </div>
+                            </div>
+                            <h3>Domain Request Distribution</h3>
+                            <table class="domain-table" id="bad-domain-table">
+                                <thead>
+                                    <tr>
+                                        <th>Domain</th>
+                                        <th>Requests</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Dynamic -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+
+
+                    <!-- INITIATOR AGGREGATION -->
+                    <div class="card" style="margin-top: 24px;">
+                        <h2>🔗 Initiator Request Aggregation & Impact Analysis</h2>
+                        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
+                            This panel aggregates all requests by their initiator script or HTML document, comparing the good vs. bad loading outcomes side-by-side. 
+                            Click <strong>Filter Explorer 🔍</strong> on any row to automatically load only those requests in the Interactive Diff Explorer!
+                        </p>
+                        <table class="domain-table" id="initiator-aggregation-table">
+                            <thead>
+                                <tr style="background-color: var(--bg-primary);">
+                                    <th>Initiator Source URL / Script</th>
+                                    <th style="width: 120px;">Good Requests</th>
+                                    <th style="width: 120px;">Bad Requests</th>
+                                    <th>Outcome Comparison (Good vs Bad Statuses)</th>
+                                    <th style="width: 150px; text-align: right;">Explorer Link</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td colspan="5" style="text-align: center; color: var(--text-secondary);">No request initiator data parsed.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- EXPLORER TAB -->
+            <div id="explorer-tab" class="tab-content active" style="padding: 0;">
+                <div class="explorer-layout">
+                    <!-- SIDEBAR -->
+                    <div class="sidebar">
+                        <div class="sidebar-search">
+                            <input type="text" id="url-filter" placeholder="Filter by URL / path (prefix 'initiator:' to filter by initiator)..." oninput="filterRequests()">
+                            <div style="display: flex; gap: 8px;">
+                                <select id="status-filter" onchange="filterRequests()" style="flex: 1;">
+                                    <option value="all">All Statuses</option>
+                                    <option value="2xx">2xx (Success)</option>
+                                    <option value="3xx">3xx (Redirect)</option>
+                                    <option value="4xx">4xx (Client Error)</option>
+                                    <option value="5xx">5xx (Server Error)</option>
+                                    <option value="mismatch">Mismatched Status</option>
+                                </select>
+                                <select id="match-filter" onchange="filterRequests()" style="flex: 1;">
+                                    <option value="all">All Pairs</option>
+                                    <option value="exact">Exact URL</option>
+                                    <option value="size_diff">Size Difference</option>
+                                    <option value="clean_url">Clean URL</option>
+                                    <option value="path">Path Match</option>
+                                    <option value="unmatched_good">Missing in Bad</option>
+                                    <option value="unmatched_bad">Missing in Good</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="request-list" id="pairs-list">
+                            <!-- Dynamically Rendered -->
+                        </div>
+                    </div>
+
+                    <!-- DETAILS -->
+                    <div class="details-pane" id="details-pane">
+                        <div class="placeholder-pane">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="16" x2="12" y2="12"></line>
+                                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                            </svg>
+                            <h3>Select a request from the sidebar</h3>
+                            <p>Pairing is computed automatically by matching domains, paths, and methods so you can see exactly how the response raw HTML changed!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Store HAR contents
+        let goodHarData = null;
+        let badHarData = null;
+        
+        let goodFileName = '';
+        let badFileName = '';
+        let goodFileSize = 0;
+        let badFileSize = 0;
+
+        let goodEntries = [];
+        let badEntries = [];
+        let matchedPairs = [];
+        
+        let activePair = null;
+        let activeDetailsSection = 'diff';
+        let hideIdentical = false;
+
+        // Setup File Upload Listeners
+        document.getElementById('good-file-input').addEventListener('change', (e) => handleFileUpload(e, 'good'));
+        document.getElementById('bad-file-input').addEventListener('change', (e) => handleFileUpload(e, 'bad'));
+        document.getElementById('btn-compare').addEventListener('click', processAndStartComparison);
+
+        function handleFileUpload(e, type) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    const parsed = JSON.parse(evt.target.result);
+                    if (!parsed.log || !parsed.log.entries) {
+                        alert("Invalid HAR File structure. Make sure this is a valid web inspector .har export.");
+                        return;
+                    }
+                    
+                    if (type === 'good') {
+                        goodHarData = parsed;
+                        goodFileName = file.name;
+                        goodFileSize = file.size;
+                        goodEntries = parsed.log.entries;
+                        
+                        const box = document.getElementById('good-upload-box');
+                        box.classList.add('loaded');
+                        document.getElementById('good-file-info').innerText = `${file.name} (${formatBytes(file.size)}) - Loaded ${goodEntries.length} requests.`;
+                    } else {
+                        badHarData = parsed;
+                        badFileName = file.name;
+                        badFileSize = file.size;
+                        badEntries = parsed.log.entries;
+                        
+                        const box = document.getElementById('bad-upload-box');
+                        box.classList.add('loaded');
+                        document.getElementById('bad-file-info').innerText = `${file.name} (${formatBytes(file.size)}) - Loaded ${badEntries.length} requests.`;
+                    }
+
+                    // Check if both files are successfully loaded
+                    if (goodHarData && badHarData) {
+                        document.getElementById('btn-compare').disabled = false;
+                    }
+                } catch(err) {
+                    alert(`Error parsing JSON file: ${err.message}`);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function resetApp() {
+            goodHarData = null;
+            badHarData = null;
+            goodEntries = [];
+            badEntries = [];
+            matchedPairs = [];
+            activePair = null;
+
+            document.getElementById('good-file-input').value = '';
+            document.getElementById('bad-file-input').value = '';
+            
+            const goodBox = document.getElementById('good-upload-box');
+            goodBox.classList.remove('loaded');
+            document.getElementById('good-file-info').innerText = "Drag & drop or click to choose .har file";
+            
+            const badBox = document.getElementById('bad-upload-box');
+            badBox.classList.remove('loaded');
+            document.getElementById('bad-file-info').innerText = "Drag & drop or click to choose .har file";
+            
+            document.getElementById('btn-compare').disabled = true;
+            
+            document.getElementById('upload-screen').style.display = 'flex';
+            document.getElementById('app-screen').style.display = 'none';
+        }
+
+        function processAndStartComparison() {
+            // Apply pairing heuristics
+            matchedPairs = matchEntries(goodEntries, badEntries);
+
+            // Render Dashboard & Statistics
+            renderDashboard();
+
+            // Render Explorer sidebar
+            renderSidebar();
+
+            // Hide Upload and Show App
+            document.getElementById('upload-screen').style.display = 'none';
+            document.getElementById('app-screen').style.display = 'flex';
+            
+            // Set header label
+            document.getElementById('header-files-label').innerText = `Good: ${goodFileName} | Bad: ${badFileName}`;
+            
+            // Default to Explorer Tab
+            switchTab('explorer');
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            if (tabId === 'dashboard') {
+                document.getElementById('tab-btn-dashboard').classList.add('active');
+                document.getElementById('dashboard-tab').classList.add('active');
+            } else {
+                document.getElementById('tab-btn-explorer').classList.add('active');
+                document.getElementById('explorer-tab').classList.add('active');
+            }
+        }
+
+        /* PAIRING AND ALIGNMENT ALGORITHM */
+        function getCleanUrl(url) {
+            try {
+                const urlObj = new URL(url);
+                const host = urlObj.host.replace('msftauth.net', 'msauth.net');
+                return `${urlObj.protocol}//${host}${urlObj.pathname}`;
+            } catch(e) {
+                return url;
+            }
+        }
+
+        function getUrlIgnoringT(url) {
+            try {
+                const urlObj = new URL(url);
+                const host = urlObj.host.replace('msftauth.net', 'msauth.net');
+                urlObj.searchParams.delete('t');
+                urlObj.searchParams.delete('p_auth');
+                urlObj.searchParams.delete('p_p_auth');
+                return `${urlObj.protocol}//${host}${urlObj.pathname}${urlObj.search}`;
+            } catch(e) {
+                return url;
+            }
+        }
+
+        function getPath(url) {
+            try {
+                return new URL(url).pathname;
+            } catch(e) {
+                return url;
+            }
+        }
+
+        function matchEntries(good, bad) {
+            const pairs = [];
+            const matchedGood = new Set();
+            const matchedBad = new Set();
+
+            // Pass 1: URL & Method Match (ignoring dynamic 't' query parameter and normalizing domains)
+            good.forEach((g, gIdx) => {
+                const gReq = g.request || {};
+                const gUrl = gReq.url || '';
+                const gMethod = gReq.method || '';
+                const gClean = getUrlIgnoringT(gUrl);
+
+                for (let bIdx = 0; bIdx < bad.length; bIdx++) {
+                    if (matchedBad.has(bIdx)) continue;
+                    const b = bad[bIdx];
+                    const bReq = b.request || {};
+                    if (getUrlIgnoringT(bReq.url || '') === gClean && bReq.method === gMethod) {
+                        pairs.push({
+                            good_idx: gIdx,
+                            bad_idx: bIdx,
+                            url: gUrl,
+                            method: gMethod,
+                            match_type: 'exact'
+                        });
+                        matchedGood.add(gIdx);
+                        matchedBad.add(bIdx);
+                        break;
+                    }
+                }
+            });
+
+            // Pass 2: Clean URL and Method Match (ignores query parameter noise & normalizes msftauth/msauth)
+            good.forEach((g, gIdx) => {
+                if (matchedGood.has(gIdx)) return;
+                const gReq = g.request || {};
+                const gClean = getCleanUrl(gReq.url || '');
+                const gMethod = gReq.method || '';
+
+                for (let bIdx = 0; bIdx < bad.length; bIdx++) {
+                    if (matchedBad.has(bIdx)) continue;
+                    const b = bad[bIdx];
+                    const bReq = b.request || {};
+                    const bClean = getCleanUrl(bReq.url || '');
+                    if (bClean === gClean && bReq.method === gMethod) {
+                        pairs.push({
+                            good_idx: gIdx,
+                            bad_idx: bIdx,
+                            url: gReq.url || '',
+                            method: gMethod,
+                            match_type: 'clean_url'
+                        });
+                        matchedGood.add(gIdx);
+                        matchedBad.add(bIdx);
+                        break;
+                    }
+                }
+            });
+
+            // Pass 3: Path and Method Match (ignores host names for shared library files / assets)
+            good.forEach((g, gIdx) => {
+                if (matchedGood.has(gIdx)) return;
+                const gReq = g.request || {};
+                const gPath = getPath(gReq.url || '');
+                const gMethod = gReq.method || '';
+
+                if (gPath === '' || gPath === '/') return;
+
+                for (let bIdx = 0; bIdx < bad.length; bIdx++) {
+                    if (matchedBad.has(bIdx)) continue;
+                    const b = bad[bIdx];
+                    const bReq = b.request || {};
+                    const bPath = getPath(bReq.url || '');
+                    if (bPath === gPath && bReq.method === gMethod) {
+                        pairs.push({
+                            good_idx: gIdx,
+                            bad_idx: bIdx,
+                            url: gReq.url || '',
+                            method: gMethod,
+                            match_type: 'path'
+                        });
+                        matchedGood.add(gIdx);
+                        matchedBad.add(bIdx);
+                        break;
+                    }
+                }
+            });
+
+            // Pass 4: Unmatched Good entries
+            good.forEach((g, gIdx) => {
+                if (matchedGood.has(gIdx)) return;
+                const gReq = g.request || {};
+                pairs.push({
+                    good_idx: gIdx,
+                    bad_idx: null,
+                    url: gReq.url || '',
+                    method: gReq.method || '',
+                    match_type: 'unmatched_good'
+                });
+            });
+
+            // Pass 5: Unmatched Bad entries
+            bad.forEach((b, bIdx) => {
+                if (matchedBad.has(bIdx)) return;
+                const bReq = b.request || {};
+                pairs.push({
+                    good_idx: null,
+                    bad_idx: bIdx,
+                    url: bReq.url || '',
+                    method: bReq.method || '',
+                    match_type: 'unmatched_bad'
+                });
+            });
+
+            // Sort in the chronological order that they appear in the .har files (using relative timeline offset)
+            const goodTimes = good.map(e => new Date(e.startedDateTime).getTime()).filter(t => !isNaN(t));
+            const badTimes = bad.map(e => new Date(e.startedDateTime).getTime()).filter(t => !isNaN(t));
+            
+            const goodStart = goodTimes.length > 0 ? Math.min(...goodTimes) : 0;
+            const badStart = badTimes.length > 0 ? Math.min(...badTimes) : 0;
+
+            pairs.forEach(pair => {
+                let goodOffset = null;
+                let badOffset = null;
+
+                if (pair.good_idx !== null) {
+                    const gEntry = good[pair.good_idx];
+                    const t = new Date(gEntry.startedDateTime).getTime();
+                    if (!isNaN(t)) {
+                        goodOffset = t - goodStart;
+                    }
+                }
+
+                if (pair.bad_idx !== null) {
+                    const bEntry = bad[pair.bad_idx];
+                    const t = new Date(bEntry.startedDateTime).getTime();
+                    if (!isNaN(t)) {
+                        badOffset = t - badStart;
+                    }
+                }
+
+                // Determine sorting key: relative time offset in milliseconds from first request
+                let sortOffset = 0;
+                if (goodOffset !== null && badOffset !== null) {
+                    // Average offset if present in both
+                    sortOffset = (goodOffset + badOffset) / 2;
+                } else if (goodOffset !== null) {
+                    sortOffset = goodOffset;
+                } else if (badOffset !== null) {
+                    sortOffset = badOffset;
+                }
+                
+                pair.sort_offset = sortOffset;
+            });
+
+            // Sort pairs by sort_offset ascending
+            pairs.sort((a, b) => a.sort_offset - b.sort_offset);
+
+            return pairs;
+        }
+
+        /* STATISTICS & METRICS */
+        function calculateStats(entries) {
+            const statuses = {};
+            const contentTypes = {};
+            const domains = {};
+            const methods = {};
+
+            entries.forEach(entry => {
+                const req = entry.request || {};
+                const res = entry.response || {};
+                
+                const method = req.method || 'UNKNOWN';
+                const url = req.url || '';
+                const status = res.status || 0;
+                
+                let domain = 'unknown';
+                try {
+                    domain = new URL(url).host;
+                } catch(e) {}
+                
+                const mimeType = ((res.content || {}).mimeType || 'unknown').split(';')[0].trim();
+
+                methods[method] = (methods[method] || 0) + 1;
+                statuses[status] = (statuses[status] || 0) + 1;
+                contentTypes[mimeType] = (contentTypes[mimeType] || 0) + 1;
+                domains[domain] = (domains[domain] || 0) + 1;
+            });
+
+            return {
+                total_requests: entries.length,
+                methods,
+                statuses,
+                content_types: contentTypes,
+                domains
+            };
+        }
+
+        function renderDashboard() {
+            const goodStats = calculateStats(goodEntries);
+            const badStats = calculateStats(badEntries);
+
+            // Good Load Rendering
+            document.getElementById('good-file-name').innerText = `${goodFileName} (${formatBytes(goodFileSize)})`;
+            document.getElementById('good-total-req').innerText = goodStats.total_requests;
+            
+            const gSuccess = calcSuccessRate(goodStats.statuses);
+            document.getElementById('good-success-rate').innerText = gSuccess + '%';
+            document.getElementById('good-redirects').innerText = sumStatuses(goodStats.statuses, 300, 399);
+            document.getElementById('good-errors').innerText = sumStatuses(goodStats.statuses, 400, 999);
+
+            // Bad Load Rendering
+            document.getElementById('bad-file-name').innerText = `${badFileName} (${formatBytes(badFileSize)})`;
+            document.getElementById('bad-total-req').innerText = badStats.total_requests;
+            
+            const bSuccess = calcSuccessRate(badStats.statuses);
+            document.getElementById('bad-success-rate').innerText = bSuccess + '%';
+            document.getElementById('bad-redirects').innerText = sumStatuses(badStats.statuses, 300, 399);
+            document.getElementById('bad-errors').innerText = sumStatuses(badStats.statuses, 400, 999);
+
+            // Domain discrepancy analysis
+            const goodDomains = new Set(Object.keys(goodStats.domains));
+            const badDomains = new Set(Object.keys(badStats.domains));
+            
+            const onlyInGood = Array.from(goodDomains).filter(d => !badDomains.has(d));
+            const onlyInBad = Array.from(badDomains).filter(d => !goodDomains.has(d));
+
+            renderDomainsTable(goodStats.domains, 'good-domain-table', onlyInGood);
+            renderDomainsTable(badStats.domains, 'bad-domain-table', onlyInBad);
+
+            // Render Initiator Aggregations
+            renderInitiatorAggregation(getInitiatorAggregates());
+        }
+
+        function getInitiatorAggregates() {
+            const aggregates = {};
+            
+            const process = (entries, type) => {
+                entries.forEach(entry => {
+                    const init = entry._initiator || {};
+                    let initUrl = init.url || '';
+                    
+                    if (!initUrl && init.stack && init.stack.callFrames && init.stack.callFrames.length > 0) {
+                        initUrl = init.stack.callFrames[0].url || '';
+                    }
+                    
+                    if (!initUrl) {
+                        initUrl = 'Direct / Inline / Unknown';
+                    }
+                    
+                    const res = entry.response || {};
+                    const status = res.status || 0;
+                    
+                    if (!aggregates[initUrl]) {
+                        aggregates[initUrl] = {
+                            url: initUrl,
+                            good_count: 0,
+                            bad_count: 0,
+                            good_statuses: {},
+                            bad_statuses: {}
+                        };
+                    }
+                    
+                    const agg = aggregates[initUrl];
+                    if (type === 'good') {
+                        agg.good_count++;
+                        agg.good_statuses[status] = (agg.good_statuses[status] || 0) + 1;
+                    } else {
+                        agg.bad_count++;
+                        agg.bad_statuses[status] = (agg.bad_statuses[status] || 0) + 1;
+                    }
+                });
+            };
+            
+            process(goodEntries, 'good');
+            process(badEntries, 'bad');
+            
+            return Object.values(aggregates).sort((a, b) => (b.good_count + b.bad_count) - (a.good_count + a.bad_count));
+        }
+
+        function renderInitiatorAggregation(aggregates) {
+            const tbody = document.querySelector('#initiator-aggregation-table tbody');
+            tbody.innerHTML = '';
+            
+            if (aggregates.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-secondary);">No request initiator data parsed.</td></tr>';
+                return;
+            }
+            
+            aggregates.forEach(agg => {
+                const tr = document.createElement('tr');
+                
+                const countDiscrepancy = agg.good_count !== agg.bad_count;
+                const hasBadErrors = Object.keys(agg.bad_statuses).some(s => parseInt(s) >= 400 || s === '0');
+                
+                if (countDiscrepancy || hasBadErrors) {
+                    tr.style.backgroundColor = '#fffaf0';
+                }
+                
+                const gStatusStr = Object.entries(agg.good_statuses)
+                    .map(([status, count]) => `<span class="badge ${getStatusClass(parseInt(status))}">${status} (${count})</span>`)
+                    .join(' ');
+                    
+                const bStatusStr = Object.entries(agg.bad_statuses)
+                    .map(([status, count]) => `<span class="badge ${getStatusClass(parseInt(status))}">${status} (${count})</span>`)
+                    .join(' ');
+                    
+                let displayUrl = agg.url;
+                if (displayUrl.length > 70) {
+                    displayUrl = displayUrl.substring(0, 67) + '...';
+                }
+                
+                let filterTerm = agg.url;
+                try {
+                    if (agg.url !== 'Direct / Inline / Unknown') {
+                        const p = new URL(agg.url);
+                        filterTerm = p.pathname; 
+                    }
+                } catch(e) {}
+                
+                tr.innerHTML = `
+                    <td style="font-family: monospace; font-size: 12px; word-break: break-all;" title="${escapeHtml(agg.url)}">
+                        <strong>${escapeHtml(displayUrl)}</strong>
+                    </td>
+                    <td style="font-weight: 600; color: var(--status-2xx);">${agg.good_count}</td>
+                    <td style="font-weight: 600; color: ${agg.bad_count === 0 ? 'var(--text-secondary)' : countDiscrepancy ? 'var(--status-3xx)' : 'var(--text-primary)'}">${agg.bad_count}</td>
+                    <td style="font-size: 11px;">
+                        <div style="margin-bottom: 2px;"><strong>Good:</strong> ${gStatusStr || '<em>None</em>'}</div>
+                        <div><strong>Bad:</strong> ${bStatusStr || '<em>None</em>'}</div>
+                    </td>
+                    <td style="text-align: right;">
+                        <button class="btn-compare" onclick="quickFilterByInitiator('${escapeJavaScriptString(filterTerm)}')" style="font-size: 11px; padding: 4px 8px; font-weight: 600; border-radius: 4px; color: white; cursor: pointer; border: none; height: auto; width: auto; display: inline-block;">
+                            Filter Explorer 🔍
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function quickFilterByInitiator(term) {
+            switchTab('explorer');
+            const filterInput = document.getElementById('url-filter');
+            if (filterInput) {
+                const formattedTerm = term.includes(' ') ? `"${term}"` : term;
+                filterInput.value = 'initiator:' + formattedTerm;
+            }
+            filterRequests();
+        }
+
+        function renderDomainsTable(domainMap, tableId, isolationList) {
+            const tbody = document.querySelector(`#${tableId} tbody`);
+            tbody.innerHTML = '';
+
+            const sorted = Object.entries(domainMap).sort((a,b) => b[1] - a[1]);
+            if (sorted.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="2" style="text-align: center;">No requests recorded.</td></tr>';
+                return;
+            }
+
+            sorted.forEach(([domain, count]) => {
+                const isIsolated = isolationList.includes(domain);
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-family: monospace; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                        <span>${domain}</span>
+                        ${isIsolated ? '<span class="domain-badge-warning">Isolated</span>' : ''}
+                    </td>
+                    <td style="font-weight: 600; width: 80px;">${count}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+
+
+        function calcSuccessRate(statuses) {
+            let total = 0;
+            let success = 0;
+            Object.entries(statuses).forEach(([status, count]) => {
+                const s = parseInt(status);
+                total += count;
+                if (s >= 200 && s < 300) {
+                    success += count;
+                }
+            });
+            return total === 0 ? 0 : Math.round((success / total) * 100);
+        }
+
+        function sumStatuses(statuses, min, max) {
+            let sum = 0;
+            Object.entries(statuses).forEach(([status, count]) => {
+                const s = parseInt(status);
+                if (s >= min && s <= max) {
+                    sum += count;
+                }
+            });
+            return sum;
+        }
+
+        function getEntryInitiatorUrls(entry) {
+            const urls = [];
+            if (!entry || !entry._initiator) return urls;
+            
+            const init = entry._initiator;
+            if (init.url) {
+                urls.push(init.url);
+            }
+            
+            const collectFromStack = (stack) => {
+                if (!stack) return;
+                if (stack.callFrames) {
+                    stack.callFrames.forEach(frame => {
+                        if (frame.url) urls.push(frame.url);
+                    });
+                }
+                if (stack.parent) {
+                    collectFromStack(stack.parent);
+                }
+            };
+            
+            collectFromStack(init.stack);
+            return urls;
+        }
+
+        /* SIDEBAR RENDERER & FILTERS */
+        function renderSidebar() {
+            const pairsDiv = document.getElementById('pairs-list');
+            pairsDiv.innerHTML = '';
+
+            const search = document.getElementById('url-filter').value.toLowerCase();
+            const statusFilter = document.getElementById('status-filter').value;
+            const matchFilter = document.getElementById('match-filter').value;
+
+            let initiatorTerm = "";
+            let urlTerm = search;
+
+            const quotedMatch = search.match(/initiator:(["'])(.*?)\1/);
+            if (quotedMatch) {
+                initiatorTerm = quotedMatch[2];
+                urlTerm = search.replace(/initiator:(["'])(.*?)\1/, "").trim();
+            } else {
+                const unquotedMatch = search.match(/initiator:(\S+)/);
+                if (unquotedMatch) {
+                    initiatorTerm = unquotedMatch[1];
+                    urlTerm = search.replace(/initiator:\S+/, "").trim();
+                } else if (search.includes("initiator:")) {
+                    urlTerm = search.replace(/initiator:\s*/, "").trim();
+                }
+            }
+
+            let filtered = matchedPairs.filter(pair => {
+                // Search filter
+                if (search) {
+                    if (initiatorTerm) {
+                        const gEntry = pair.good_idx !== null ? goodEntries[pair.good_idx] : null;
+                        const bEntry = pair.bad_idx !== null ? badEntries[pair.bad_idx] : null;
+                        
+                        const gInitUrls = getEntryInitiatorUrls(gEntry).map(u => u.toLowerCase());
+                        const bInitUrls = getEntryInitiatorUrls(bEntry).map(u => u.toLowerCase());
+                        
+                        const matchInit = gInitUrls.some(u => u.includes(initiatorTerm)) || bInitUrls.some(u => u.includes(initiatorTerm));
+                        
+                        if (!matchInit) {
+                            return false;
+                        }
+                    }
+
+                    if (urlTerm) {
+                        const matchUrl = pair.url.toLowerCase().includes(urlTerm);
+                        if (!matchUrl) {
+                            return false;
+                        }
+                    }
+                }
+                
+                // Match filter
+                if (matchFilter !== 'all') {
+                    if (matchFilter === 'size_diff') {
+                        const gEntry = pair.good_idx !== null ? goodEntries[pair.good_idx] : null;
+                        const bEntry = pair.bad_idx !== null ? badEntries[pair.bad_idx] : null;
+                        const gSize = gEntry ? ((gEntry.response.content || {}).size || 0) : 0;
+                        const bSize = bEntry ? ((bEntry.response.content || {}).size || 0) : 0;
+                        const isExactMatch = pair.match_type === 'exact';
+                        const hasSizeDifference = gEntry !== null && bEntry !== null && gSize !== bSize;
+                        
+                        if (!isExactMatch || !hasSizeDifference) {
+                            return false;
+                        }
+                    } else if (pair.match_type !== matchFilter) {
+                        return false;
+                    }
+                }
+
+                // Status filter
+                const gEntry = pair.good_idx !== null ? goodEntries[pair.good_idx] : null;
+                const bEntry = pair.bad_idx !== null ? badEntries[pair.bad_idx] : null;
+                const gStatus = gEntry ? (gEntry.response.status || 0) : null;
+                const bStatus = bEntry ? (bEntry.response.status || 0) : null;
+
+                if (statusFilter !== 'all') {
+                    if (statusFilter === 'mismatch') {
+                        return gStatus !== bStatus;
+                    }
+
+                    const min = statusFilter === '2xx' ? 200 : statusFilter === '3xx' ? 300 : statusFilter === '4xx' ? 400 : 500;
+                    const max = statusFilter === '2xx' ? 299 : statusFilter === '3xx' ? 399 : statusFilter === '4xx' ? 499 : 999;
+                    
+                    const gMatch = gStatus !== null && gStatus >= min && gStatus <= max;
+                    const bMatch = bStatus !== null && bStatus >= min && bStatus <= max;
+                    
+                    return gMatch || bMatch;
+                }
+
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                pairsDiv.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--text-secondary); font-style: italic;">No request groups match the filter settings.</div>';
+                return;
+            }
+
+            filtered.forEach((pair, localIdx) => {
+                const item = document.createElement('div');
+                item.className = 'req-item';
+                item.setAttribute('data-good-idx', pair.good_idx);
+                item.setAttribute('data-bad-idx', pair.bad_idx);
+                
+                if (activePair && activePair.good_idx === pair.good_idx && activePair.bad_idx === pair.bad_idx) {
+                    item.classList.add('active');
+                }
+
+                item.onclick = () => selectPair(pair, item);
+
+                const gEntry = pair.good_idx !== null ? goodEntries[pair.good_idx] : null;
+                const bEntry = pair.bad_idx !== null ? badEntries[pair.bad_idx] : null;
+                const gStatus = gEntry ? (gEntry.response.status || 0) : null;
+                const bStatus = bEntry ? (bEntry.response.status || 0) : null;
+
+                const gTime = gEntry ? (gEntry.time || 0) : 0;
+                const bTime = bEntry ? (bEntry.time || 0) : 0;
+
+                const gSize = gEntry ? ((gEntry.response.content || {}).size || 0) : 0;
+                const bSize = bEntry ? ((bEntry.response.content || {}).size || 0) : 0;
+
+                const isExactMatch = pair.match_type === 'exact';
+                const hasSizeDifference = gEntry !== null && bEntry !== null && gSize !== bSize;
+
+                if (isExactMatch && hasSizeDifference) {
+                    item.classList.add('has-size-diff');
+                }
+
+                let statusBadge = '';
+                if (gStatus !== null && bStatus !== null) {
+                    if (gStatus === bStatus) {
+                        statusBadge = `<span class="badge badge-status ${getStatusClass(gStatus)}">${gStatus}</span>`;
+                    } else {
+                        statusBadge = `
+                            <span class="badge badge-status ${getStatusClass(gStatus)}">${gStatus}</span>
+                            <span>➡️</span>
+                            <span class="badge badge-status ${getStatusClass(bStatus)}">${bStatus}</span>
+                        `;
+                    }
+                } else if (gStatus !== null) {
+                    statusBadge = `<span class="badge badge-status ${getStatusClass(gStatus)}">${gStatus} (Only Good)</span>`;
+                } else {
+                    statusBadge = `<span class="badge badge-status ${getStatusClass(bStatus)}">${bStatus} (Only Bad)</span>`;
+                }
+
+                // Short url text
+                let displayUrl = pair.url;
+                try {
+                    const parsed = new URL(pair.url);
+                    displayUrl = parsed.pathname + parsed.search;
+                    if (displayUrl.length > 50) displayUrl = displayUrl.substring(0, 47) + '...';
+                } catch(e) {}
+
+                let sizeDiffBadge = '';
+                if (isExactMatch && hasSizeDifference) {
+                    sizeDiffBadge = `<span class="size-diff-badge" title="Size Mismatch: Good (${formatBytes(gSize)}) vs Bad (${formatBytes(bSize)})">⚠️ Size Diff</span>`;
+                }
+
+                item.innerHTML = `
+                    <div class="req-meta-row">
+                        <div class="req-method-status">
+                            <span class="badge badge-method">${pair.method}</span>
+                            ${statusBadge}
+                        </div>
+                        <div style="display: flex; gap: 4px; align-items: center;">
+                            ${sizeDiffBadge}
+                            <span class="match-badge m-${pair.match_type}">${formatMatchType(pair.match_type)}</span>
+                        </div>
+                    </div>
+                    <div class="req-url-text" title="${pair.url}">${displayUrl}</div>
+                    <div class="req-info-row">
+                        <span>Good: ${gSize ? formatBytes(gSize) : '0 B'} (${gTime ? Math.round(gTime) + 'ms' : '-'})</span>
+                        <span>Bad: ${bSize ? formatBytes(bSize) : '0 B'} (${bTime ? Math.round(bTime) + 'ms' : '-'})</span>
+                    </div>
+                `;
+                pairsDiv.appendChild(item);
+            });
+        }
+
+        function filterRequests() {
+            renderSidebar();
+        }
+
+        function getStatusClass(status) {
+            if (!status) return 'status-0';
+            if (status >= 200 && status < 300) return 'status-2xx';
+            if (status >= 300 && status < 400) return 'status-3xx';
+            if (status >= 400 && status < 500) return 'status-4xx';
+            return 'status-5xx';
+        }
+
+        function formatMatchType(type) {
+            if (type === 'exact') return 'Exact';
+            if (type === 'clean_url') return 'URL Param Diff';
+            if (type === 'path') return 'Domain Diff';
+            if (type === 'unmatched_good') return 'Missing in Bad';
+            return 'Missing in Good';
+        }
+
+        /* DETAILS VIEW PANELS */
+        function selectPair(pair, element) {
+            activePair = pair;
+            document.querySelectorAll('.req-item').forEach(el => el.classList.remove('active'));
+            if (element) element.classList.add('active');
+
+            const good = pair.good_idx !== null ? goodEntries[pair.good_idx] : null;
+            const bad = pair.bad_idx !== null ? badEntries[pair.bad_idx] : null;
+
+            const activeUrl = (good || bad).request.url;
+            const activeMethod = (good || bad).request.method;
+
+            let statusText = '';
+            if (good && bad) {
+                statusText = `Good Status: ${good.response.status} | Bad Status: ${bad.response.status}`;
+            } else if (good) {
+                statusText = `Good Status: ${good.response.status} (Missing in Bad)`;
+            } else {
+                statusText = `Bad Status: ${bad.response.status} (Missing in Good)`;
+            }
+
+            const detailsPane = document.getElementById('details-pane');
+            detailsPane.innerHTML = `
+                <div class="details-header">
+                    <h2 title="${activeUrl}">${activeMethod} ${activeUrl}</h2>
+                    <div class="details-header-grid">
+                        <div class="meta-detail-box">
+                            <div class="meta-lbl">Pair Match Heuristic</div>
+                            <div class="meta-val">${formatMatchType(pair.match_type)}</div>
+                        </div>
+                        <div class="meta-detail-box">
+                            <div class="meta-lbl">Status Outcomes</div>
+                            <div class="meta-val">${statusText}</div>
+                        </div>
+                        <div class="meta-detail-box">
+                            <div class="meta-lbl">Timing (Good / Bad)</div>
+                            <div class="meta-val">${good ? Math.round(good.time) + 'ms' : '-'} / ${bad ? Math.round(bad.time) + 'ms' : '-'}</div>
+                        </div>
+                        <div class="meta-detail-box">
+                            <div class="meta-lbl">Body Size (Good / Bad)</div>
+                            <div class="meta-val">${good ? formatBytes(good.response.content.size) : '-'} / ${bad ? formatBytes(bad.response.content.size) : '-'}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="sections-tabs">
+                    <button class="sec-tab-btn ${activeDetailsSection === 'diff' ? 'active' : ''}" onclick="switchDetailsSection('diff')">Visual HTML/Response Diff</button>
+                    <button class="sec-tab-btn ${activeDetailsSection === 'headers' ? 'active' : ''}" onclick="switchDetailsSection('headers')">Headers & Params</button>
+                    <button class="sec-tab-btn ${activeDetailsSection === 'timing' ? 'active' : ''}" onclick="switchDetailsSection('timing')">Timing Breakdown</button>
+                </div>
+                
+                <div class="compare-section" id="details-section-content">
+                    <!-- Dynamic tabs -->
+                </div>
+            `;
+
+            loadActiveDetailsSection(good, bad);
+        }
+
+        function switchDetailsSection(sectionId) {
+            activeDetailsSection = sectionId;
+            document.querySelectorAll('.sec-tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.innerText.toLowerCase().includes(sectionId)) {
+                    btn.classList.add('active');
+                }
+            });
+            // Re-render
+            if (activePair) {
+                const good = activePair.good_idx !== null ? goodEntries[activePair.good_idx] : null;
+                const bad = activePair.bad_idx !== null ? badEntries[activePair.bad_idx] : null;
+                loadActiveDetailsSection(good, bad);
+            }
+        }
+
+        function loadActiveDetailsSection(good, bad) {
+            const container = document.getElementById('details-section-content');
+
+            if (activeDetailsSection === 'headers') {
+                container.innerHTML = `
+                    <div style="font-weight: bold; font-size: 14px; margin-bottom: 8px;">1. HTTP Request Headers & Parameters</div>
+                    <div class="side-by-side">
+                        <div class="comparison-col">
+                            <div class="col-header good-h">Good Load Request</div>
+                            <div class="col-content">
+                                ${good ? renderRequestParams(good) : '<em>No request recorded</em>'}
+                            </div>
+                        </div>
+                        <div class="comparison-col">
+                            <div class="col-header bad-h">Bad Load Request</div>
+                            <div class="col-content">
+                                ${bad ? renderRequestParams(bad) : '<em>No request recorded</em>'}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="font-weight: bold; font-size: 14px; margin-top: 24px; margin-bottom: 8px;">2. HTTP Response Headers</div>
+                    <div class="side-by-side">
+                        <div class="comparison-col">
+                            <div class="col-header good-h">Good Load Response</div>
+                            <div class="col-content">
+                                ${good ? renderHeaders(good.response.headers) : '<em>No response recorded</em>'}
+                            </div>
+                        </div>
+                        <div class="comparison-col">
+                            <div class="col-header bad-h">Bad Load Response</div>
+                            <div class="col-content">
+                                ${bad ? renderHeaders(bad.response.headers) : '<em>No response recorded</em>'}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (activeDetailsSection === 'timing') {
+                container.innerHTML = `
+                    <div class="timeline-legend">
+                        <div class="legend-item"><span class="dot t-blocked"></span> Blocked/Queueing</div>
+                        <div class="legend-item"><span class="dot t-dns"></span> DNS</div>
+                        <div class="legend-item"><span class="dot t-connect"></span> Connect/SSL</div>
+                        <div class="legend-item"><span class="dot t-send"></span> Send</div>
+                        <div class="legend-item"><span class="dot t-wait"></span> Wait (TTFB)</div>
+                        <div class="legend-item"><span class="dot t-receive"></span> Receive</div>
+                    </div>
+                    <div class="side-by-side">
+                        <div class="comparison-col">
+                            <div class="col-header good-h">Good Timing Timeline</div>
+                            <div class="col-content">
+                                ${good ? renderTimings(good.timings, good.time, good.startedDateTime) : '<em>No timings recorded</em>'}
+                            </div>
+                        </div>
+                        <div class="comparison-col">
+                            <div class="col-header bad-h">Bad Timing Timeline</div>
+                            <div class="col-content">
+                                ${bad ? renderTimings(bad.timings, bad.time, bad.startedDateTime) : '<em>No timings recorded</em>'}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Diff section
+                container.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <span style="font-weight: bold; font-size: 14px;">Response Raw HTML & Body Visual Diff:</span>
+                            <button class="btn-reset" id="toggle-identical-btn" onclick="toggleHideIdentical()" style="font-size: 11px; padding: 4px 10px; font-weight: 600; border-radius: 4px; background-color: ${hideIdentical ? '#e53e3e' : 'var(--primary-color)'}; color: white; cursor: pointer; border: none; transition: background-color 0.2s;">
+                                ${hideIdentical ? "Show All Lines" : "Hide Identical Lines"}
+                            </button>
+                        </div>
+                        <span style="font-size: 12px; color: var(--text-secondary)">Green: Added | Red: Removed | Yellow: Changed</span>
+                    </div>
+                    <div class="diff-container" id="diff-container-loading">
+                        <!-- Rendered by diff engine -->
+                    </div>
+                `;
+                
+                // Run JavaScript client-side visual line diff
+                renderDiff(good, bad);
+            }
+        }
+
+        function renderRequestParams(entry) {
+            let html = '';
+            const req = entry.request;
+            
+            html += `<table class="kv-table" style="margin-bottom: 12px; background-color: #f7fafc; border: 1px solid var(--border-color); border-radius: 4px;">`;
+            html += `<tr><td class="k">HTTP Version</td><td>${req.httpVersion}</td></tr>`;
+            html += `<tr><td class="k">Server IP</td><td>${entry.serverIPAddress || 'unknown'}</td></tr>`;
+            html += `</table>`;
+
+            // Query string
+            if (req.queryString && req.queryString.length > 0) {
+                html += '<div style="font-weight: 600; font-size: 11px; margin-bottom: 4px; text-transform: uppercase; color: var(--text-secondary)">Query Parameters</div>';
+                html += '<table class="kv-table" style="margin-bottom: 16px;">';
+                req.queryString.forEach(q => {
+                    html += `<tr><td class="k">${escapeHtml(q.name)}</td><td>${escapeHtml(q.value)}</td></tr>`;
+                });
+                html += '</table>';
+            }
+
+            // POST Data
+            if (req.postData) {
+                html += '<div style="font-weight: 600; font-size: 11px; margin-bottom: 4px; text-transform: uppercase; color: var(--text-secondary)">POST Payload (' + escapeHtml(req.postData.mimeType) + ')</div>';
+                if (req.postData.text) {
+                    html += `<pre class="post-body-text">${escapeHtml(req.postData.text)}</pre>`;
+                } else if (req.postData.params && req.postData.params.length > 0) {
+                    html += '<table class="kv-table" style="margin-bottom: 16px;">';
+                    req.postData.params.forEach(p => {
+                        html += `<tr><td class="k">${escapeHtml(p.name)}</td><td>${escapeHtml(p.value)}</td></tr>`;
+                    });
+                    html += '</table>';
+                }
+            }
+
+            // Initiator
+            if (entry._initiator) {
+                html += '<div style="font-weight: 600; font-size: 11px; margin-bottom: 4px; text-transform: uppercase; color: var(--text-secondary); margin-top: 16px;">Request Initiator</div>';
+                html += renderInitiator(entry._initiator);
+            }
+
+            // Headers
+            html += '<div style="font-weight: 600; font-size: 11px; margin-bottom: 4px; text-transform: uppercase; color: var(--text-secondary); margin-top: 16px;">Request Headers</div>';
+            html += renderHeaders(req.headers);
+
+            return html;
+        }
+
+        function renderInitiator(init) {
+            if (!init) return '<em>No initiator details</em>';
+            
+            let html = '<div style="background-color: #f7fafc; border: 1px solid var(--border-color); border-radius: 4px; padding: 10px; font-size: 12px; font-family: monospace;">';
+            
+            const type = init.type || 'unknown';
+            html += `<div><strong>Type:</strong> <span class="badge" style="background-color: #e2e8f0; color: #4a5568;">${escapeHtml(type)}</span></div>`;
+            
+            if (init.url) {
+                html += `<div style="margin-top: 4px; word-break: break-all;"><strong>Source:</strong> <a href="#" onclick="navigateToRequestUrl(event, '${escapeJavaScriptString(init.url)}')" style="color: var(--primary-color); text-decoration: underline;">${escapeHtml(init.url)}</a></div>`;
+            }
+            
+            if (init.lineNumber !== undefined && init.lineNumber !== null) {
+                html += `<div><strong>Line:</strong> ${init.lineNumber}</div>`;
+            }
+            
+            if (init.stack && init.stack.callFrames && init.stack.callFrames.length > 0) {
+                html += '<div style="margin-top: 8px; border-top: 1px dashed #cbd5e0; padding-top: 6px;">';
+                html += '<strong>JS Call Stack:</strong>';
+                html += '<ul style="padding-left: 16px; margin-top: 4px; display: flex; flex-direction: column; gap: 4px; list-style-type: square; font-size: 11px; color: var(--text-secondary); max-height: 180px; overflow-y: auto;">';
+                
+                init.stack.callFrames.forEach(frame => {
+                    const func = frame.functionName || '(anonymous)';
+                    const url = frame.url ? frame.url.split('/').pop() : 'inline';
+                    const line = frame.lineNumber !== undefined ? frame.lineNumber : '?';
+                    const col = frame.columnNumber !== undefined ? frame.columnNumber : '?';
+                    
+                    html += `<li title="${escapeHtml(frame.url || '')}">`;
+                    if (frame.url) {
+                        html += `<strong>${escapeHtml(func)}</strong> @ <a href="#" onclick="navigateToRequestUrl(event, '${escapeJavaScriptString(frame.url)}')" style="color: var(--primary-color); text-decoration: underline;">${escapeHtml(url)}</a>:${line}:${col}`;
+                    } else {
+                        html += `<strong>${escapeHtml(func)}</strong> @ inline:${line}:${col}`;
+                    }
+                    html += `</li>`;
+                });
+                
+                html += '</ul>';
+                
+                let parent = init.stack.parent;
+                let parentLevel = 1;
+                while (parent && parentLevel <= 3) {
+                    if (parent.callFrames && parent.callFrames.length > 0) {
+                        html += `<div style="margin-top: 6px; font-size: 10px; font-weight: bold; text-transform: uppercase; color: #a0aec0;">Parent Stack (${parent.description || 'Promise/Async'}):</div>`;
+                        html += '<ul style="padding-left: 16px; margin-top: 2px; display: flex; flex-direction: column; gap: 3px; list-style-type: circle; font-size: 10px; color: #718096; max-height: 100px; overflow-y: auto;">';
+                        
+                        parent.callFrames.forEach(frame => {
+                            const func = frame.functionName || '(anonymous)';
+                            const url = frame.url ? frame.url.split('/').pop() : 'inline';
+                            const line = frame.lineNumber !== undefined ? frame.lineNumber : '?';
+                            
+                            html += `<li title="${escapeHtml(frame.url || '')}">`;
+                            if (frame.url) {
+                                html += `<strong>${escapeHtml(func)}</strong> @ <a href="#" onclick="navigateToRequestUrl(event, '${escapeJavaScriptString(frame.url)}')" style="color: var(--primary-color); text-decoration: underline;">${escapeHtml(url)}</a>:${line}`;
+                            } else {
+                                html += `<strong>${escapeHtml(func)}</strong> @ inline:${line}`;
+                            }
+                            html += `</li>`;
+                        });
+                        
+                        html += '</ul>';
+                    }
+                    parent = parent.parent;
+                    parentLevel++;
+                }
+                
+                html += '</div>';
+            }
+            
+            html += '</div>';
+            return html;
+        }
+
+        function renderHeaders(headers) {
+            if (!headers || headers.length === 0) return '<em>No headers</em>';
+            
+            // Create a copy and sort alphabetically (case-insensitive) by header name
+            const sortedHeaders = [...headers].sort((a, b) => {
+                const nameA = (a.name || '').toLowerCase();
+                const nameB = (b.name || '').toLowerCase();
+                if (nameA < nameB) return -1;
+                if (nameA > nameB) return 1;
+                return 0;
+            });
+
+            let html = '<table class="kv-table">';
+            sortedHeaders.forEach(h => {
+                html += `<tr><td class="k">${escapeHtml(h.name)}</td><td>${escapeHtml(h.value)}</td></tr>`;
+            });
+            html += '</table>';
+            return html;
+        }
+
+        function renderTimings(t, totalTime, startedDateTime) {
+            if (!t) return '<em>No timing data</em>';
+            
+            const blocked = t.blocked >= 0 ? t.blocked : 0;
+            const dns = t.dns >= 0 ? t.dns : 0;
+            const connect = t.connect >= 0 ? t.connect : 0;
+            const ssl = t.ssl >= 0 ? t.ssl : 0;
+            const send = t.send >= 0 ? t.send : 0;
+            const wait = t.wait >= 0 ? t.wait : 0;
+            const receive = t.receive >= 0 ? t.receive : 0;
+
+            const total = blocked + dns + connect + send + wait + receive;
+            const getPct = (val) => total > 0 ? (val / total * 100).toFixed(1) + '%' : '0%';
+
+            return `
+                <div style="font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text-secondary);">
+                    📅 Request start time: <span style="font-family: monospace; color: var(--text-primary); font-weight: bold;">${startedDateTime || 'unknown'}</span>
+                </div>
+                <div style="font-size: 14px; font-weight: bold; margin-bottom: 12px; color: var(--primary-color)">
+                    Total Request Time: ${Math.round(totalTime)}ms
+                </div>
+                <div class="timing-bar-container">
+                    <div class="timing-bar-row">
+                        <div>Blocked:</div>
+                        <div style="background-color: #edf2f7; width: 100%; border-radius: 3px; display: flex;">
+                            <div class="t-bar t-blocked" style="width: ${getPct(blocked)}"></div>
+                        </div>
+                        <div style="text-align: right; font-weight: 600;">${Math.round(blocked)}ms</div>
+                    </div>
+                    <div class="timing-bar-row">
+                        <div>DNS Lookup:</div>
+                        <div style="background-color: #edf2f7; width: 100%; border-radius: 3px; display: flex;">
+                            <div class="t-bar t-dns" style="width: ${getPct(dns)}"></div>
+                        </div>
+                        <div style="text-align: right; font-weight: 600;">${Math.round(dns)}ms</div>
+                    </div>
+                    <div class="timing-bar-row">
+                        <div>Connection:</div>
+                        <div style="background-color: #edf2f7; width: 100%; border-radius: 3px; display: flex;">
+                            <div class="t-bar t-connect" style="width: ${getPct(connect)}"></div>
+                        </div>
+                        <div style="text-align: right; font-weight: 600;">${Math.round(connect)}ms</div>
+                    </div>
+                    <div class="timing-bar-row">
+                        <div>Send Payload:</div>
+                        <div style="background-color: #edf2f7; width: 100%; border-radius: 3px; display: flex;">
+                            <div class="t-bar t-send" style="width: ${getPct(send)}"></div>
+                        </div>
+                        <div style="text-align: right; font-weight: 600;">${Math.round(send)}ms</div>
+                    </div>
+                    <div class="timing-bar-row">
+                        <div>Wait (TTFB):</div>
+                        <div style="background-color: #edf2f7; width: 100%; border-radius: 3px; display: flex;">
+                            <div class="t-bar t-wait" style="width: ${getPct(wait)}"></div>
+                        </div>
+                        <div style="text-align: right; font-weight: 600;">${Math.round(wait)}ms</div>
+                    </div>
+                    <div class="timing-bar-row">
+                        <div>Receive:</div>
+                        <div style="background-color: #edf2f7; width: 100%; border-radius: 3px; display: flex;">
+                            <div class="t-bar t-receive" style="width: ${getPct(receive)}"></div>
+                        </div>
+                        <div style="text-align: right; font-weight: 600;">${Math.round(receive)}ms</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        /* CLIENT SIDE BASE64 DECODER & CONTENT FORMATTER */
+        function getResponseText(entry) {
+            if (!entry) return "";
+            const response = entry.response || {};
+            const content = response.content || {};
+            const text = content.text || "";
+            const encoding = content.encoding || "";
+
+            if (!text) {
+                if (content.size > 0) {
+                    return `[Response body content is missing from the .har file (Size: ${content.size} bytes)]`;
+                }
+                return "";
+            }
+
+            if (encoding === 'base64') {
+                try {
+                    const binaryString = atob(text);
+                    const len = binaryString.length;
+                    const bytes = new Uint8Array(len);
+                    for (let i = 0; i < len; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+                    const decoder = new TextDecoder('utf-8');
+                    return decoder.decode(bytes);
+                } catch (e) {
+                    return `[Base64 Encoded Binary Data - Size: ${content.size || 0} bytes]`;
+                }
+            }
+            return text;
+        }
+
+        function formatContent(text, mimeType) {
+            if (!text) return "";
+            mimeType = (mimeType || "").toLowerCase();
+            if (mimeType.includes("json") || text.trim().startsWith("{") || text.trim().startsWith("[")) {
+                try {
+                    const parsed = JSON.parse(text);
+                    return JSON.stringify(parsed, null, 2);
+                } catch (e) {}
+            }
+            return text;
+        }
+
+        /* LIGHTWEIGHT CLIENT SIDE LCS LINE DIFF ENGINE */
+        function renderDiff(goodEntry, badEntry) {
+            const container = document.getElementById('diff-container-loading');
+            
+            const goodText = goodEntry ? getResponseText(goodEntry) : "";
+            const badText = badEntry ? getResponseText(badEntry) : "";
+            
+            const goodMime = goodEntry ? (goodEntry.response.content.mimeType || '') : '';
+            const badMime = badEntry ? (badEntry.response.content.mimeType || '') : '';
+            
+            const goodFormatted = formatContent(goodText, goodMime);
+            const badFormatted = formatContent(badText, badMime);
+
+            if (!goodFormatted && !badFormatted) {
+                container.innerHTML = "<div class='no-diff'>Both responses are empty or have no readable body text.</div>";
+                return;
+            }
+
+            let goodLines = goodFormatted.split(/\r?\n/);
+            let badLines = badFormatted.split(/\r?\n/);
+
+            // Run diff
+            const isHtml = goodMime.toLowerCase().includes('text/html') || badMime.toLowerCase().includes('text/html');
+            const rawDiff = computeLCSDiff(goodLines, badLines);
+            const alignedRows = alignDiffRows(rawDiff, isHtml);
+
+            let tableHtml = '';
+
+            tableHtml += '<table class="diff">';
+            tableHtml += `
+                <thead>
+                    <tr style="background-color: #edf2f7; font-weight: bold; border-bottom: 2px solid var(--border-color)">
+                        <td class="diff-num" style="border-right: 1px solid var(--border-color);">Good L#</td>
+                        <td style="border-right: 2px solid var(--border-color); font-weight: bold; font-family: monospace;">Good HAR Response Content</td>
+                        <td class="diff-num" style="border-right: 1px solid var(--border-color);">Bad L#</td>
+                        <td style="font-weight: bold; font-family: monospace;">Bad HAR Response Content</td>
+                    </tr>
+                </thead>
+                <tbody>
+            `;
+
+            function renderRowHtml(row) {
+                const leftContent = row.leftHtml !== undefined ? row.leftHtml : escapeHtml(row.leftText);
+                const rightContent = row.rightHtml !== undefined ? row.rightHtml : escapeHtml(row.rightText);
+                return `
+                    <tr>
+                        <td class="diff-num ${row.classLeft}">${row.leftNum}</td>
+                        <td class="${row.classLeft}" style="border-right: 2px solid var(--border-color); font-family: monospace;">${leftContent}</td>
+                        <td class="diff-num ${row.classRight}">${row.rightNum}</td>
+                        <td class="${row.classRight}" style="font-family: monospace;">${rightContent}</td>
+                    </tr>
+                `;
+            }
+
+            let rowsHtml = '';
+            
+            if (hideIdentical) {
+                let i = 0;
+                while (i < alignedRows.length) {
+                    const isIdentical = (row) => row.classLeft === '' && row.classRight === '' && row.leftNum !== '' && row.rightNum !== '';
+                    
+                    if (isIdentical(alignedRows[i])) {
+                        let count = 0;
+                        const startIndex = i;
+                        while (i < alignedRows.length && isIdentical(alignedRows[i])) {
+                            count++;
+                            i++;
+                        }
+                        
+                        const contextLimit = 3;
+                        if (count <= contextLimit * 2) {
+                            for (let idx = startIndex; idx < i; idx++) {
+                                rowsHtml += renderRowHtml(alignedRows[idx]);
+                            }
+                        } else {
+                            for (let idx = startIndex; idx < startIndex + contextLimit; idx++) {
+                                rowsHtml += renderRowHtml(alignedRows[idx]);
+                            }
+                            
+                            const collapsedCount = count - contextLimit * 2;
+                            rowsHtml += `
+                                <tr class="collapsed-placeholder-row">
+                                    <td colspan="4" style="background-color: #f7fafc; text-align: center; color: var(--text-secondary); font-size: 11px; padding: 8px; font-style: italic; border-top: 1px dashed var(--border-color); border-bottom: 1px dashed var(--border-color); user-select: none;">
+                                        ↕️ &nbsp; [Collapsed ${collapsedCount} identical lines] &nbsp; ↕️
+                                    </td>
+                                </tr>
+                            `;
+                            
+                            for (let idx = i - contextLimit; idx < i; idx++) {
+                                rowsHtml += renderRowHtml(alignedRows[idx]);
+                            }
+                        }
+                    } else {
+                        rowsHtml += renderRowHtml(alignedRows[i]);
+                        i++;
+                    }
+                }
+            } else {
+                alignedRows.forEach(row => {
+                    rowsHtml += renderRowHtml(row);
+                });
+            }
+
+            tableHtml += rowsHtml;
+            tableHtml += '</tbody></table>';
+            container.innerHTML = tableHtml;
+        }
+
+        function toggleHideIdentical() {
+            hideIdentical = !hideIdentical;
+            const btn = document.getElementById('toggle-identical-btn');
+            if (btn) {
+                btn.innerText = hideIdentical ? "Show All Lines" : "Hide Identical Lines";
+                btn.style.backgroundColor = hideIdentical ? "#e53e3e" : "var(--primary-color)";
+            }
+            
+            if (activePair) {
+                const good = activePair.good_idx !== null ? goodEntries[activePair.good_idx] : null;
+                const bad = activePair.bad_idx !== null ? badEntries[activePair.bad_idx] : null;
+                loadActiveDetailsSection(good, bad);
+            }
+        }
+
+        function normalizeWhitespace(str) {
+            if (!str) return '';
+            return str.trim().replace(/\s+/g, ' ');
+        }
+
+        function computeLCSDiff(leftLines, rightLines) {
+            const n = leftLines.length;
+            const m = rightLines.length;
+            
+            // Pre-normalize all lines to optimize comparison performance
+            const leftNormalized = leftLines.map(normalizeWhitespace);
+            const rightNormalized = rightLines.map(normalizeWhitespace);
+            
+            // 1. Strip common prefix from the top
+            let commonPrefixCount = 0;
+            while (commonPrefixCount < n && commonPrefixCount < m && 
+                   leftNormalized[commonPrefixCount] === rightNormalized[commonPrefixCount]) {
+                commonPrefixCount++;
+            }
+            
+            // 2. Strip common suffix from the bottom
+            let commonSuffixCount = 0;
+            while (commonSuffixCount < (n - commonPrefixCount) && 
+                   commonSuffixCount < (m - commonPrefixCount) && 
+                   leftNormalized[n - 1 - commonSuffixCount] === rightNormalized[m - 1 - commonSuffixCount]) {
+                commonSuffixCount++;
+            }
+            
+            // The middle section that actually differs
+            const leftMiddle = leftLines.slice(commonPrefixCount, n - commonSuffixCount);
+            const rightMiddle = rightLines.slice(commonPrefixCount, m - commonSuffixCount);
+            const leftMiddleNorm = leftNormalized.slice(commonPrefixCount, n - commonSuffixCount);
+            const rightMiddleNorm = rightNormalized.slice(commonPrefixCount, m - commonSuffixCount);
+            
+            const nMid = leftMiddle.length;
+            const mMid = rightMiddle.length;
+            
+            const result = [];
+            
+            // Add common prefix to result
+            for (let i = 0; i < commonPrefixCount; i++) {
+                const isExact = leftLines[i] === rightLines[i];
+                result.push({
+                    type: isExact ? 'equal' : 'whitespace_diff',
+                    leftLineNum: i + 1,
+                    rightLineNum: i + 1,
+                    leftText: leftLines[i],
+                    rightText: rightLines[i]
+                });
+            }
+            
+            // Run DP LCS only on the middle slice if it is not empty
+            if (nMid > 0 || mMid > 0) {
+                // If one side is completely empty, it's pure adds or deletes
+                if (nMid === 0) {
+                    for (let j = 0; j < mMid; j++) {
+                        result.push({
+                            type: 'add',
+                            leftLineNum: null,
+                            rightLineNum: commonPrefixCount + j + 1,
+                            leftText: '',
+                            rightText: rightMiddle[j]
+                        });
+                    }
+                } else if (mMid === 0) {
+                    for (let i = 0; i < nMid; i++) {
+                        result.push({
+                            type: 'delete',
+                            leftLineNum: commonPrefixCount + i + 1,
+                            rightLineNum: null,
+                            leftText: leftMiddle[i],
+                            rightText: ''
+                        });
+                    }
+                } else {
+                    // Both middle sections have lines - run the DP
+                    const dp = Array.from({ length: nMid + 1 }, () => new Int32Array(mMid + 1));
+                    
+                    for (let i = 1; i <= nMid; i++) {
+                        const leftNorm = leftMiddleNorm[i-1];
+                        for (let j = 1; j <= mMid; j++) {
+                            if (leftNorm === rightMiddleNorm[j-1]) {
+                                dp[i][j] = dp[i-1][j-1] + 1;
+                            } else {
+                                dp[i][j] = Math.max(dp[i-1][j], dp[i][j-1]);
+                            }
+                        }
+                    }
+                    
+                    // Backtrack middle section
+                    const midResult = [];
+                    let i = nMid, j = mMid;
+                    
+                    while (i > 0 || j > 0) {
+                        if (i > 0 && j > 0 && leftMiddleNorm[i-1] === rightMiddleNorm[j-1]) {
+                            const isExactEqual = leftMiddle[i-1] === rightMiddle[j-1];
+                            midResult.push({
+                                type: isExactEqual ? 'equal' : 'whitespace_diff',
+                                leftLineNum: commonPrefixCount + i,
+                                rightLineNum: commonPrefixCount + j,
+                                leftText: leftMiddle[i-1],
+                                rightText: rightMiddle[j-1]
+                            });
+                            i--;
+                            j--;
+                        } else if (j > 0 && (i === 0 || dp[i][j-1] >= dp[i-1][j])) {
+                            midResult.push({
+                                type: 'add',
+                                leftLineNum: null,
+                                rightLineNum: commonPrefixCount + j,
+                                leftText: '',
+                                rightText: rightMiddle[j-1]
+                            });
+                            j--;
+                        } else {
+                            midResult.push({
+                                type: 'delete',
+                                leftLineNum: commonPrefixCount + i,
+                                rightLineNum: null,
+                                leftText: leftMiddle[i-1],
+                                rightText: ''
+                            });
+                            i--;
+                        }
+                    }
+                    
+                    midResult.reverse();
+                    result.push(...midResult);
+                }
+            }
+            
+            // Add common suffix to result
+            for (let i = 0; i < commonSuffixCount; i++) {
+                const leftIdx = n - commonSuffixCount + i;
+                const rightIdx = m - commonSuffixCount + i;
+                const isExact = leftLines[leftIdx] === rightLines[rightIdx];
+                result.push({
+                    type: isExact ? 'equal' : 'whitespace_diff',
+                    leftLineNum: leftIdx + 1,
+                    rightLineNum: rightIdx + 1,
+                    leftText: leftLines[leftIdx],
+                    rightText: rightLines[rightIdx]
+                });
+            }
+            
+            return result;
+        }
+
+        function alignDiffRows(diffResult, isHtml) {
+            const rows = [];
+            let i = 0;
+            while (i < diffResult.length) {
+                const current = diffResult[i];
+                if (current.type === 'equal') {
+                    rows.push({
+                        leftNum: current.leftLineNum,
+                        rightNum: current.rightLineNum,
+                        leftText: current.leftText,
+                        rightText: current.rightText,
+                        classLeft: '',
+                        classRight: ''
+                    });
+                    i++;
+                } else if (current.type === 'whitespace_diff') {
+                    rows.push({
+                        leftNum: current.leftLineNum,
+                        rightNum: current.rightLineNum,
+                        leftText: current.leftText,
+                        rightText: current.rightText,
+                        classLeft: 'diff_whitespace',
+                        classRight: 'diff_whitespace'
+                    });
+                    i++;
+                } else if (current.type === 'delete') {
+                    // Lookahead: check if there is an 'add' directly following deletes, to render as side-by-side 'modified' row
+                    let nextAddIdx = i + 1;
+                    while (nextAddIdx < diffResult.length && diffResult[nextAddIdx].type === 'delete') {
+                        nextAddIdx++;
+                    }
+                    if (nextAddIdx < diffResult.length && diffResult[nextAddIdx].type === 'add') {
+                        const matchedAdd = diffResult[nextAddIdx];
+                        
+                        // Compute dynamic character-level intra-line diff highlights!
+                        const intra = highlightIntralineDiff(current.leftText, matchedAdd.rightText, isHtml);
+                        
+                        rows.push({
+                            leftNum: current.leftLineNum,
+                            rightNum: matchedAdd.rightLineNum,
+                            leftText: current.leftText,
+                            rightText: matchedAdd.rightText,
+                            leftHtml: intra.leftHtml,
+                            rightHtml: intra.rightHtml,
+                            classLeft: 'diff_sub',
+                            classRight: 'diff_add'
+                        });
+                        // Remove the matched add so it is not processed twice
+                        diffResult.splice(nextAddIdx, 1);
+                        i++;
+                    } else {
+                        // Pure delete (removed line)
+                        rows.push({
+                            leftNum: current.leftLineNum,
+                            rightNum: '',
+                            leftText: current.leftText,
+                            rightText: '',
+                            classLeft: 'diff_sub',
+                            classRight: 'diff_empty'
+                        });
+                        i++;
+                    }
+                } else if (current.type === 'add') {
+                    // Pure add (new line)
+                    rows.push({
+                        leftNum: '',
+                        rightNum: current.rightLineNum,
+                        leftText: '',
+                        rightText: current.rightText,
+                        classLeft: 'diff_empty',
+                        classRight: 'diff_add'
+                    });
+                    i++;
+                }
+            }
+            return rows;
+        }
+
+        function highlightIntralineDiff(leftStr, rightStr, isHtml) {
+            // Safety cap: If lines are exceptionally long (e.g. over 800 chars),
+            // bypass character-level diff to prevent nested loop performance impact.
+            // BUT for HTML files, perform the per-line comparison even if it's more than 800 characters!
+            if (!isHtml && (leftStr.length > 800 || rightStr.length > 800)) {
+                return {
+                    leftHtml: escapeHtml(leftStr),
+                    rightHtml: escapeHtml(rightStr)
+                };
+            }
+            
+            const n = leftStr.length;
+            const m = rightStr.length;
+            
+            const dp = Array.from({ length: n + 1 }, () => new Int32Array(m + 1));
+            
+            for (let i = 1; i <= n; i++) {
+                const cLeft = leftStr[i-1];
+                for (let j = 1; j <= m; j++) {
+                    if (cLeft === rightStr[j-1]) {
+                        dp[i][j] = dp[i-1][j-1] + 1;
+                    } else {
+                        dp[i][j] = Math.max(dp[i-1][j], dp[i][j-1]);
+                    }
+                }
+            }
+            
+            const leftSegs = [];
+            const rightSegs = [];
+            
+            let i = n, j = m;
+            while (i > 0 || j > 0) {
+                if (i > 0 && j > 0 && leftStr[i-1] === rightStr[j-1]) {
+                    leftSegs.push({ type: 'equal', text: leftStr[i-1] });
+                    rightSegs.push({ type: 'equal', text: rightStr[j-1] });
+                    i--;
+                    j--;
+                } else if (j > 0 && (i === 0 || dp[i][j-1] >= dp[i-1][j])) {
+                    rightSegs.push({ type: 'add', text: rightStr[j-1] });
+                    j--;
+                } else {
+                    leftSegs.push({ type: 'delete', text: leftStr[i-1] });
+                    i--;
+                }
+            }
+            
+            leftSegs.reverse();
+            rightSegs.reverse();
+            
+            return {
+                leftHtml: renderSegments(leftSegs, 'delete'),
+                rightHtml: renderSegments(rightSegs, 'add')
+            };
+        }
+        
+        function renderSegments(segs, diffType) {
+            if (segs.length === 0) return '';
+            
+            let html = '';
+            let currentType = null;
+            let currentText = '';
+            
+            for (const seg of segs) {
+                if (seg.type === currentType) {
+                    currentText += seg.text;
+                } else {
+                    if (currentText) {
+                        html += formatSegment(currentText, currentType, diffType);
+                    }
+                    currentType = seg.type;
+                    currentText = seg.text;
+                }
+            }
+            if (currentText) {
+                html += formatSegment(currentText, currentType, diffType);
+            }
+            
+            return html;
+        }
+        
+        function formatSegment(text, type, diffType) {
+            const escaped = escapeHtml(text);
+            if (type === 'equal') {
+                return escaped;
+            }
+            const className = diffType === 'delete' ? 'diff-char-delete' : 'diff-char-add';
+            return `<span class="${className}">${escaped}</span>`;
+        }
+
+        /* HELPERS */
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function escapeJavaScriptString(str) {
+            if (!str) return '';
+            return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
+        }
+
+        function navigateToRequestUrl(event, url) {
+            if (event) event.preventDefault();
+            
+            // Find pair in matchedPairs that matches the URL
+            const cleanTarget = getCleanUrl(url);
+            
+            let foundPair = null;
+            let foundIdx = -1;
+            
+            // Try Pass 1: URL Match (ignoring dynamic 't' query parameter and normalizing domains)
+            const targetClean = getUrlIgnoringT(url);
+            for (let i = 0; i < matchedPairs.length; i++) {
+                if (getUrlIgnoringT(matchedPairs[i].url) === targetClean) {
+                    foundPair = matchedPairs[i];
+                    foundIdx = i;
+                    break;
+                }
+            }
+            
+            // Try Pass 2: Clean URL match
+            if (!foundPair) {
+                for (let i = 0; i < matchedPairs.length; i++) {
+                    if (getCleanUrl(matchedPairs[i].url) === cleanTarget) {
+                        foundPair = matchedPairs[i];
+                        foundIdx = i;
+                        break;
+                    }
+                }
+            }
+            
+            if (foundPair) {
+                // Find the corresponding element in the DOM sidebar
+                const reqItems = document.querySelectorAll('.req-item');
+                let targetEl = null;
+                
+                for (let el of reqItems) {
+                    const gIdx = el.getAttribute('data-good-idx');
+                    const bIdx = el.getAttribute('data-bad-idx');
+                    
+                    const elGoodIdx = gIdx !== 'null' ? parseInt(gIdx) : null;
+                    const elBadIdx = bIdx !== 'null' ? parseInt(bIdx) : null;
+                    
+                    if (elGoodIdx === foundPair.good_idx && elBadIdx === foundPair.bad_idx) {
+                        targetEl = el;
+                        break;
+                    }
+                }
+                
+                if (targetEl) {
+                    // Click the element to trigger selectPair
+                    targetEl.click();
+                    // Scroll it into view smoothly!
+                    targetEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                } else {
+                    alert(`Found matching request: ${url}\nBut it is currently hidden by active filters in the sidebar. Clear your filters to select it!`);
+                }
+            } else {
+                alert(`Could not find a corresponding request in the loaded HAR files for:\n${url}`);
+            }
+        }
+    </script>
+</body>
+</html>
