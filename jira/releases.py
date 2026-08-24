@@ -31,20 +31,17 @@ quarterly_releases = {
     '2026.q3': 152,
 }
 
+def compute_old_update_threshold(x):
+    if x == '2023.q3':
+        return 92
+    year, quarter = x.split('.')
+    if quarter == 'q1':
+        return quarterly_releases['%d.q4' % (int(year) - 1)]
+    else:
+        return quarterly_releases['%s.q%d' % (year, int(quarter[1]) - 1)]
+
 old_update_threshold = {
-    '2023.q3': 92,
-    '2023.q4': quarterly_releases['2023.q3'],
-    '2024.q1': quarterly_releases['2023.q4'],
-    '2024.q2': quarterly_releases['2024.q1'],
-    '2024.q3': quarterly_releases['2024.q2'],
-    '2024.q4': quarterly_releases['2024.q3'],
-    '2025.q1': quarterly_releases['2024.q4'],
-    '2025.q2': quarterly_releases['2025.q1'],
-    '2025.q3': quarterly_releases['2025.q2'],
-    '2025.q4': quarterly_releases['2025.q3'],
-    '2026.q1': quarterly_releases['2025.q4'],
-    '2026.q2': quarterly_releases['2026.q1'],
-    '2026.q3': quarterly_releases['2026.q2'],
+    key: compute_old_update_threshold(key) for key in quarterly_releases.keys()
 }
 
 quarterly_updates = { value: key for key, value in quarterly_releases.items() }
