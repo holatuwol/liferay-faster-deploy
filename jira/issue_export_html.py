@@ -140,14 +140,19 @@ html_doc = f"""<!doctype html>
   .back-to-top a {{ color: var(--accent); }}
   .filter-bar {{
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 1.25rem;
+    flex-direction: column;
+    gap: 1rem;
     margin-bottom: 1.25rem;
     padding: 0.85rem 1rem;
     border: 1px solid var(--border);
     border-radius: 8px;
     background: var(--card-bg);
+  }}
+  .filter-row {{
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1.25rem;
   }}
   .filter-group {{ display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }}
   .filter-label {{
@@ -171,6 +176,27 @@ html_doc = f"""<!doctype html>
   }}
   .chip:hover {{ border-color: var(--accent); }}
   .chip.active {{ background: var(--accent); border-color: var(--accent); color: #fff; }}
+  .filter-select {{
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--fg);
+    border-radius: 999px;
+    padding: 0.3rem 1.5rem 0.3rem 0.75rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M0 3l5 5 5-5z' fill='%235f6368'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 0.6rem center;
+  }}
+  @media (prefers-color-scheme: dark) {{
+    .filter-select {{
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M0 3l5 5 5-5z' fill='%239aa0a6'/></svg>");
+    }}
+  }}
+  .filter-select:hover {{ border-color: var(--accent); }}
+  .filter-select:focus {{ outline: none; border-color: var(--accent); }}
   .hidden {{ display: none; }}
 </style>
 </head>
@@ -179,18 +205,28 @@ html_doc = f"""<!doctype html>
   <p class="subtitle" id="ticket-count"></p>
 
   <div class="filter-bar">
-    <div class="filter-group">
-      <span class="filter-label">Filter by</span>
-      <div id="filter-field-chips" class="chip-group"></div>
+    <div class="filter-row">
+      <div class="filter-group">
+        <span class="filter-label">Filter by</span>
+        <div id="filter-field-chips" class="chip-group"></div>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">Date range</span>
+        <div id="date-range-chips" class="chip-group"></div>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">Comments</span>
+        <div id="comment-range-chips" class="chip-group"></div>
+        <button type="button" id="toggle-comments-btn" class="chip">Collapse all</button>
+      </div>
     </div>
-    <div class="filter-group">
-      <span class="filter-label">Date range</span>
-      <div id="date-range-chips" class="chip-group"></div>
-    </div>
-    <div class="filter-group">
-      <span class="filter-label">Comments</span>
-      <div id="comment-range-chips" class="chip-group"></div>
-      <button type="button" id="toggle-comments-btn" class="chip">Collapse all</button>
+    <div class="filter-row">
+      <div class="filter-group">
+        <span class="filter-label">Commenter</span>
+        <select id="comment-author-select" class="filter-select">
+          <option value="all">Any Author</option>
+        </select>
+      </div>
     </div>
   </div>
 
@@ -331,13 +367,20 @@ html_doc = f"""<!doctype html>
     var lastCommentMs = commentDates.length ? Math.max.apply(null, commentDates) : null;
     var lastComment = fmtDate(lastCommentMs);
 
+    var tAuthorsMap = {{}};
+    comments.forEach(function(c) {{
+      if (c.author) tAuthorsMap[c.author] = true;
+    }});
+    var tAuthors = Object.keys(tAuthorsMap);
+    var commentAuthorsEscaped = esc(JSON.stringify(tAuthors));
+
     var tocExtraCells = availableExtraFields.map(function(f) {{
       var formatted = formatFieldValue(t[f.key]);
       return '<td data-sort="' + esc(formatted) + '">' + esc(formatted) + "</td>";
     }}).join("");
 
     tocRows.push(
-      '<tr data-created="' + (t.createdDate || "") + '" data-last-comment="' + (lastCommentMs || "") + '">' +
+      '<tr data-created="' + (t.createdDate || "") + '" data-last-comment="' + (lastCommentMs || "") + '" data-comment-authors="' + commentAuthorsEscaped + '">' +
         '<td data-sort="' + esc(key) + '"><a href="#ticket-' + anchor + '">' + esc(key) + "</a></td>" +
         '<td data-sort="' + esc(reporter) + '">' + reporter + '</td>' +
         "<td>" + summary + "</td>" +
@@ -357,7 +400,7 @@ html_doc = f"""<!doctype html>
         var cBody = c.body || "";
         commentHtml.push(
           '<div class="comment" data-public="' + (c.public === false ? "false" : "true") +
-            '" data-created="' + (c.createdDate || "") + '">' +
+            '" data-created="' + (c.createdDate || "") + '" data-author="' + cAuthor + '">' +
             '<div class="comment-meta"><span class="comment-author">' + cAuthor +
               '</span> &middot; <span class="comment-date">' + esc(cDate) + "</span></div>" +
             '<div class="comment-body">' + cBody + "</div>" +
@@ -373,7 +416,7 @@ html_doc = f"""<!doctype html>
     }}).join("");
 
     sections.push(
-      '<section class="ticket" id="ticket-' + anchor + '" data-created="' + (t.createdDate || "") + '" data-last-comment="' + (lastCommentMs || "") + '">' +
+      '<section class="ticket" id="ticket-' + anchor + '" data-created="' + (t.createdDate || "") + '" data-last-comment="' + (lastCommentMs || "") + '" data-comment-authors="' + commentAuthorsEscaped + '">' +
         "<h2>" + esc(key) + "</h2>" +
         '<table class="fields">' +
           "<tr><th>Summary</th><td>" + summary + "</td></tr>" +
@@ -412,13 +455,23 @@ html_doc = f"""<!doctype html>
     var visibleCount = 0;
     commentsEl.querySelectorAll(".comment").forEach(function(c) {{
       totalCount++;
-      var visible = matchesDateRange(c.dataset.created, rangeKey);
+      var matchesDate = matchesDateRange(c.dataset.created, rangeKey);
+      var matchesAuthor = (activeCommentAuthor === "all" || c.dataset.author === activeCommentAuthor);
+      var visible = matchesDate && matchesAuthor;
       c.classList.toggle("hidden", !visible);
       if (visible) visibleCount++;
     }});
 
     bar.closest("details").querySelector("summary").textContent =
-      "Comments (" + (rangeKey === "all" ? totalCount : visibleCount + " of " + totalCount) + ")";
+      "Comments (" + (rangeKey === "all" && activeCommentAuthor === "all" ? totalCount : visibleCount + " of " + totalCount) + ")";
+  }}
+
+  function applyFiltersToAllCommentBars() {{
+    document.querySelectorAll(".comment-filter-bar").forEach(function(bar) {{
+      var activeChip = bar.querySelector(".comment-filter-chip.active");
+      var rangeKey = activeChip ? activeChip.dataset.rangeKey : "all";
+      applyCommentRangeToBar(bar, rangeKey);
+    }});
   }}
 
   document.getElementById("tickets").addEventListener("click", function(event) {{
@@ -460,6 +513,7 @@ html_doc = f"""<!doctype html>
 
   var activeFilterField = "lastComment";
   var activeDateRange = "1";
+  var activeCommentAuthor = "all";
 
   var filterFieldChipsEl = document.getElementById("filter-field-chips");
   FILTER_FIELDS.forEach(function(field) {{
@@ -516,7 +570,17 @@ html_doc = f"""<!doctype html>
   }});
 
   function matchesActiveFilter(el) {{
-    return matchesDateRange(el.dataset[activeFilterField], activeDateRange);
+    var matchesDate = matchesDateRange(el.dataset[activeFilterField], activeDateRange);
+    if (!matchesDate) return false;
+
+    if (activeCommentAuthor === "all") return true;
+
+    var authors = [];
+    try {{
+      authors = JSON.parse(el.dataset.commentAuthors || "[]");
+    }} catch (e) {{}}
+
+    return authors.indexOf(activeCommentAuthor) !== -1;
   }}
 
   function applyFilters() {{
@@ -540,7 +604,35 @@ html_doc = f"""<!doctype html>
       visibleCount === tickets.length ? tickets.length + " tickets" : visibleCount + " of " + tickets.length + " tickets";
   }}
 
+  // Populate the comment author dropdown
+  var authorsMap = {{}};
+  tickets.forEach(function(t) {{
+    (t.comments || []).forEach(function(c) {{
+      if (c.author) {{
+        authorsMap[c.author] = true;
+      }}
+    }});
+  }});
+  var sortedAuthors = Object.keys(authorsMap).sort(function(a, b) {{
+    return a.localeCompare(b, undefined, {{ sensitivity: "base" }});
+  }});
+
+  var authorSelect = document.getElementById("comment-author-select");
+  sortedAuthors.forEach(function(author) {{
+    var option = document.createElement("option");
+    option.value = author;
+    option.textContent = author;
+    authorSelect.appendChild(option);
+  }});
+
+  authorSelect.addEventListener("change", function() {{
+    activeCommentAuthor = authorSelect.value;
+    applyFilters();
+    applyFiltersToAllCommentBars();
+  }});
+
   applyFilters();
+  applyFiltersToAllCommentBars();
 }})();
 </script>
 </body>
