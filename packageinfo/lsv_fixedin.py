@@ -200,11 +200,11 @@ def update_fix_versions(query):
         fix_versions[issue_key] = fix_version
 
 def check_public_security_issues():
-    update_fix_versions('project = LPE AND labels = LSV AND (resolution in (Completed, Fixed) OR labels = sev-1) ORDER BY key')
+    update_fix_versions('project = LPE AND labels = LSV AND resolution in (Completed, Fixed) ORDER BY key')
 
 def check_private_security_issues():
     update_fix_versions('project = LPE AND labels != LSV AND component = "Security Vulnerability" AND resolution in (Completed, Fixed) ORDER BY key')
-    update_fix_versions('project = LPE AND level = Private and (summary ~ "Use of library" OR summary ~ "LSV*")')
+    update_fix_versions('project = LPE AND labels != LSV AND component != "Security Vulnerability" AND resolution in (Completed, Fixed) AND summary ~ "LSV*" ORDER BY key')
 
 def update_help_center_links():
     pattern = re.compile('LSV-([0-9]+)')
