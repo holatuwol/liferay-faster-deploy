@@ -93,6 +93,9 @@ def get_servicedesk_issue(issue_key, issue_fields):
 
         comments = []
 
+        if 'comment' in issue:
+            comments = [issue['comments'][0]]
+
         issue['comments'] = comments
 
         r = await_get_request(f"{jira_base_url}/rest/servicedeskapi/request/{issue_key}/comment", payload)
@@ -110,13 +113,16 @@ def get_servicedesk_issue(issue_key, issue_fields):
             r = await_get_request(f"{jira_base_url}/rest/servicedeskapi/request/{issue_key}/comment", payload)
 
             if r.status_code != 200:
-                return comments
+                return issue
 
             response_json = r.json()
 
             comments.extend([extract_comment(x) for x in response_json['values']])
     else:
         comments = issue['comments']
+
+    if len(comments) > 1 and comments[0]['createdDate'] == comments[1]['createdDate']:
+        comments = comments[1:]
 
     requires_fields = False
 
