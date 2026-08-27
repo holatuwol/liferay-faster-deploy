@@ -214,6 +214,8 @@ html_doc = f"""<!doctype html>
         <span class="filter-label">Date range</span>
         <div id="date-range-chips" class="chip-group"></div>
       </div>
+    </div>
+    <div class="filter-row">
       <div class="filter-group">
         <span class="filter-label">Comments</span>
         <div id="comment-range-chips" class="chip-group"></div>
@@ -417,7 +419,7 @@ html_doc = f"""<!doctype html>
 
     sections.push(
       '<section class="ticket" id="ticket-' + anchor + '" data-created="' + (t.createdDate || "") + '" data-last-comment="' + (lastCommentMs || "") + '" data-comment-authors="' + commentAuthorsEscaped + '">' +
-        "<h2>" + esc(key) + "</h2>" +
+        '<h2><a href="https://liferay.atlassian.net/browse/' + esc(key) + '" target="_blank">' + esc(key) + '</a></h2>' +
         '<table class="fields">' +
           "<tr><th>Summary</th><td>" + summary + "</td></tr>" +
           "<tr><th>Reporter</th><td>" + reporter + "</td></tr>" +
