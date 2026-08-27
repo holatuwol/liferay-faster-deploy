@@ -8,8 +8,7 @@ import zoneinfo
 sys.path.insert(0, dirname(dirname(abspath(inspect.getfile(inspect.currentframe())))))
 
 from jira import await_get_request, get_issues, jira_base_url
-
-issue_fields = ['key', 'issuelinks', 'versions', 'fixVersions', 'customfield_10886', 'customfield_10786', 'priority', 'labels', 'updated']
+issue_fields = ['key', 'issuelinks', 'versions', 'fixVersions', 'customfield_10563', 'customfield_10886', 'customfield_10786', 'priority', 'labels', 'updated']
 
 def get_issue_updated(issue, target_tz):
     if 'issueKey' not in issue:
