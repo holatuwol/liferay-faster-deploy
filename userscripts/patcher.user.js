@@ -346,6 +346,88 @@ function compareTicket(a, b) {
 function getTicketLinks(text, className) {
     return text.split(',').map(x => x.trim()).sort(compareTicket).map(getTicketLink.bind(null, className)).join(', ');
 }
+var spinnerMax = 0;
+var spinnerCurrent = 0;
+/**
+ * Adds a spinner
+ */
+function addSpinner(max) {
+    var spinnerOverlay = document.createElement('div');
+    spinnerOverlay.setAttribute('id', 'spinner-overlay');
+    spinnerOverlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: rgba(255, 255, 255, 0.7); /* Semi-transparent background */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999; /* Ensures it sits above other content */
+        transition: opacity 0.2s ease-in-out;
+      `;
+    var spinnerContainer = document.createElement('div');
+    spinnerContainer.style.cssText = `
+        position: relative;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    `;
+    var spinner = document.createElement('div');
+    spinner.style.cssText = `
+        width: 80px;
+        height: 80px;
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid #3498db; /* Color of spinning arc */
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      `;
+    spinnerContainer.appendChild(spinner);
+    if (max !== undefined && max !== null) {
+        spinnerMax = max;
+        spinnerCurrent = 0;
+        var spinnerProgress = document.createElement('div');
+        spinnerProgress.setAttribute('id', 'spinner-progress');
+        spinnerProgress.style.cssText = `
+            position: absolute;
+            font-family: sans-serif;
+            font-size: 14px;
+            font-weight: bold;
+            color: #333;
+        `;
+        spinnerProgress.textContent = `0/${max}`;
+        spinnerContainer.appendChild(spinnerProgress);
+    }
+    spinnerOverlay.appendChild(spinnerContainer);
+    document.body.appendChild(spinnerOverlay);
+}
+/**
+ * Updates the spinner progress
+ */
+function updateSpinner(step = 1) {
+    spinnerCurrent += step;
+    var spinnerProgress = document.getElementById('spinner-progress');
+    if (spinnerProgress) {
+        spinnerProgress.textContent = `${spinnerCurrent}/${spinnerMax}`;
+    }
+}
+/**
+ * Updates the spinner progress (alias of updateSpinner)
+ */
+function updateSpinnerProgress(step = 1) {
+    updateSpinner(step);
+}
+/**
+ * Adds a spinner
+ */
+function removeSpinner() {
+    var spinnerOverlay = document.getElementById('spinner-overlay');
+    if (!spinnerOverlay) {
+        return;
+    }
+    spinnerOverlay.remove();
+}
 /**
  * Replaces any links that would have opened in a modal dialog / popup
  * window with one that opens in a regular new window.
@@ -1585,152 +1667,6 @@ function highlightAnalysisNeededBuilds() {
         buildsTableBody.appendChild(detachedRows[i]);
     }
 }
-function getMissingTicketList(lsvTickets) {
-    var fixPack = getFixPack();
-    if (!fixPack || fixPack.name.indexOf('marketplace-') == 0) {
-        return [[], [], [], []];
-    }
-    var tagName = ((fixPack.name.indexOf('portal-') == 0) || (fixPack.name.indexOf('fix-pack-base-6210') == 0)) ? fixPack.name : fixPack.tag;
-    var liferayVersion = getLiferayVersion(tagName);
-    var buildNumber = '';
-    if (tagName.indexOf('portal-') == 0) {
-        buildNumber = '6210';
-    }
-    else {
-        buildNumber = '' + Math.floor(liferayVersion / 1000);
-    }
-    var buildNameNode = querySelector('patcherBuildName');
-    buildNameNode.removeAttribute('style');
-    var buildName = [];
-    if (buildNameNode.tagName.toLowerCase() == 'select') {
-        buildName = buildNameNode.value.split(',');
-    }
-    else {
-        buildName = buildNameNode.value.split(',');
-    }
-    var ticketList = new Set(buildName.map(x => x.trim()));
-    var missingTicketList = [[], [], [], [], []];
-    var fixPackNumber = 0;
-    if (buildNumber == '6210') {
-        fixPackNumber = (tagName.indexOf('portal-') == 0) ? parseInt(tagName.substring('portal-'.length)) : 0;
-    }
-    else {
-        fixPackNumber = liferayVersion % 1000;
-    }
-    for (var ticketName in lsvTickets) {
-        if (!ticketList.has(ticketName) && lsvTickets[ticketName][buildNumber] && lsvTickets[ticketName][buildNumber] > fixPackNumber) {
-            var severity = lsvTickets[ticketName]['sev'] || 4;
-            missingTicketList[severity].push(ticketName);
-        }
-    }
-    return missingTicketList;
-}
-function getMissingTicketTableRow(lsvTickets, missingTickets, severity) {
-    if (severity == 0) {
-        return '';
-    }
-    var lsvList = [
-        '<tr><th class="nowrap">', severity == 4 ? 'other' : 'SEV-' + severity, '</th><td>'
-    ];
-    if ((severity != 3) && (missingTickets.length == 0)) {
-        return '';
-    }
-    if ((severity == 1) || (severity == 2)) {
-        lsvList.push('<span class="compact">');
-        lsvList.push(missingTickets.map(x => getTicketLink('', x, x)).join(', '));
-        lsvList.push('</span>');
-        lsvList.push('<div class="verbose" contenteditable onfocus="', 'var selection = window.getSelection();', 'var range = document.createRange();', 'range.selectNodeContents(this);', 'selection.removeAllRanges();', 'selection.addRange(range);', '"><dl>');
-        missingTickets
-            .filter(function (ticketName) {
-            return 'lsv' in lsvTickets[ticketName] && 'hc' in lsvTickets[ticketName];
-        })
-            .sort(function (ticketName1, ticketName2) {
-            var ticket1 = lsvTickets[ticketName1];
-            var ticket2 = lsvTickets[ticketName2];
-            if (ticket1['lsv'] != ticket2['lsv']) {
-                return ticket1['lsv'] - ticket2['lsv'];
-            }
-            return ticketName1 < ticketName2 ? -1 : 1;
-        })
-            .reduce(function (accumulator, ticketName, index) {
-            var lsvNumber = lsvTickets[ticketName]['lsv'];
-            var helpCenterNumber = lsvTickets[ticketName]['hc'];
-            if ((index > 0) && (lsvNumber == accumulator[accumulator.length - 10])) {
-                accumulator[accumulator.length - 8] += ', ' + ticketName;
-            }
-            else {
-                accumulator.push('<dt>', 'LSV-', lsvNumber, ' / ', ticketName, '</dt><dd>', '<a href="https://help.liferay.com/hc/articles/', helpCenterNumber, '">https://help.liferay.com/hc/articles/', helpCenterNumber, '</a>', '</dd>');
-            }
-            return accumulator;
-        }, lsvList);
-        lsvList.push('</dl></div>');
-    }
-    else {
-        lsvList.push('<span class="compact">', '' + missingTickets.length, missingTickets.length == 1 ? ' ticket' : ' tickets', '</span><span class="verbose">', missingTickets.length == 0 ? 'none' : missingTickets.map(x => getTicketLink('', x, x)).join(', '), '</span>');
-    }
-    lsvList.push('</td></tr>');
-    return lsvList.join('');
-}
-function updateMissingTicketTable(lsvTickets) {
-    var tableContainer = document.getElementById('security-fixes');
-    var missingTicketList = getMissingTicketList(lsvTickets);
-    var tableRows = missingTicketList.map(getMissingTicketTableRow.bind(null, lsvTickets));
-    var tableRowsHTML = tableRows.join('');
-    tableContainer.innerHTML = [
-        '<table class="table table-bordered table-hover">',
-        '<tbody class="table-data">', tableRowsHTML, '</tbody>',
-        '<tfoot><tr><td class="show-details" colspan=2>',
-        '<a class="compact" href="#" onclick="var cl=this.closest(\'#security-fixes\').classList;',
-        'cl.remove(\'compact\');cl.add(\'verbose\');return false;">(show details)</a>',
-        '<a class="verbose" href="#" onclick="var cl=this.closest(\'#security-fixes\').classList;',
-        'cl.add(\'compact\');cl.remove(\'verbose\');return false;">(hide details)</a>',
-        '</td></tr></tfoot></table>'
-    ].join('');
-}
-function renderSecurityFixesSection() {
-    var buildNameNode = querySelector('patcherBuildName');
-    var xhr = new XMLHttpRequest();
-    var lsvFixedInURL = 'https://s3-us-west-2.amazonaws.com/mdang.grow/lsv_fixedin.json';
-    xhr.open('GET', lsvFixedInURL);
-    xhr.onload = function () {
-        var lsvTickets = JSON.parse(this.responseText);
-        var updateMissingTicketTableListener = updateMissingTicketTable.bind(null, lsvTickets);
-        buildNameNode.addEventListener('blur', updateMissingTicketTableListener);
-        var projectVersionNode = querySelector('patcherProjectVersionId');
-        projectVersionNode.addEventListener('change', updateMissingTicketTableListener);
-        updateMissingTicketTableListener();
-    };
-    xhr.setRequestHeader('Cache-Control', 'no-cache, no-store, max-age=0');
-    xhr.setRequestHeader('Pragma', 'no-cache');
-    xhr.send(null);
-}
-function addSecurityFixesSection() {
-    if (document.location.pathname.indexOf('/-/osb_patcher/builds/') == -1) {
-        return;
-    }
-    var accountElement = querySelector('patcherBuildAccountEntryCode');
-    if (!accountElement) {
-        var labelElement = document.querySelector('label[for="' + ns + 'account-code"]');
-        accountElement = labelElement.nextSibling;
-    }
-    if (!accountElement) {
-        return;
-    }
-    var container = document.createElement('div');
-    container.classList.add('control-group', 'input-text-wrapper');
-    var labelElement = document.createElement('label');
-    labelElement.classList.add('control-label');
-    labelElement.textContent = 'Missing Security Fixes';
-    container.appendChild(labelElement);
-    var tableContainer = document.createElement('span');
-    tableContainer.setAttribute('id', 'security-fixes');
-    tableContainer.classList.add('compact');
-    container.appendChild(tableContainer);
-    var accountParentElement = accountElement.parentElement;
-    var accountGrandParentElement = accountParentElement.parentElement;
-    accountGrandParentElement.insertBefore(container, accountParentElement);
-    renderSecurityFixesSection();
-}
 function addEngineerComments() {
     var buildsRegEx = /\/-\/osb_patcher\/builds\/[0-9]+[^\/]*$/;
     if (!buildsRegEx.test(document.location.pathname)) {
@@ -2036,6 +1972,186 @@ async function updatePreviousBuildsContent() {
     contentHeader.appendChild(baselineSelect);
     renderBuildComparisons(contentRows, contentCells, fixes, projectVersions, baselineSelect.value);
 }
+// Extract project version text directly from the select options
+function getProjectVersionsFromDOM() {
+    var projectVersionIdFilter = document.getElementById('_1_WAR_osbpatcherportlet_patcherProjectVersionIdFilter');
+    if (!projectVersionIdFilter) {
+        return {};
+    }
+    return Array.from(projectVersionIdFilter.options)
+        .filter(opt => opt.text && opt.text.indexOf('.q') != -1)
+        .reduce((acc, next) => {
+        acc[next.text] = next.value;
+        return acc;
+    }, {});
+}
+async function getPatcherFixVersions(token, tokensSet) {
+    var params = new URLSearchParams();
+    params.append('p_p_id', portletId);
+    params.append('p_p_state', 'exclusive');
+    params.append(ns + 'advancedSearch', 'true');
+    params.append(ns + 'andOperator', 'true');
+    params.append(ns + 'patcherFixName', token);
+    params.append(ns + 'statusFilter', '100');
+    params.append(ns + 'delta', '200');
+    var parser = new DOMParser();
+    var hasMorePages = true;
+    var foundVersions = [];
+    for (var page = 1; hasMorePages; page++) {
+        params.set(ns + 'cur', String(page));
+        var response = await fetch('/group/guest/patching?' + params.toString());
+        var responseDocument = parser.parseFromString(await response.text(), 'text/html');
+        var newFoundVersions = Array.from(responseDocument.querySelectorAll('#' + ns + 'patcherFixsSearchContainerSearchContainer table tbody tr'))
+            // .filter(row => {
+            //     var contentCell = row.querySelector('td:nth-child(3)');
+            //     if (!contentCell || !contentCell.textContent) {
+            //         return false;
+            //     }
+            //     var tokenList = contentCell.textContent.split(',').filter(it => it).map(it => it.trim());
+            //     return tokenList.length > 0 && tokenList.every(it => tokensSet.has(it));
+            // })
+            .map(row => {
+            var versionCell = row.querySelector('td:nth-child(6)');
+            if (!versionCell || !versionCell.textContent) {
+                return null;
+            }
+            return versionCell.textContent.trim();
+        })
+            .filter(it => it);
+        Array.prototype.push.apply(foundVersions, newFoundVersions);
+        hasMorePages = !!responseDocument.querySelector('#' + ns + 'patcherFixsSearchContainerPageIteratorBottom ul.lfr-pagination-buttons li.last:not(.disabled)');
+    }
+    updateSpinner(1);
+    return {
+        token,
+        foundVersions: new Set(foundVersions),
+    };
+}
+// Helper: Modular fetch API call with URL-encoded body
+async function getAllPatcherFixVersions(tokensList, tokensSet) {
+    var fixVersionsList = await Promise.all(tokensList.map(token => getPatcherFixVersions(token, tokensSet)));
+    return fixVersionsList.reduce((acc, next) => {
+        acc[next.token] = next.foundVersions;
+        return acc;
+    }, {});
+}
+function getTargetVersions(selectedVersion, allVersions) {
+    if (!selectedVersion)
+        return [];
+    var match = selectedVersion.match(/^([0-9]+\.q[1-4]\.)(\d+)$/);
+    if (!match)
+        return [selectedVersion];
+    var [, prefix, startNumStr] = match;
+    var startNum = parseInt(startNumStr);
+    return Object.keys(allVersions)
+        .filter(x => x.indexOf(prefix) == 0)
+        .map(v => {
+        var patchVersion = parseInt(v.substring(prefix.length + 1));
+        return { full: v, patch: patchVersion };
+    })
+        .filter(v => v.patch >= startNum)
+        .sort((a, b) => a.patch - b.patch)
+        .map(v => v.full);
+}
+function generateBulkSearchContentArea() {
+    var projectVersions = getProjectVersionsFromDOM();
+    var contentArea = document.createElement('div');
+    contentArea.id = 'bulk-search-content';
+    contentArea.style.display = 'none';
+    contentArea.style.padding = '20px';
+    contentArea.style.border = '1px solid #ddd';
+    contentArea.style.borderRadius = '4px';
+    contentArea.style.marginTop = '15px';
+    contentArea.innerHTML = `
+    <h3>Bulk Search</h3>
+    <p>This feature was added to make it easier to see if fixes exist on patcher for various tickets (LPD, LPE, CVEs), and which baselines they exist for. However, it's naive; the fix might have been added with other tokens and so even though the fix <em>exists</em>, it might require additional tokens for the build to go through, or you might fight with patcher's greedy merge algorithm all along the way.</p>
+    <div style="margin-bottom: 15px;">
+      <label for="bulk-tokens-input" style="font-weight: bold; display: block; margin-bottom: 5px;">
+        Tickets (comma or newline separated):
+      </label>
+      <textarea id="bulk-tokens-input" rows="8" style="width: 100%; max-width: 600px; font-family: monospace;" placeholder="List any Jira tickets or any CVEs (experimental) you wish to check"></textarea>
+    </div>
+    <button id="bulk-search-button" class="btn btn-primary">Submit Bulk Search</button>
+    <div id="bulk-search-results" style="margin-top: 15px;">
+    </div>
+  `;
+    var tokenListInput = contentArea.querySelector('#bulk-tokens-input');
+    var bulkSearchButton = contentArea.querySelector('#bulk-search-button');
+    var bulkSearchResults = contentArea.querySelector('#bulk-search-results');
+    bulkSearchButton.addEventListener('click', async (e) => {
+        var rawText = tokenListInput.value;
+        var tokensSet = new Set(rawText.split(/[\n,]+/).map(t => t.trim()).filter(Boolean));
+        var tokensList = Array.from(tokensSet);
+        var cveTokensList = tokensList.filter(it => it.indexOf('CVE-') == 0 || it.indexOf('PRISMA-') == 0);
+        var cveFixTokensSet = new Set();
+        var cveToLPELookup = {};
+        var nonCVETokensList = tokensList.filter(it => it.indexOf('CVE-') == -1 && it.indexOf('PRISMA-') == -1);
+        if (cveTokensList.length > 0) {
+            var cveResponse = await fetch('https://s3-us-west-2.amazonaws.com/mdang.grow/security_issue_cve_lpe.json');
+            cveToLPELookup = await cveResponse.json();
+            cveFixTokensSet = new Set(cveTokensList.map(it => cveToLPELookup[it]).reduce((acc, next) => acc.concat(next), []));
+            tokensSet = new Set([...nonCVETokensList, ...cveFixTokensSet]);
+            tokensList = Array.from(tokensSet);
+        }
+        addSpinner(tokensList.length);
+        var availableFixVersions = await getAllPatcherFixVersions(tokensList, tokensSet);
+        var cveRows = cveTokensList.map(cve => {
+            var cveFixes = cveToLPELookup[cve] || [];
+            var cveFixVersions = new Set(cveFixes.map(ticket => Array.from(availableFixVersions[ticket]) || []).reduce((acc, next) => acc.concat(next), []));
+            return `
+        <tr>
+          <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; white-space: nowrap;">${cve}${cveFixes.length == 0 ? "" : ("<br/>(" + cveFixes.join(', ') + ")")}</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">${Array.from(cveFixVersions).sort((a, b) => getLiferayVersion(a) - getLiferayVersion(b)).join(', ')}</td>
+        </tr>
+      `;
+        });
+        var nonCVERows = nonCVETokensList.map(ticket => `
+      <tr>
+        <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">${ticket}</td>
+        <td style="padding: 8px; border: 1px solid #ddd;">${Array.from(availableFixVersions[ticket]).sort((a, b) => getLiferayVersion(a) - getLiferayVersion(b)).join(', ')}</td>
+      </tr>
+    `);
+        bulkSearchResults.innerHTML = `
+      <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+        <thead>
+          <tr style="background-color: #f2f2f2; text-align: left;">
+            <th style="padding: 8px; border: 1px solid #ddd;">Ticket</th>
+            <th style="padding: 8px; border: 1px solid #ddd;">Available on Baselines</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${cveRows.concat(nonCVERows).join('')}
+        </tbody>
+      </table>
+    `;
+        removeSpinner();
+    });
+    contentArea.style.display = 'block';
+    return contentArea;
+}
+function addBulkSearchTab() {
+    var navTabs = document.querySelector('ul.nav.nav-tabs');
+    if (!navTabs.parentElement) {
+        return;
+    }
+    var navTabsParent = navTabs.parentElement;
+    var bulkTab = document.createElement('li');
+    bulkTab.id = 'bulk-search-tab';
+    bulkTab.innerHTML = `<a href="#bulk-search">Bulk Search</a>`;
+    navTabs.appendChild(bulkTab);
+    bulkTab.addEventListener('click', (e) => {
+        e.preventDefault();
+        var contentArea = generateBulkSearchContentArea();
+        Array.from(navTabs.children).forEach(li => li.classList.remove('active'));
+        bulkTab.classList.add('active');
+        Array.from(navTabsParent.children).forEach(child => {
+            if (child !== navTabs) {
+                navTabsParent.removeChild(child);
+            }
+        });
+        navTabsParent.appendChild(contentArea);
+    });
+}
 // Run all the changes we need to the page.
 var applyPatcherCustomizations = function () {
     highlightAnalysisNeededBuilds();
@@ -2044,7 +2160,8 @@ var applyPatcherCustomizations = function () {
         Liferay.on('projectVersionIdReady', updateFromQueryString);
     }
     var activeTab = document.querySelector('.tab.active');
-    if (activeTab && ((activeTab.textContent || '').trim() != 'QA Builds')) {
+    var activeTabName = activeTab ? (activeTab.textContent || '').trim() : '';
+    if (activeTabName && (activeTabName != 'QA Builds')) {
         rearrangeColumns();
         replaceJenkinsLinks();
         replacePopupWindowLinks();
@@ -2063,9 +2180,11 @@ var applyPatcherCustomizations = function () {
         replaceDate('modifiedDate');
         replaceDate('statusDate');
         addProductVersionFilter();
-        addSecurityFixesSection();
         addEngineerComments();
         updatePreviousBuildsContent();
+        if (activeTabName == 'Fixes') {
+            addBulkSearchTab();
+        }
     }
     // Runs after addProductVersionFilter, since on the create fix page
     // that function clones the same patcherProjectVersionIdFilter
