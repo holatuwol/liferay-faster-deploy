@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        10.9
+// @version        11.0
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -2037,9 +2037,8 @@ async function getPatcherFixVersionsPage(token, page) {
     params.append(ns + 'patcherFixName', token);
     params.append(ns + 'statusFilter', '100');
     params.append(ns + 'delta', '200');
-    var parser = new DOMParser();
     params.set(ns + 'cur', String(page));
-    return await fetch('/group/guest/patching?' + params.toString());
+    return fetch('/group/guest/patching?' + params.toString());
 }
 async function getPatcherFixVersions(token, tokensSet) {
     if (patcherFixVersionsCache[token]) {
@@ -2130,7 +2129,6 @@ function getPatcherPortalFixSearchLink(tokens, version, projectVersions) {
     params.append(ns + 'patcherProjectVersionIdFilter', projectVersions[version]);
     return `<a href="/group/guest/patching?${params.toString()}" target="_blank">${version}</a>`;
 }
-var securityFixVersions = null;
 function compareQuarterlyVersions(a, b) {
     if (!a)
         return -1;
@@ -2157,14 +2155,6 @@ function isFixInPrefix(fixVer, prefix) {
     const cleanPrefix = prefix.toLowerCase().replace(/\s+/g, '');
     return cleanFix.indexOf(cleanPrefix) !== -1;
 }
-async function getSecurityFixVersions() {
-    if (securityFixVersions) {
-        return securityFixVersions;
-    }
-    var response = await fetch('https://s3-us-west-2.amazonaws.com/mdang.grow/security_issue_fix_versions.json');
-    securityFixVersions = await response.json();
-    return securityFixVersions;
-}
 function getCleanVersionFromFix(fixVer) {
     if (!fixVer) {
         return null;
@@ -2175,95 +2165,389 @@ function getCleanVersionFromFix(fixVer) {
     }
     return null;
 }
-function isTicketInSecurityData(ticket, data) {
-    for (const v of Object.keys(data)) {
-        const versionObj = data[v];
-        for (const cat of ['sev-1', 'sev-2', 'sev-3', 'unknown']) {
-            if (versionObj[cat] && versionObj[cat][ticket]) {
+async function getJiraFieldsGraph(tokens) {
+    const fields = {};
+    const prefixes = ['LPE', 'LPD', 'LPS', 'LPSA', 'COMMERCE', 'LSV'];
+    tokens = tokens.filter(token => prefixes.some(prefix => token.startsWith(prefix)));
+    while (tokens.length > 0) {
+        const issues = await getJiraIssuesByKey(tokens, ['key', 'issuelinks', 'versions', 'fixVersions', 'customfield_10886', 'customfield_10786', 'priority', 'labels'], [], false);
+        tokens = [];
+        for (const issue of issues) {
+            if (!issue.fields) {
+                continue;
+            }
+            const key = issue.key;
+            fields[key] = issue.fields;
+            if (!issue.fields.issuelinks) {
+                continue;
+            }
+            for (const link of issue.fields.issuelinks) {
+                const linkedIssue = link.outwardIssue || link.inwardIssue;
+                if (!linkedIssue) {
+                    continue;
+                }
+                const linkedIssueKey = linkedIssue.key;
+                if (linkedIssueKey in fields || !prefixes.some(prefix => linkedIssueKey.startsWith(prefix))) {
+                    continue;
+                }
+                if (key.startsWith('LPE-')) {
+                    if (!linkedIssueKey.startsWith('LPE-')) {
+                        tokens.push(linkedIssueKey);
+                    }
+                }
+                else if (!key.startsWith('LSV-')) {
+                    if (linkedIssueKey.startsWith('LPE-') || linkedIssueKey.startsWith('LSV-')) {
+                        tokens.push(linkedIssueKey);
+                    }
+                }
+            }
+        }
+    }
+    return fields;
+}
+function getProductLine(ver) {
+    const m = ver.toLowerCase().match(/(\d{4}\.q[1-4])/);
+    return m ? m[1] : null;
+}
+function isApplicableFixVersion(fvName, targetVersion) {
+    const fvLine = getProductLine(fvName);
+    const targetLine = getProductLine(targetVersion);
+    if (!fvLine || !targetLine) {
+        return false;
+    }
+    return fvLine === targetLine;
+}
+function hasLabel(issue, labelName) {
+    if (!issue.labels) {
+        return false;
+    }
+    for (const label of issue.labels) {
+        if (typeof label === 'string') {
+            if (label === labelName) {
+                return true;
+            }
+        }
+        else if (typeof label === 'object' && label !== null) {
+            const name = label.name || label.value;
+            if (name === labelName) {
                 return true;
             }
         }
     }
     return false;
 }
-async function getJiraFixVersions(versionPrefix, tokens) {
-    if (tokens.length === 0) {
-        return {};
-    }
-    try {
-        await new Promise((resolve, reject) => {
-            GM.xmlHttpRequest({
-                method: 'GET',
-                url: 'https://liferay.atlassian.net/rest/api/3/myself',
-                responseType: 'json',
-                onload: function (r) {
-                    if (r.status == 200) {
-                        resolve(r.response);
+function getLsvSeverityGroup(lsvKeys, jiraFieldsGraph) {
+    const sortedKeys = Array.from(lsvKeys).sort();
+    // 1. Check customfield_10786 (Severity) first across all linked LSVs
+    for (const lk of sortedKeys) {
+        const lsvIssue = jiraFieldsGraph[lk];
+        if (lsvIssue) {
+            const cfSev = lsvIssue.customfield_10786;
+            if (cfSev) {
+                let val;
+                if (Array.isArray(cfSev)) {
+                    if (cfSev.length > 0) {
+                        val = cfSev[0].value;
                     }
-                    else {
-                        reject(new Error("Empty response"));
-                    }
-                },
-                onerror: reject,
-                ontimeout: reject,
-            });
-        });
-        updateSpinner(1);
-    }
-    catch (e) {
-        return {};
-    }
-    const result = {};
-    for (const token of tokens) {
-        result[token] = null;
-    }
-    const chunkSize = 100;
-    for (let i = 0; i < tokens.length; i += chunkSize) {
-        const chunk = tokens.slice(i, i + chunkSize);
-        const validChunk = chunk.filter(t => /^[a-zA-Z0-9-]+$/.test(t));
-        if (validChunk.length === 0) {
-            continue;
-        }
-        const jql = `key in (${validChunk.join(',')})`;
-        const url = `https://liferay.atlassian.net/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&fields=fixVersions&maxResults=100`;
-        var issues = await new Promise((resolve, reject) => {
-            GM.xmlHttpRequest({
-                method: 'GET',
-                url,
-                responseType: 'json',
-                onload: function (r) {
-                    if (r.response.issues) {
-                        resolve(r.response.issues);
-                    }
-                    else {
-                        reject(new Error("Empty response"));
-                    }
-                },
-                onerror: reject,
-                ontimeout: reject,
-            });
-        });
-        for (const issue of issues) {
-            const key = issue.key;
-            const fields = issue.fields;
-            if (fields && fields.fixVersions) {
-                const fixVersions = fields.fixVersions
-                    .map(fv => getCleanVersionFromFix(fv.name.toUpperCase()))
-                    .filter(name => name);
-                var matchingVersions = fixVersions
-                    .filter(name => isFixInPrefix(name, versionPrefix));
-                if (matchingVersions.length == 0) {
-                    matchingVersions = fixVersions
-                        .filter(name => compareQuarterlyVersions(versionPrefix, name) < 0);
                 }
-                if (matchingVersions.length > 0) {
-                    matchingVersions.sort(compareQuarterlyVersions);
-                    result[key] = matchingVersions[0];
+                else if (cfSev && typeof cfSev === 'object') {
+                    val = cfSev.value;
+                }
+                if (val) {
+                    if (val === 'Critical') {
+                        return 'sev-1';
+                    }
+                    else if (val === 'High') {
+                        return 'sev-2';
+                    }
+                    else {
+                        return 'sev-3'; // Medium, Low, etc.
+                    }
                 }
             }
         }
     }
-    return result;
+    // 2. Fall back to priority if severity is null/empty on all linked LSVs
+    for (const lk of sortedKeys) {
+        const lsvIssue = jiraFieldsGraph[lk];
+        if (lsvIssue) {
+            const prio = lsvIssue.priority;
+            if (prio) {
+                let val;
+                if (Array.isArray(prio)) {
+                    if (prio.length > 0) {
+                        val = prio[0].name;
+                    }
+                }
+                else if (prio && typeof prio === 'object') {
+                    val = prio.name;
+                }
+                if (val) {
+                    if (val === 'Critical') {
+                        return 'sev-1';
+                    }
+                    else if (val === 'High') {
+                        return 'sev-2';
+                    }
+                    else {
+                        return 'sev-3'; // all others = sev-3
+                    }
+                }
+            }
+        }
+    }
+    return null;
+}
+async function getJiraSecurityStatusRecord(tokens) {
+    if (tokens.length === 0) {
+        return {};
+    }
+    try {
+        await getJiraAPIResponse('/rest/api/3/myself');
+    }
+    catch (e) {
+        return {};
+    }
+    const jiraFieldsGraph = await getJiraFieldsGraph(tokens);
+    updateSpinner(1);
+    const record = {};
+    for (const key of Object.keys(jiraFieldsGraph)) {
+        const issue = jiraFieldsGraph[key];
+        if (!issue) {
+            continue;
+        }
+        // Determine lsvKeys
+        const lsvKeys = new Set();
+        if (key.startsWith('LSV-')) {
+            lsvKeys.add(key);
+        }
+        else {
+            if (issue.issuelinks) {
+                for (const link of issue.issuelinks) {
+                    const linkedIssue = link.outwardIssue || link.inwardIssue;
+                    if (linkedIssue) {
+                        const lk = linkedIssue.key;
+                        if (lk.startsWith('LSV-') && lk in jiraFieldsGraph) {
+                            lsvKeys.add(lk);
+                        }
+                        else if ((lk.startsWith('LPS-') || lk.startsWith('LPD-')) && lk in jiraFieldsGraph) {
+                            const parentIssue = jiraFieldsGraph[lk];
+                            if (parentIssue && parentIssue.issuelinks) {
+                                for (const plink of parentIssue.issuelinks) {
+                                    const plinkedIssue = plink.outwardIssue || plink.inwardIssue;
+                                    if (plinkedIssue) {
+                                        const plk = plinkedIssue.key;
+                                        if (plk.startsWith('LSV-') && plk in jiraFieldsGraph) {
+                                            lsvKeys.add(plk);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // Pool this issue and its directly linked parent/related issues (for fallback)
+        const pooledIssues = [issue];
+        if (issue.issuelinks) {
+            for (const link of issue.issuelinks) {
+                const linkedIssue = link.outwardIssue || link.inwardIssue;
+                if (linkedIssue && linkedIssue.key in jiraFieldsGraph) {
+                    pooledIssues.push(jiraFieldsGraph[linkedIssue.key]);
+                }
+            }
+        }
+        // Step 1: Collect affects versions from linked LSV tickets
+        const lsvAffectsMap = new Map();
+        for (const lk of lsvKeys) {
+            const lsvIssue = jiraFieldsGraph[lk];
+            if (lsvIssue && lsvIssue.versions) {
+                for (const ver of lsvIssue.versions) {
+                    if (ver && ver.name) {
+                        lsvAffectsMap.set(ver.name, `${lk} via versions`);
+                    }
+                }
+            }
+        }
+        // Step 2: Extract pooled fix_versions (including customfield_10886)
+        const stdFixVersionsMap = new Map();
+        for (const issueNode of pooledIssues) {
+            const tKey = Object.keys(jiraFieldsGraph).find(k => jiraFieldsGraph[k] === issueNode) || key;
+            if (issueNode.fixVersions) {
+                for (const fv of issueNode.fixVersions) {
+                    if (fv && fv.name) {
+                        // Prefer the ticket itself, do not overwrite if already set by a prior issue (like the ticket itself)
+                        if (!stdFixVersionsMap.has(fv.name)) {
+                            stdFixVersionsMap.set(fv.name, `${tKey} via fixVersions`);
+                        }
+                    }
+                }
+            }
+            const cfVal = issueNode.customfield_10886;
+            if (cfVal) {
+                if (Array.isArray(cfVal)) {
+                    for (const fv of cfVal) {
+                        if (fv && fv.name) {
+                            if (!stdFixVersionsMap.has(fv.name)) {
+                                stdFixVersionsMap.set(fv.name, `${tKey} via customfield_10886`);
+                            }
+                        }
+                    }
+                }
+                else if (typeof cfVal === 'object') {
+                    const name = cfVal.name;
+                    if (name) {
+                        if (!stdFixVersionsMap.has(name)) {
+                            stdFixVersionsMap.set(name, `${tKey} via customfield_10886`);
+                        }
+                    }
+                }
+            }
+        }
+        const finalFixVersionsMap = new Map();
+        if (lsvAffectsMap.size > 0) {
+            // Use compareQuarterlyVersions to resolve each affected version from lsvAffectsMap 
+            // to the closest fix version chronologically after it from stdFixVersionsMap,
+            // restricted to the correct product/quarterly line via isApplicableFixVersion.
+            for (const [ver, source] of lsvAffectsMap.entries()) {
+                const candidates = Array.from(stdFixVersionsMap.keys())
+                    .filter(candidate => isApplicableFixVersion(candidate, ver) && compareQuarterlyVersions(candidate, ver) > 0);
+                if (candidates.length > 0) {
+                    candidates.sort(compareQuarterlyVersions);
+                    const closestFix = candidates[0];
+                    const closestSource = stdFixVersionsMap.get(closestFix);
+                    finalFixVersionsMap.set(closestFix, `${closestSource}`);
+                }
+            }
+            // Also combine with customfield_10886 precise fix versions from pooled issues
+            for (const issueNode of pooledIssues) {
+                const tKey = Object.keys(jiraFieldsGraph).find(k => jiraFieldsGraph[k] === issueNode) || key;
+                const cfVal = issueNode.customfield_10886;
+                if (cfVal) {
+                    if (Array.isArray(cfVal)) {
+                        for (const fv of cfVal) {
+                            if (fv && fv.name) {
+                                // Prefer the ticket itself or previously resolved closestFix, do not overwrite
+                                if (!finalFixVersionsMap.has(fv.name)) {
+                                    finalFixVersionsMap.set(fv.name, `${tKey} via customfield_10886`);
+                                }
+                            }
+                        }
+                    }
+                    else if (typeof cfVal === 'object') {
+                        const name = cfVal.name;
+                        if (name) {
+                            if (!finalFixVersionsMap.has(name)) {
+                                finalFixVersionsMap.set(name, `${tKey} via customfield_10886`);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        else {
+            for (const [ver, source] of stdFixVersionsMap.entries()) {
+                finalFixVersionsMap.set(ver, source);
+            }
+        }
+        const fixVersions = [];
+        for (const [ver, source] of finalFixVersionsMap.entries()) {
+            fixVersions.push(`${ver} (${source})`);
+        }
+        // Determine the severity group
+        let group = null;
+        if (hasLabel(issue, 'sev-1')) {
+            group = 'sev-1';
+        }
+        else if (hasLabel(issue, 'sev-2')) {
+            group = 'sev-2';
+        }
+        else if (hasLabel(issue, 'sev-3')) {
+            group = 'sev-3';
+        }
+        if (!group) {
+            if (lsvKeys.size > 0) {
+                group = getLsvSeverityGroup(lsvKeys, jiraFieldsGraph);
+            }
+            if (!group) {
+                group = 'unknown';
+            }
+        }
+        record[key] = {
+            severity: group,
+            fixVersions: fixVersions
+        };
+    }
+    return record;
+}
+async function getJiraAPIResponse(path) {
+    return new Promise((resolve, reject) => {
+        GM.xmlHttpRequest({
+            method: 'GET',
+            url: 'https://liferay.atlassian.net' + path,
+            responseType: 'json',
+            onload: function (r) {
+                if (r.status == 200) {
+                    resolve(r);
+                }
+                else if (r.status == 429) {
+                    var retryAfter = (parseInt(r.getResponseHeader('Retry-After') || '0') + 1) * 1000;
+                    setTimeout(getJiraAPIResponse.bind(null, path), retryAfter);
+                }
+                else {
+                    reject(new Error("Empty response"));
+                }
+            },
+            onerror: reject,
+            ontimeout: reject,
+        });
+    });
+}
+async function getJiraIssuesByKey(tokens, fields, expand, render) {
+    var issues = [];
+    const chunkSize = 100;
+    for (let i = 0; i < tokens.length; i += chunkSize) {
+        const chunk = tokens.slice(i, i + chunkSize);
+        const jql = `key in (${chunk.join(',')})`;
+        issues = issues.concat(await getJiraIssues(jql, fields, expand, render));
+    }
+    return issues;
+}
+async function getJiraIssues(jql, fields, expand, render) {
+    if (render) {
+        expand = expand.concat(['renderedFields']);
+    }
+    const params = new URLSearchParams();
+    params.append('jql', jql);
+    params.append('maxResults', '100');
+    if (fields.length > 0) {
+        params.append('fields', fields.join(','));
+    }
+    else {
+        params.append('fields', '*all');
+    }
+    if (expand.length > 0) {
+        params.append('expand', expand.join(','));
+    }
+    const searchURL = '/rest/api/3/search/jql';
+    var issues = [];
+    try {
+        var r = await getJiraAPIResponse(`${searchURL}?${params.toString()}`);
+        var response = r.response;
+        issues = issues.concat(response.issues);
+        while (!response.isLast && response.nextPageToken) {
+            params.set('nextPageToken', response.nextPageToken);
+            r = await getJiraAPIResponse(`${searchURL}?${params.toString()}`);
+            response = r.response;
+            issues = issues.concat(response.issues);
+        }
+    }
+    catch (e) {
+        console.error(e);
+        return issues;
+    }
+    return issues;
 }
 function isFixed(targetVersion, prefix, selectedVersion) {
     if (!targetVersion) {
@@ -2274,55 +2558,14 @@ function isFixed(targetVersion, prefix, selectedVersion) {
     }
     return compareQuarterlyVersions(selectedVersion, targetVersion) >= 0;
 }
-function getTicketSecurityStatus(ticket, prefix, selectedVersion, data, jiraFixVersion) {
-    const prefixVersions = Object.keys(data)
-        .filter(v => v.indexOf(prefix + '.') === 0)
-        .sort(compareQuarterlyVersions);
-    const canonicalBranchFix = getCleanVersionFromFix(jiraFixVersion) || jiraFixVersion;
-    if (prefixVersions.length === 0) {
-        if (jiraFixVersion) {
-            if (isFixed(canonicalBranchFix, prefix, selectedVersion)) {
-                return `<span class="bulk-search-status-fixed">Fixed</span> (in ${jiraFixVersion} via Jira)`;
-            }
-            else {
-                return `<span class="bulk-search-status-not-fixed">Not Fixed</span> (Target: ${jiraFixVersion} via Jira)`;
-            }
-        }
-        return `<span class="bulk-search-status-na">N/A (No data for baseline prefix)</span>`;
+function getTicketSecurityStatus(ticket, prefix, selectedVersion, jiraStatus) {
+    if (!jiraStatus) {
+        return `<span class="bulk-search-status-na">N/A</span>`;
     }
-    // 1. Gather all targets and severity for this ticket across this prefix
-    const allTargets = [];
-    let severity = 'unknown';
-    for (const v of prefixVersions) {
-        const versionObj = data[v];
-        for (const cat of ['sev-1', 'sev-2', 'sev-3', 'unknown']) {
-            if (versionObj[cat] && versionObj[cat][ticket]) {
-                severity = cat;
-                const fixes = versionObj[cat][ticket] || [];
-                for (const f of fixes) {
-                    if (allTargets.indexOf(f) === -1) {
-                        allTargets.push(f);
-                    }
-                }
-                break;
-            }
-        }
-    }
+    const severity = jiraStatus.severity;
+    const allTargets = jiraStatus.fixVersions;
     if (allTargets.length === 0) {
-        if (jiraFixVersion) {
-            if (isFixed(canonicalBranchFix, prefix, selectedVersion)) {
-                if (selectedVersion === 'All') {
-                    return `<span class="bulk-search-status-fixed">Fixed</span> (in ${jiraFixVersion} via Jira)`;
-                }
-                else {
-                    return `<span class="bulk-search-status-fixed">Fixed</span> (since ${jiraFixVersion} via Jira)`;
-                }
-            }
-            else {
-                return `<span class="bulk-search-status-not-fixed">Not Fixed</span> (Target: ${jiraFixVersion} via Jira)`;
-            }
-        }
-        return `<span class="bulk-search-status-na">N/A (Not security-relevant or not listed)</span>`;
+        return `<span class="bulk-search-status-not-fixed">Not Fixed</span>, Severity: ${severity}, Target: TBD`;
     }
     // Filter targets belonging to our baseline prefix
     const prefixTargets = allTargets.filter(t => isFixInPrefix(t, prefix));
@@ -2337,27 +2580,27 @@ function getTicketSecurityStatus(ticket, prefix, selectedVersion, data, jiraFixV
             const canonicalBranchFix = latestPrefixTarget.clean;
             if (isFixed(canonicalBranchFix, prefix, selectedVersion)) {
                 if (selectedVersion === 'All') {
-                    return `<span class="bulk-search-status-fixed">Fixed</span> (in ${canonicalBranchFix})`;
+                    return `<span class="bulk-search-status-fixed">Fixed</span> in ${latestPrefixTarget.original}`;
                 }
                 else {
-                    return `<span class="bulk-search-status-fixed">Fixed</span> (since ${canonicalBranchFix})`;
+                    return `<span class="bulk-search-status-fixed">Fixed</span> since ${latestPrefixTarget.original}`;
                 }
             }
             else {
-                return `<span class="bulk-search-status-not-fixed">Not Fixed</span> (Severity: ${severity}, Target: ${canonicalBranchFix})`;
+                return `<span class="bulk-search-status-not-fixed">Not Fixed</span>, Severity: ${severity}, Target: ${latestPrefixTarget.original}`;
             }
         }
     }
     // If none exist on prefix (or could not parse), point to the latest future baseline
     const parsedFutureTargets = allTargets
-        .map(t => getCleanVersionFromFix(t))
-        .filter(item => item !== null);
+        .map(t => ({ original: t, clean: getCleanVersionFromFix(t) }))
+        .filter(item => item.clean !== null);
     if (parsedFutureTargets.length > 0) {
-        parsedFutureTargets.sort((a, b) => compareQuarterlyVersions(a, b));
+        parsedFutureTargets.sort((a, b) => compareQuarterlyVersions(a.clean, b.clean));
         const latestFutureTarget = parsedFutureTargets[parsedFutureTargets.length - 1];
-        return `<span class="bulk-search-status-not-fixed">Not Fixed</span> (Severity: ${severity}, Target: ${latestFutureTarget})`;
+        return `<span class="bulk-search-status-not-fixed">Not Fixed</span>, Severity: ${severity}, Target: ${latestFutureTarget.original}`;
     }
-    return `<span class="bulk-search-status-not-fixed">Not Fixed</span> (Severity: ${severity}, Target: ${allTargets.join(', ')})`;
+    return `<span class="bulk-search-status-not-fixed">Not Fixed</span>, Severity: ${severity}, Target: ${allTargets.join(', ')}`;
 }
 function generateBulkSearchContentArea() {
     var projectVersions = getProjectVersionsFromDOM();
@@ -2405,19 +2648,22 @@ function generateBulkSearchContentArea() {
     const versionSelect = contentArea.querySelector('#bulk-baseline-version');
     var bulkSearchButton = contentArea.querySelector('#bulk-search-button');
     var bulkSearchResults = contentArea.querySelector('#bulk-search-results');
-    getSecurityFixVersions().then(data => {
-        const prefixes = Array.from(new Set(Object.keys(data).map(k => k.split('.').slice(0, 2).join('.'))))
-            .sort((a, b) => compareQuarterlyVersions(b, a));
-        for (const prefix of prefixes) {
-            const opt = document.createElement('option');
-            opt.value = prefix;
-            opt.textContent = prefix;
-            prefixSelect.appendChild(opt);
-        }
-    }).catch(err => {
-        console.error('Failed to load security fix versions', err);
-    });
-    prefixSelect.addEventListener('change', async () => {
+    const quarterlyVersions = Object.keys(projectVersions)
+        .map(v => v.trim())
+        .filter(v => getCleanVersionFromFix(v) !== null)
+        .sort(compareQuarterlyVersions);
+    const prefixes = Array.from(new Set(quarterlyVersions.map(v => {
+        const match = v.toLowerCase().match(/(\d{4})\.q([1-4])/);
+        return match ? `${match[1]}.q${match[2]}` : '';
+    }).filter(Boolean)))
+        .sort((a, b) => compareQuarterlyVersions(b + '.0', a + '.0'));
+    for (const prefix of prefixes) {
+        const opt = document.createElement('option');
+        opt.value = prefix;
+        opt.textContent = prefix;
+        prefixSelect.appendChild(opt);
+    }
+    prefixSelect.addEventListener('change', () => {
         const prefix = prefixSelect.value;
         if (!prefix) {
             versionContainer.style.display = 'none';
@@ -2426,9 +2672,8 @@ function generateBulkSearchContentArea() {
             }
             return;
         }
-        const data = await getSecurityFixVersions();
-        const versions = Object.keys(data)
-            .filter(v => v.indexOf(prefix + '.') === 0)
+        const versions = quarterlyVersions
+            .filter(v => v.toLowerCase().startsWith(prefix.toLowerCase() + '.'))
             .sort(compareQuarterlyVersions);
         versionSelect.innerHTML = '<option value="All">All</option>';
         for (const v of versions) {
@@ -2487,29 +2732,24 @@ function generateBulkSearchContentArea() {
         var showSecurity = !!selectedPrefix;
         addSpinner(tokensList.length + (showSecurity ? 2 : 0));
         var availableFixVersions = await getAllPatcherFixVersions(tokensList, tokensSet);
-        var securityData = null;
-        var jiraFixVersionsRecord = {};
+        var jiraSecurityStatusRecord = {};
         if (showSecurity) {
-            securityData = await getSecurityFixVersions();
             updateSpinner(1);
-            var missingTokens = tokensList.filter(ticket => !isTicketInSecurityData(ticket, securityData));
-            if (missingTokens.length > 0) {
-                jiraFixVersionsRecord = await getJiraFixVersions(selectedPrefix, missingTokens);
-            }
+            jiraSecurityStatusRecord = await getJiraSecurityStatusRecord(tokensList);
             updateSpinner(1);
         }
         var cveRows = cveTokensList.map(cve => {
             var cveFixes = cveToLPELookup[cve] || [];
             var cveFixVersions = new Set(cveFixes.map(ticket => Array.from(availableFixVersions[ticket]) || []).reduce((acc, next) => acc.concat(next), []));
             var securityCell = '';
-            if (showSecurity && securityData) {
+            if (showSecurity) {
                 var securityStatus = '';
                 if (cveFixes.length === 0) {
                     securityStatus = `<span style="color: #777;">No associated LPEs found</span>`;
                 }
                 else {
                     securityStatus = cveFixes.map(ticket => {
-                        var status = getTicketSecurityStatus(ticket, selectedPrefix, selectedVersion, securityData, jiraFixVersionsRecord[ticket]);
+                        var status = getTicketSecurityStatus(ticket, selectedPrefix, selectedVersion, jiraSecurityStatusRecord[ticket] || null);
                         return `<div><strong>${ticket}:</strong> ${status}</div>`;
                     }).join('');
                 }
@@ -2525,8 +2765,8 @@ function generateBulkSearchContentArea() {
         });
         var nonCVERows = nonCVETokensList.map(ticket => {
             var securityCell = '';
-            if (showSecurity && securityData) {
-                var status = getTicketSecurityStatus(ticket, selectedPrefix, selectedVersion, securityData, jiraFixVersionsRecord[ticket]);
+            if (showSecurity) {
+                var status = getTicketSecurityStatus(ticket, selectedPrefix, selectedVersion, jiraSecurityStatusRecord[ticket] || null);
                 securityCell = `<td class="bulk-search-fix-status">${status}</td>`;
             }
             var cves = lpeToCVELookup[ticket] || [];
@@ -2546,7 +2786,7 @@ function generateBulkSearchContentArea() {
           <tr>
             <th class="bulk-search-ticket">Ticket</th>
             <th class="bulk-search-baselines">Available on Baselines</th>
-            ${(showSecurity && securityData) ? `<th class="bulk-search-fix-status">${fixStatusHeader}</th>` : ''}
+            ${showSecurity ? `<th class="bulk-search-fix-status">${fixStatusHeader}</th>` : ''}
           </tr>
         </thead>
         <tbody>
