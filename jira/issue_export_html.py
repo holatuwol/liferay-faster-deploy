@@ -1,11 +1,22 @@
+import argparse
 import base64
 import gzip
 import json
 from os.path import exists
 import sys
 
-cache_file = sys.argv[1]
-export_title = sys.argv[2]
+parser = argparse.ArgumentParser(description="Generate HTML ticket export.")
+parser.add_argument("cache_file", help="Path to cache file (JSON or JSON.gz)")
+parser.add_argument("export_title", help="Title for the export")
+parser.add_argument("--ticket-range", default="1", choices=["1", "3", "7", "14", "30", "60", "90", "180", "365", "all"], help="Default active date range for tickets (default: 1)")
+parser.add_argument("--comment-range", default="all", choices=["1", "3", "7", "14", "30", "60", "90", "180", "365", "all"], help="Default active date range for comments (default: all)")
+
+args = parser.parse_args()
+
+cache_file = args.cache_file
+export_title = args.export_title
+default_ticket_range = args.ticket_range
+default_comment_range = args.comment_range
 
 if exists(f"{cache_file}.gz"):
   with open(f"{cache_file}.gz", 'rb') as f:
@@ -315,7 +326,7 @@ html_doc = f"""<!doctype html>
   }}
 
   var commentFilterChipsHtml = DATE_RANGES.map(function(range) {{
-    return '<button type="button" class="chip comment-filter-chip' + (range.key === "all" ? " active" : "") +
+    return '<button type="button" class="chip comment-filter-chip' + (range.key === "{default_comment_range}" ? " active" : "") +
       '" data-range-key="' + range.key + '">' + range.label + "</button>";
   }}).join("");
 
@@ -514,7 +525,7 @@ html_doc = f"""<!doctype html>
   }});
 
   var activeFilterField = "lastComment";
-  var activeDateRange = "1";
+  var activeDateRange = "{default_ticket_range}";
   var activeCommentAuthor = "all";
 
   var filterFieldChipsEl = document.getElementById("filter-field-chips");
@@ -548,7 +559,7 @@ html_doc = f"""<!doctype html>
   }});
 
   var commentRangeChipsEl = document.getElementById("comment-range-chips");
-  var activeCommentRange = "all";
+  var activeCommentRange = "{default_comment_range}";
   DATE_RANGES.forEach(function(range) {{
     var chip = document.createElement("button");
     chip.type = "button";
