@@ -3,6 +3,8 @@
 SCRIPT_FOLDER=$(dirname $0)
 source ${SCRIPT_FOLDER}/../bin/activate
 
+python releases.py
+
 if [ "" == "${AWS_PROFILE}" ]; then
 	AWS_PROFILE='default'
 fi
