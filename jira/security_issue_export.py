@@ -35,16 +35,19 @@ def get_issue_updated(issue, target_tz):
 
     return dt_target.strftime("%Y-%m-%d %H:%M")
 
-def get_issues_by_key(file_name, issue_keys, target_tz):
+def get_issues_by_key(file_name, issue_keys, target_date, target_tz):
     file_path = f'security_issue_export/{file_name}.json'
+
     if exists(file_path):
         with open(file_path, 'rt') as f:
             old_issues = json.loads(f.read())
             max_updated = datetime.fromisoformat(max([x['updated'] for x in old_issues.values() if 'updated' in x])).astimezone(target_tz).strftime("%Y-%m-%d %H:%M")
-            common_jql = f'and updated > {max_updated} order by key'
+            common_jql = f'and updated > "{max_updated}"'
     else:
         old_issues = {}
-        common_jql = 'order by key'
+        common_jql = ''
+
+    common_jql = f'{common_jql} and updated < "{target_date.astimezone(target_tz).strftime("%Y-%m-%d %H:%M")}" order by key'
 
     issues = {} | old_issues
 
@@ -56,60 +59,95 @@ def get_issues_by_key(file_name, issue_keys, target_tz):
     with open(file_path, 'wb') as f:
         f.write(json.dumps(issues))
 
-def export_jira_issues():
-    r = await_get_request(f"{jira_base_url}/rest/api/3/myself", {})
+    return issues
 
-    if r.status_code != 200:
-        return {}
+def process_issue_links(issues, issue_link_keys):
+    for issue in issues.values():
+        for issue_link in issue['issuelinks']:
+            if 'inwardIssue' in issue_link:
+                issue_link_key = issue_link['inwardIssue']['key']
+                project = issue_link_key[:issue_link_key.find('-')]
+                if project in issue_link_keys:
+                    issue_link_keys[project].append(issue_link_key)
+            if 'outwardIssue' in issue_link:
+                issue_link_key = issue_link['outwardIssue']['key']
+                project = issue_link_key[:issue_link_key.find('-')]
+                if project in issue_link_keys:
+                    issue_link_keys[project].append(issue_link_key)
 
-    response_json = r.json()
-    target_tz = zoneinfo.ZoneInfo(response_json['timeZone'])
+def export_jira_issues(target_date, target_tz):
+    common_jql = ' and '.join([
+        'level is not empty',
+        'status = Closed',
+        'Resolution not in (Discarded, Duplicate, "Won\'t Fix")',
+        f'updated < "{target_date.astimezone(target_tz).strftime("%Y-%m-%d %H:%M")}"'])
 
-    common_jql = f'and level is not empty and status = Closed and Resolution not in (Discarded, Duplicate, "Won\'t Fix") and updated < "{datetime.now().astimezone(target_tz).strftime("%Y-%m-%d %H:%M")}"'
-
-    jqls = {
-        'LPS': f'project = LPS and component = "Security Vulnerability" {common_jql}',
-        'LPD': f'project = LPD and "Cross Cutting Properties" = "Security Vulnerability" {common_jql}', 
+    other_keys = {
+        'COMMERCE': ['COMMERCE-1165'],
+        'LPS': ['LPS-117307', 'LPS-138398', 'LPS-140907', 'LPS-159040', 'LPS-175631', 'LPS-203552'],
+        'LPSA': ['LPSA-38892', 'LPSA-56431'],
+        'LPD': ['LPD-11235', 'LPD-22045', 'LPD-26723', 'LPD-55827'],
     }
 
-    lpe_issue_keys = []
-    lsv_issue_keys = []
+    jqls = {
+        'COMMERCE': f'project = COMMERCE and component = "Security Vulnerability" and {common_jql}',
+        'LPS': f'project = LPS and component = "Security Vulnerability" and {common_jql}',
+        'LPSA': f'project = LPSA and component = "Security Vulnerability" and {common_jql}',
+        'LPD': f'project = LPD and "Cross Cutting Properties" = "Security Vulnerability" and {common_jql}', 
+    }
+
+    issue_link_keys = {'LPE': [], 'LSV': []}
 
     for file_name, jql in jqls.items():
         file_path = f'security_issue_export/{file_name}.json'
-        if exists(file_path):
-            with open(file_path, 'rt') as f:
-                old_issues = json.loads(f.read())
 
-            if len(old_issues) > 0:
-                max_updated = datetime.fromisoformat(max([x['updated'] for x in old_issues.values() if 'updated' in x])).astimezone(target_tz).strftime("%Y-%m-%d %H:%M")
-                jql = f'{jql} and updated > "{max_updated}"'
-        else:
-            old_issues = {}
+        jql_issues = { issue_key: issue_response['fields'] for issue_key, issue_response in get_issues(f'({jql}) order by key', issue_fields, [], False).items() }
 
-        new_issues = { issue_key: issue_response['fields'] for issue_key, issue_response in get_issues(f'{jql} order by key', issue_fields, [], False).items() }
+        missing_issues = {}
 
-        issues = old_issues | new_issues
+        if file_name in other_keys:
+            missing_issues = { issue_key: issue_response['fields'] for issue_key, issue_response in get_issues(f'key in ({','.join(other_keys[file_name])}) order by key', issue_fields, [], False).items() }
+
+        issues = jql_issues | missing_issues
 
         with open(file_path, 'wb') as f:
             f.write(json.dumps(issues))
 
-        for key, issue in issues.items():
-            for issue_link in issue['issuelinks']:
-                if 'inwardIssue' in issue_link:
-                    issue_link_key = issue_link['inwardIssue']['key']
-                    if issue_link_key[:3] == 'LPE':
-                        lpe_issue_keys.append(issue_link_key)
-                    elif issue_link_key[:3] == 'LSV':
-                        lsv_issue_keys.append(issue_link_key)
-                if 'outwardIssue' in issue_link:
-                    issue_link_key = issue_link['outwardIssue']['key']
-                    if issue_link_key[:3] == 'LPE':
-                        lpe_issue_keys.append(issue_link_key)
-                    elif issue_link_key[:3] == 'LSV':
-                        lsv_issue_keys.append(issue_link_key)
+        process_issue_links(issues, issue_link_keys)
 
-    get_issues_by_key('LPE', lpe_issue_keys, target_tz)
-    get_issues_by_key('LSV', lsv_issue_keys, target_tz)
+    get_issues_by_key('LPE', issue_link_keys['LPE'], target_date, target_tz)
+    get_issues_by_key('LSV', issue_link_keys['LSV'], target_date, target_tz)
 
-export_jira_issues()
+def check_missing_lsvs(target_date, target_tz):
+    with open('security_issue_export/LSV.json', 'rt') as f:
+        linked_lsvs = json.loads(f.read())
+
+    common_jql = ' and '.join([
+        'project = LSV',
+        '("Issue Classification" is empty or "Issue Classification" not in ("False Positive", "Ignored", "Not Exploitable", "Won\'t Do"))',
+        'status = Closed',
+        'Resolution not in (Discarded, Duplicate, "Not a Bug", "Won\'t Fix")',
+        f'updated < "{target_date.astimezone(target_tz).strftime("%Y-%m-%d %H:%M")}"'
+    ])
+
+    lsvs_with_cves = get_issues(f'{common_jql} and ("CVE IDs[Short text]" ~ "CVE-*")', issue_fields, [], False)
+
+    missing_lsvs_with_cves = [x for x in lsvs_with_cves.keys() if x not in linked_lsvs]
+    print(len(missing_lsvs_with_cves), 'issues:', missing_lsvs_with_cves)
+
+    lsvs_without_cves = get_issues(f'{common_jql} and ("CVE IDs[Short text]" !~ "CVE-*" or "CVE IDs[Short text]" is empty) and (summary ~ "CVE-*" or description ~ "CVE-*" or comment ~ "CVE-*")')
+
+    missing_lsvs_without_cves = [x for x in lsvs_without_cves.keys() if x not in linked_lsvs]
+    print(len(missing_lsvs_without_cves), 'issues:', missing_lsvs_without_cves)
+
+r = await_get_request(f"{jira_base_url}/rest/api/3/myself", {})
+
+assert(r.status_code == 200)
+
+response_json = r.json()
+target_tz = zoneinfo.ZoneInfo(response_json['timeZone'])
+
+target_date = datetime.now()
+
+export_jira_issues(target_date, target_tz)
+check_missing_lsvs(target_date, target_tz)
