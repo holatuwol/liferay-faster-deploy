@@ -117,32 +117,6 @@ def get_closest_after(fix_versions, target_version):
         
     return []
 
-def get_immediately_after(ver):
-    """
-    Given an affects version, returns the immediately following patch/release (fix version).
-    E.g. 2026.q2.11 -> 2026.q2.12
-         2025.q1    -> 2025.q1.1
-         7.1 DXP    -> 7.1.X EE
-    """
-    # 1. Quarterly release with patch number (e.g., 2026.q2.11 -> 2026.q2.12)
-    m = re.search(r'(202[3-6]\.[qQ][1-4])\.(\d+)', ver)
-    if m:
-        prefix = m.group(1)
-        patch = int(m.group(2))
-        return f"{prefix}.{patch + 1}"
-    
-    # 2. Quarterly release without patch number (e.g., 2025.q1 -> 2025.q1.1)
-    m_line = re.search(r'202[3-6]\.[qQ][1-4]', ver)
-    if m_line:
-        return f"{ver}.1"
-        
-    # 3. Standard release (e.g., '7.1 DXP (7.1.10)' -> '7.1.X EE')
-    for line in ['6.1', '6.2', '7.0', '7.1', '7.2', '7.3', '7.4']:
-        if line in ver:
-            return f"{line}.X EE"
-            
-    return ver
-
 def get_lsv_severity_group(lsv_keys, lsv_issues):
     """
     Determines the severity group (sev-1, sev-2, sev-3) from linked LSV tickets.
@@ -179,6 +153,31 @@ def get_lsv_severity_group(lsv_keys, lsv_issues):
                     return 'sev-3' # all others = sev-3
 
     return None
+
+def get_issue_fix_versions(issue_node):
+    """
+    Extracts fix versions and customfield_10886 fix versions from an issue node.
+    Filters out any versions containing '.X' or '.x'.
+    """
+    fvs = set()
+    for fv in issue_node.get('fixVersions', []):
+        if isinstance(fv, dict) and 'name' in fv:
+            name = fv['name']
+            if '.x' not in name.lower():
+                fvs.add(name)
+    cf_val = issue_node.get('customfield_10886')
+    if cf_val:
+        if isinstance(cf_val, list):
+            for fv in cf_val:
+                if isinstance(fv, dict) and 'name' in fv:
+                    name = fv['name']
+                    if '.x' not in name.lower():
+                        fvs.add(name)
+        elif isinstance(cf_val, dict) and 'name' in cf_val:
+            name = cf_val['name']
+            if '.x' not in name.lower():
+                fvs.add(name)
+    return fvs
 
 def get_target_version_data(target_version):
     target_line = parse_product_line(target_version)
@@ -299,44 +298,20 @@ def get_target_version_data(target_version):
                     if lk in issues_all:
                         pooled_issues.append(issues_all[lk])
 
-        # Step 1: Collect affects versions from linked LSV tickets
-        lsv_affects = set()
-        for lk in lsv_keys:
-            for ver in lsv_issues[lk].get('versions', []):
-                lsv_affects.add(ver['name'])
+        # Step 1 & 2: Identify fix versions. If this is an LPE and has its own valid fix versions, use them.
+        # Otherwise, fall back to other linked tickets (such as LPS, LPD, COMMERCE, LSV).
+        is_lpe = key.startswith('LPE-')
+        lpe_own_fvs = get_issue_fix_versions(issue)
 
-        # Step 2: Extract pooled fix_versions (including customfield_10886)
-        std_fix_versions = set()
-        for issue_node in pooled_issues:
-            # Standard fixVersions
-            for fv in issue_node.get('fixVersions', []):
-                if isinstance(fv, dict) and 'name' in fv:
-                    std_fix_versions.add(fv['name'])
-            # Customfield_10886 fix versions
-            cf_val = issue_node.get('customfield_10886')
-            if cf_val:
-                if isinstance(cf_val, list):
-                    for fv in cf_val:
-                        if isinstance(fv, dict) and 'name' in fv:
-                            std_fix_versions.add(fv['name'])
-                elif isinstance(cf_val, dict) and 'name' in cf_val:
-                    std_fix_versions.add(cf_val['name'])
-
-        if lsv_affects:
-            # Prefer LSV affects versions by computing their immediately following patch/release
-            fix_versions = set(get_immediately_after(ver) for ver in lsv_affects)
-            # Combine with precise customfield_10886 fix versions if available
-            for issue_node in pooled_issues:
-                cf_val = issue_node.get('customfield_10886')
-                if cf_val:
-                    if isinstance(cf_val, list):
-                        for fv in cf_val:
-                            if isinstance(fv, dict) and 'name' in fv:
-                                fix_versions.add(fv['name'])
-                    elif isinstance(cf_val, dict) and 'name' in cf_val:
-                        fix_versions.add(cf_val['name'])
+        if is_lpe and lpe_own_fvs:
+            fix_versions = lpe_own_fvs
         else:
-            # Fall back to standard pooled fixVersions + customfield_10886
+            fallback_issues = pooled_issues[1:] if is_lpe else pooled_issues
+
+            std_fix_versions = set()
+            for issue_node in fallback_issues:
+                std_fix_versions.update(get_issue_fix_versions(issue_node))
+
             fix_versions = std_fix_versions
 
         affects_versions = set(ver['name'] for issue_node in pooled_issues for ver in issue_node.get('versions', []))
