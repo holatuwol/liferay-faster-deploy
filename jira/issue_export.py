@@ -1,4 +1,5 @@
 from bs4 import BeautifulSoup
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 import gzip
 import inspect
@@ -166,7 +167,9 @@ def get_servicedesk_issue(issue_key, issue_fields):
 
     return issue
 
-def get_exported_service_desk_issue(issue, exclude_fields):
+def get_exported_service_desk_issue(issue_key, issue_fields, exclude_fields):
+    issue = get_servicedesk_issue(issue_key, issue_fields)
+
     if issue is None:
         return None
 
@@ -184,31 +187,6 @@ def get_exported_service_desk_issue(issue, exclude_fields):
             del comment['public']
     
     return issue
-    
-def get_issue_updated(issue, target_tz):
-    if 'issueKey' not in issue:
-        print(issue)
-        return None
-
-    issue_key = issue['issueKey']
-    issue_file = f'issue_export/{issue_key}.json'
-
-    if not exists(issue_file):
-        return None
-
-    with open(issue_file, 'r', encoding='utf-8') as f:
-        cached_issue = json.load(f)
-
-    if 'updated' not in cached_issue:
-        return None
-
-    jira_timestamp = cached_issue['updated']
-    fixed_timestamp = jira_timestamp[:-2] + ":" + jira_timestamp[-2:]
-
-    dt_source = datetime.fromisoformat(fixed_timestamp)
-    dt_target = dt_source.astimezone(target_tz)
-
-    return dt_target.strftime("%Y-%m-%d %H:%M")
 
 def export_service_desk_issues(jql, cache_file, exclude_fields):
     r = await_get_request(f"{jira_base_url}/rest/api/3/myself", {})
@@ -219,15 +197,27 @@ def export_service_desk_issues(jql, cache_file, exclude_fields):
     response_json = r.json()
     target_tz = zoneinfo.ZoneInfo(response_json['timeZone'])
 
-    jql = f"{jql} and updated < '{datetime.now().astimezone(target_tz).strftime("%Y-%m-%d %H:%M")}'"
+    jql = f'{jql} and updated < "{datetime.now().astimezone(target_tz).strftime("%Y-%m-%d %H:%M")}"'
+
+    old_issues = {}
+
+    if cache_file is not None and exists(f"{cache_file}.gz") and 'updated' not in exclude_fields:
+        with gzip.open(f"{cache_file}.gz", 'rt', encoding='utf-8') as f:
+            old_issues = {issue['issueKey']: issue for issue in json.loads(f.read())}
+
+        updated = [x['updated'] for x in old_issues.values() if 'updated' in x]
+        if len(updated) > 0:
+            jql = f'{jql} and updated >= "{datetime.fromisoformat(max(updated)).astimezone(target_tz).strftime("%Y-%m-%d %H:%M")}"'
 
     if jql.find('order by') == -1:
         jql = f"{jql} order by created asc"
 
-    issues = { issue_key: issue_response['fields'] for issue_key, issue_response in get_issues(jql, ['key', 'updated'], [], False).items() }
+    new_issues = { issue_key: issue_response['fields'] for issue_key, issue_response in get_issues(jql, ['key', 'updated'], [], False).items() }
+
+    issues = old_issues | new_issues
 
     servicedesk_issues = [
-        get_exported_service_desk_issue(get_servicedesk_issue(issue_key, issue_fields), exclude_fields)
+        get_exported_service_desk_issue(issue_key, issue_fields, exclude_fields)
             for issue_key, issue_fields in issues.items()
     ]
 
