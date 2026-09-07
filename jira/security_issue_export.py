@@ -10,39 +10,15 @@ sys.path.insert(0, dirname(dirname(abspath(inspect.getfile(inspect.currentframe(
 from jira import await_get_request, get_issues, jira_base_url
 issue_fields = ['key', 'issuelinks', 'versions', 'fixVersions', 'customfield_10563', 'customfield_10886', 'customfield_10786', 'priority', 'labels', 'updated']
 
-def get_issue_updated(issue, target_tz):
-    if 'issueKey' not in issue:
-        print(issue)
-        return None
-
-    issue_key = issue['issueKey']
-    issue_file = f'security_issue_export/{issue_key}.json'
-
-    if not exists(issue_file):
-        return None
-
-    with open(issue_file, 'r', encoding='utf-8') as f:
-        cached_issue = json.load(f)
-
-    if 'updated' not in cached_issue:
-        return None
-
-    jira_timestamp = cached_issue['updated']
-    fixed_timestamp = jira_timestamp[:-2] + ":" + jira_timestamp[-2:]
-
-    dt_source = datetime.fromisoformat(fixed_timestamp)
-    dt_target = dt_source.astimezone(target_tz)
-
-    return dt_target.strftime("%Y-%m-%d %H:%M")
-
 def get_issues_by_key(file_name, issue_keys, target_date, target_tz):
     file_path = f'security_issue_export/{file_name}.json'
 
     if exists(file_path):
         with open(file_path, 'rt') as f:
             old_issues = json.loads(f.read())
-            max_updated = datetime.fromisoformat(max([x['updated'] for x in old_issues.values() if 'updated' in x])).astimezone(target_tz).strftime("%Y-%m-%d %H:%M")
-            common_jql = f'and updated > "{max_updated}"'
+        updated = [x['updated'] for x in old_issues.values() if 'updated' in x]
+        if len(updated) > 0:
+            common_jql = f'and updated > "{datetime.fromisoformat(max(updated)).astimezone(target_tz).strftime("%Y-%m-%d %H:%M")}"'
     else:
         old_issues = {}
         common_jql = ''
@@ -140,14 +116,15 @@ def check_missing_lsvs(target_date, target_tz):
     missing_lsvs_without_cves = [x for x in lsvs_without_cves.keys() if x not in linked_lsvs]
     print(len(missing_lsvs_without_cves), 'issues:', missing_lsvs_without_cves)
 
-r = await_get_request(f"{jira_base_url}/rest/api/3/myself", {})
+if __name__ == '__main__':
+    r = await_get_request(f"{jira_base_url}/rest/api/3/myself", {})
 
-assert(r.status_code == 200)
+    assert(r.status_code == 200)
 
-response_json = r.json()
-target_tz = zoneinfo.ZoneInfo(response_json['timeZone'])
+    response_json = r.json()
+    target_tz = zoneinfo.ZoneInfo(response_json['timeZone'])
 
-target_date = datetime.now()
+    target_date = datetime.now()
 
-export_jira_issues(target_date, target_tz)
-check_missing_lsvs(target_date, target_tz)
+    export_jira_issues(target_date, target_tz)
+    check_missing_lsvs(target_date, target_tz)
