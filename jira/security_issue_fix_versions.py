@@ -13,20 +13,10 @@ QUARTERLY_RELEASES = {
     '2026.q1': 147, '2026.q2': 149, '2026.q3': 152,
 }
 
-QUARTERLY_VERSION_RANGE = {
-    '2023.q3': [0, 10], '2023.q4': [0, 10],
-    '2024.q1': [1, 30], '2024.q2': [0, 13], '2024.q3': [0, 13], '2024.q4': [0, 7],
-    '2025.q1': [0, 27], '2025.q2': [0, 12], '2025.q3': [0, 10], '2025.q4': [0, 12],
-    '2026.q1': [0, 12], '2025.q2': [0, 12], '2025.q3': [0, 1],
-}
+with open('releases.json', 'rt') as f:
+    ALL_VERSIONS = list(json.loads(f.read()).keys())
 
-QUARTERLY_VERSIONS = []
-
-for version, range_boundaries in QUARTERLY_VERSION_RANGE.items():
-	QUARTERLY_VERSIONS.extend([
-		f'{version}.{patch}' for patch in list(range(range_boundaries[0], range_boundaries[1]+1))
-	])
-
+QUARTERLY_VERSIONS = [version for version in ALL_VERSIONS if version.find('.q') != -1]
 
 def parse_product_line(vname):
     """
@@ -216,6 +206,8 @@ def get_target_version_data(target_version):
 
     # Load cache files
     try:
+        with open(os.path.join(export_dir, 'COMMERCE.json'), 'r', encoding='utf-8') as f:
+            commerce_issues = json.loads(f.read())
         with open(os.path.join(export_dir, 'LPE.json'), 'r', encoding='utf-8') as f:
             lpe_issues = json.loads(f.read())
         with open(os.path.join(export_dir, 'LPS.json'), 'r', encoding='utf-8') as f:
@@ -230,7 +222,7 @@ def get_target_version_data(target_version):
 
     # Combine into a single lookup index
     issues_all = {}
-    for src in [lpe_issues, lps_issues, lpd_issues, lsv_issues]:
+    for src in [commerce_issues, lpe_issues, lps_issues, lpd_issues, lsv_issues]:
         issues_all.update(src)
 
     # Build undirected adjacency graph across all issues for path finding
@@ -436,7 +428,7 @@ def main():
         with open(sys.argv[1], 'rt', encoding='utf-8') as f:
             target_versions = set([x['base_version'] for x in json.loads(f.read()) if x['base_version'] is not None and x['base_version'] != ''])
     else:
-        target_versions = QUARTERLY_VERSIONS
+        target_versions = ALL_VERSIONS
 
     sorted_output = { target_version: get_target_version_data(target_version) for target_version in target_versions }
 
