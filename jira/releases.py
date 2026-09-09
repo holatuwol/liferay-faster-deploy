@@ -77,7 +77,14 @@ def get_release_ulevel(release_name):
 
         return quarterly_releases[short_name]
 
-    return int(release_name.split('-')[1][1:])
+    update = release_name.split('-')[1]
+    if update[0] == 'u':
+        return int(update[1:])
+    if update[:2] == 'fp':
+        return int(update[2:])
+
+    print(update)
+    assert(False)
 
 def get_release_baseline(release_name):
     return int(release_name[:6].replace('.', ''))
@@ -271,23 +278,40 @@ def update_releases():
         elif name[:6] == '7.3.10' and name.find(' DXP U') != -1:
             release_num = int(name[name.rfind('U')+1:])
             short_name = '7.3.10-u%d' % release_num
+        elif name[:6] == '7.3.10' and name.find(' DXP SP') != -1:
+            release_num = int(name[name.rfind('SP')+2:])
+            short_name = '7.3.10-u%d' % release_num
         elif name == '7.3.10 DXP GA1':
             release_num = 0
             short_name = '7.3.10-ga1'
         elif name[:6] == '7.3.10' and name.find(' DXP FP') != -1:
-            release_num = int(name[name.rfind('P')+1:])
+            release_num = int(name[name.rfind('FP')+2:])
             short_name = '7.3.10-u%d' % release_num
+        elif name[:6] == '7.2.10' and name.find(' DXP FP') != -1:
+            release_num = int(name[name.rfind('FP')+2:].strip())
+            short_name = '7.2.10-fp%d' % release_num
+        elif name == '7.2.10 DXP GA1':
+            release_num = 0
+            short_name = '7.2.10-ga1'
 
-        if short_name is not None and get_release_ulevel(short_name) is not None:
-            project_releases[project].append(str(release['id']))
-            unsorted_releases[short_name].append(str(release['id']))
-            unsorted_releases[short_name] = sorted(unsorted_releases[short_name])
+        if short_name is None or get_release_ulevel(short_name) is None:
+            return False
+
+        project_releases[project].append(str(release['id']))
+        unsorted_releases[short_name].append(str(release['id']))
+        unsorted_releases[short_name] = sorted(unsorted_releases[short_name])
+        return True
 
     for release in get_releases('LPS'):
         add_release('LPS', release)
 
     for release in get_releases('LPD'):
         add_release('LPD', release)
+    
+    # add releases where we skipped the release step on Jira
+    assert(add_release('LPS', {'name': '7.2.10 DXP FP 19', 'id': '15257'}))
+    assert(add_release('LPS', {'name': '7.2.10 DXP FP20', 'id': '15188'}))
+    assert(add_release('LPD', {'name': '2023.Q4.3', 'id': '16748'}))
 
     sorted_releases = OrderedDict(sorted(unsorted_releases.items(), key=lambda x: release_sort_key(x[0])))
 
@@ -434,7 +458,6 @@ def check_changelogs():
         release_name = '7.4.13-u%d' % i if i > 0 else '7.4.13-ga1'
         release_file_name = f'releases.{jira_env}/{release_name}.json'
         if len(issue_keys) == 0:
-            del releases[release_name]
             os.remove(release_file_name)
         else:
             with open(release_file_name, 'w') as f:
@@ -443,7 +466,6 @@ def check_changelogs():
     for release_name, issue_keys in quarterly_fixed_issues.items():
         release_file_name = f'releases.{jira_env}/{release_name}.json'
         if len(issue_keys) == 0:
-            del releases[release_name]
             os.remove(release_file_name)
         else:
             with open(release_file_name, 'w') as f:
