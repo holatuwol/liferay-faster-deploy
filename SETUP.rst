@@ -19,17 +19,9 @@ When installing ``conda`` on Windows, make sure to include it in your PATH envir
 Python Packages
 ---------------
 
-These scripts make use of the following Python libraries:
+These scripts make use of the Python libraries documented in ``requirements.txt``:
 
-* ``1password``: https://pypi.org/project/1password/
-* ``beautifulsoup4``: https://www.crummy.com/software/BeautifulSoup/
-* ``dateparser``: https://dateparser.readthedocs.io/en/stable/
-* ``humanize``: https://github.com/jmoiron/humanize
-* ``orjson``: https://pypi.org/project/orjson/
-* ``pandas``: http://pandas.pydata.org/
-* ``requests``: http://docs.python-requests.org/en/master/
-* ``semver``: https://pypi.python.org/pypi/semver
-* ``yq``: https://yq.readthedocs.io/en/latest/
+* `requirements <requirements.txt>`__
 
 You can install all of these packages using the following commands:
 

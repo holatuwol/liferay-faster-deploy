@@ -16,6 +16,86 @@ QUARTERLY_RELEASES = {
 with open('releases.json', 'rt') as f:
     ALL_VERSIONS = list(json.loads(f.read()).keys())
 
+ALL_VERSIONS_LOWER = {v.lower().strip(): v for v in ALL_VERSIONS}
+
+unknown_versions = set()
+
+def normalize_version(name):
+    global unknown_versions
+
+    if not isinstance(name, str):
+        return name
+
+    v_clean = name.strip().lower()
+    if v_clean in ALL_VERSIONS_LOWER:
+        return ALL_VERSIONS_LOWER[v_clean]
+
+    short_name = None
+    if v_clean[0] == 'u':
+        short_name = '7.4.13-%s' % v_clean
+    elif name[:6] == '7.4.3.' and name.find(' CE GA') != -1:
+        release_num = int(name[6:name.find(' ')])
+        if release_num >= 15:
+            short_name = '7.4.13-u%d' % release_num
+        elif release_num > 4:
+            short_name = '7.4.13-u%d' % (release_num - 4)
+    elif name[:6] == '7.4.3.' and name.find('-ga') != -1:
+        release_num = int(name[6:name.find('-ga')])
+        if release_num >= 15:
+            short_name = '7.4.13-u%d' % release_num
+        elif release_num > 4:
+            short_name = '7.4.13-u%d' % (release_num - 4)
+    elif name == '7.4.13 DXP GA1':
+        short_name = '7.4.13-ga1'
+    elif name[:12] == '7.4.13 DXP U':
+        try:
+            release_num = int(name[12:])
+            short_name = '7.4.13-u%d' % release_num
+        except ValueError:
+            pass
+    elif len(name) > 8 and (name[4:6] == '.Q' or name[4:6] == '.q'):
+        short_name = name.lower().strip()
+    elif name[:6] == '7.3.10' and name.find(' DXP U') != -1:
+        try:
+            release_num = int(name[name.rfind('U')+1:])
+            short_name = '7.3.10-u%d' % release_num
+        except ValueError:
+            pass
+    elif name[:6] == '7.3.10' and name.find(' DXP SP') != -1:
+        try:
+            release_num = int(name[name.rfind('SP')+2:])
+            short_name = '7.3.10-u%d' % release_num
+        except ValueError:
+            pass
+    elif name == '7.3.10 DXP GA1':
+        short_name = '7.3.10-ga1'
+    elif name[:6] == '7.3.10' and name.find(' DXP FP') != -1:
+        try:
+            release_num = int(name[name.rfind('FP')+2:])
+            short_name = '7.3.10-u%d' % release_num
+        except ValueError:
+            pass
+    elif name[:6] == '7.2.10' and name.find(' DXP FP') != -1:
+        try:
+            release_num = int(name[name.rfind('FP')+2:].strip())
+            short_name = '7.2.10-fp%d' % release_num
+        except ValueError:
+            pass
+    elif name == '7.2.10 DXP GA1' or name == '7.2.0 GA1':
+        short_name = '7.2.10-ga1'
+
+    if short_name is not None:
+        short_clean = short_name.strip().lower()
+        if short_clean in ALL_VERSIONS_LOWER:
+            return ALL_VERSIONS_LOWER[short_clean]
+        return short_name
+
+    if name not in unknown_versions:
+        unknown_versions.add(name)
+        # print(name)
+
+    return None
+
 QUARTERLY_VERSIONS = [version for version in ALL_VERSIONS if version.find('.q') != -1]
 
 def parse_product_line(vname):
@@ -44,6 +124,19 @@ def get_patch_level(vname):
     Defaults to 0 if not present.
     """
     m = re.search(r'202[3-6]\.[qQ][1-4]\.(\d+)', vname)
+    if m:
+        return int(m.group(1))
+    return 0
+
+def get_standard_ulevel(vname):
+    """
+    Extracts the update level / fix pack level suffix (e.g. 24 in 7.3.10-u24 or 15 in 7.2.10-fp15).
+    Defaults to 0 for GA1.
+    """
+    vname = vname.strip().lower()
+    if '-ga1' in vname or 'ga1' in vname:
+        return 0
+    m = re.search(r'(?:-u|-fp|-sp|u|fp|sp)(\d+)', vname)
     if m:
         return int(m.group(1))
     return 0
@@ -98,25 +191,6 @@ def get_version_rank(vname):
             
     return 0
 
-def get_closest_after(fix_versions, target_version):
-    """
-    Finds and returns the closest fix version chronologically after the target version.
-    """
-    target_rank = get_version_rank(target_version)
-    after_versions = []
-    
-    for fv in fix_versions:
-        fv_rank = get_version_rank(fv)
-        if fv_rank > target_rank:
-            after_versions.append((fv_rank, fv))
-            
-    if after_versions:
-        # Sort by rank ascending, and return the closest one
-        after_versions.sort(key=lambda x: x[0])
-        return [after_versions[0][1]]
-        
-    return []
-
 def get_lsv_severity_group(lsv_keys, lsv_issues):
     """
     Determines the severity group (sev-1, sev-2, sev-3) from linked LSV tickets.
@@ -154,29 +228,50 @@ def get_lsv_severity_group(lsv_keys, lsv_issues):
 
     return None
 
+def add_fix_version(fvs, name):
+    lower_name = name.lower()
+
+    if lower_name == 'master' or ' ce ' in lower_name or 'milestone' in lower_name or 'sprint' in lower_name:
+        return
+    
+    if lower_name[:2] == 'ac':
+        return
+
+    if '.x' in lower_name:
+        return
+
+    if lower_name[:3] in ['5.1', '5.2', '6.0', '6.1', '6.2', '7.0', '7.1']:
+        return
+    
+    if lower_name[:3] == '7.2' and 'sp' in lower_name:
+        return
+
+    normalized_version = normalize_version(name)
+    if normalized_version is not None:
+        fvs.add(normalized_version)
+
 def get_issue_fix_versions(issue_node):
     """
     Extracts fix versions and customfield_10886 fix versions from an issue node.
-    Filters out any versions containing '.X' or '.x'.
     """
     fvs = set()
     for fv in issue_node.get('fixVersions', []):
         if isinstance(fv, dict) and 'name' in fv:
             name = fv['name']
-            if '.x' not in name.lower():
-                fvs.add(name)
+            add_fix_version(fvs, name)
+
     cf_val = issue_node.get('customfield_10886')
     if cf_val:
         if isinstance(cf_val, list):
             for fv in cf_val:
                 if isinstance(fv, dict) and 'name' in fv:
                     name = fv['name']
-                    if '.x' not in name.lower():
-                        fvs.add(name)
+                    add_fix_version(fvs, name)
+
         elif isinstance(cf_val, dict) and 'name' in cf_val:
             name = cf_val['name']
-            if '.x' not in name.lower():
-                fvs.add(name)
+            add_fix_version(fvs, name)
+
     return fvs
 
 def get_target_version_data(target_version):
@@ -193,7 +288,7 @@ def get_target_version_data(target_version):
     script_dir = os.path.dirname(os.path.abspath(__file__))
     export_dir = os.path.join(script_dir, 'security_issue_export')
 
-    required_files = ['LPE.json', 'LPS.json', 'LPD.json', 'LSV.json']
+    required_files = ['COMMERCE.json', 'LPE.json', 'LPS.json', 'LPSA.json', 'LPD.json', 'LSV.json']
     missing_files = [f for f in required_files if not os.path.exists(os.path.join(export_dir, f))]
 
     if missing_files:
@@ -211,6 +306,8 @@ def get_target_version_data(target_version):
             lpe_issues = json.loads(f.read())
         with open(os.path.join(export_dir, 'LPS.json'), 'r', encoding='utf-8') as f:
             lps_issues = json.loads(f.read())
+        with open(os.path.join(export_dir, 'LPSA.json'), 'r', encoding='utf-8') as f:
+            lpsa_issues = json.loads(f.read())
         with open(os.path.join(export_dir, 'LPD.json'), 'r', encoding='utf-8') as f:
             lpd_issues = json.loads(f.read())
         with open(os.path.join(export_dir, 'LSV.json'), 'r', encoding='utf-8') as f:
@@ -221,7 +318,7 @@ def get_target_version_data(target_version):
 
     # Combine into a single lookup index
     issues_all = {}
-    for src in [commerce_issues, lpe_issues, lps_issues, lpd_issues, lsv_issues]:
+    for src in [commerce_issues, lpe_issues, lps_issues, lpsa_issues, lpd_issues, lsv_issues]:
         issues_all.update(src)
 
     # Build undirected adjacency graph across all issues for path finding
@@ -280,7 +377,7 @@ def get_target_version_data(target_version):
                         lk = link[side]['key']
                         if lk.startswith('LSV-') and lk in lsv_issues:
                             lsv_keys.add(lk)
-                        elif (lk.startswith('LPS-') or lk.startswith('LPD-')) and lk in issues_all:
+                        elif (lk.startswith('LPS-') or lk.startswith('LPD-') or lk.startswith('LPSA-')) and lk in issues_all:
                             parent_issue = issues_all[lk]
                             for plink in parent_issue.get('issuelinks', []):
                                 for pside in ['inwardIssue', 'outwardIssue']:
@@ -299,7 +396,7 @@ def get_target_version_data(target_version):
                         pooled_issues.append(issues_all[lk])
 
         # Step 1 & 2: Identify fix versions. If this is an LPE and has its own valid fix versions, use them.
-        # Otherwise, fall back to other linked tickets (such as LPS, LPD, COMMERCE, LSV).
+        # Otherwise, fall back to other linked tickets (such as LPS, LPSA, LPD, COMMERCE, LSV).
         is_lpe = key.startswith('LPE-')
         lpe_own_fvs = get_issue_fix_versions(issue)
 
@@ -340,19 +437,23 @@ def get_target_version_data(target_version):
                 fv_q_level = get_quarterly_level(fv)
                 fv_patch_level = get_patch_level(fv)
 
-                # If target is a quarterly patch release and fix is a quarterly patch release
-                if target_patch_level > 0 or fv_patch_level > 0:
-                    if target_patch_level < fv_patch_level:
-                        is_affected = True
-                        break
-                elif target_q_level is not None and fv_q_level is not None:
-                    if target_q_level < fv_q_level:
-                        is_affected = True
-                        break
+                if target_q_level is not None or fv_q_level is not None:
+                    # If target is a quarterly patch release and fix is a quarterly patch release
+                    if target_patch_level > 0 or fv_patch_level > 0:
+                        if target_patch_level < fv_patch_level:
+                            is_affected = True
+                            break
+                    elif target_q_level is not None and fv_q_level is not None:
+                        if target_q_level < fv_q_level:
+                            is_affected = True
+                            break
                 else:
-                    # Default: standard line GA/base release does not contain maintenance branch fixes
-                    is_affected = True
-                    break
+                    # Standard line releases (7.2, 7.3, 7.4)
+                    target_ulevel = get_standard_ulevel(target_version)
+                    fv_ulevel = get_standard_ulevel(fv)
+                    if target_ulevel < fv_ulevel:
+                        is_affected = True
+                        break
         else:
             # Step 4: Heuristic fallback (check if target line is explicitly in the affects version list)
             for ver in affects_versions:
@@ -384,7 +485,7 @@ def get_target_version_data(target_version):
 
             # Populate resolved fixes
             if not applicable_fixes:
-                output_data[group][key] = get_closest_after(fix_versions, target_version)
+                output_data[group][key] = []
             else:
                 output_data[group][key] = applicable_fixes
 
@@ -400,15 +501,27 @@ def get_target_version_data(target_version):
 
 def main():
     if len(sys.argv) > 1:
-        with open(sys.argv[1], 'rt', encoding='utf-8') as f:
-            target_versions = set([x['base_version'] for x in json.loads(f.read()) if x['base_version'] is not None and x['base_version'] != ''])
+        specific_ticket = sys.argv[1]
+        target_versions = ALL_VERSIONS
     else:
+        specific_ticket = None
         target_versions = ALL_VERSIONS
 
-    sorted_output = { target_version: get_target_version_data(target_version) for target_version in target_versions }
+    if specific_ticket:
+        ticket_results = {}
+        for target_version in sorted(target_versions, key=lambda x: [int(c) if c.isdigit() else c for c in re.split(r'(\d+)', x)]):
+            data = get_target_version_data(target_version)
+            for group in ['sev-1', 'sev-2', 'sev-3', 'unknown']:
+                if specific_ticket in data[group]:
+                    ticket_results[target_version] = {group: data[group][specific_ticket]}
+                    break
+        with open('security_issue_fix_versions.debug.json', 'wb') as f:
+            f.write(json.dumps(ticket_results, option=json.OPT_INDENT_2))
+    else:
+        sorted_output = { target_version: get_target_version_data(target_version) for target_version in target_versions }
 
-    with open('security_issue_fix_versions.json', 'wb') as f:
-        f.write(json.dumps(sorted_output))
+        with open('security_issue_fix_versions.json', 'wb') as f:
+            f.write(json.dumps(sorted_output, option=json.OPT_INDENT_2))
 
 if __name__ == '__main__':
     main()
