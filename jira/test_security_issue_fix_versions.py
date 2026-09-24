@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import unittest
-from security_issue_fix_versions import get_issue_fix_versions, is_applicable_fix_version, normalize_version, get_standard_ulevel
+from security_issue_fix_versions import get_issue_fix_versions, is_applicable_fix_version, normalize_version, get_standard_ulevel, get_target_version_data
 
 class TestSecurityIssueFixVersions(unittest.TestCase):
 
@@ -65,6 +65,43 @@ class TestSecurityIssueFixVersions(unittest.TestCase):
         self.assertEqual(get_standard_ulevel('7.4.13-u100'), 100)
         self.assertEqual(get_standard_ulevel('7.3.10-ga1'), 0)
         self.assertEqual(get_standard_ulevel('7.3.10'), 0)
+
+    def test_quarterly_release_stream_fixes(self):
+        # LPE-18093 is fixed in 2024.q1.13.
+        # It should affect 2024.q1.12, but NOT 2024.q1.13 or 2024.q1.14.
+        
+        # 1. Affected in older version (2024.q1.12)
+        d12 = get_target_version_data('2024.q1.12')
+        self.assertEqual(d12['sev-3'].get('LPE-18093'), ['2024.q1.13'])
+        
+        # 2. Fixed/not affected in the fix version itself (2024.q1.13)
+        d13 = get_target_version_data('2024.q1.13')
+        for group in ['sev-1', 'sev-2', 'sev-3', 'unknown']:
+            self.assertNotIn('LPE-18093', d13[group])
+            
+        # 3. Fixed/not affected in subsequent versions (2024.q1.14)
+        d14 = get_target_version_data('2024.q1.14')
+        for group in ['sev-1', 'sev-2', 'sev-3', 'unknown']:
+            self.assertNotIn('LPE-18093', d14[group])
+
+    def test_linked_tickets_missing_backports(self):
+        # LPE-18210 has own fixes in 2025.q1 (2025.q1.7) and 2025.q2 (2025.q2.0)
+        # But a backport to 2024.q1 is defined on linked ticket LPD-51821 as 2024.q1.22.
+        # This backport should be merged in and handled.
+        
+        # 1. Affected in version older than 2024.q1.22 (e.g. 2024.q1.21)
+        d21 = get_target_version_data('2024.q1.21')
+        self.assertEqual(d21['sev-3'].get('LPE-18210'), ['2024.q1.22'])
+        
+        # 2. Fixed in 2024.q1.22
+        d22 = get_target_version_data('2024.q1.22')
+        for group in ['sev-1', 'sev-2', 'sev-3', 'unknown']:
+            self.assertNotIn('LPE-18210', d22[group])
+            
+        # 3. Fixed in 2024.q1.23
+        d23 = get_target_version_data('2024.q1.23')
+        for group in ['sev-1', 'sev-2', 'sev-3', 'unknown']:
+            self.assertNotIn('LPE-18210', d23[group])
 
 if __name__ == '__main__':
     unittest.main()

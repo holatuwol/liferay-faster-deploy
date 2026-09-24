@@ -224,6 +224,7 @@ def export_service_desk_issues(jql_or_issues, cache_file, exclude_fields):
     servicedesk_issues = [
         get_exported_service_desk_issue(issue_key, issue_fields, exclude_fields)
             for issue_key, issue_fields in issues.items()
+                if issue_key[:5] == 'LRHC-'
     ]
 
     servicedesk_issues = sorted([x for x in servicedesk_issues if x is not None], key=lambda x: x['issueKey'])

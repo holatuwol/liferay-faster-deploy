@@ -30,6 +30,7 @@ ticket_base64 = base64.b64encode(ticket_bytes).decode('utf-8')
 html_doc = f"""<!doctype html>
 <html lang="en">
 <head>
+<base href="https://liferay.atlassian.net/" target="_blank">
 <meta charset="utf-8">
 <title>Ticket Export for {export_title}</title>
 <style>
@@ -430,7 +431,7 @@ html_doc = f"""<!doctype html>
 
     sections.push(
       '<section class="ticket" id="ticket-' + anchor + '" data-created="' + (t.createdDate || "") + '" data-last-comment="' + (lastCommentMs || "") + '" data-comment-authors="' + commentAuthorsEscaped + '">' +
-        '<h2><a href="https://liferay.atlassian.net/browse/' + esc(key) + '" target="_blank">' + esc(key) + '</a></h2>' +
+        '<h2><a href="https://liferay.atlassian.net/browse/' + esc(key) + '">' + esc(key) + '</a></h2>' +
         '<table class="fields">' +
           "<tr><th>Summary</th><td>" + summary + "</td></tr>" +
           "<tr><th>Reporter</th><td>" + reporter + "</td></tr>" +

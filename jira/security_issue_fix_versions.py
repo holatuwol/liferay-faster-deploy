@@ -397,11 +397,30 @@ def get_target_version_data(target_version):
 
         # Step 1 & 2: Identify fix versions. If this is an LPE and has its own valid fix versions, use them.
         # Otherwise, fall back to other linked tickets (such as LPS, LPSA, LPD, COMMERCE, LSV).
+        # Note: If the LPE has its own fix versions, we also pull additional fix versions from linked tickets
+        # for release streams/product lines that are not already covered by the LPE's own fix versions.
         is_lpe = key.startswith('LPE-')
         lpe_own_fvs = get_issue_fix_versions(issue)
 
         if is_lpe and lpe_own_fvs:
-            fix_versions = lpe_own_fvs
+            covered_lines = set()
+            for fv in lpe_own_fvs:
+                line = parse_product_line(fv)
+                if line:
+                    covered_lines.add(line)
+
+            fallback_issues = pooled_issues[1:]
+            std_fix_versions = set()
+            for issue_node in fallback_issues:
+                std_fix_versions.update(get_issue_fix_versions(issue_node))
+
+            additional_fixes = set()
+            for fv in std_fix_versions:
+                line = parse_product_line(fv)
+                if line and line not in covered_lines:
+                    additional_fixes.add(fv)
+
+            fix_versions = lpe_own_fvs.union(additional_fixes)
         else:
             fallback_issues = pooled_issues[1:] if is_lpe else pooled_issues
 
@@ -414,12 +433,14 @@ def get_target_version_data(target_version):
         affects_versions = set(ver['name'] for issue_node in pooled_issues for ver in issue_node.get('versions', []))
 
         # Step 3: Extract fix versions applicable to the target version's product line
+        stream_fixes = []
         applicable_fixes = []
         is_target_quarterly = bool(re.search(r'202[3-6]\.[qQ][1-4]', target_version))
         target_rank = get_version_rank(target_version)
 
         for fv in fix_versions:
             if is_applicable_fix_version(fv, target_version):
+                stream_fixes.append(fv)
                 if is_target_quarterly:
                     # For quarterly releases, the fix must be chronologically after the target version
                     if get_version_rank(fv) > target_rank:
@@ -431,9 +452,9 @@ def get_target_version_data(target_version):
 
         is_affected = False
 
-        if applicable_fixes:
-            # Check if target version is older than the applicable fixes
-            for fv in applicable_fixes:
+        if stream_fixes:
+            # Check if target version is older than any of the stream fixes
+            for fv in stream_fixes:
                 fv_q_level = get_quarterly_level(fv)
                 fv_patch_level = get_patch_level(fv)
 
