@@ -542,7 +542,13 @@ def main():
         sorted_output = { target_version: get_target_version_data(target_version) for target_version in target_versions }
 
         with open('security_issue_fix_versions.json', 'wb') as f:
-            f.write(json.dumps(sorted_output, option=json.OPT_INDENT_2))
+            f.write(json.dumps(sorted_output))
+
+        with open('security_issue_fix_versions.ndjson', 'wb') as f:
+            encoded_new_line = '\n'.encode('utf-8')
+            for key, value in sorted_output.items():
+                f.write(json.dumps({'key': key, 'value': value}))
+                f.write(encoded_new_line)
 
 if __name__ == '__main__':
     main()

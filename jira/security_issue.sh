@@ -5,14 +5,15 @@ source ${SCRIPT_FOLDER}/../bin/activate
 
 s3upload() {
 	S3_BUCKET=mdang.grow ${SCRIPT_FOLDER}/../packageinfo/s3upload "${1}"
-	S3_BUCKET=mdang.tokyo ${SCRIPT_FOLDER}/../packageinfo/s3upload "${1}"
 }
 
 python security_issue_export.py
 python security_issue_lpe_cve.py
 python security_issue_cve_lpe.py
 
-for file in security_issue*.json; do
+python security_issue_fix_versions.py
+
+for file in security_issue_cve_lpe.json security_issue_lpe_cve.json security_issue_fix_versions.json; do
 	s3upload ${file}
 done
 

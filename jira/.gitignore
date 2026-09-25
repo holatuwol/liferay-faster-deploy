@@ -5,4 +5,5 @@ releases
 *.gz
 *.json
 *.log
+*.ndjson
 *.txt
