@@ -11,9 +11,17 @@ def export_project(account_key):
     issues, _ = export_service_desk_issues(issues, f"customer_export/{account_key}.json", ['accountCode', 'public', 'updated', 'priority', 'longTermResolution', 'heatScore', 'irTime', 'crTime'])
 
 if exists(sys.argv[1]):
-    print(sys.argv[1])
-    with open(sys.argv[1], 'rb') as f:
-        account_keys = set([account['code'] for account in json.loads(f.read())])
+    file_path = sys.argv[1]
+
+    print(file_path)
+
+    assert(file_path[:-5] == '.json' or file_path[:-7] == '.ndjson')
+
+    with open(file_path, 'rb') as f:
+        if file_path[:-5] == '.json':
+            account_keys = set([account['code'] for account in json.loads(f.read())])
+        else:
+            account_keys = set([json.loads(line)['code'] for line in f])
 
     with ThreadPoolExecutor(max_workers=5) as executor:
         tasks = [executor.submit(export_project, account_key) for account_key in account_keys]

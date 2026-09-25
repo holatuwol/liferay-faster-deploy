@@ -1,7 +1,8 @@
 import argparse
 import base64
 import gzip
-import json
+import io
+import orjson as json
 from os.path import exists
 import sys
 
@@ -18,14 +19,23 @@ export_title = args.export_title
 default_ticket_range = args.ticket_range
 default_comment_range = args.comment_range
 
+tickets = []
+
 if exists(f"{cache_file}.gz"):
   with open(f"{cache_file}.gz", 'rb') as f:
-    ticket_bytes = f.read()
+    tickets = json.loads(gzip.decompress(f.read()))
 else:
   with open(f"{cache_file}", 'rb') as f:
-    ticket_bytes = gzip.compress(f.read())
+    tickets = json.loads(f.read())
 
-ticket_base64 = base64.b64encode(ticket_bytes).decode('utf-8')
+ticket_bytes = io.BytesIO()
+newline_bytes = '\n'.encode('utf-8')
+with gzip.open(ticket_bytes, 'wb') as gzip_ticket_bytes:
+   for ticket in tickets:
+      gzip_ticket_bytes.write(json.dumps(ticket))
+      gzip_ticket_bytes.write(newline_bytes)
+
+ticket_base64 = base64.b64encode(ticket_bytes.getvalue()).decode('utf-8')
 
 html_doc = f"""<!doctype html>
 <html lang="en">
@@ -270,8 +280,32 @@ html_doc = f"""<!doctype html>
 (async function() {{
   var compressedStream = new Blob([Uint8Array.fromBase64(document.getElementById("ticket-data").textContent)]).stream();
   var decompressedStream = compressedStream.pipeThrough(new DecompressionStream('gzip'));
-  var ticketsResponse = new Response(decompressedStream);
-  var tickets = JSON.parse(await ticketsResponse.text());
+  var response = new Response(decompressedStream);
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder("utf-8");
+  let buffer = "";
+  const tickets = [];
+  
+  while (true) {{
+    const {{ value, done }} = await reader.read();
+    if (done) break;
+    
+    buffer += decoder.decode(value, {{ stream: true }});
+    const lines = buffer.split("\\n");
+    buffer = lines.pop() || "";
+    
+    for (const line of lines) {{
+      const trimmed = line.trim();
+      if (trimmed) {{
+        tickets.push(JSON.parse(trimmed));
+      }}
+    }}
+  }}
+  
+  const finalTrimmed = buffer.trim();
+  if (finalTrimmed) {{
+    tickets.push(JSON.parse(finalTrimmed));
+  }}
 
   function esc(s) {{
     return (s == null ? "" : String(s))
@@ -656,16 +690,9 @@ html_doc = f"""<!doctype html>
 with open(f"{cache_file[:-5]}.html", "w", encoding="utf-8") as f:
     f.write(html_doc)
 
-if exists(f"{cache_file}.gz"):
-  with gzip.open(f"{cache_file}.gz", "rt", encoding="utf-8") as f:
-      data = json.load(f)
-else:
-  with open(cache_file, "r", encoding="utf-8") as f:
-      data = json.load(f)
-
 last_comment_date = max(
-    (c.get("createdDate") for t in data for c in t.get("comments", []) if c.get("createdDate") is not None),
+    (comment.get("createdDate") for ticket in tickets for comment in ticket.get("comments", []) if comment.get("createdDate") is not None),
     default=None,
 )
 
-print(f"Wrote export for {cache_file} ({len(data)} tickets), last comment was at {last_comment_date}")
+print(f"Wrote export for {cache_file} ({len(tickets)} tickets), last comment was at {last_comment_date}")
