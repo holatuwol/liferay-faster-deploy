@@ -429,7 +429,7 @@ html_doc = f"""<!doctype html>
 
     tocRows.push(
       '<tr data-created="' + (t.createdDate || "") + '" data-last-comment="' + (lastCommentMs || "") + '" data-comment-authors="' + commentAuthorsEscaped + '">' +
-        '<td data-sort="' + esc(key) + '"><a href="#ticket-' + anchor + '">' + esc(key) + "</a></td>" +
+        '<td data-sort="' + esc(key) + '"><a href="#" onclick="document.getElementById(\\'ticket-' + anchor + '\\').scrollIntoView(); return false;">' + esc(key) + "</a></td>" +
         '<td data-sort="' + esc(reporter) + '">' + reporter + '</td>' +
         "<td>" + summary + "</td>" +
         '<td data-sort="' + (t.createdDate || "") + '">' + esc(created) + "</td>" +
