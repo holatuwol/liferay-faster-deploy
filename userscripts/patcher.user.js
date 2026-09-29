@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        11.0
+// @version        11.1
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -2602,6 +2602,43 @@ function getTicketSecurityStatus(ticket, prefix, selectedVersion, jiraStatus) {
     }
     return `<span class="bulk-search-status-not-fixed">Not Fixed</span>, Severity: ${severity}, Target: ${allTargets.join(', ')}`;
 }
+async function fetchSecurityIssueSynonyms() {
+    const url = 'https://s3-us-west-2.amazonaws.com/mdang.grow/security_issue_synonyms.ndjson';
+    var res = await fetch(url);
+    if (!res.ok)
+        throw new Error(`${res.status} ${res.statusText} for ${url}`);
+    if (!res.body)
+        throw new Error(`Missing response body for ${url}`);
+    const reader = res.body.getReader();
+    if (!reader) {
+        return {};
+    }
+    const decoder = new TextDecoder("utf-8");
+    let buffer = "";
+    const dataList = [];
+    while (true) {
+        const { value, done } = await reader.read();
+        if (done)
+            break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed) {
+                dataList.push(JSON.parse(trimmed));
+            }
+        }
+    }
+    const finalTrimmed = buffer.trim();
+    if (finalTrimmed) {
+        dataList.push(JSON.parse(finalTrimmed));
+    }
+    return dataList.reduce((acc, next) => {
+        acc[next['key']] = next['value'];
+        return acc;
+    }, {});
+}
 function generateBulkSearchContentArea() {
     var projectVersions = getProjectVersionsFromDOM();
     var contentArea = document.createElement('div');
@@ -2698,29 +2735,17 @@ function generateBulkSearchContentArea() {
         var tokensList = Array.from(tokensSet);
         var cveTokensList = tokensList.filter(it => it.indexOf('CVE-') == 0 || it.indexOf('PRISMA-') == 0);
         var cveFixTokensSet = new Set();
-        var cveToLPELookup = {};
-        var lpeToCVELookup = {};
-        try {
-            var cveResponse = await fetch('https://s3-us-west-2.amazonaws.com/mdang.grow/security_issue_cve_lpe.json');
-            cveToLPELookup = await cveResponse.json();
-            var cveKeys = Object.keys(cveToLPELookup);
-            for (var i = 0; i < cveKeys.length; i++) {
-                var cve = cveKeys[i];
-                var lpes = cveToLPELookup[cve] || [];
-                for (var j = 0; j < lpes.length; j++) {
-                    var lpe = lpes[j];
-                    if (!lpeToCVELookup[lpe]) {
-                        lpeToCVELookup[lpe] = [];
-                    }
-                    if (lpeToCVELookup[lpe].indexOf(cve) === -1) {
-                        lpeToCVELookup[lpe].push(cve);
-                    }
-                }
-            }
-        }
-        catch (err) {
-            console.error('Failed to fetch CVE-LPE map', err);
-        }
+        var synonymLookup = await fetchSecurityIssueSynonyms();
+        var isCVE = (it) => it.indexOf('CVE-') == 0 || it.indexOf('PRISMA-') == 0;
+        var isLPE = (it) => it.indexOf('LPE-') == 0;
+        var cveToLPELookup = Object.keys(synonymLookup).filter(isCVE).reduce((acc, next) => {
+            acc[next] = synonymLookup[next].filter(isLPE);
+            return acc;
+        }, {});
+        var lpeToCVELookup = Object.keys(synonymLookup).filter(isLPE).reduce((acc, next) => {
+            acc[next] = synonymLookup[next].filter(isCVE);
+            return acc;
+        }, {});
         var nonCVETokensList = tokensList.filter(it => it.indexOf('CVE-') == -1 && it.indexOf('PRISMA-') == -1);
         if (cveTokensList.length > 0) {
             cveFixTokensSet = new Set(cveTokensList.map(it => cveToLPELookup[it] || []).reduce((acc, next) => acc.concat(next), []));
