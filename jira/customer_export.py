@@ -15,10 +15,10 @@ if exists(sys.argv[1]):
 
     print(file_path)
 
-    assert(file_path[:-5] == '.json' or file_path[:-7] == '.ndjson')
+    assert(file_path[-5:] == '.json' or file_path[-7:] == '.ndjson')
 
     with open(file_path, 'rb') as f:
-        if file_path[:-5] == '.json':
+        if file_path[-5:] == '.json':
             account_keys = set([account['code'] for account in json.loads(f.read())])
         else:
             account_keys = set([json.loads(line)['code'] for line in f])
