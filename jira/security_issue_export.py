@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import datetime
 import inspect
 import orjson as json
@@ -7,7 +8,7 @@ import zoneinfo
 
 sys.path.insert(0, dirname(dirname(abspath(inspect.getfile(inspect.currentframe())))))
 
-from jira import await_get_request, get_issues, jira_base_url
+from jira import await_get_request, get_issue_fields, get_issues, jira_base_url
 issue_fields = ['key', 'issuelinks', 'versions', 'fixVersions', 'customfield_10563', 'customfield_10886', 'customfield_10786', 'priority', 'labels', 'updated']
 
 def get_issues_by_key(file_name, issue_keys, target_date, target_tz):
@@ -43,13 +44,11 @@ def process_issue_links(issues, issue_link_keys):
             if 'inwardIssue' in issue_link:
                 issue_link_key = issue_link['inwardIssue']['key']
                 project = issue_link_key[:issue_link_key.find('-')]
-                if project in issue_link_keys:
-                    issue_link_keys[project].append(issue_link_key)
+                issue_link_keys[project].append(issue_link_key)
             if 'outwardIssue' in issue_link:
                 issue_link_key = issue_link['outwardIssue']['key']
                 project = issue_link_key[:issue_link_key.find('-')]
-                if project in issue_link_keys:
-                    issue_link_keys[project].append(issue_link_key)
+                issue_link_keys[project].append(issue_link_key)
 
 def export_jira_issues(target_date, target_tz):
     common_jql = ' and '.join([
@@ -72,9 +71,12 @@ def export_jira_issues(target_date, target_tz):
         'LPD': f'project = LPD and "Cross Cutting Properties" = "Security Vulnerability" and {common_jql}', 
     }
 
-    issue_link_keys = {'LPE': [], 'LSV': []}
+    issue_link_keys = defaultdict(list)
 
     for file_name, jql in jqls.items():
+        if file_name == 'COMMERCE':
+            continue
+
         file_path = f'security_issue_export/{file_name}.json'
 
         jql_issues = { issue_key: issue_response['fields'] for issue_key, issue_response in get_issues(f'({jql}) order by key', issue_fields, [], False).items() }
@@ -87,6 +89,14 @@ def export_jira_issues(target_date, target_tz):
         issues = jql_issues | missing_issues
 
         with open(file_path, 'wb') as f:
+            f.write(json.dumps(issues))
+
+        process_issue_links(issues, issue_link_keys)
+
+    if not exists(f'security_issue_export/COMMERCE.json'):
+        issues = { issue_key: get_issue_fields(issue_key, issue_fields) for issue_key in issue_link_keys['COMMERCE'] }
+
+        with open(f'security_issue_export/COMMERCE.json', 'wb') as f:
             f.write(json.dumps(issues))
 
         process_issue_links(issues, issue_link_keys)

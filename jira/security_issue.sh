@@ -8,12 +8,10 @@ s3upload() {
 }
 
 python security_issue_export.py
-python security_issue_lpe_cve.py
-python security_issue_cve_lpe.py
-
+python security_issue_synonyms.py
 python security_issue_fix_versions.py
 
-for file in security_issue_cve_lpe.json security_issue_lpe_cve.json security_issue_fix_versions.json; do
+for file in security_issue_synonyms.ndjson; do
 	s3upload ${file}
 done
 
