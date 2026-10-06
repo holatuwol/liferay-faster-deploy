@@ -82,6 +82,8 @@ def get_release_ulevel(release_name):
         return int(update[1:])
     if update[:2] == 'fp':
         return int(update[2:])
+    if update[:2] == 'de':
+        return int(update[2:])
 
     print(update)
     assert(False)
@@ -102,8 +104,8 @@ def ticket_sort_key(line):
     try:
         return (issue_key[:last_dash], int(issue_key[last_dash+1:]))
     except:
-        print(line)
-        exit(1)
+        print(f'error in line: "{line}"')
+        assert(False)
 
 def get_iso_time(jira_time):
     if jira_time == '':
@@ -176,13 +178,31 @@ def get_jira_fixed_issues(release_name, release_ids):
 
     release_raw_file_name = f'releases.{jira_env}/{release_name}.raw.json'
 
-    if exists(release_raw_file_name):
-        with open(release_raw_file_name, 'r') as f:
-            return json.load(f)
-
     release_issues = {}
 
-    fixed_issues = get_issues(query, None, render=True)
+    if release_name[:6] != '7.0.10' and release_name[:6] != '7.1.10':
+        if exists(release_raw_file_name):
+            with open(release_raw_file_name, 'r') as f:
+                return json.load(f)
+
+        fixed_issues = get_issues(query, None, render=True)
+    else:
+        if exists(release_raw_file_name):
+            with open(release_raw_file_name, 'r') as f:
+                return json.load(f)
+
+        release_keys_file_name = f'releases.{jira_env}/{release_name}.keys.json'
+
+        if not exists(release_keys_file_name):
+            print(f'unrecognized release {release_name}')
+            return {}
+
+        with open(release_keys_file_name, 'r') as f:
+            issue_keys = json.load(f)
+
+        query = f'key in ({','.join(issue_keys)})'
+
+        fixed_issues = get_issues(query, None, render=True)
 
     if len(fixed_issues) == 0:
         print('No issues found with query %s' % query)
@@ -220,7 +240,7 @@ def get_jira_fixed_issues(release_name, release_ids):
             if cve_issue is None:
                 continue
 
-            if cve_issue[:4] == 'CWE-':
+            if cve_issue[:4] == 'CWE-' or cve_issue[:4] == 'LSV-':
                 continue
 
             if cve_issue[:4] == 'CVE-':
@@ -235,7 +255,7 @@ def get_jira_fixed_issues(release_name, release_ids):
                 continue
 
             print(lsv_issue_key)
-            exit(1)
+            assert(False)
 
     if len(secure_issue_keys) > 0:
         print('Found [%s] = [%s] = [%s] for %s' % (','.join(secure_issue_keys), ','.join(lsv_issue_keys.keys()), ','.join(cve_issues), release_name))
@@ -293,8 +313,24 @@ def update_releases():
         elif name == '7.2.10 DXP GA1':
             release_num = 0
             short_name = '7.2.10-ga1'
+        elif name[:6] == '7.1.10' and name.find(' DXP FP') != -1:
+            release_num = int(name[name.rfind('FP')+2:].strip())
+            short_name = '7.1.10-fp%d' % release_num
+        elif name == '7.1.10 DXP GA1':
+            release_num = 0
+            short_name = '7.1.10-ga1'
+        elif name[:5] == '7.0.0' and name.find(' DXP FP') != -1:
+            release_num = int(name[name.rfind('FP')+2:].strip())
+            short_name = '7.0.10-de%d' % release_num
+        elif name == '7.0.0 DXP GA1':
+            release_num = 0
+            short_name = '7.0.10-ga1'
 
-        if short_name is None or get_release_ulevel(short_name) is None:
+        if short_name is None:
+            return False
+
+        if get_release_ulevel(short_name) is None:
+            print(name)
             return False
 
         project_releases[project].append(str(release['id']))

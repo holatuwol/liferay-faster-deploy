@@ -189,7 +189,7 @@ def get_releases(project):
     payload = {
         'startAt': start_at,
         'maxResults': 100,
-        'status': 'released',
+        'status': 'released,archived',
     }
 
     r = await_get_request(search_url, payload)

@@ -82,6 +82,44 @@ def normalize_version(name):
             pass
     elif name == '7.2.10 DXP GA1' or name == '7.2.0 GA1':
         short_name = '7.2.10-ga1'
+    elif name[:6] == '7.1.10' and name.find(' DXP FP') != -1:
+        try:
+            release_num = int(name[name.rfind('FP')+2:].strip())
+            short_name = '7.1.10-fp%d' % release_num
+        except ValueError:
+            pass
+    elif name == '7.1.10 DXP GA1' or name == '7.1.0 CE GA1':
+        short_name = '7.1.10-ga1'
+    elif (name[:6] == '7.0.10' or name[:5] == '7.0.0') and name.find(' DXP FP') != -1:
+        try:
+            release_num = int(name[name.rfind('FP')+2:].strip())
+            short_name = '7.0.10-de%d' % release_num
+        except ValueError:
+            pass
+    elif name == '7.0.0 DXP GA1' or name == '7.0.10 DXP GA1':
+        short_name = '7.0.10-ga1'
+    elif re.match(r'^7\.0\.\d+(?:\s+ce)?\s+(?:ga\d*|m\d+|milestone(?:\s+\d+)?|rc\d*|release\s+candidate(?:\s+\d+)?|alpha(?:\s+\d+)?|beta(?:\s+\d+)?)$', v_clean, re.IGNORECASE):
+        short_name = '7.0.10-ga1'
+    elif re.match(r'^7\.1\.\d+(?:\s+ce)?\s+(?:rc\d*|release\s+candidate(?:\s+\d+)?|alpha(?:\s+\d+)?|beta(?:\s+\d+)?)$', v_clean, re.IGNORECASE):
+        short_name = '7.1.10-ga1'
+    elif re.match(r'^7\.2\.\d+(?:\s+ce)?\s+(?:rc\d*|release\s+candidate(?:\s+\d+)?|alpha(?:\s+\d+)?|beta(?:\s+\d+)?)$', v_clean, re.IGNORECASE):
+        short_name = '7.2.10-ga1'
+    elif re.match(r'^7\.3\.\d+(?:\s+ce)?\s+(?:rc\d*|release\s+candidate(?:\s+\d+)?|alpha(?:\s+\d+)?|beta(?:\s+\d+)?)$', v_clean, re.IGNORECASE):
+        short_name = '7.3.10-ga1'
+    elif re.match(r'^7\.4\.\d+(?:\s+ce)?\s+(?:rc\d*|release\s+candidate(?:\s+\d+)?|alpha(?:\s+\d+)?|beta(?:\s+\d+)?)$', v_clean, re.IGNORECASE):
+        short_name = '7.4.13-ga1'
+    elif name[:10] == '7.0.10-de':
+        try:
+            release_num = int(name[10:])
+            short_name = '7.0.10-de%d' % release_num
+        except ValueError:
+            pass
+    elif name[:10] == '7.1.10-fp':
+        try:
+            release_num = int(name[10:])
+            short_name = '7.1.10-fp%d' % release_num
+        except ValueError:
+            pass
 
     if short_name is not None:
         short_clean = short_name.strip().lower()
@@ -129,13 +167,13 @@ def get_patch_level(vname):
 
 def get_standard_ulevel(vname):
     """
-    Extracts the update level / fix pack level suffix (e.g. 24 in 7.3.10-u24 or 15 in 7.2.10-fp15).
+    Extracts the update level / fix pack level suffix (e.g. 24 in 7.3.10-u24 or 15 in 7.2.10-fp15 or 60 in 7.0.10-de60).
     Defaults to 0 for GA1.
     """
     vname = vname.strip().lower()
     if '-ga1' in vname or 'ga1' in vname:
         return 0
-    m = re.search(r'(?:-u|-fp|-sp|u|fp|sp)(\d+)', vname)
+    m = re.search(r'(?:-u|-fp|-sp|-de|u|fp|sp|de)(\d+)', vname)
     if m:
         return int(m.group(1))
     return 0
@@ -230,8 +268,15 @@ def get_lsv_severity_group(lsv_keys, lsv_issues):
 def add_fix_version(fvs, name):
     lower_name = name.lower()
 
-    if lower_name == 'master' or ' ce ' in lower_name or 'milestone' in lower_name or 'sprint' in lower_name:
+    if lower_name == 'master' or 'sprint' in lower_name:
         return
+
+    if 'milestone' in lower_name and not re.match(r'^7\.\d+\.\d+', lower_name):
+        return
+
+    if ' ce ' in lower_name and not re.search(r'\b(?:rc\d*|release\s+candidate|alpha(?:\s+\d+)?|beta(?:\s+\d+)?)\b', lower_name):
+        if not lower_name.startswith('7.'):
+            return
     
     if lower_name[:2] == 'ac':
         return
@@ -239,7 +284,7 @@ def add_fix_version(fvs, name):
     if '.x' in lower_name:
         return
 
-    if lower_name[:3] in ['5.1', '5.2', '6.0', '6.1', '6.2', '7.0', '7.1']:
+    if lower_name[:3] in ['5.1', '5.2', '6.0', '6.1', '6.2']:
         return
     
     if lower_name[:3] == '7.2' and 'sp' in lower_name:
@@ -251,25 +296,52 @@ def add_fix_version(fvs, name):
 
 def get_issue_fix_versions(issue_node):
     """
-    Extracts fix versions and customfield_10886 fix versions from an issue node.
+    Extracts fix versions, customfield_10886 fix versions, and fixpack labels from an issue node.
     """
     fvs = set()
+    x_lines = set()
+
+    def process_fv(fv_node):
+        if isinstance(fv_node, dict) and 'name' in fv_node:
+            name = fv_node['name']
+            if '.x' in name.lower():
+                product_line = parse_product_line(name)
+                if product_line:
+                    x_lines.add(product_line)
+            else:
+                add_fix_version(fvs, name)
+
     for fv in issue_node.get('fixVersions', []):
-        if isinstance(fv, dict) and 'name' in fv:
-            name = fv['name']
-            add_fix_version(fvs, name)
+        process_fv(fv)
 
-    cf_val = issue_node.get('customfield_10886')
-    if cf_val:
-        if isinstance(cf_val, list):
-            for fv in cf_val:
-                if isinstance(fv, dict) and 'name' in fv:
-                    name = fv['name']
-                    add_fix_version(fvs, name)
+    for cf_key in ['customfield_10886', 'customfield_10978']:
+        cf_val = issue_node.get(cf_key)
+        if cf_val:
+            if isinstance(cf_val, list):
+                for fv in cf_val:
+                    process_fv(fv)
+            elif isinstance(cf_val, dict):
+                process_fv(cf_val)
 
-        elif isinstance(cf_val, dict) and 'name' in cf_val:
-            name = cf_val['name']
-            add_fix_version(fvs, name)
+    for label in issue_node.get('labels', []):
+        m_70 = re.match(r'^liferay-fixpack-(?:de-)+(\d+)-7010$', label)
+        if m_70:
+            add_fix_version(fvs, f'7.0.10-de{m_70.group(1)}')
+        m_71 = re.match(r'^liferay-fixpack-(?:dxp-)+(\d+)-7110$', label)
+        if m_71:
+            add_fix_version(fvs, f'7.1.10-fp{m_71.group(1)}')
+
+    for product_line in x_lines:
+        has_version = any(parse_product_line(v) == product_line for v in fvs)
+        if not has_version:
+            is_quarterly = bool(re.search(r'202[3-6]\.[qQ][1-4]', product_line))
+            versions = [v for v in ALL_VERSIONS if parse_product_line(v) == product_line]
+            if versions:
+                if is_quarterly:
+                    latest_v = max(versions, key=get_patch_level)
+                else:
+                    latest_v = max(versions, key=get_standard_ulevel)
+                fvs.add(normalize_version(latest_v))
 
     return fvs
 
@@ -310,6 +382,15 @@ def get_precomputed_data():
     except Exception as e:
         print(f"Error loading JSON cache files: {e}", file=sys.stderr)
         sys.exit(1)
+
+    with open('security_issue_extra_fix_versions.json','rt', encoding='utf-8') as f:
+        extra_fix_versions = json.loads(f.read())
+        
+    try:
+        with open('security_issue_extra_affects_versions.json','rt', encoding='utf-8') as f:
+            extra_affects_versions = json.loads(f.read())
+    except FileNotFoundError:
+        extra_affects_versions = {}
 
     # Combine into a single lookup index
     issues_all = {}
@@ -419,6 +500,28 @@ def get_precomputed_data():
 
         affects_versions = set(ver['name'] for issue_node in pooled_issues for ver in issue_node.get('versions', []))
 
+        # Check for milestone affects versions
+        for ver in affects_versions:
+            if re.search(r'\b(?:m\d+|alpha(?:\s+\d+)?|beta(?:\s+\d+)?)\b', ver, re.IGNORECASE):
+                stream = parse_product_line(ver)
+                if stream:
+                    has_stream_fix = any(parse_product_line(fv) == stream for fv in fix_versions)
+                    if not has_stream_fix:
+                        ga1_version = None
+                        if stream == '7.0':
+                            ga1_version = '7.0.10-ga1'
+                        elif stream == '7.1':
+                            ga1_version = '7.1.10-ga1'
+                        elif stream == '7.2':
+                            ga1_version = '7.2.10-ga1'
+                        elif stream == '7.3':
+                            ga1_version = '7.3.10-ga1'
+                        elif stream == '7.4':
+                            ga1_version = '7.4.13-ga1'
+                        
+                        if ga1_version:
+                            fix_versions.add(ga1_version)
+
         # Step 3: Extract fix versions applicable to the target version's product line
         group = None
         labels = issue.get('labels', [])
@@ -434,6 +537,12 @@ def get_precomputed_data():
                 group = get_lsv_severity_group(lsv_keys, lsv_issues)
             if not group:
                 group = 'unknown'
+
+        if key in extra_fix_versions:
+            fix_versions.update(extra_fix_versions[key])
+            
+        if key in extra_affects_versions:
+            affects_versions.update(extra_affects_versions[key])
 
         precomputed[key] = {
             'fix_versions': list(fix_versions),
@@ -489,7 +598,10 @@ def get_target_version_data(target_version):
 
         is_affected = False
 
-        if stream_fixes:
+        if target_line == '7.0' and '7.0.10-ga1' in stream_fixes:
+            # If an issue is fixed in GA1, it does not affect any DE releases
+            is_affected = False
+        elif stream_fixes:
             # Check if target version is older than any of the stream fixes
             for fv in stream_fixes:
                 fv_q_level = get_quarterly_level(fv)
@@ -554,13 +666,26 @@ def main():
         with open('security_issue_fix_versions.debug.json', 'wb') as f:
             f.write(json.dumps(ticket_results, option=json.OPT_INDENT_2))
     else:
+        empty_tickets = defaultdict(dict)
         sorted_output = { target_version: get_target_version_data(target_version) for target_version in target_versions }
 
         with open('security_issue_fix_versions.ndjson', 'wb') as f:
             encoded_new_line = '\n'.encode('utf-8')
             for key, value in sorted_output.items():
                 f.write(json.dumps({'key': key, 'value': value}))
+
+                product_line = parse_product_line(key)
+
+                if product_line not in empty_tickets:
+                    empty_tickets[product_line] = {
+                        severity: sorted([ticket for ticket, fix_versions in tickets.items() if len(fix_versions) == 0])
+                            for severity, tickets in value.items()
+                    }
+
                 f.write(encoded_new_line)
+
+        with open('security_issue_empty_fix_versions.json', 'wb') as f:
+            f.write(json.dumps(empty_tickets))
 
 if __name__ == '__main__':
     main()
