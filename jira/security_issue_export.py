@@ -2,6 +2,7 @@ from collections import defaultdict
 from datetime import datetime
 import inspect
 import orjson as json
+from os import remove
 from os.path import abspath, dirname, exists
 import sys
 import zoneinfo
@@ -9,7 +10,15 @@ import zoneinfo
 sys.path.insert(0, dirname(dirname(abspath(inspect.getfile(inspect.currentframe())))))
 
 from jira import await_get_request, get_issue_fields, get_issues, jira_base_url
-issue_fields = ['key', 'issuelinks', 'versions', 'fixVersions', 'customfield_10563', 'customfield_10886', 'customfield_10786', 'priority', 'labels', 'updated']
+
+issue_fields = ['key', 'issuelinks', 'versions', 'fixVersions', 'customfield_10563', 'customfield_10886', 'customfield_10786', 'customfield_10978', 'priority', 'labels', 'updated']
+
+common_lsv_jql = ' and '.join([
+    'project = LSV',
+    '("Issue Classification" is empty or "Issue Classification" not in ("False Positive", "Ignored", "Not Exploitable", "Won\'t Do"))',
+    'status = Closed',
+    'Resolution not in (Discarded, Duplicate, "Not a Bug", "Won\'t Fix")',
+])
 
 def get_issues_by_key(file_name, issue_keys, target_date, target_tz):
     file_path = f'security_issue_export/{file_name}.json'
@@ -51,6 +60,8 @@ def process_issue_links(issues, issue_link_keys):
                 issue_link_keys[project].append(issue_link_key)
 
 def export_jira_issues(target_date, target_tz):
+    global common_lsv_jql
+
     common_jql = ' and '.join([
         'level is not empty',
         'status = Closed',
@@ -58,28 +69,23 @@ def export_jira_issues(target_date, target_tz):
         f'updated < "{target_date.astimezone(target_tz).strftime("%Y-%m-%d %H:%M")}"'])
 
     other_keys = {
-        'COMMERCE': ['COMMERCE-1165'],
         'LPS': ['LPS-117307', 'LPS-138398', 'LPS-140907', 'LPS-159040', 'LPS-175631', 'LPS-203552'],
         'LPSA': ['LPSA-38892', 'LPSA-56431'],
         'LPD': ['LPD-11235', 'LPD-22045', 'LPD-26723', 'LPD-55827'],
     }
 
     jqls = {
-        'COMMERCE': f'project = COMMERCE and component = "Security Vulnerability" and {common_jql}',
         'LPS': f'project = LPS and component = "Security Vulnerability" and {common_jql}',
         'LPSA': f'project = LPSA and component = "Security Vulnerability" and {common_jql}',
-        'LPD': f'project = LPD and "Cross Cutting Properties" = "Security Vulnerability" and {common_jql}', 
+        'LPD': f'project = LPD and "Cross Cutting Properties" = "Security Vulnerability" and {common_jql}',
     }
 
     issue_link_keys = defaultdict(list)
 
     for file_name, jql in jqls.items():
-        if file_name == 'COMMERCE':
-            continue
-
         file_path = f'security_issue_export/{file_name}.json'
 
-        jql_issues = { issue_key: issue_response['fields'] for issue_key, issue_response in get_issues(f'({jql}) order by key', issue_fields, [], False).items() }
+        jql_issues = { issue_key: issue_response['fields'] for issue_key, issue_response in get_issues(f'{jql} order by key', issue_fields, [], False).items() }
 
         missing_issues = {}
 
@@ -93,35 +99,38 @@ def export_jira_issues(target_date, target_tz):
 
         process_issue_links(issues, issue_link_keys)
 
-    if not exists(f'security_issue_export/COMMERCE.json'):
+    if exists('security_issue_export/COMMERCE.json'):
+        with open(f'security_issue_export/COMMERCE.json', 'rt') as f:
+            issues = json.loads(f.read())
+
+        process_issue_links(issues, issue_link_keys)
+    else:
+        jql_issues = { issue_key: issue_response['fields'] for issue_key, issue_response in get_issues(f'{common_lsv_jql} order by key', issue_fields, [], False).items() }
+
+        process_issue_links(jql_issues, issue_link_keys)
+
         issues = { issue_key: get_issue_fields(issue_key, issue_fields) for issue_key in issue_link_keys['COMMERCE'] }
 
         with open(f'security_issue_export/COMMERCE.json', 'wb') as f:
             f.write(json.dumps(issues))
 
-        process_issue_links(issues, issue_link_keys)
-
     get_issues_by_key('LPE', issue_link_keys['LPE'], target_date, target_tz)
     get_issues_by_key('LSV', issue_link_keys['LSV'], target_date, target_tz)
 
 def check_missing_lsvs(target_date, target_tz):
+    global common_lsv_jql
+
+    common_jql = f'{common_lsv_jql} and updated < "{target_date.astimezone(target_tz).strftime("%Y-%m-%d %H:%M")}"'
+
     with open('security_issue_export/LSV.json', 'rt') as f:
         linked_lsvs = json.loads(f.read())
-
-    common_jql = ' and '.join([
-        'project = LSV',
-        '("Issue Classification" is empty or "Issue Classification" not in ("False Positive", "Ignored", "Not Exploitable", "Won\'t Do"))',
-        'status = Closed',
-        'Resolution not in (Discarded, Duplicate, "Not a Bug", "Won\'t Fix")',
-        f'updated < "{target_date.astimezone(target_tz).strftime("%Y-%m-%d %H:%M")}"'
-    ])
 
     lsvs_with_cves = get_issues(f'{common_jql} and ("CVE IDs[Short text]" ~ "CVE-*")', issue_fields, [], False)
 
     missing_lsvs_with_cves = [x for x in lsvs_with_cves.keys() if x not in linked_lsvs]
     print(len(missing_lsvs_with_cves), 'issues:', missing_lsvs_with_cves)
 
-    lsvs_without_cves = get_issues(f'{common_jql} and ("CVE IDs[Short text]" !~ "CVE-*" or "CVE IDs[Short text]" is empty) and (summary ~ "CVE-*" or description ~ "CVE-*" or comment ~ "CVE-*")')
+    lsvs_without_cves = get_issues(f'{common_lsv_jql} and ("CVE IDs[Short text]" !~ "CVE-*" or "CVE IDs[Short text]" is empty) and (summary ~ "CVE-*" or description ~ "CVE-*" or comment ~ "CVE-*")')
 
     missing_lsvs_without_cves = [x for x in lsvs_without_cves.keys() if x not in linked_lsvs]
     print(len(missing_lsvs_without_cves), 'issues:', missing_lsvs_without_cves)
