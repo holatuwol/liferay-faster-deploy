@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import os
 import sys
 import orjson as json
@@ -274,17 +273,13 @@ def get_issue_fix_versions(issue_node):
 
     return fvs
 
-def get_target_version_data(target_version):
-    target_line = parse_product_line(target_version)
-    target_q_level = get_quarterly_level(target_version)
-    target_patch_level = get_patch_level(target_version)
+_PRECOMPUTED_DATA = None
 
-    if not target_line:
-        print(f"Error: Could not identify product line for version '{target_version}'.", file=sys.stderr)
-        print("Please check the input format (e.g., '7.3 DXP (7.3.10)' or '2025.q1.15').", file=sys.stderr)
-        sys.exit(1)
+def get_precomputed_data():
+    global _PRECOMPUTED_DATA
+    if _PRECOMPUTED_DATA is not None:
+        return _PRECOMPUTED_DATA
 
-    # Resolve file paths relative to script directory
     script_dir = os.path.dirname(os.path.abspath(__file__))
     export_dir = os.path.join(script_dir, 'security_issue_export')
 
@@ -350,21 +345,13 @@ def get_target_version_data(target_version):
         if not has_lpe_path:
             disconnected_lsv_keys.append(lsv_key)
 
-    # Initialize grouped output structure
-    output_data = {
-        'sev-1': {},
-        'sev-2': {},
-        'sev-3': {},
-        'unknown': {}
-    }
-
-    # We evaluate all LPE issues, and any disconnected LSV issues
     issues_to_evaluate = []
     for k, v in lpe_issues.items():
-        issues_to_evaluate.append((k, v, False)) # key, issue dict, is_disconnected_lsv
+        issues_to_evaluate.append((k, v, False))
     for k in disconnected_lsv_keys:
         issues_to_evaluate.append((k, lsv_issues[k], True))
 
+    precomputed = {}
     for key, issue, is_disconnected_lsv in issues_to_evaluate:
         # Find all linked LSV issues within 1 or 2 hops (only if this isn't a disconnected LSV itself)
         lsv_keys = set()
@@ -433,10 +420,60 @@ def get_target_version_data(target_version):
         affects_versions = set(ver['name'] for issue_node in pooled_issues for ver in issue_node.get('versions', []))
 
         # Step 3: Extract fix versions applicable to the target version's product line
+        group = None
+        labels = issue.get('labels', [])
+        if 'sev-1' in labels:
+            group = 'sev-1'
+        elif 'sev-2' in labels:
+            group = 'sev-2'
+        elif 'sev-3' in labels:
+            group = 'sev-3'
+        
+        if not group:
+            if lsv_keys:
+                group = get_lsv_severity_group(lsv_keys, lsv_issues)
+            if not group:
+                group = 'unknown'
+
+        precomputed[key] = {
+            'fix_versions': list(fix_versions),
+            'affects_versions': list(affects_versions),
+            'group': group
+        }
+
+    _PRECOMPUTED_DATA = precomputed
+    return _PRECOMPUTED_DATA
+
+
+def get_target_version_data(target_version):
+    target_line = parse_product_line(target_version)
+    target_q_level = get_quarterly_level(target_version)
+    target_patch_level = get_patch_level(target_version)
+
+    if not target_line:
+        print(f"Error: Could not identify product line for version '{target_version}'.", file=sys.stderr)
+        print("Please check the input format (e.g., '7.3 DXP (7.3.10)' or '2025.q1.15').", file=sys.stderr)
+        sys.exit(1)
+
+    precomputed = get_precomputed_data()
+
+    output_data = {
+        'sev-1': {},
+        'sev-2': {},
+        'sev-3': {},
+        'unknown': {}
+    }
+
+    is_target_quarterly = bool(re.search(r'202[3-6]\.[qQ][1-4]', target_version))
+    target_rank = get_version_rank(target_version)
+
+    for key, data in precomputed.items():
+        fix_versions = set(data['fix_versions'])
+        affects_versions = set(data['affects_versions'])
+        group = data['group']
+
         stream_fixes = []
         applicable_fixes = []
-        is_target_quarterly = bool(re.search(r'202[3-6]\.[qQ][1-4]', target_version))
-        target_rank = get_version_rank(target_version)
 
         for fv in fix_versions:
             if is_applicable_fix_version(fv, target_version):
@@ -483,28 +520,6 @@ def get_target_version_data(target_version):
                     break
 
         if is_affected:
-            # Determine the severity group
-            group = None
-            labels = issue.get('labels', [])
-            
-            # 1. Check LPE/disconnected LSV labels first
-            if 'sev-1' in labels:
-                group = 'sev-1'
-            elif 'sev-2' in labels:
-                group = 'sev-2'
-            elif 'sev-3' in labels:
-                group = 'sev-3'
-            
-            # 2. Check severity/priority of matching LSV
-            if not group:
-                if lsv_keys:
-                    group = get_lsv_severity_group(lsv_keys, lsv_issues)
-                
-                # 3. If no matching LSV or all checks return None, mark as 'unknown'
-                if not group:
-                    group = 'unknown'
-
-            # Populate resolved fixes
             if not applicable_fixes:
                 output_data[group][key] = []
             else:
