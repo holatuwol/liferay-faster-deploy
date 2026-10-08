@@ -79,6 +79,9 @@
 
 <p class="alert alert-warning"><strong>Warning</strong>: This is NOT an official Liferay tool, nor is it supported by Liferay in any way.</p>
 
+<datalist id="versionList">
+</datalist>
+
 <table class="table">
 <thead>
 <tr>
@@ -91,12 +94,10 @@
 <tbody>
 <tr>
 <td>
-<select id="sourceVersion" name="sourceVersion">
-</select>
+<input id="sourceVersion" list="versionList" name="sourceVersion" />
 </td>
 <td>
-<select id="targetVersion" name="targetVersion">
-</select>
+<input id="targetVersion" list="versionList" name="targetVersion" />
 </td>
 <td>
 	<button id="updateButton" value="update" type="button">refresh</button>

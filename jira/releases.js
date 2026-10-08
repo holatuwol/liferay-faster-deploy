@@ -1,7 +1,8 @@
 var modifyState = history.pushState ? history.pushState.bind(history) : null;
 
-var select1 = document.getElementById('sourceVersion');
-var select2 = document.getElementById('targetVersion');
+var versionList = document.getElementById('versionList');
+var input1 = document.getElementById('sourceVersion');
+var input2 = document.getElementById('targetVersion');
 
 var releaseVersions = {};
 var releaseDetails = {};
@@ -36,6 +37,18 @@ function debounce(callback) {
 		timer = setTimeout(callback, 100);
 	};
 }
+
+var setIndex = function(input, x) {
+	for (var i = 0; i < versionList.options.length; i++) {
+		if (versionList.options[i].value == x) {
+			input.value = x;
+			return input.value;
+		}
+	}
+
+	input.value = versionList.options[versionList.options.length - 1].value;
+	return input.value;
+};
 
 function getLiferayVersion(version) {
   if (version.trim() == '') {
@@ -74,8 +87,8 @@ function checkReleaseDetails() {
 
 	releaseNotesElement.innerHTML = '';
 
-	var select1Value = select1.options[select1.selectedIndex].value;
-	var select2Value = select2.options[select2.selectedIndex].value;
+	var select1Value = setIndex(input1, input1.value);
+	var select2Value = setIndex(input2, input2.value);
 
 	if (modifyState) {
 		var baseURL = window.location.protocol + "//" + window.location.host + window.location.pathname;
@@ -192,8 +205,8 @@ function createTableOfContentsElement(checkboxName, elementId, label, count, tog
 };
 
 function exportReleaseNotesToCSV(ticketKeys) {
-	var select1Value = select1.options[select1.selectedIndex].value;
-	var select2Value = select2.options[select2.selectedIndex].value;
+	var select1Value = setIndex(input1, input1.value);
+	var select2Value = setIndex(input2, input2.value);
 
 	var [versionsToAdd, versionsToRemove] = getFetchVersions(select1Value, select2Value);
 
@@ -680,6 +693,18 @@ function getUpdate(version) {
 		var baseVersion = parseInt(version.substring(0, 6).substring(0, 6).replaceAll('.', ''));
 		return (baseVersion * 1000) + parseInt(version.substring(version.indexOf('-u') + 2));
 	}
+	else if (version.indexOf('-de') != -1) {
+		var baseVersion = parseInt(version.substring(0, 6).substring(0, 6).replaceAll('.', ''));
+		return (baseVersion * 1000) + parseInt(version.substring(version.indexOf('-de') + 3));
+	}
+	else if (version.indexOf('-fp') != -1) {
+		var baseVersion = parseInt(version.substring(0, 6).substring(0, 6).replaceAll('.', ''));
+		return (baseVersion * 1000) + parseInt(version.substring(version.indexOf('-fp') + 3));
+	}
+	else if (version.indexOf('-sp') != -1) {
+		var baseVersion = parseInt(version.substring(0, 6).substring(0, 6).replaceAll('.', ''));
+		return (baseVersion * 1000) + parseInt(version.substring(version.indexOf('-sp') + 3));
+	}
 	else if (version.indexOf('-ga1') != -1) {
 		var baseVersion = parseInt(version.substring(0, 6).substring(0, 6).replaceAll('.', ''));
 		return (baseVersion * 1000);
@@ -828,27 +853,14 @@ function initUI() {
 	fetch(requestURL).then(x => x.json()).then(releases => {
 		releaseVersions = releases;
 
-		var setIndex = function(select, x) {
-			for (var i = 0; i < select.options.length; i++) {
-				if (select.options[i].value == x) {
-					select.selectedIndex = i;
-					return;
-				}
-			}
-
-			select.selectedIndex = select.options.length - 1;
-		};
-
 		Object.keys(releases).forEach(it => {
-			var option1 = document.createElement('option');
-			var option2 = document.createElement('option');
-			option1.value = option1.textContent = option2.value = option2.textContent = it;
-			select1.appendChild(option1);
-			select2.appendChild(option2);
+			var option = document.createElement('option');
+			option.value = option.textContent = it;
+			versionList.appendChild(option);
 		});
 
-		setIndex(select1, getParameter('sourceVersion'));
-		setIndex(select2, getParameter('targetVersion'));
+		setIndex(input1, getParameter('sourceVersion'));
+		setIndex(input2, getParameter('targetVersion'));
 
 		var button = document.getElementById('updateButton');
 		button.onclick = checkReleaseDetails;
