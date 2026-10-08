@@ -84,6 +84,8 @@ def get_release_ulevel(release_name):
         return int(update[2:])
     if update[:2] == 'de':
         return int(update[2:])
+    if update[:2] == 'sp':
+        return int(update[2:])
 
     print(update)
     assert(False)
@@ -166,32 +168,25 @@ def get_issue_compact(fixed_issue):
 def get_jira_fixed_issues(release_name, release_ids):
     release_cf = get_release_cf(release_name)
 
-    if release_ids is not None and release_cf > 0:
+    release_keys_file_name = f'releases.{jira_env}/{release_name}.keys.json'
+    release_raw_file_name = f'releases.{jira_env}/{release_name}.raw.json'
+
+    if release_ids is not None and len(release_ids) > 0 and release_cf > 0:
         query = 'fixVersion in (%s) OR (project in ("LPE","LPS","LPD") AND cf[10210] = %s)' % (','.join(release_ids), release_cf)
-    elif release_ids is not None:
+    elif release_ids is not None and len(release_ids) > 0:
         query = 'fixVersion in (%s)' % ','.join(release_ids)
     elif release_cf > 0:
         query = f'project in ("LPE","LPS","LPD") AND cf[10210] = {release_cf}'
-    else:
+    elif not exists(release_keys_file_name):
         print(f'unrecognized release {release_name}')
         return {}
 
-    release_raw_file_name = f'releases.{jira_env}/{release_name}.raw.json'
-
     release_issues = {}
 
-    if release_name[:6] != '7.0.10' and release_name[:6] != '7.1.10':
+    if exists(release_keys_file_name):
         if exists(release_raw_file_name):
             with open(release_raw_file_name, 'r') as f:
                 return json.load(f)
-
-        fixed_issues = get_issues(query, None, render=True)
-    else:
-        if exists(release_raw_file_name):
-            with open(release_raw_file_name, 'r') as f:
-                return json.load(f)
-
-        release_keys_file_name = f'releases.{jira_env}/{release_name}.keys.json'
 
         if not exists(release_keys_file_name):
             print(f'unrecognized release {release_name}')
@@ -201,6 +196,12 @@ def get_jira_fixed_issues(release_name, release_ids):
             issue_keys = json.load(f)
 
         query = f'key in ({','.join(issue_keys)})'
+
+        fixed_issues = get_issues(query, None, render=True)
+    else:
+        if exists(release_raw_file_name):
+            with open(release_raw_file_name, 'r') as f:
+                return json.load(f)
 
         fixed_issues = get_issues(query, None, render=True)
 
@@ -348,6 +349,9 @@ def update_releases():
     assert(add_release('LPS', {'name': '7.2.10 DXP FP 19', 'id': '15257'}))
     assert(add_release('LPS', {'name': '7.2.10 DXP FP20', 'id': '15188'}))
     assert(add_release('LPD', {'name': '2023.Q4.3', 'id': '16748'}))
+
+    unsorted_releases['6.2.10-ga1'] = []
+    unsorted_releases.update({'6.2.10-sp%d' % i: [] for i in range(1, 21)})
 
     sorted_releases = OrderedDict(sorted(unsorted_releases.items(), key=lambda x: release_sort_key(x[0])))
 
