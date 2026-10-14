@@ -149,7 +149,7 @@ def parse_product_line(vname):
         return m_q.group(0).upper()
         
     # Match standard major/minor lines
-    for line in ['6.1', '6.2', '7.0', '7.1', '7.2', '7.3', '7.4']:
+    for line in ['6.1.10', '6.1.20', '6.1.30', '6.2.10', '6.1', '6.2', '7.0', '7.1', '7.2', '7.3', '7.4']:
         if line in vname:
             return line
             
@@ -171,12 +171,19 @@ def get_standard_ulevel(vname):
     Defaults to 0 for GA1.
     """
     vname = vname.strip().lower()
+    base_ulevel = 0
+
+    if vname[:4] == '6.1.':
+        base_ulevel = int(vname[4:6].replace('.', '')) * 1000
+    elif vname[:4] == '6.2.':
+        base_ulevel = int(vname[4:6].replace('.', '')) * 1000
+
     if '-ga1' in vname or 'ga1' in vname:
-        return 0
+        return base_ulevel
     m = re.search(r'(?:-u|-fp|-sp|-de|u|fp|sp|de)(\d+)', vname)
     if m:
-        return int(m.group(1))
-    return 0
+        return base_ulevel + int(m.group(1))
+    return base_ulevel
 
 def is_applicable_fix_version(fv_name, target_version):
     """
@@ -218,13 +225,24 @@ def get_version_rank(vname):
         # Extract patch level if any, e.g. .15 in 2025.q1.15
         m_p = re.search(r'202[3-6]\.[qQ][1-4]\.(\d+)', vname)
         patch = int(m_p.group(1)) if m_p else 0
-        return 704000 + u_level * 100 + patch
+        return 740000 + u_level * 100 + patch
 
+    for line in ['6.1.10', '6.1.20', '6.1.30', '6.2.10']:
+        if line in vname:
+            major, minor, patch = map(int, line.split('.'))
+            return major * 100000 + minor * 10000 + patch * 1000
+
+    if '6.1' in vname:
+        return 6 * 100000 + 1 * 10000
+
+    if '6.2' in vname:
+        return 6 * 100000 + 2 * 10000
+    
     # Check standard lines
-    for line in ['6.1', '6.2', '7.0', '7.1', '7.2', '7.3', '7.4']:
+    for line in ['7.0', '7.1', '7.2', '7.3', '7.4']:
         if line in vname:
             major, minor = map(int, line.split('.'))
-            return major * 100000 + minor * 1000
+            return major * 100000 + minor * 10000
             
     return 0
 
@@ -332,7 +350,12 @@ def get_issue_fix_versions(issue_node):
             add_fix_version(fvs, f'7.1.10-fp{m_71.group(1)}')
 
     for product_line in x_lines:
-        has_version = any(parse_product_line(v) == product_line for v in fvs)
+        has_version = False
+        for v in fvs:
+            v_line = parse_product_line(v)
+            if v_line and v_line.startswith(product_line):
+                has_version = True
+                break
         if not has_version:
             is_quarterly = bool(re.search(r'202[3-6]\.[qQ][1-4]', product_line))
             versions = [v for v in ALL_VERSIONS if parse_product_line(v) == product_line]
@@ -385,6 +408,22 @@ def get_precomputed_data():
 
     with open('security_issue_extra_fix_versions.json','rt', encoding='utf-8') as f:
         extra_fix_versions = json.loads(f.read())
+        
+    releases_prod_dir = os.path.join(script_dir, 'releases.production')
+    if os.path.exists(releases_prod_dir):
+        for fname in os.listdir(releases_prod_dir):
+            if fname.endswith('.keys.json'):
+                version_name = fname[:-10]
+                if version_name.startswith(('6.1.', '6.2.', '7.0.', '7.1.')):
+                    try:
+                        with open(os.path.join(releases_prod_dir, fname), 'rt', encoding='utf-8') as f:
+                            keys = json.loads(f.read())
+                            for key in keys:
+                                if key not in extra_fix_versions:
+                                    extra_fix_versions[key] = []
+                                extra_fix_versions[key].append(version_name)
+                    except Exception as e:
+                        print(f"Error loading {fname}: {e}", file=sys.stderr)
         
     try:
         with open('security_issue_extra_affects_versions.json','rt', encoding='utf-8') as f:
@@ -627,7 +666,8 @@ def get_target_version_data(target_version):
         else:
             # Step 4: Heuristic fallback (check if target line is explicitly in the affects version list)
             for ver in affects_versions:
-                if parse_product_line(ver) == target_line:
+                ver_line = parse_product_line(ver)
+                if ver_line and target_line.startswith(ver_line):
                     is_affected = True
                     break
 

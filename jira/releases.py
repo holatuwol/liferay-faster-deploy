@@ -66,7 +66,7 @@ def get_release_cf(release_name):
     return int(release_name.split('-')[1][1:])
 
 def get_release_ulevel(release_name):
-    if release_name[-3:] == 'ga1':
+    if release_name[-3:-1] == 'ga':
         return 0
 
     if release_name.find('.q') != -1:
@@ -278,6 +278,14 @@ def update_releases():
     project_releases = defaultdict(list)
     unsorted_releases = defaultdict(list)
 
+    unsorted_releases.update({'6.1.%d-ga%d' % (i * 10, i): [] for i in range(1, 4)})
+
+    unsorted_releases['6.2.10-ga1'] = []
+    unsorted_releases.update({'6.2.10-sp%d' % i: [] for i in range(1, 21)})
+
+    unsorted_releases['7.0.10-ga1'] = []
+    unsorted_releases.update({'7.0.10-de%d' % i: [] for i in range(1, 103)})
+
     def add_release(project, release):
         name = release['name']
         short_name = None
@@ -326,6 +334,15 @@ def update_releases():
         elif name == '7.0.0 DXP GA1':
             release_num = 0
             short_name = '7.0.10-ga1'
+        elif name == '6.1.30 EE GA3':
+            release_num = 0
+            short_name = '6.1.30-ga3'
+        elif name == '6.1.20 EE GA2':
+            release_num = 0
+            short_name = '6.1.20-ga2'
+        elif name == '6.1.10 EE GA1':
+            release_num = 0
+            short_name = '6.1.10-ga1'
 
         if short_name is None:
             return False
@@ -344,14 +361,14 @@ def update_releases():
 
     for release in get_releases('LPD'):
         add_release('LPD', release)
-    
+
+    for release in get_releases('LPE'):
+        add_release('LPE', release)
+
     # add releases where we skipped the release step on Jira
     assert(add_release('LPS', {'name': '7.2.10 DXP FP 19', 'id': '15257'}))
     assert(add_release('LPS', {'name': '7.2.10 DXP FP20', 'id': '15188'}))
     assert(add_release('LPD', {'name': '2023.Q4.3', 'id': '16748'}))
-
-    unsorted_releases['6.2.10-ga1'] = []
-    unsorted_releases.update({'6.2.10-sp%d' % i: [] for i in range(1, 21)})
 
     sorted_releases = OrderedDict(sorted(unsorted_releases.items(), key=lambda x: release_sort_key(x[0])))
 
