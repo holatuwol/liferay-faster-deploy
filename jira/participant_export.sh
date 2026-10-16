@@ -14,7 +14,7 @@ export_html() {
 if [ "" == "${1}" ]; then
     python participant_export.py
 
-    for file_name in participant_export/*.json.gz; do
+    for file_name in $(find participant_export -name '*.json.gz'); do
         user_name="$(basename "${file_name}" | sed 's/.json.gz$//g')"
         export_html ${user_name}
     done
