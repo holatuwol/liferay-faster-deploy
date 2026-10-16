@@ -94,7 +94,7 @@ def get_servicedesk_issue(issue_key, issue_fields):
 
         comments = []
 
-        if 'comment' in issue:
+        if 'comments' in issue:
             comments = [issue['comments'][0]]
 
         issue['comments'] = comments
