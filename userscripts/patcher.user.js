@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        11.2
+// @version        11.3
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -226,7 +226,6 @@ if (document.location.pathname.indexOf('/create') != -1) {
 }
 var AUI = unsafeWindow.AUI;
 var Liferay = unsafeWindow.Liferay;
-var _1_WAR_osbpatcherportlet_productVersionOnChange = unsafeWindow._1_WAR_osbpatcherportlet_productVersionOnChange;
 var portletId = '1_WAR_osbpatcherportlet';
 var ns = '_' + portletId + '_';
 /**
@@ -1207,7 +1206,7 @@ function updateProductVersionSelect() {
     var option = getDefaultProductVersionOption(productVersionSelect, liferayVersion);
     if (option) {
         option.selected = true;
-        _1_WAR_osbpatcherportlet_productVersionOnChange(option.value);
+        unsafeWindow._1_WAR_osbpatcherportlet_productVersionOnChange(option.value);
         setTimeout(updateProjectVersionOrder, 500);
     }
 }
