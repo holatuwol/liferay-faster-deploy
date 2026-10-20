@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		 Customer Portal Quarterly Release Downloads Filter
 // @namespace	holatuwol
-// @version	  0.6
+// @version	  0.8
 // @updateURL	https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/customer_portal.user.js
 // @match		https://customer.liferay.com/downloads*
 // @grant		unsafeWindow
@@ -116,7 +116,6 @@
 		// Input field for dynamic typing
 		const input = document.createElement('input');
 		input.type = 'text';
-		input.placeholder = 'Filter or target release (e.g., 2023.Q4)...';
 		input.style.cssText = `
 			padding: 6px 12px;
 			border: 1px solid #cbd5e1;
@@ -134,16 +133,34 @@
 		var fileTypeAssetCategoryId = getSearchParam('fileTypeAssetCategoryId');
 
 		var presets = [];
-		var activeTarget = '';
 
-		if (productAssetCategoryId == '122235468') {
-			if (fileTypeAssetCategoryId == '122589696') {
-				presets = ['All'].concat(Array.from(new Set(Array.from(document.querySelectorAll('.section-title')).map(it => /[0-9]+\.Q[1-4]/g.exec(it.textContent?.trim())).filter(it => it).map(it => it[0]))).sort().reverse());
-			}
+		// Quarterly releases are grouped by quarter, other products list each
+		// service pack, fix pack, security fix pack, or update in the order of
+		// the page.
+		var sectionTitles = Array.from(document.querySelectorAll('.section-title')).map(it => it.textContent?.trim());
+		var quarters = sectionTitles.map(it => /[0-9]+\.Q[1-4]/g.exec(it)).filter(it => it).map(it => it[0]);
 
-			activeTarget = sessionStorage.getItem('liferay_active_filter') || '';
-			input.value = activeTarget;
+		if (quarters.length) {
+			presets = Array.from(new Set(quarters)).sort().reverse();
 		}
+		else {
+			presets = Array.from(new Set(sectionTitles.map(it => /(Security Fix Pack|Service Pack|Fix Pack|Update|GA) ?[0-9]+/gi.exec(it)).filter(it => it).map(it => it[0])));
+		}
+
+		if (presets.length) {
+			input.placeholder = `Filter or target release (e.g., ${presets[0]})...`;
+			presets = ['All'].concat(presets);
+		}
+		else {
+			input.placeholder = 'Filter or target release...';
+		}
+
+		// Remember the active filter for each product, so that a quarterly
+		// filter does not hide the releases of another product.
+		var activeFilterKey = `liferay_active_filter_${productAssetCategoryId}`;
+
+		var activeTarget = sessionStorage.getItem(activeFilterKey) || '';
+		input.value = activeTarget;
 
 		// Retrieve active stored filter across page reloads
 
@@ -166,7 +183,7 @@
 
 			btn.onclick = () => {
 				const targetVal = text === 'All' ? '' : text;
-				sessionStorage.setItem('liferay_active_filter', targetVal);
+				sessionStorage.setItem(activeFilterKey, targetVal);
 				input.value = targetVal;
 
 				// Update UI active styles
@@ -183,6 +200,24 @@
 			buttonGroup.appendChild(btn);
 		});
 
+		// A term that ends with a number does not match a longer number, so
+		// "Fix Pack 1" does not match "Fix Pack 10".
+		function matches(text, searchTerm) {
+			var index = text.indexOf(searchTerm);
+
+			while (index != -1) {
+				var nextChar = text.charAt(index + searchTerm.length);
+
+				if (!/[0-9]$/.test(searchTerm) || !/[0-9]/.test(nextChar)) {
+					return true;
+				}
+
+				index = text.indexOf(searchTerm, index + 1);
+			}
+
+			return false;
+		}
+
 		// Filter visible releases or navigate to next pagination page if 0 matches found
 		function applyFilterOrNavigate(query) {
 			const searchTerm = query.toLowerCase().trim();
@@ -193,7 +228,7 @@
 				const text = (title.textContent).toLowerCase();
 				const row = title.closest('tr');
 				// Match against release titles
-				if (!searchTerm || text.includes(searchTerm)) {
+				if (!searchTerm || matches(text, searchTerm)) {
 					row.style.display = '';
 					visibleCount++;
 				} else {
@@ -202,8 +237,24 @@
 			});
 		}
 
+		// The page keeps the old releases until a product and a type are
+		// selected, so remove the buttons of the old product.
+		const productForm = document.getElementById(`portlet_${portletId}`) || document;
+
+		productForm.addEventListener('change', (e) => {
+			if (e.target.tagName != 'SELECT') {
+				return;
+			}
+
+			buttonGroup.remove();
+			input.value = '';
+			input.disabled = true;
+			input.placeholder = 'Select a product and a type to filter the releases...';
+			applyFilterOrNavigate('');
+		});
+
 		input.oninput = (e) => {
-			sessionStorage.setItem('liferay_active_filter', e.target.value);
+			sessionStorage.setItem(activeFilterKey, e.target.value);
 			applyFilterOrNavigate(e.target.value);
 		};
 
@@ -239,6 +290,9 @@
 				}, 300));
 
 				waitForResultsTable.observe(portlet, {childList: true, subtree: true});
+			}
+			else {
+				applyFilterOrNavigate(activeTarget);
 			}
 		}
 	}
