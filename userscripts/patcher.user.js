@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        11.7
+// @version        11.8
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -98,6 +98,29 @@ th.branch-type a {
 #toggle_id_patcher_fix_searchadvancedBodyNode .control-group.input-String-wrapper,
 #toggle_id_patcher_fix_searchadvancedBodyNode .control-group.input-text-wrapper {
   display: block;
+}
+
+.patcher-form-row {
+  display: grid !important;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: start;
+  justify-items: start;
+  margin-bottom: 12px !important;
+  row-gap: 12px;
+}
+
+.patcher-form-row > * {
+  grid-column: 2;
+  margin: 0 !important;
+}
+
+.patcher-form-row > textarea {
+  box-sizing: border-box;
+}
+
+.patcher-form-row > .patcher-form-label {
+  grid-column: 1;
+  grid-row: 1;
 }
 
 a[href*="https://grow.liferay.com/"] {
@@ -1703,6 +1726,28 @@ function updateCompactContainer(compactContainer, controlGroup) {
     tableCell.textContent = ticketCount + ((ticketCount == 1) ? ' ticket' : ' tickets');
     tableRow.appendChild(tableCell);
 }
+/**
+ * Puts the label of each flex form row in a column of its own, and each
+ * field of the row on a line of its own. Without this, the selects and
+ * the inputs that this script adds next to a field make the row too wide.
+ */
+function layoutFormRows() {
+    var rows = document.querySelectorAll('#p_p_id' + ns + ' .control-group');
+    for (var i = 0; i < rows.length; i++) {
+        var row = rows[i];
+        if (row.classList.contains('patcher-form-row') || (getComputedStyle(row).display != 'flex')) {
+            continue;
+        }
+        var label = Array.from(row.children).find(function (child) {
+            return (child.tagName.toLowerCase() == 'label') || child.classList.contains('control-label');
+        });
+        if (!label) {
+            continue;
+        }
+        label.classList.add('patcher-form-label');
+        row.classList.add('patcher-form-row');
+    }
+}
 function rearrangeColumns() {
     if (document.location.pathname.indexOf('/-/osb_patcher/builds/') == -1) {
         return;
@@ -3070,6 +3115,11 @@ var applyPatcherCustomizations = function () {
     // template this sorts, and the clone must be sorted by that function.
     sortProjectVersionIdFilterSelects();
     compareBuildFixes();
+    layoutFormRows();
+    new MutationObserver(debounce(layoutFormRows, 100)).observe(document.body, {
+        childList: true,
+        subtree: true,
+    });
 };
 if (exportFunction) {
     applyPatcherCustomizations = exportFunction(applyPatcherCustomizations, window);
