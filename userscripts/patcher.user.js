@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        11.4
+// @version        11.5
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -772,46 +772,194 @@ function addProductVersionFilter() {
     else {
         updateProductVersionSelect();
     }
-    waitForElement('patcherProjectVersionId').then(function (element) {
-        addProjectVersionFilterInput(element);
+    var addCreateProjectVersionFilterInput = function () {
+        var projectVersionSelect = querySelector('patcherProjectVersionId');
+        if (projectVersionSelect && !projectVersionSelect.disabled) {
+            addProjectVersionFilterInput(projectVersionSelect);
+        }
+    };
+    new MutationObserver(debounce(addCreateProjectVersionFilterInput, 100)).observe(document.body, {
+        childList: true,
+        subtree: true,
+    });
+    addCreateProjectVersionFilterInput();
+}
+var projectVersionInputCount = 0;
+var projectVersionSelectsWithInput = new WeakSet();
+/**
+ * Returns the texts of the project version options, from the newest
+ * version to the oldest. A filter select keeps its option without a
+ * value (for example 'All') at the start, so that the filter can be
+ * removed.
+ */
+function getProjectVersionTexts(projectVersionSelect) {
+    var isFilter = projectVersionSelect.name == (ns + 'patcherProjectVersionIdFilter');
+    var emptyValueTexts = [];
+    var versionTexts = [];
+    for (var i = 0; i < projectVersionSelect.options.length; i++) {
+        var option = projectVersionSelect.options[i];
+        var text = (option.textContent || '').trim();
+        if (text == '') {
+            continue;
+        }
+        if (option.value != '') {
+            versionTexts.push(text);
+        }
+        else if (isFilter) {
+            emptyValueTexts.push(text);
+        }
+    }
+    return emptyValueTexts.concat(versionTexts.sort(function (a, b) {
+        return b.localeCompare(a, 'en', {numeric: true});
+    }));
+}
+/**
+ * Returns true if the page or the query string selects a project version
+ * in the given select of a create page. The page can mark the version
+ * with the selected attribute, and the query string can name the version.
+ * Use as Build Template (templatePatcherBuildId in the query string)
+ * selects the version of the template without the selected attribute.
+ */
+function isProjectVersionPreselected(projectVersionSelect) {
+    if (new RegExp(ns + 'templatePatcherBuildId=\\d+').test(document.location.search)) {
+        return true;
+    }
+    var match = new RegExp(ns + 'patcherProjectVersionId=(\\d+)').exec(document.location.search);
+    return Array.from(projectVersionSelect.options).some(function (option) {
+        return option.hasAttribute('selected') || (match && (option.value == match[1]));
     });
 }
 /**
- * Adds a text input that filters the options of the project version
- * select as you type. Called immediately after the project version
- * select is synthesized (when a product version was already selected on
- * page load), later once the portlet's own AJAX call populates the
- * project version select after the user picks a product version
- * manually (since selectedVersion is null on a fresh "create fix" form
- * and addProjectVersionFilter never runs in that case), and also for
- * any other page's project version filter select (see
- * sortProjectVersionIdFilterSelects). A given select is only marked up
- * with a filter input once, tracked on the select itself rather than by
- * a fixed input id, since there can be more than one such select on the
- * same page.
+ * Creates a text input with a list of choices. Typing in the input
+ * filters the list. When the input text is equal to a choice, the input
+ * calls onSelect with that text. When the input gets the focus, it is
+ * cleared, so that the full list shows.
+ */
+function createVersionInput(placeholder, onSelect) {
+    var dataList = document.createElement('datalist');
+    dataList.id = ns + 'projectVersionList' + (++projectVersionInputCount);
+    var input = document.createElement('input');
+    input.setAttribute('list', dataList.id);
+    input.style.minWidth = '16em';
+    input.type = 'text';
+    var selectedText = '';
+    var texts = [];
+    var selectText = function () {
+        var text = input.value.trim();
+        if ((text != selectedText) && (texts.indexOf(text) != -1)) {
+            onSelect(text);
+        }
+    };
+    input.addEventListener('blur', function () {
+        if (!input.value.trim()) {
+            input.value = selectedText;
+        }
+    });
+    input.addEventListener('change', selectText);
+    input.addEventListener('focus', function () {
+        input.value = '';
+    });
+    input.addEventListener('input', function (event) {
+        if (event.inputType != 'insertText') {
+            selectText();
+        }
+    });
+    return {
+        dataList: dataList,
+        input: input,
+        insert: function (parentElement, nextSibling) {
+            parentElement.insertBefore(input, nextSibling);
+            parentElement.insertBefore(dataList, nextSibling);
+        },
+        setSelectedText: function (text) {
+            selectedText = text;
+            input.placeholder = text || placeholder;
+            if (document.activeElement != input) {
+                input.value = text;
+            }
+        },
+        hasText: function (text) {
+            return texts.indexOf(text) != -1;
+        },
+        setTexts: function (newTexts) {
+            texts = newTexts;
+            dataList.innerHTML = '';
+            for (var i = 0; i < texts.length; i++) {
+                var option = document.createElement('option');
+                option.value = texts[i];
+                dataList.appendChild(option);
+            }
+        }
+    };
+}
+/**
+ * Replaces a project version select with a text input that has a list of
+ * the project versions. The select stays in the form but is hidden, and a
+ * pick from the list selects the same version in the select. Called once
+ * the portlet's own AJAX call populates the project version select of a
+ * create page, and also for any other page's project version filter
+ * select (see sortProjectVersionIdFilterSelects). A given select gets an
+ * input only once, tracked in a WeakSet rather than by a fixed input id,
+ * since there can be more than one such select on the same page. A
+ * WeakSet and not an attribute, since the portlet can replace the select
+ * with a copy of it, and the copy must get an input of its own. If the
+ * portlet replaces the select, the input of the old select
+ * is removed, and projectVersionIdReady does not fire again, so that
+ * updateFromQueryString does not undo the choices of the user. A create
+ * page select starts without a version, so that the user must pick one,
+ * except when the page or the query string selects one (for example Use
+ * as Build Template).
  */
 function addProjectVersionFilterInput(projectVersionSelect) {
-    if (projectVersionSelect.getAttribute('data-has-filter-input') == 'true') {
+    if (projectVersionSelectsWithInput.has(projectVersionSelect)) {
         return;
     }
-    projectVersionSelect.setAttribute('data-has-filter-input', 'true');
-    var projectVersionFilterInput = document.createElement('input');
-    projectVersionFilterInput.type = 'text';
-    projectVersionFilterInput.placeholder = 'Filter project versions';
-    projectVersionFilterInput.addEventListener('input', function () {
-        filterProjectVersionSelect(projectVersionSelect, projectVersionFilterInput.value);
+    projectVersionSelectsWithInput.add(projectVersionSelect);
+    var oldElements = Array.from(projectVersionSelect.parentElement.children).filter(function (element) {
+        return element.classList.contains('project-version-input');
     });
-    var projectSelectedValue = projectVersionSelect.selectedIndex > -1 ? projectVersionSelect.options[projectVersionSelect.selectedIndex].value : null;
-    var projectVersionSelectParentElement = projectVersionSelect.parentElement;
-    projectVersionSelectParentElement.insertBefore(projectVersionFilterInput, projectVersionSelect);
-    filterProjectVersionSelect(projectVersionSelect, '');
-    if (projectSelectedValue) {
-        var projectSelectedOption = projectVersionSelect.querySelector('option[value="' + projectSelectedValue + '"]');
-        if (projectSelectedOption) {
-            projectSelectedOption.selected = true;
-        }
+    var isReplacement = oldElements.length > 0;
+    for (var i = 0; i < oldElements.length; i++) {
+        oldElements[i].remove();
     }
-    Liferay.fire('projectVersionIdReady');
+    var isFilter = projectVersionSelect.name == (ns + 'patcherProjectVersionIdFilter');
+    var isPicked = false;
+    var versionInput = createVersionInput('Select a project version', function (text) {
+        var option = Array.from(projectVersionSelect.options).find(function (option) {
+            return (option.textContent || '').trim() == text;
+        });
+        isPicked = true;
+        projectVersionSelect.value = option.value;
+        projectVersionSelect.dispatchEvent(new Event('change', {bubbles: true}));
+    });
+    var updateVersionInput = function () {
+        versionInput.setTexts(getProjectVersionTexts(projectVersionSelect));
+        if (!isFilter && !isPicked && !isProjectVersionPreselected(projectVersionSelect)) {
+            projectVersionSelect.selectedIndex = -1;
+            versionInput.setSelectedText('');
+            return;
+        }
+        var selectedOption = projectVersionSelect.options[projectVersionSelect.selectedIndex];
+        var selectedText = selectedOption ? (selectedOption.textContent || '').trim() : '';
+        versionInput.setSelectedText(versionInput.hasText(selectedText) ? selectedText : '');
+    };
+    versionInput.dataList.classList.add('project-version-input');
+    versionInput.input.classList.add('project-version-input');
+    versionInput.input.required = !isFilter;
+    projectVersionSelect.style.display = 'none';
+    versionInput.insert(projectVersionSelect.parentElement, projectVersionSelect);
+    projectVersionSelect.addEventListener('change', updateVersionInput);
+    new MutationObserver(function () {
+        isPicked = false;
+        updateVersionInput();
+    }).observe(projectVersionSelect, {
+        childList: true,
+        subtree: true,
+    });
+    updateVersionInput();
+    if (!isReplacement) {
+        Liferay.fire('projectVersionIdReady');
+    }
 }
 function addProjectVersionFilter(productVersionSelect, selectedVersion) {
     var projectVersionSelect = querySelector('patcherProjectVersionId');
@@ -1027,114 +1175,6 @@ function groupAndSortOptions(select) {
         else {
             select.appendChild(option);
         }
-    }
-}
-/**
- * Returns whether every character of the pattern appears in the text in
- * the same order, though not necessarily contiguously (e.g. 'q413'
- * fuzzy-matches '7.4.13-q4'), the same style of matching used by fuzzy
- * finders like fzf or the VS Code quick open.
- */
-function fuzzyMatch(text, pattern) {
-    if (pattern === '') {
-        return true;
-    }
-    var textIndex = 0;
-    for (var patternIndex = 0; patternIndex < pattern.length; patternIndex++) {
-        textIndex = text.indexOf(pattern[patternIndex], textIndex);
-        if (textIndex == -1) {
-            return false;
-        }
-        textIndex++;
-    }
-    return true;
-}
-/**
- * Hides options in the project version select whose text doesn't match
- * the given filter text, so that a long list of project versions can be
- * narrowed down by typing instead of scrolling through the full list.
- * Since options are kept in ascending numeric order (see
- * updateProjectVersionOrder), the first matching option is the earliest
- * matching version, so it's automatically selected, whether that's the
- * first option overall (filter text is empty) or the first option that
- * matches what was typed. Options prefixed with 'test-' are skipped in
- * favor of a non-'test-' match, since they're not meant to be used by
- * default, but if 'test-' options are the only matches, one of them is
- * selected anyway rather than leaving nothing selected.
- * Updates are applied to optgroups first, falling back to option-level
- * matching only if no optgroups match.
- */
-function filterProjectVersionSelect(projectVersionSelect, filterText) {
-    var normalizedFilterText = filterText.trim().toLowerCase();
-    var optgroups = Array.from(projectVersionSelect.querySelectorAll('optgroup'));
-    var matchingOptgroups = optgroups.filter(function (optgroup) {
-        var label = (optgroup.getAttribute('label') || '').toLowerCase();
-        return fuzzyMatch(label, normalizedFilterText);
-    });
-    var optgroupMatchMode = normalizedFilterText !== '' && matchingOptgroups.length > 0;
-    var firstMatchingOption = null;
-    var firstMatchingTestOption = null;
-    if (optgroupMatchMode) {
-        for (var i = 0; i < optgroups.length; i++) {
-            var optgroup = optgroups[i];
-            var matches = matchingOptgroups.indexOf(optgroup) != -1;
-            optgroup.style.display = matches ? '' : 'none';
-        }
-        for (var i = 0; i < projectVersionSelect.options.length; i++) {
-            var option = projectVersionSelect.options[i];
-            var parentElement = option.parentElement;
-            var isInMatchingOptgroup = parentElement && parentElement.tagName.toLowerCase() === 'optgroup' && matchingOptgroups.indexOf(parentElement) != -1;
-            if (isInMatchingOptgroup) {
-                option.style.display = '';
-                var optionText = (option.textContent || '').toLowerCase();
-                if (!firstMatchingOption) {
-                    if (optionText.trim().indexOf('test-') != 0) {
-                        firstMatchingOption = option;
-                    }
-                    else if (!firstMatchingTestOption) {
-                        firstMatchingTestOption = option;
-                    }
-                }
-            }
-            else {
-                option.style.display = 'none';
-            }
-        }
-    }
-    else {
-        for (var i = 0; i < projectVersionSelect.options.length; i++) {
-            var option = projectVersionSelect.options[i];
-            var optionText = (option.textContent || '').toLowerCase();
-            var matches = fuzzyMatch(optionText, normalizedFilterText);
-            option.style.display = matches ? '' : 'none';
-            if (matches && !firstMatchingOption) {
-                if (optionText.trim().indexOf('test-') != 0) {
-                    firstMatchingOption = option;
-                }
-                else if (!firstMatchingTestOption) {
-                    firstMatchingTestOption = option;
-                }
-            }
-        }
-        for (var i = 0; i < optgroups.length; i++) {
-            var optgroup = optgroups[i];
-            var hasVisibleOption = false;
-            var childOptions = optgroup.getElementsByTagName('option');
-            for (var j = 0; j < childOptions.length; j++) {
-                if (childOptions[j].style.display !== 'none') {
-                    hasVisibleOption = true;
-                    break;
-                }
-            }
-            optgroup.style.display = hasVisibleOption ? '' : 'none';
-        }
-    }
-    var selectedOption = firstMatchingOption || firstMatchingTestOption;
-    if (selectedOption) {
-        selectedOption.selected = true;
-    }
-    else {
-        projectVersionSelect.selectedIndex = -1;
     }
 }
 /**
@@ -2874,10 +2914,7 @@ var applyPatcherCustomizations = function () {
     }
     // Runs after addProductVersionFilter, since on the create fix page
     // that function clones the same patcherProjectVersionIdFilter
-    // template this sorts; sorting/filtering the template first would
-    // leak its data-has-filter-input marker onto the clone via
-    // cloneNode(true) and cause the visible clone to end up without a
-    // filter input of its own.
+    // template this sorts, and the clone must be sorted by that function.
     sortProjectVersionIdFilterSelects();
     compareBuildFixes();
 };
