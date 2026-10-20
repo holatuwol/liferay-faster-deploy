@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        11.5
+// @version        11.6
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -206,10 +206,10 @@ tr.qa-analysis-unneeded {
 }
 `;
 document.head.appendChild(styleElement);
-if (document.location.pathname.indexOf('/create') != -1) {
+if ((document.location.pathname.indexOf('/create') != -1) || isFixesListPage()) {
     var createStyleElement = document.createElement('style');
     createStyleElement.textContent = `
-#_1_WAR_osbpatcherportlet_patcherProductVersionId option {
+#_1_WAR_osbpatcherportlet_patcherProductVersionId:not([data-liferay-version=""]) option {
   display: none;
 }
 
@@ -714,11 +714,39 @@ function pruneProjectVersionOptions(select, liferayVersion) {
     }
 }
 /**
+ * Returns whether the current page is the fixes list.
+ */
+function isFixesListPage() {
+    var activeTab = document.querySelector('.tab.active');
+    return !!activeTab && ((activeTab.textContent || '').trim() == 'Fixes') &&
+        (document.location.pathname.indexOf('/create') == -1);
+}
+/**
+ * Returns the URL of the fixes list for the given product version and,
+ * if it is not empty, the given project version.
+ */
+function getFixesListURL(patcherProductVersionId, patcherProjectVersionIdFilter) {
+    var params = {
+        'advancedSearch': 'true',
+        'andOperator': 'true',
+        'hideOldFixVersions': 'true',
+        'hideOldFixVersionsCheckbox': 'true',
+        'statusFilter': '100',
+        'patcherFixName': '',
+        'patcherProductVersionId': patcherProductVersionId
+    };
+    if (patcherProjectVersionIdFilter) {
+        params.patcherProjectVersionIdFilter = patcherProjectVersionIdFilter;
+    }
+    return 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher?' + getQueryString(params);
+}
+/**
  * Adds a new element to the page to allow you to select from a list of
  * Liferay versions before choosing a product version. Only applies on
- * the create fix page, since on other pages (e.g. viewing an existing
- * build or fix) this select is either disabled or not meant to have its
- * defaults second-guessed.
+ * the create pages and on the fixes list, since on other pages (e.g.
+ * viewing an existing build or fix) this select is either disabled or
+ * not meant to have its defaults second-guessed. On the fixes list, a
+ * Liferay version change loads the list of the new product version.
  */
 function addProductVersionFilter() {
     var productVersionSelect = querySelector('patcherProductVersionId');
@@ -733,7 +761,8 @@ function addProductVersionFilter() {
         replaceReadOnlySelect('patcherProjectVersionId', branchName, 'https://github.com/liferay/liferay-portal-ee/tree/' + patcherTagName);
         return;
     }
-    if (document.location.pathname.indexOf('/create') == -1) {
+    var isFixesList = isFixesListPage();
+    if ((document.location.pathname.indexOf('/create') == -1) && !isFixesList) {
         return;
     }
     var selectedVersion = null;
@@ -749,7 +778,7 @@ function addProductVersionFilter() {
     }
     var hadSelectedVersion = !!selectedVersion;
     if (!selectedVersion) {
-        selectedVersion = 'Quarterly';
+        selectedVersion = isFixesList ? '' : 'Quarterly';
     }
     var liferayVersionSelect = document.createElement('select');
     liferayVersionSelect.id = ns + 'liferayVersion';
@@ -765,6 +794,10 @@ function addProductVersionFilter() {
     productVersionSelect.addEventListener('change', setTimeout.bind(null, updateProjectVersionOrder, 500));
     var productVersionSelectParentElement = productVersionSelect.parentElement;
     productVersionSelectParentElement.insertBefore(liferayVersionSelect, productVersionSelect);
+    if (isFixesList) {
+        productVersionSelect.setAttribute('data-liferay-version', selectedVersion);
+        return;
+    }
     if (hadSelectedVersion && selectedVersion) {
         productVersionSelect.setAttribute('data-liferay-version', selectedVersion);
         addProjectVersionFilter(productVersionSelect, selectedVersion);
@@ -960,6 +993,109 @@ function addProjectVersionFilterInput(projectVersionSelect) {
     if (!isReplacement) {
         Liferay.fire('projectVersionIdReady');
     }
+}
+/**
+ * Returns a pattern that matches the project versions of the given
+ * product, or null if the fixes list does not filter the versions of
+ * the product.
+ */
+function getProductProjectVersionPattern(productVersionText) {
+    var fixPackNames = {
+        'DXP 7.0': 'de-[0-9]+-7010',
+        'DXP 7.1': 'dxp-[0-9]+-7110',
+        'DXP 7.2': 'dxp-[0-9]+-7210',
+        'DXP 7.3': 'dxp-[0-9]+-7310'
+    };
+    if (fixPackNames[productVersionText]) {
+        return new RegExp('^fix-pack-' + fixPackNames[productVersionText] + '(-private)?$');
+    }
+    if (productVersionText == 'DXP 7.4') {
+        return /^7\.4\.13-u[0-9]+$/;
+    }
+    if (productVersionText == 'Quarterly Releases') {
+        return /[0-9]{4}\.q[0-9]+\.[0-9]+/;
+    }
+    return null;
+}
+/**
+ * Adds a text input next to the product version select of the fixes
+ * list, with a list of the project versions of the selected product.
+ * A pick from the list reloads the fixes list for that project version,
+ * and a pick of 'All' removes the project version filter.
+ */
+function addFixesVersionInput() {
+    if (document.location.pathname.indexOf('/create') != -1) {
+        return;
+    }
+    var productVersionSelect = querySelector('patcherProductVersionId');
+    var projectVersionSelect = document.getElementsByName(ns + 'patcherProjectVersionIdFilter')[0];
+    if (!productVersionSelect || !projectVersionSelect || (productVersionSelect.selectedIndex == -1)) {
+        return;
+    }
+    var pattern = getProductProjectVersionPattern((productVersionSelect.options[productVersionSelect.selectedIndex].textContent || '').trim());
+    if (!pattern) {
+        return;
+    }
+    var versions = Array.from(projectVersionSelect.options).map(function (option) {
+        return {
+            text: (option.textContent || '').trim(),
+            value: option.value
+        };
+    }).filter(function (version) {
+        return pattern.test(version.text);
+    }).sort(function (a, b) {
+        return b.text.localeCompare(a.text, 'en', {numeric: true});
+    });
+    if (versions.length == 0) {
+        return;
+    }
+    var match = new RegExp(ns + 'patcherProjectVersionIdFilter=(\\d+)').exec(document.location.search);
+    var selectedVersion = versions.find(function (version) {
+        return match && (version.value == match[1]);
+    });
+    var versionInput = createVersionInput('All', function (text) {
+        var version = versions.find(function (version) {
+            return version.text == text;
+        });
+        document.location.href = getFixesListURL(productVersionSelect.value, version ? version.value : null);
+    });
+    versionInput.setTexts(['All'].concat(versions.map(function (version) {
+        return version.text;
+    })));
+    versionInput.setSelectedText(selectedVersion ? selectedVersion.text : 'All');
+    versionInput.insert(productVersionSelect.parentElement, productVersionSelect.nextSibling);
+}
+/**
+ * A keyword search of the fixes list ignores the project version filter.
+ * If a project version is selected, the search becomes an advanced search
+ * with the keywords as the fix name, also when the keywords are empty.
+ * After an advanced search, the keywords input shows that fix name.
+ */
+function addKeywordsProjectVersionFilter() {
+    var keywordsElement = document.getElementById('toggle_id_patcher_fix_searchkeywords');
+    if (!keywordsElement || !keywordsElement.form) {
+        return;
+    }
+    var form = keywordsElement.form;
+    var isAdvancedSearch = new RegExp(ns + 'advancedSearch=true').test(document.location.search);
+    var match = new RegExp(ns + 'patcherFixName=([^&]+)').exec(document.location.search);
+    if (isAdvancedSearch && match && !keywordsElement.value) {
+        keywordsElement.value = decodeURIComponent(match[1].replace(/\+/g, ' '));
+    }
+    document.addEventListener('submit', function (event) {
+        if (event.target != form) {
+            return;
+        }
+        var advancedSearchElement = form.elements[ns + 'advancedSearch'];
+        var patcherFixNameElement = form.elements[ns + 'patcherFixName'];
+        var projectVersionSelect = form.elements[ns + 'patcherProjectVersionIdFilter'];
+        if (!advancedSearchElement || !patcherFixNameElement || !projectVersionSelect || !projectVersionSelect.value) {
+            return;
+        }
+        advancedSearchElement.value = 'true';
+        patcherFixNameElement.value = keywordsElement.value.trim();
+        keywordsElement.value = '';
+    }, true);
 }
 function addProjectVersionFilter(productVersionSelect, selectedVersion) {
     var projectVersionSelect = querySelector('patcherProjectVersionId');
@@ -1239,6 +1375,10 @@ function updateProductVersionSelect() {
     var option = getDefaultProductVersionOption(productVersionSelect, liferayVersion);
     if (option) {
         option.selected = true;
+        if (isFixesListPage()) {
+            document.location.href = getFixesListURL(option.value, null);
+            return;
+        }
         unsafeWindow._1_WAR_osbpatcherportlet_productVersionOnChange(option.value);
         setTimeout(updateProjectVersionOrder, 500);
     }
@@ -2909,6 +3049,8 @@ var applyPatcherCustomizations = function () {
         addEngineerComments();
         updatePreviousBuildsContent();
         if (activeTabName == 'Fixes') {
+            addFixesVersionInput();
+            addKeywordsProjectVersionFilter();
             addBulkSearchTab();
         }
     }
