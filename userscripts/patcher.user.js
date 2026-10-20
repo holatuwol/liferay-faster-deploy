@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        11.3
+// @version        11.4
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -218,7 +218,8 @@ if (document.location.pathname.indexOf('/create') != -1) {
 #_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version="7.1"] option[data-liferay-version="7.1"],
 #_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version="7.2"] option[data-liferay-version="7.2"],
 #_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version="7.3"] option[data-liferay-version="7.3"],
-#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version="7.4"] option[data-liferay-version="7.4"] {
+#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version="7.4"] option[data-liferay-version="7.4"],
+#_1_WAR_osbpatcherportlet_patcherProductVersionId[data-liferay-version="Quarterly"] option[data-liferay-version="Quarterly"] {
   display: block;
 }
 `;
@@ -667,15 +668,17 @@ function replaceReadOnlySelect(name, text, link) {
         replaceNode(select, select.options[select.selectedIndex].textContent || 'unknown');
     }
 }
-var liferayVersions = ['', '6.x', '7.0', '7.1', '7.2', '7.3', '7.4'];
+var liferayVersions = ['', '6.x', '7.0', '7.1', '7.2', '7.3', '7.4', 'Quarterly'];
 /**
  * Determines the broad Liferay version (e.g. '7.4') that a product
  * version select option's text belongs to, based on the same text
- * patterns used to tag the options in addProductVersionFilter.
+ * patterns used to tag the options in addProductVersionFilter. The
+ * 'Quarterly Releases' option has a broad version of its own, so that
+ * 7.4 shows only the DXP 7.4 and Portal 7.4 options.
  */
 function getProductVersionLiferayVersion(optionText) {
     if (optionText.trim() == 'Quarterly Releases') {
-        return '7.4';
+        return 'Quarterly';
     }
     for (var i = 1; i < liferayVersions.length; i++) {
         if ((optionText.indexOf('DXP ' + liferayVersions[i]) != -1) || (optionText.indexOf('Portal ' + liferayVersions[i]) != -1)) {
@@ -691,10 +694,11 @@ function getProductVersionLiferayVersion(optionText) {
  * selected product version.
  */
 function pruneProjectVersionOptions(select, liferayVersion) {
-    if (liferayVersion == '7.4') {
+    if ((liferayVersion == '7.4') || (liferayVersion == 'Quarterly')) {
+        var versionString = (liferayVersion == '7.4') ? '7.4.13-' : '.q';
         for (var i = select.options.length - 1; i >= 0; i--) {
             var version = (select.options[i].textContent || '').trim();
-            if ((version != '') && (version.indexOf('7.4.13-') == -1) && (version.indexOf('.q') == -1)) {
+            if ((version != '') && (version.indexOf(versionString) == -1)) {
                 select.options[i].remove();
             }
         }
@@ -745,7 +749,7 @@ function addProductVersionFilter() {
     }
     var hadSelectedVersion = !!selectedVersion;
     if (!selectedVersion) {
-        selectedVersion = '7.4';
+        selectedVersion = 'Quarterly';
     }
     var liferayVersionSelect = document.createElement('select');
     liferayVersionSelect.id = ns + 'liferayVersion';
@@ -1166,20 +1170,9 @@ function sortProjectVersionIdFilterSelects() {
 }
 /**
  * Returns the option that should be auto-selected in the product version
- * select for the given Liferay version. Version 7.4 prefers the
- * 'Quarterly Releases' option over the first option tagged with
- * data-liferay-version="7.4" (typically 'DXP 7.4'), since fix packs for
- * 7.4 are now delivered as quarterly releases.
+ * select for the given Liferay version.
  */
 function getDefaultProductVersionOption(productVersionSelect, liferayVersion) {
-    if (liferayVersion == '7.4') {
-        var quarterlyReleasesOptions = Array.from(productVersionSelect.options).filter(function (option) {
-            return (option.textContent || '').trim() == 'Quarterly Releases';
-        });
-        if (quarterlyReleasesOptions.length > 0) {
-            return quarterlyReleasesOptions[0];
-        }
-    }
     return productVersionSelect.querySelector('option[data-liferay-version="' + liferayVersion + '"]');
 }
 /**
@@ -1194,7 +1187,7 @@ function updateProductVersionSelect() {
         var selectedOption = productVersionSelect.options[productVersionSelect.selectedIndex];
         var selectedOptionText = selectedOption.textContent || '';
         if (selectedOption.getAttribute('data-liferay-version') == liferayVersion) {
-            var isDefaultOptionText = (liferayVersion == '7.4') ?
+            var isDefaultOptionText = (liferayVersion == 'Quarterly') ?
                 (selectedOptionText.trim() == 'Quarterly Releases') :
                 (selectedOptionText.trim() == 'DXP ' + liferayVersion);
             if (isDefaultOptionText) {
