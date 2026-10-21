@@ -28,11 +28,6 @@ fetchpr() {
 		upstream_remote=$(git for-each-ref --format='%(refname)' refs/remotes/ | grep "/upstream[^/]*/${BASE_BRANCH}$" | cut -d'/' -f 3)
 	fi
 
-	if [ "" == "$upstream_remote" ]; then
-		echo "Unable to identify upstream equivalent of $BASE_BRANCH"
-		exit 1
-	fi
-
 	if [ "" != "$(git for-each-ref --format='%(refname)' refs/heads/${target_branch})" ]; then
 		git branch -D ${target_branch}
 	fi
