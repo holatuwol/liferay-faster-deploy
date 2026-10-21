@@ -877,7 +877,7 @@ function getProjectVersionTexts(projectVersionSelect) {
         }
     }
     return emptyValueTexts.concat(versionTexts.sort(function (a, b) {
-        return b.localeCompare(a, 'en', {numeric: true});
+        return b.localeCompare(a, 'en', { numeric: true });
     }));
 }
 /**
@@ -997,7 +997,7 @@ function addProjectVersionFilterInput(projectVersionSelect) {
         });
         isPicked = true;
         projectVersionSelect.value = option.value;
-        projectVersionSelect.dispatchEvent(new Event('change', {bubbles: true}));
+        projectVersionSelect.dispatchEvent(new Event('change', { bubbles: true }));
     });
     var updateVersionInput = function () {
         versionInput.setTexts(getProjectVersionTexts(projectVersionSelect));
@@ -1078,7 +1078,7 @@ function addFixesVersionInput() {
     }).filter(function (version) {
         return pattern.test(version.text);
     }).sort(function (a, b) {
-        return b.text.localeCompare(a.text, 'en', {numeric: true});
+        return b.text.localeCompare(a.text, 'en', { numeric: true });
     });
     if (versions.length == 0) {
         return;
