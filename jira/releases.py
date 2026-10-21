@@ -279,12 +279,28 @@ def update_releases():
     unsorted_releases = defaultdict(list)
 
     unsorted_releases.update({'6.1.%d-ga%d' % (i * 10, i): [] for i in range(1, 4)})
+    unsorted_releases.update({'6.1.30-sp%d' % i: [] for i in range(1, 6)})
 
     unsorted_releases['6.2.10-ga1'] = []
     unsorted_releases.update({'6.2.10-sp%d' % i: [] for i in range(1, 21)})
 
     unsorted_releases['7.0.10-ga1'] = []
     unsorted_releases.update({'7.0.10-de%d' % i: [] for i in range(1, 103)})
+
+    unsorted_releases['7.1.10-fp27'] = ['14827']
+    unsorted_releases['7.1.10-fp28'] = ['14828']
+
+    unsorted_releases['7.4.13-u102'] = ['16044', '16504']
+    unsorted_releases['7.4.13-u103'] = ['16126', '16682']
+    unsorted_releases['7.4.13-u104'] = ['16127', '16505']
+    unsorted_releases['7.4.13-u105'] = ['16133']
+    unsorted_releases['7.4.13-u106'] = ['16134', '16506']
+    unsorted_releases['7.4.13-u107'] = ['16135']
+    unsorted_releases['7.4.13-u108'] = ['16136', '16507']
+    unsorted_releases['7.4.13-u109'] = ['16142', '16508']
+    unsorted_releases['7.4.13-u110'] = ['16240', '16509']
+    unsorted_releases['7.4.13-u111'] = ['16242', '16749']
+    unsorted_releases['7.4.13-u112'] = ['16243']
 
     def add_release(project, release):
         name = release['name']
