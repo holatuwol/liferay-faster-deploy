@@ -1322,8 +1322,12 @@ function getOptionGroup(optionText) {
 /**
  * Groups and sorts select options under <optgroup> elements, sorting all
  * options/optgroups appropriately, and updating the select's DOM structure.
+ * The select keeps its selected option, since removing the options makes
+ * the browser select the first option that is added back.
  */
 function groupAndSortOptions(select) {
+    var selectedIndex = select.selectedIndex;
+    var selectedOption = (selectedIndex == -1) ? null : select.options[selectedIndex];
     var options = Array.from(select.options);
     options.sort(compareLiferayVersions);
     select.innerHTML = '';
@@ -1345,6 +1349,12 @@ function groupAndSortOptions(select) {
         else {
             select.appendChild(option);
         }
+    }
+    if (selectedOption) {
+        selectedOption.selected = true;
+    }
+    else {
+        select.selectedIndex = -1;
     }
 }
 /**
