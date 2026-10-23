@@ -746,16 +746,18 @@ function isFixesListPage() {
 }
 /**
  * Returns the URL of the fixes list for the given product version and,
- * if it is not empty, the given project version.
+ * if it is not empty, the given project version. The keywords of the
+ * search input become the fix name, so that a version change keeps them.
  */
 function getFixesListURL(patcherProductVersionId, patcherProjectVersionIdFilter) {
+    var keywordsElement = document.getElementById('toggle_id_patcher_fix_searchkeywords');
     var params = {
         'advancedSearch': 'true',
         'andOperator': 'true',
         'hideOldFixVersions': 'true',
         'hideOldFixVersionsCheckbox': 'true',
         'statusFilter': '100',
-        'patcherFixName': '',
+        'patcherFixName': keywordsElement ? encodeURIComponent(keywordsElement.value.trim()) : '',
         'patcherProductVersionId': patcherProductVersionId
     };
     if (patcherProjectVersionIdFilter) {
@@ -913,8 +915,16 @@ function createVersionInput(placeholder, onSelect) {
     var texts = [];
     var selectText = function () {
         var text = input.value.trim();
-        if ((text != selectedText) && (texts.indexOf(text) != -1)) {
+        if (texts.indexOf(text) == -1) {
+            return;
+        }
+        if (text != selectedText) {
             onSelect(text);
+        }
+        else {
+            // A pick of the selected text changes nothing, so the input
+            // gives up the focus, and the next click clears it again.
+            input.blur();
         }
     };
     input.addEventListener('blur', function () {
@@ -1322,8 +1332,12 @@ function getOptionGroup(optionText) {
 /**
  * Groups and sorts select options under <optgroup> elements, sorting all
  * options/optgroups appropriately, and updating the select's DOM structure.
+ * The select keeps its selected option, since removing the options makes
+ * the browser select the first option that is added back.
  */
 function groupAndSortOptions(select) {
+    var selectedIndex = select.selectedIndex;
+    var selectedOption = (selectedIndex == -1) ? null : select.options[selectedIndex];
     var options = Array.from(select.options);
     options.sort(compareLiferayVersions);
     select.innerHTML = '';
@@ -1345,6 +1359,12 @@ function groupAndSortOptions(select) {
         else {
             select.appendChild(option);
         }
+    }
+    if (selectedOption) {
+        selectedOption.selected = true;
+    }
+    else {
+        select.selectedIndex = -1;
     }
 }
 /**
