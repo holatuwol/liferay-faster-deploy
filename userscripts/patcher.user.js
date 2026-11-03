@@ -1062,6 +1062,43 @@ function getProductProjectVersionPattern(productVersionText) {
     return null;
 }
 /**
+ * Adds a text input after the given element, with All and the project
+ * versions of the given filter select that match the given pattern, from
+ * the newest to the oldest. A pick from the list loads the URL that
+ * getURL returns for the value of the picked version, or for null if
+ * the pick is All.
+ */
+function addProjectVersionListInput(element, projectVersionSelect, pattern, getURL) {
+    var versions = Array.from(projectVersionSelect.options).map(function (option) {
+        return {
+            text: (option.textContent || '').trim(),
+            value: option.value
+        };
+    }).filter(function (version) {
+        return (version.value != '') && pattern.test(version.text);
+    }).sort(function (a, b) {
+        return b.text.localeCompare(a.text, 'en', { numeric: true });
+    });
+    if (versions.length == 0) {
+        return;
+    }
+    var match = new RegExp(ns + 'patcherProjectVersionIdFilter=(\\d+)').exec(document.location.search);
+    var selectedVersion = versions.find(function (version) {
+        return match && (version.value == match[1]);
+    });
+    var versionInput = createVersionInput('All', function (text) {
+        var version = versions.find(function (version) {
+            return version.text == text;
+        });
+        document.location.href = getURL(version ? version.value : null);
+    });
+    versionInput.setTexts(['All'].concat(versions.map(function (version) {
+        return version.text;
+    })));
+    versionInput.setSelectedText(selectedVersion ? selectedVersion.text : 'All');
+    versionInput.insert(element.parentElement, element.nextSibling);
+}
+/**
  * Adds a text input next to the product version select of the fixes
  * list, with a list of the project versions of the selected product.
  * A pick from the list reloads the fixes list for that project version,
@@ -1080,34 +1117,52 @@ function addFixesVersionInput() {
     if (!pattern) {
         return;
     }
-    var versions = Array.from(projectVersionSelect.options).map(function (option) {
-        return {
-            text: (option.textContent || '').trim(),
-            value: option.value
-        };
-    }).filter(function (version) {
-        return pattern.test(version.text);
-    }).sort(function (a, b) {
-        return b.text.localeCompare(a.text, 'en', { numeric: true });
+    addProjectVersionListInput(productVersionSelect, projectVersionSelect, pattern, function (patcherProjectVersionIdFilter) {
+        return getFixesListURL(productVersionSelect.value, patcherProjectVersionIdFilter);
     });
-    if (versions.length == 0) {
+}
+/**
+ * Returns the URL of the builds list of the current account, with the
+ * given filters changed. A filter with an empty value is removed, and
+ * the list starts again on the first page.
+ */
+function getAccountBuildsListURL(filters) {
+    var params = new URLSearchParams(document.location.search);
+    params.set(ns + 'advancedSearch', 'true');
+    params.set(ns + 'andOperator', 'true');
+    params.delete(ns + 'cur');
+    Object.keys(filters).forEach(function (key) {
+        if (filters[key]) {
+            params.set(ns + key, filters[key]);
+        }
+        else {
+            params.delete(ns + key);
+        }
+    });
+    return 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/accounts/view?' + params.toString();
+}
+/**
+ * Adds a text input next to the product version select of the builds
+ * list of an account, the same as on the fixes list. If the product has
+ * no known project version pattern, the list has all the versions. A pick
+ * reloads the builds of the account for that project version.
+ */
+function addAccountBuildsVersionInput() {
+    if (document.location.pathname.indexOf('/accounts/view') == -1) {
         return;
     }
-    var match = new RegExp(ns + 'patcherProjectVersionIdFilter=(\\d+)').exec(document.location.search);
-    var selectedVersion = versions.find(function (version) {
-        return match && (version.value == match[1]);
+    var projectVersionSelect = document.getElementsByName(ns + 'patcherProjectVersionIdFilter')[0];
+    if (!projectVersionSelect) {
+        return;
+    }
+    var productVersionSelect = querySelector('patcherProductVersionId');
+    var pattern = null;
+    if (productVersionSelect && (productVersionSelect.selectedIndex != -1)) {
+        pattern = getProductProjectVersionPattern((productVersionSelect.options[productVersionSelect.selectedIndex].textContent || '').trim());
+    }
+    addProjectVersionListInput(productVersionSelect || projectVersionSelect, projectVersionSelect, pattern || /./, function (patcherProjectVersionIdFilter) {
+        return getAccountBuildsListURL({ patcherProjectVersionIdFilter: patcherProjectVersionIdFilter });
     });
-    var versionInput = createVersionInput('All', function (text) {
-        var version = versions.find(function (version) {
-            return version.text == text;
-        });
-        document.location.href = getFixesListURL(productVersionSelect.value, version ? version.value : null);
-    });
-    versionInput.setTexts(['All'].concat(versions.map(function (version) {
-        return version.text;
-    })));
-    versionInput.setSelectedText(selectedVersion ? selectedVersion.text : 'All');
-    versionInput.insert(productVersionSelect.parentElement, productVersionSelect.nextSibling);
 }
 /**
  * A keyword search of the fixes list ignores the project version filter.
@@ -3124,6 +3179,7 @@ var applyPatcherCustomizations = function () {
         addProductVersionFilter();
         addEngineerComments();
         updatePreviousBuildsContent();
+        addAccountBuildsVersionInput();
         if (activeTabName == 'Fixes') {
             addFixesVersionInput();
             addKeywordsProjectVersionFilter();
