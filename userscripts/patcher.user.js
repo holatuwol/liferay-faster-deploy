@@ -748,15 +748,17 @@ function isFixesListPage() {
  * Returns the URL of the fixes list for the given product version and,
  * if it is not empty, the given project version. The keywords of the
  * search input become the fix name, so that a version change keeps them.
+ * Without a given status, the list keeps the status of the current page,
+ * and All if the current page does not have one.
  */
-function getFixesListURL(patcherProductVersionId, patcherProjectVersionIdFilter) {
+function getFixesListURL(patcherProductVersionId, patcherProjectVersionIdFilter, statusFilter) {
     var keywordsElement = document.getElementById('toggle_id_patcher_fix_searchkeywords');
     var params = {
         'advancedSearch': 'true',
         'andOperator': 'true',
         'hideOldFixVersions': 'true',
         'hideOldFixVersionsCheckbox': 'true',
-        'statusFilter': '100',
+        'statusFilter': (statusFilter != null) ? statusFilter : getStatusFilter(''),
         'patcherFixName': keywordsElement ? encodeURIComponent(keywordsElement.value.trim()) : '',
         'patcherProductVersionId': patcherProductVersionId
     };
@@ -1097,12 +1099,62 @@ function addProjectVersionListInput(element, projectVersionSelect, pattern, getU
     })));
     versionInput.setSelectedText(selectedVersion ? selectedVersion.text : 'All');
     versionInput.insert(element.parentElement, element.nextSibling);
+    return versionInput;
+}
+/**
+ * Returns the patcher status filter in the query string of the current
+ * page, or the given default value if the query string does not have one.
+ * An empty value is All.
+ */
+function getStatusFilter(defaultValue) {
+    var match = new RegExp(ns + 'statusFilter=(\\d*)').exec(document.location.search);
+    return match ? match[1] : defaultValue;
+}
+/**
+ * Adds a text input after the given element, with the patcher statuses of
+ * the status filter select of the page. The option without a value is
+ * All. If the query string has no status, the input shows the status of
+ * the select. A pick from the list loads the URL that getURL returns for
+ * the value of the picked status.
+ */
+function addStatusListInput(element, getURL) {
+    var statusSelect = document.getElementsByName(ns + 'statusFilter')[0];
+    if (!statusSelect || !statusSelect.options) {
+        return;
+    }
+    var statuses = Array.from(statusSelect.options).map(function (option) {
+        return {
+            text: (option.value == '') ? 'All' : (option.textContent || '').trim(),
+            value: option.value
+        };
+    }).filter(function (status) {
+        return status.text != '';
+    });
+    if (statuses.length == 0) {
+        return;
+    }
+    var statusFilter = getStatusFilter(statusSelect.value);
+    var selectedStatus = statuses.find(function (status) {
+        return status.value == statusFilter;
+    });
+    var statusInput = createVersionInput('Patcher Status', function (text) {
+        var status = statuses.find(function (status) {
+            return status.text == text;
+        });
+        document.location.href = getURL(status.value);
+    });
+    statusInput.setTexts(statuses.map(function (status) {
+        return status.text;
+    }));
+    statusInput.setSelectedText(selectedStatus ? selectedStatus.text : '');
+    statusInput.insert(element.parentElement, element.nextSibling);
 }
 /**
  * Adds a text input next to the product version select of the fixes
  * list, with a list of the project versions of the selected product.
  * A pick from the list reloads the fixes list for that project version,
- * and a pick of 'All' removes the project version filter.
+ * and a pick of 'All' removes the project version filter. A patcher
+ * status input follows it.
  */
 function addFixesVersionInput() {
     if (document.location.pathname.indexOf('/create') != -1) {
@@ -1114,11 +1166,12 @@ function addFixesVersionInput() {
         return;
     }
     var pattern = getProductProjectVersionPattern((productVersionSelect.options[productVersionSelect.selectedIndex].textContent || '').trim());
-    if (!pattern) {
-        return;
-    }
-    addProjectVersionListInput(productVersionSelect, projectVersionSelect, pattern, function (patcherProjectVersionIdFilter) {
+    var versionInput = pattern && addProjectVersionListInput(productVersionSelect, projectVersionSelect, pattern, function (patcherProjectVersionIdFilter) {
         return getFixesListURL(productVersionSelect.value, patcherProjectVersionIdFilter);
+    });
+    addStatusListInput(versionInput ? versionInput.dataList : productVersionSelect, function (statusFilter) {
+        var match = new RegExp(ns + 'patcherProjectVersionIdFilter=(\\d+)').exec(document.location.search);
+        return getFixesListURL(productVersionSelect.value, match ? match[1] : null, statusFilter);
     });
 }
 /**
@@ -1145,7 +1198,8 @@ function getAccountBuildsListURL(filters) {
  * Adds a text input next to the product version select of the builds
  * list of an account, the same as on the fixes list. If the product has
  * no known project version pattern, the list has all the versions. A pick
- * reloads the builds of the account for that project version.
+ * reloads the builds of the account for that project version. A patcher
+ * status input follows it.
  */
 function addAccountBuildsVersionInput() {
     if (document.location.pathname.indexOf('/accounts/view') == -1) {
@@ -1160,8 +1214,12 @@ function addAccountBuildsVersionInput() {
     if (productVersionSelect && (productVersionSelect.selectedIndex != -1)) {
         pattern = getProductProjectVersionPattern((productVersionSelect.options[productVersionSelect.selectedIndex].textContent || '').trim());
     }
-    addProjectVersionListInput(productVersionSelect || projectVersionSelect, projectVersionSelect, pattern || /./, function (patcherProjectVersionIdFilter) {
+    var element = productVersionSelect || projectVersionSelect;
+    var versionInput = addProjectVersionListInput(element, projectVersionSelect, pattern || /./, function (patcherProjectVersionIdFilter) {
         return getAccountBuildsListURL({ patcherProjectVersionIdFilter: patcherProjectVersionIdFilter });
+    });
+    addStatusListInput(versionInput ? versionInput.dataList : element, function (statusFilter) {
+        return getAccountBuildsListURL({ statusFilter: statusFilter });
     });
 }
 /**
