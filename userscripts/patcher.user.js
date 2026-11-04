@@ -44,8 +44,12 @@ p[inputcssclass="osb-patcher-input-wide"] {
   width: 60em;
 }
 
-#_1_WAR_osbpatcherportlet_patcherBuildName {
+.osb-patcher-max-height #_1_WAR_osbpatcherportlet_patcherBuildName {
   height: 5em;
+}
+
+select#_1_WAR_osbpatcherportlet_statusFilter {
+  width: auto;
 }
 
 .control-group.field-wrapper .table,
@@ -227,9 +231,60 @@ tr.qa-analysis-unneeded {
 .bulk-search-status-na {
   color: #777;
 }
+
+/* Search panel of the lists (see enhanceSearchToggle) */
+.patcher-search-panel,
+.patcher-search-secondary {
+  align-items: flex-end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em 1.25em;
+}
+
+.patcher-search-panel {
+  margin: 0.5em 0 1em;
+}
+
+.patcher-search-secondary {
+  border-top: 1px solid #eee;
+  flex-basis: 100%;
+  padding-top: 0.5em;
+}
+
+.patcher-search-panel .control-group,
+.patcher-search-panel .control-group.patcher-form-row {
+  display: block !important;
+  margin: 0 !important;
+}
+
+.patcher-search-panel .control-group .control-label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 0.2em;
+  min-width: 0 !important;
+  width: auto !important;
+}
+
+.patcher-search-panel input,
+.patcher-search-panel select {
+  margin-bottom: 0 !important;
+}
+
+.patcher-search-actions {
+  align-items: center;
+  display: flex;
+  gap: 1em;
+}
+
+.patcher-search-advanced-link {
+  font-size: 14px;
+  margin-left: 1em;
+  vertical-align: middle;
+  white-space: nowrap;
+}
 `;
 document.head.appendChild(styleElement);
-if ((document.location.pathname.indexOf('/create') != -1) || isFixesListPage()) {
+if (document.location.pathname.indexOf('/create') != -1) {
     var createStyleElement = document.createElement('style');
     createStyleElement.textContent = `
 #_1_WAR_osbpatcherportlet_patcherProductVersionId:not([data-liferay-version=""]) option {
@@ -290,6 +345,182 @@ async function waitForElement(selector) {
  */
 function getQueryString(params) {
     return Object.keys(params).map(key => (key.indexOf('p_p_') == 0 ? key : (ns + key)) + '=' + params[key]).join('&');
+}
+/**
+ * Leaves out the blank fields of a form that the browser submits with GET,
+ * since their names alone can make the URL too long. This runs when the
+ * browser collects the fields of the form for the submit (the formdata
+ * event), so the fields of the form stay as they are, and it also covers
+ * a submit by a script of the page (form.submit()). Fields with their
+ * default value (hide old fix versions) are left out too, but not when the
+ * checkbox is cleared, since then the value is false. A simple search with
+ * a status becomes an advanced search, and an advanced search sends its
+ * keywords as the build name or the fix name, since it finds nothing with
+ * keywords. Forms submitted with POST are left alone, since their fields
+ * are not in the URL.
+ */
+function removeEmptyGetFormFields() {
+    document.addEventListener('formdata', function (event) {
+        var form = event.target;
+        // TypeScript 3.6 has no types for the formdata event.
+        var formData = event.formData;
+        if (!form || !formData || !isGetForm(form)) {
+            return;
+        }
+        var entries = [];
+        formData.forEach(function (value, name) {
+            entries.push([name, value]);
+        });
+        // Parameters that have their default value can be left off as well.
+        var defaultValues = {};
+        defaultValues[ns + 'hideOldFixVersions'] = 'true';
+        defaultValues[ns + 'hideOldFixVersionsCheckbox'] = 'true';
+        var names = entries.map(function (entry) {
+            return entry[0];
+        }).filter(function (name, index, array) {
+            return array.indexOf(name) == index;
+        });
+        names.forEach(function (name) {
+            var values = entries.filter(function (entry) {
+                return entry[0] == name;
+            }).map(function (entry) {
+                return entry[1];
+            });
+            var nonEmptyValues = values.filter(function (value) {
+                return (typeof value != 'string') || ((value != '') && (value != defaultValues[name]));
+            });
+            if (nonEmptyValues.length == values.length) {
+                return;
+            }
+            formData.delete(name);
+            nonEmptyValues.forEach(function (value) {
+                formData.append(name, value);
+            });
+        });
+        // A simple search ignores the status filter, so a search with a status
+        // becomes an advanced search.
+        if (String(formData.get(ns + 'statusFilter') || '') && (formData.get(ns + 'advancedSearch') == 'false')) {
+            formData.set(ns + 'advancedSearch', 'true');
+        }
+        // An advanced search finds nothing with keywords, so the keywords
+        // become the name field of the search, if it is empty: the build name
+        // for builds (for example the builds list of an account), and the fix
+        // name for fixes.
+        if ((formData.get(ns + 'advancedSearch') == 'true') && formData.has(ns + 'keywords')) {
+            var keywords = String(formData.get(ns + 'keywords') || '').trim();
+            var hasField = function (name) {
+                return Array.from(form.elements).some(function (element) {
+                    return element.name == ns + name;
+                });
+            };
+            var nameField = ns + (hasField('patcherBuildName') ? 'patcherBuildName' :
+                hasField('patcherFixName') ? 'patcherFixName' :
+                    (document.location.pathname.indexOf('/accounts') != -1) ? 'patcherBuildName' : 'patcherFixName');
+            formData.delete(ns + 'keywords');
+            if (keywords && !String(formData.get(nameField) || '').trim()) {
+                formData.set(nameField, keywords);
+            }
+        }
+    }, true);
+}
+/**
+ * Returns whether the given form submits with GET, the default method.
+ */
+function isGetForm(form) {
+    return (form.getAttribute('method') || 'get').toLowerCase() == 'get';
+}
+/**
+ * Sets the referrer policy of the page to no-referrer, so that the
+ * requests that follow send no Referer header.
+ */
+function setNoReferrerPolicy() {
+    var meta = document.querySelector('meta[name="referrer"]');
+    if (!meta) {
+        meta = document.createElement('meta');
+        meta.name = 'referrer';
+        document.head.appendChild(meta);
+    }
+    meta.content = 'no-referrer';
+}
+/**
+ * Makes the forms that submit with GET send no Referer header, since the
+ * URL of the current page can be long enough that the request is too large
+ * for the server. The forms get the noreferrer link type of the rel
+ * attribute, but Chromium ignores it on forms, so a GET submit also sets
+ * the referrer policy of the page (see setNoReferrerPolicy) just before the
+ * browser loads the next page: on the submit event of a submit button, and
+ * on the formdata event of a submit by a script (form.submit()), which has
+ * no submit event. Forms submitted with POST are left alone.
+ */
+function addNoReferrerToGetForms() {
+    var addNoReferrer = function (form) {
+        if (!isGetForm(form)) {
+            return;
+        }
+        var rel = (form.getAttribute('rel') || '').split(/\s+/).filter(function (value) {
+            return value != '';
+        });
+        if (rel.indexOf('noreferrer') == -1) {
+            rel.push('noreferrer');
+            form.setAttribute('rel', rel.join(' '));
+        }
+    };
+    Array.from(document.forms).forEach(addNoReferrer);
+    var onSubmit = function (event) {
+        if ((event.target instanceof HTMLFormElement) && isGetForm(event.target)) {
+            addNoReferrer(event.target);
+        }
+    };
+    document.addEventListener('submit', onSubmit, true);
+    document.addEventListener('formdata', onSubmit, true);
+}
+/**
+ * Makes the pagination links of the search containers of the page send no
+ * Referer header, the same as the forms (see addNoReferrerToGetForms),
+ * since the URL of the current page can be long enough that the request
+ * is too large for the server. A pagination link is a link in a page
+ * iterator (the page and items per page menus, and the first, previous,
+ * next and last links), or a link to a page or a number of items per page
+ * of a list (the cur and delta parameters). The links of the page get it
+ * when the page is ready, and a link that the portlet adds later (for
+ * example when it renders a menu again) gets it when it is clicked,
+ * before the browser follows it.
+ */
+function addNoReferrerToPaginationLinks() {
+    var paginationPattern = new RegExp('[?&]' + ns + '(cur|delta)=');
+    var isPaginationLink = function (link) {
+        return !!link.closest('.taglib-page-iterator, .lfr-pagination') || paginationPattern.test(link.href);
+    };
+    var addNoReferrer = function (link) {
+        var rel = (link.getAttribute('rel') || '').split(/\s+/).filter(function (value) {
+            return value != '';
+        });
+        if (rel.indexOf('noreferrer') == -1) {
+            rel.push('noreferrer');
+            link.setAttribute('rel', rel.join(' '));
+        }
+        link.setAttribute('referrerpolicy', 'no-referrer');
+    };
+    Array.from(document.querySelectorAll('a[href]')).forEach(function (link) {
+        if (isPaginationLink(link)) {
+            addNoReferrer(link);
+        }
+    });
+    var onActivate = function (event) {
+        var link = ((event.target instanceof Element) ? event.target.closest('a[href]') : null);
+        if (link && isPaginationLink(link)) {
+            addNoReferrer(link);
+        }
+    };
+    ['mousedown', 'click', 'auxclick'].forEach(function (type) {
+        document.addEventListener(type, onActivate, true);
+    });
+}
+/**
+ * Returns the parameters of the query string of the current page.
+ */
+function getPageParameters() {
+    return new URLSearchParams(document.location.search);
 }
 /**
  * Shorthand for fetching an element with a namespaced ID.
@@ -357,13 +588,6 @@ function replaceNode(oldNode, newHTML) {
     parentElement.insertBefore(newNode, newHiddenInputNode);
 }
 /**
- * Returns a link to the build.
- */
-function getBuildLink(buildId) {
-    return '<a class="nowrap" href="https://patcher.liferay.com/group/guest/patching/-/osb_patcher/builds/' +
-        buildId + '" target="_blank">' + buildId + '</a>';
-}
-/**
  * Returns a link to the ticket.
  */
 function getTicketLink(className, ticket, title) {
@@ -379,7 +603,6 @@ function getTicketLink(className, ticket, title) {
         var params = {
             advancedSearch: true,
             andOperator: true,
-            hideOldFixVersions: true,
             patcherFixName: ticket,
             patcherProductVersionId: productVersionId,
             patcherProjectVersionIdFilter: projectVersionId
@@ -476,12 +699,6 @@ function updateSpinner(step = 1) {
     if (spinnerProgress) {
         spinnerProgress.textContent = `${spinnerCurrent}/${spinnerMax}`;
     }
-}
-/**
- * Updates the spinner progress (alias of updateSpinner)
- */
-function updateSpinnerProgress(step = 1) {
-    updateSpinner(step);
 }
 /**
  * Adds a spinner
@@ -745,33 +962,22 @@ function isFixesListPage() {
         (document.location.pathname.indexOf('/create') == -1);
 }
 /**
- * Returns the URL of the fixes list for the given product version and,
- * if it is not empty, the given project version. The keywords of the
- * search input become the fix name, so that a version change keeps them.
+ * Returns the text of the keywords search input of the page (the input
+ * named keywords, or the one of the fixes list search toolbar), or an
+ * empty string if the page has no such input.
  */
-function getFixesListURL(patcherProductVersionId, patcherProjectVersionIdFilter) {
-    var keywordsElement = document.getElementById('toggle_id_patcher_fix_searchkeywords');
-    var params = {
-        'advancedSearch': 'true',
-        'andOperator': 'true',
-        'hideOldFixVersions': 'true',
-        'hideOldFixVersionsCheckbox': 'true',
-        'statusFilter': '100',
-        'patcherFixName': keywordsElement ? encodeURIComponent(keywordsElement.value.trim()) : '',
-        'patcherProductVersionId': patcherProductVersionId
-    };
-    if (patcherProjectVersionIdFilter) {
-        params.patcherProjectVersionIdFilter = patcherProjectVersionIdFilter;
-    }
-    return 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher?' + getQueryString(params);
+function getKeywordsInputValue() {
+    var keywordsElement = (document.getElementById('toggle_id_patcher_fix_searchkeywords') ||
+        document.getElementsByName(ns + 'keywords')[0] || null);
+    return keywordsElement ? keywordsElement.value.trim() : '';
 }
 /**
  * Adds a new element to the page to allow you to select from a list of
  * Liferay versions before choosing a product version. Only applies on
- * the create pages and on the fixes list, since on other pages (e.g.
- * viewing an existing build or fix) this select is either disabled or
- * not meant to have its defaults second-guessed. On the fixes list, a
- * Liferay version change loads the list of the new product version.
+ * the create pages, since on other pages (e.g. viewing an existing build
+ * or fix) this select is either disabled or not meant to have its
+ * defaults second-guessed. The lists have a search panel instead (see
+ * enhanceSearchToggle).
  */
 function addProductVersionFilter() {
     var productVersionSelect = querySelector('patcherProductVersionId');
@@ -786,8 +992,7 @@ function addProductVersionFilter() {
         replaceReadOnlySelect('patcherProjectVersionId', branchName, 'https://github.com/liferay/liferay-portal-ee/tree/' + patcherTagName);
         return;
     }
-    var isFixesList = isFixesListPage();
-    if ((document.location.pathname.indexOf('/create') == -1) && !isFixesList) {
+    if (document.location.pathname.indexOf('/create') == -1) {
         return;
     }
     var selectedVersion = null;
@@ -803,7 +1008,7 @@ function addProductVersionFilter() {
     }
     var hadSelectedVersion = !!selectedVersion;
     if (!selectedVersion) {
-        selectedVersion = isFixesList ? '' : 'Quarterly';
+        selectedVersion = 'Quarterly';
     }
     var liferayVersionSelect = document.createElement('select');
     liferayVersionSelect.id = ns + 'liferayVersion';
@@ -819,10 +1024,6 @@ function addProductVersionFilter() {
     productVersionSelect.addEventListener('change', setTimeout.bind(null, updateProjectVersionOrder, 500));
     var productVersionSelectParentElement = productVersionSelect.parentElement;
     productVersionSelectParentElement.insertBefore(liferayVersionSelect, productVersionSelect);
-    if (isFixesList) {
-        productVersionSelect.setAttribute('data-liferay-version', selectedVersion);
-        return;
-    }
     if (hadSelectedVersion && selectedVersion) {
         productVersionSelect.setAttribute('data-liferay-version', selectedVersion);
         addProjectVersionFilter(productVersionSelect, selectedVersion);
@@ -878,8 +1079,11 @@ function getProjectVersionTexts(projectVersionSelect) {
             emptyValueTexts.push(text);
         }
     }
+    // Newest first by the version (see getLiferayVersion), so that for
+    // example the quarterly releases come before the fix packs and the
+    // marketplace versions, and then by name for the same version.
     return emptyValueTexts.concat(versionTexts.sort(function (a, b) {
-        return b.localeCompare(a, 'en', { numeric: true });
+        return (getLiferayVersion(b) - getLiferayVersion(a)) || b.localeCompare(a, 'en', { numeric: true });
     }));
 }
 /**
@@ -902,8 +1106,12 @@ function isProjectVersionPreselected(projectVersionSelect) {
  * Creates a text input with a list of choices. Typing in the input
  * filters the list. When the input text is equal to a choice, the input
  * calls onSelect with that text. When the input gets the focus, it is
- * cleared, so that the full list shows.
+ * cleared, so that the list shows the first choices. The list (a datalist)
+ * only has the choices that have the text of the input, at most
+ * versionInputOptionCount of them, since a datalist with hundreds of
+ * options is slow to filter as the user types.
  */
+var versionInputOptionCount = 50;
 function createVersionInput(placeholder, onSelect) {
     var dataList = document.createElement('datalist');
     dataList.id = ns + 'projectVersionList' + (++projectVersionInputCount);
@@ -913,6 +1121,29 @@ function createVersionInput(placeholder, onSelect) {
     input.type = 'text';
     var selectedText = '';
     var texts = [];
+    var shownFilter = null;
+    // Fills the list with the first choices that have the given text (in
+    // any case), in the order of the choices. The browser filters the list
+    // the same way, so the list has the choices that it would show.
+    var showOptions = function (text) {
+        var filter = text.trim().toLowerCase();
+        if (filter == shownFilter) {
+            return;
+        }
+        shownFilter = filter;
+        var fragment = document.createDocumentFragment();
+        var count = 0;
+        for (var i = 0; (i < texts.length) && (count < versionInputOptionCount); i++) {
+            if ((filter == '') || (texts[i].toLowerCase().indexOf(filter) != -1)) {
+                var option = document.createElement('option');
+                option.value = texts[i];
+                fragment.appendChild(option);
+                count++;
+            }
+        }
+        dataList.innerHTML = '';
+        dataList.appendChild(fragment);
+    };
     var selectText = function () {
         var text = input.value.trim();
         if (texts.indexOf(text) == -1) {
@@ -935,8 +1166,10 @@ function createVersionInput(placeholder, onSelect) {
     input.addEventListener('change', selectText);
     input.addEventListener('focus', function () {
         input.value = '';
+        showOptions('');
     });
     input.addEventListener('input', function (event) {
+        showOptions(input.value);
         if (event.inputType != 'insertText') {
             selectText();
         }
@@ -949,6 +1182,11 @@ function createVersionInput(placeholder, onSelect) {
             parentElement.insertBefore(dataList, nextSibling);
         },
         setSelectedText: function (text) {
+            // A change of a focused input with an open list can make the browser
+            // close the list, so the input only changes when the text changes.
+            if (text == selectedText) {
+                return;
+            }
             selectedText = text;
             input.placeholder = text || placeholder;
             if (document.activeElement != input) {
@@ -960,12 +1198,8 @@ function createVersionInput(placeholder, onSelect) {
         },
         setTexts: function (newTexts) {
             texts = newTexts;
-            dataList.innerHTML = '';
-            for (var i = 0; i < texts.length; i++) {
-                var option = document.createElement('option');
-                option.value = texts[i];
-                dataList.appendChild(option);
-            }
+            shownFilter = null;
+            showOptions((document.activeElement == input) ? input.value : '');
         }
     };
 }
@@ -1062,52 +1296,174 @@ function getProductProjectVersionPattern(productVersionText) {
     return null;
 }
 /**
- * Adds a text input next to the product version select of the fixes
- * list, with a list of the project versions of the selected product.
- * A pick from the list reloads the fixes list for that project version,
- * and a pick of 'All' removes the project version filter.
+ * Returns the URL of the builds list of the current account, with the
+ * given filters changed. A filter with an empty value is removed, and
+ * the list starts again on the first page. The URL is an advanced search,
+ * which finds nothing with a keywords parameter, so the keywords (the
+ * ones of the keywords search input, or else the ones of the current URL)
+ * become the build name instead.
  */
-function addFixesVersionInput() {
-    if (document.location.pathname.indexOf('/create') != -1) {
-        return;
+function getAccountBuildsListURL(filters) {
+    var params = new URLSearchParams(getPageParameters().toString());
+    params.set(ns + 'advancedSearch', 'true');
+    params.set(ns + 'andOperator', 'true');
+    params.delete(ns + 'cur');
+    // Keeps the keywords that the user typed after the page loaded, as the
+    // build name of the advanced search.
+    var keywords = (document.getElementsByName(ns + 'keywords').length > 0) ? getKeywordsInputValue() :
+        (params.get(ns + 'keywords') || params.get(ns + 'patcherBuildName') || '');
+    params.delete(ns + 'keywords');
+    if (keywords) {
+        params.set(ns + 'patcherBuildName', keywords);
     }
-    var productVersionSelect = querySelector('patcherProductVersionId');
-    var projectVersionSelect = document.getElementsByName(ns + 'patcherProjectVersionIdFilter')[0];
-    if (!productVersionSelect || !projectVersionSelect || (productVersionSelect.selectedIndex == -1)) {
-        return;
+    else {
+        params.delete(ns + 'patcherBuildName');
     }
-    var pattern = getProductProjectVersionPattern((productVersionSelect.options[productVersionSelect.selectedIndex].textContent || '').trim());
-    if (!pattern) {
-        return;
-    }
-    var versions = Array.from(projectVersionSelect.options).map(function (option) {
-        return {
-            text: (option.textContent || '').trim(),
-            value: option.value
-        };
-    }).filter(function (version) {
-        return pattern.test(version.text);
-    }).sort(function (a, b) {
-        return b.text.localeCompare(a.text, 'en', { numeric: true });
+    Object.keys(filters).forEach(function (key) {
+        if (filters[key]) {
+            params.set(ns + key, filters[key]);
+        }
+        else {
+            params.delete(ns + key);
+        }
     });
-    if (versions.length == 0) {
-        return;
+    return 'https://patcher.liferay.com/group/guest/patching/-/osb_patcher/accounts/view?' + params.toString();
+}
+/**
+ * Returns the value of the given namespaced parameter of the current page
+ * (see getPageParameters), or null if the page does not have it.
+ */
+function getNamespacedParameter(name) {
+    return getPageParameters().get(ns + name);
+}
+/**
+ * Returns whether the given product version text is the product that a
+ * pick of the given broad Liferay version selects, for example DXP 7.3
+ * for 7.3, and Quarterly Releases for Quarterly.
+ */
+function isDefaultProductVersionText(liferayVersion, productVersionText) {
+    return (liferayVersion == 'Quarterly') ?
+        (productVersionText.trim() == 'Quarterly Releases') :
+        (productVersionText.trim() == 'DXP ' + liferayVersion);
+}
+/**
+ * Returns the URL of the current list with the given filters changed (a
+ * null value removes the filter), on the first page: for the builds list
+ * of an account, the builds of the account (see getAccountBuildsListURL),
+ * and for another list, the current URL with the filters changed.
+ */
+function getListFilterURL(filters) {
+    if (document.location.pathname.indexOf('/accounts/view') != -1) {
+        return getAccountBuildsListURL(filters);
     }
-    var match = new RegExp(ns + 'patcherProjectVersionIdFilter=(\\d+)').exec(document.location.search);
-    var selectedVersion = versions.find(function (version) {
-        return match && (version.value == match[1]);
+    var params = new URLSearchParams(getPageParameters().toString());
+    params.delete(ns + 'cur');
+    Object.keys(filters).forEach(function (key) {
+        var value = filters[key];
+        if (value) {
+            params.set(ns + key, value);
+        }
+        else {
+            params.delete(ns + key);
+        }
     });
-    var versionInput = createVersionInput('All', function (text) {
-        var version = versions.find(function (version) {
-            return version.text == text;
+    return document.location.origin + document.location.pathname + '?' + params.toString();
+}
+/**
+ * The columns of the tables of a list whose values become links to the list
+ * filtered by that value (see addFilterColumnLinks): the header of the
+ * column, the name of the select of the page whose options give the value
+ * of each text, and the URL of a value. A project version filter is an
+ * advanced search. A product filter removes the project version filter,
+ * since a project version belongs to one product.
+ */
+var filterColumns = [
+    {
+        header: 'Project Version',
+        selectName: 'patcherProjectVersionIdFilter',
+        getURL: function (value) {
+            return getListFilterURL({ advancedSearch: 'true', patcherProjectVersionIdFilter: value });
+        }
+    },
+    {
+        header: 'Product',
+        selectName: 'patcherProductVersionId',
+        getURL: function (value) {
+            return getListFilterURL({ patcherProductVersionId: value, patcherProjectVersionIdFilter: null });
+        }
+    }
+];
+/**
+ * Turns the values of the filter columns (see filterColumns) of the tables
+ * of a list (for example the Product and Project Version columns of the
+ * fixes list, or the Project Version column of the builds list of an
+ * account) into links to the list filtered by that value. The value of a
+ * cell is the option of the select of the column with the same text (the
+ * select with the most options, if the page has more than one), and a
+ * cell without such an option, or that already has a link, stays as it
+ * is. The links send no Referer header, the same as the pagination links
+ * (see addNoReferrerToPaginationLinks). Since the table can be created again (for example by the
+ * search container of the portlet), the cells are checked again whenever
+ * the page changes.
+ */
+function addFilterColumnLinks() {
+    var getValues = function (selectName) {
+        var select = Array.from(document.getElementsByName(ns + selectName)).filter(function (element) {
+            return element.tagName == 'SELECT';
+        }).sort(function (a, b) {
+            return b.options.length - a.options.length;
+        })[0];
+        var values = {};
+        if (select) {
+            Array.from(select.options).forEach(function (option) {
+                var text = (option.textContent || '').trim();
+                if ((option.value != '') && (option.value != '0') && text) {
+                    values[text] = option.value;
+                }
+            });
+        }
+        return values;
+    };
+    var update = function () {
+        filterColumns.forEach(function (column) {
+            var values = getValues(column.selectName);
+            if (Object.keys(values).length == 0) {
+                return;
+            }
+            Array.from(document.querySelectorAll('table')).forEach(function (table) {
+                var index = Array.from(table.querySelectorAll('thead th')).findIndex(function (headerCell) {
+                    return (headerCell.textContent || '').trim() == column.header;
+                });
+                if (index == -1) {
+                    return;
+                }
+                Array.from(table.querySelectorAll('tbody tr')).forEach(function (row) {
+                    var cell = row.cells[index];
+                    if (!cell || (cell.children.length > 0)) {
+                        return;
+                    }
+                    var text = (cell.textContent || '').trim();
+                    var value = values[text];
+                    if (!value) {
+                        return;
+                    }
+                    var link = document.createElement('a');
+                    link.href = column.getURL(value);
+                    link.textContent = text;
+                    link.title = 'Show only ' + text;
+                    link.setAttribute('rel', 'noreferrer');
+                    link.setAttribute('referrerpolicy', 'no-referrer');
+                    cell.textContent = '';
+                    cell.appendChild(link);
+                });
+            });
         });
-        document.location.href = getFixesListURL(productVersionSelect.value, version ? version.value : null);
+    };
+    update();
+    new MutationObserver(debounce(update, 300)).observe(document.body, {
+        childList: true,
+        subtree: true,
     });
-    versionInput.setTexts(['All'].concat(versions.map(function (version) {
-        return version.text;
-    })));
-    versionInput.setSelectedText(selectedVersion ? selectedVersion.text : 'All');
-    versionInput.insert(productVersionSelect.parentElement, productVersionSelect.nextSibling);
 }
 /**
  * A keyword search of the fixes list ignores the project version filter.
@@ -1121,10 +1477,10 @@ function addKeywordsProjectVersionFilter() {
         return;
     }
     var form = keywordsElement.form;
-    var isAdvancedSearch = new RegExp(ns + 'advancedSearch=true').test(document.location.search);
-    var match = new RegExp(ns + 'patcherFixName=([^&]+)').exec(document.location.search);
-    if (isAdvancedSearch && match && !keywordsElement.value) {
-        keywordsElement.value = decodeURIComponent(match[1].replace(/\+/g, ' '));
+    var isAdvancedSearch = getNamespacedParameter('advancedSearch') == 'true';
+    var patcherFixName = getNamespacedParameter('patcherFixName');
+    if (isAdvancedSearch && patcherFixName && !keywordsElement.value) {
+        keywordsElement.value = patcherFixName;
     }
     document.addEventListener('submit', function (event) {
         if (event.target != form) {
@@ -1134,6 +1490,12 @@ function addKeywordsProjectVersionFilter() {
         var patcherFixNameElement = form.elements[ns + 'patcherFixName'];
         var projectVersionSelect = form.elements[ns + 'patcherProjectVersionIdFilter'];
         if (!advancedSearchElement || !patcherFixNameElement || !projectVersionSelect || !projectVersionSelect.value) {
+            return;
+        }
+        // With the two search modes (see enhanceSearchToggle), the keywords
+        // are disabled in the advanced search, and the project version is
+        // disabled in the basic search, which then stays a basic search.
+        if (keywordsElement.disabled || projectVersionSelect.disabled) {
             return;
         }
         advancedSearchElement.value = 'true';
@@ -1182,8 +1544,6 @@ function addProjectVersionFilter(productVersionSelect, selectedVersion) {
             getQueryString({
                 'advancedSearch': 'true',
                 'andOperator': 'true',
-                'hideOldFixVersions': 'true',
-                'hideOldFixVersionsCheckbox': 'true',
                 'statusFilter': '100',
                 'patcherFixName': '',
                 'patcherProductVersionId': productVersionSelect.options[productVersionSelect.selectedIndex].value,
@@ -1201,10 +1561,11 @@ function getLiferayVersion(version) {
         return 0;
     }
     else if (version.indexOf('marketplace-') != -1) {
-        var pos = version.indexOf('-private');
-        pos = version.lastIndexOf('-', pos == -1 ? version.length : pos - 1);
-        var shortVersion = version.substring(pos + 1);
-        return parseInt(shortVersion) * 1000;
+        // The suffix is the four digit version at the end (before -private),
+        // since the name of the app can also have -private in it (for example
+        // marketplace-social-private-messaging-1.0.0-7010).
+        var suffixMatcher = /-([0-9]{4})(?:-private)?$/.exec(version);
+        return suffixMatcher ? parseInt(suffixMatcher[1]) * 1000 : 0;
     }
     else if (version.indexOf('fix-pack-de-') != -1) {
         var pos = version.indexOf('-', 12);
@@ -1417,10 +1778,7 @@ function updateProductVersionSelect() {
         var selectedOption = productVersionSelect.options[productVersionSelect.selectedIndex];
         var selectedOptionText = selectedOption.textContent || '';
         if (selectedOption.getAttribute('data-liferay-version') == liferayVersion) {
-            var isDefaultOptionText = (liferayVersion == 'Quarterly') ?
-                (selectedOptionText.trim() == 'Quarterly Releases') :
-                (selectedOptionText.trim() == 'DXP ' + liferayVersion);
-            if (isDefaultOptionText) {
+            if (isDefaultProductVersionText(liferayVersion, selectedOptionText)) {
                 setTimeout(updateProjectVersionOrder, 500);
             }
             return;
@@ -1429,10 +1787,6 @@ function updateProductVersionSelect() {
     var option = getDefaultProductVersionOption(productVersionSelect, liferayVersion);
     if (option) {
         option.selected = true;
-        if (isFixesListPage()) {
-            document.location.href = getFixesListURL(option.value, null);
-            return;
-        }
         unsafeWindow._1_WAR_osbpatcherportlet_productVersionOnChange(option.value);
         setTimeout(updateProjectVersionOrder, 500);
     }
@@ -1493,6 +1847,220 @@ function updateFromQueryString() {
         }
         input.value = match[1];
     }
+}
+/**
+ * Gives the blank option of the given select the text All, so that the
+ * select (and the text input of a project version filter select, see
+ * getProjectVersionTexts) says what the blank option means.
+ */
+function labelBlankOption(select) {
+    if (!select) {
+        return;
+    }
+    var option = Array.from(select.options).find(function (option) {
+        return option.value == '';
+    });
+    if (option && !(option.textContent || '').trim()) {
+        option.textContent = 'All';
+    }
+}
+/**
+ * Turns the search toggle of a list (the keywords input with the popover
+ * of the advanced search, for example the fixes list or the builds list of
+ * an account) into a search with two modes:
+ *
+ * - The advanced search, the default, shows the fields that people
+ *   usually search with in a row in the page: the account fields (fields
+ *   whose name has account in it), the name (Content for fixes), the
+ *   project version and the patcher status, with a Search button. The
+ *   other fields of the advanced search (for example Fix ID, Type, Match
+ *   All or Any, Hide Old Fix Versions) are under More options, which is
+ *   closed at the start.
+ * - The basic search is the keywords input of the portlet, without the
+ *   advanced search.
+ *
+ * A link switches between the two. A page starts in the advanced search,
+ * except a page that a basic search loaded (keywords without an advanced
+ * search in the URL), which starts in the basic search. The
+ * fields stay the fields of the form of the portlet, and the fields of
+ * the mode that is not shown are disabled, so that the form only submits
+ * the fields of the mode that is shown, the same as the popover does.
+ * Returns whether the toggle has the two modes.
+ */
+function enhanceSearchToggle(toggle) {
+    if (toggle.querySelector('.patcher-search-panel')) {
+        return true;
+    }
+    var simple = toggle.querySelector('[id$="searchsimple"]');
+    var advanced = toggle.querySelector('.taglib-search-toggle-advanced');
+    var body = advanced ? advanced.querySelector('[id$="advancedBodyNode"]') : null;
+    var advancedSearchInput = advanced ? advanced.querySelector('input[name="' + ns + 'advancedSearch"]') : null;
+    var keywordsInput = simple ? simple.querySelector('input[name="' + ns + 'keywords"]') : null;
+    if (!simple || !advanced || !body || !advancedSearchInput || !keywordsInput) {
+        return false;
+    }
+    var groups = Array.from(body.querySelectorAll('.control-group'));
+    var findGroup = function (names) {
+        return groups.find(function (group) {
+            return names.some(function (name) {
+                return !!group.querySelector('[name="' + ns + name + '"]');
+            });
+        });
+    };
+    // The account fields (for example the account code of the builds list of
+    // an account) come first, before the name.
+    var accountGroups = groups.filter(function (group) {
+        return Array.from(group.querySelectorAll('input, select')).some(function (field) {
+            var element = field;
+            return (element.type != 'hidden') && /account/i.test(element.name.replace(ns, ''));
+        });
+    });
+    var nameGroup = findGroup(['patcherFixName', 'patcherBuildName']);
+    var primaryGroups = accountGroups.concat([nameGroup, findGroup(['patcherProjectVersionIdFilter']), findGroup(['statusFilter'])].filter(function (group) {
+        return !!group && (accountGroups.indexOf(group) == -1);
+    }));
+    if (primaryGroups.length == 0) {
+        return false;
+    }
+    var secondaryGroups = groups.filter(function (group) {
+        return primaryGroups.indexOf(group) == -1;
+    });
+    ['patcherProjectVersionIdFilter', 'statusFilter', 'typeFilter'].forEach(function (name) {
+        labelBlankOption(body.querySelector('select[name="' + ns + name + '"]'));
+    });
+    // The Match select has its label in the text around it.
+    var andOperatorGroup = findGroup(['andOperator']);
+    if (andOperatorGroup && !andOperatorGroup.querySelector('label')) {
+        var andOperatorLabel = document.createElement('label');
+        andOperatorLabel.className = 'control-label';
+        andOperatorLabel.htmlFor = ns + 'andOperator';
+        andOperatorLabel.textContent = 'Match';
+        andOperatorGroup.insertBefore(andOperatorLabel, andOperatorGroup.firstChild);
+    }
+    // The panel of the advanced search.
+    var panel = document.createElement('div');
+    panel.className = 'patcher-search-panel';
+    primaryGroups.forEach(function (group) {
+        panel.appendChild(group);
+    });
+    var actions = document.createElement('div');
+    actions.className = 'patcher-search-actions';
+    panel.appendChild(actions);
+    var searchButton = document.createElement('button');
+    searchButton.className = 'btn btn-primary';
+    searchButton.type = 'submit';
+    searchButton.textContent = 'Search';
+    actions.appendChild(searchButton);
+    var secondary = document.createElement('div');
+    secondary.className = 'patcher-search-secondary';
+    secondaryGroups.forEach(function (group) {
+        secondary.appendChild(group);
+    });
+    var createLink = function (text) {
+        var link = document.createElement('a');
+        link.href = '#';
+        link.setAttribute('role', 'button');
+        link.className = 'patcher-search-link';
+        link.textContent = text;
+        return link;
+    };
+    var moreLink = createLink('More options');
+    var setSecondaryShown = function (isShown) {
+        secondary.style.display = isShown ? '' : 'none';
+        moreLink.textContent = isShown ? 'Fewer options' : 'More options';
+        moreLink.setAttribute('aria-expanded', String(isShown));
+    };
+    if (secondaryGroups.length > 0) {
+        actions.appendChild(moreLink);
+        panel.appendChild(secondary);
+        moreLink.addEventListener('click', function (event) {
+            event.preventDefault();
+            setSecondaryShown(secondary.style.display == 'none');
+        });
+    }
+    var basicLink = createLink('Basic search');
+    actions.appendChild(basicLink);
+    toggle.insertBefore(panel, advanced);
+    // The popover of the portlet is no longer used: its fields are in the
+    // panel, and the keywords input gets a link to the panel instead.
+    advanced.style.display = 'none';
+    var toggleAdvanced = simple.querySelector('[id$="toggleAdvanced"]');
+    if (toggleAdvanced) {
+        toggleAdvanced.style.display = 'none';
+    }
+    // The link goes after the keywords input and its button, outside of
+    // their input-append, which has a font size of zero in the styles of
+    // the portlet, so that a link in it would not show.
+    var advancedLink = createLink('Advanced search');
+    advancedLink.classList.add('patcher-search-advanced-link');
+    simple.parentElement.insertBefore(advancedLink, simple.nextSibling);
+    // The arrow keys in the keywords input open the popover, which would
+    // also turn the basic search into an advanced search.
+    document.addEventListener('keydown', function (event) {
+        if ((event.target == keywordsInput) && ((event.key == 'ArrowUp') || (event.key == 'ArrowDown'))) {
+            event.stopImmediatePropagation();
+        }
+    }, true);
+    setSecondaryShown(false);
+    var nameField = nameGroup ? nameGroup.querySelector('input[type="text"]') : null;
+    var setMode = function (mode) {
+        var isAdvanced = mode == 'advanced';
+        // The text moves to the field of the other mode, if that one is empty.
+        if (nameField && isAdvanced && !nameField.value.trim() && keywordsInput.value.trim()) {
+            nameField.value = keywordsInput.value.trim();
+        }
+        else if (nameField && !isAdvanced && !keywordsInput.value.trim() && nameField.value.trim()) {
+            keywordsInput.value = nameField.value.trim();
+        }
+        panel.style.display = isAdvanced ? '' : 'none';
+        simple.style.display = isAdvanced ? 'none' : '';
+        advancedLink.style.display = isAdvanced ? 'none' : '';
+        keywordsInput.disabled = isAdvanced;
+        advancedSearchInput.value = String(isAdvanced);
+        Array.from(panel.querySelectorAll('input, select, textarea')).forEach(function (field) {
+            field.disabled = !isAdvanced;
+        });
+    };
+    basicLink.addEventListener('click', function (event) {
+        event.preventDefault();
+        setMode('basic');
+        keywordsInput.focus();
+    });
+    advancedLink.addEventListener('click', function (event) {
+        event.preventDefault();
+        setMode('advanced');
+        if (nameField) {
+            nameField.focus();
+        }
+    });
+    var params = getPageParameters();
+    var isBasicSearchPage = (params.get(ns + 'advancedSearch') == 'false') && !!(params.get(ns + 'keywords') || '').trim();
+    setMode(isBasicSearchPage ? 'basic' : 'advanced');
+    // The text input of the project version filter select (see
+    // addProjectVersionFilterInput) is added after the panel, so it gets
+    // the state of the mode when it is added.
+    new MutationObserver(function () {
+        var isAdvanced = panel.style.display != 'none';
+        Array.from(panel.querySelectorAll('input, select, textarea')).forEach(function (field) {
+            if (field.disabled == isAdvanced) {
+                field.disabled = !isAdvanced;
+            }
+        });
+    }).observe(panel, { childList: true, subtree: true });
+    return true;
+}
+/**
+ * Adds the two search modes (see enhanceSearchToggle) to the search
+ * toggles of the page. Returns whether any search toggle has them.
+ */
+function enhanceSearchToggles() {
+    var isEnhanced = false;
+    Array.from(document.querySelectorAll('.taglib-search-toggle')).forEach(function (toggle) {
+        if (enhanceSearchToggle(toggle)) {
+            isEnhanced = true;
+        }
+    });
+    return isEnhanced;
 }
 function getBuildFix(accumulator, row) {
     var cells = row.cells;
@@ -2343,24 +2911,6 @@ async function getAllPatcherFixVersions(tokensList, tokensSet) {
         return acc;
     }, {});
 }
-function getTargetVersions(selectedVersion, allVersions) {
-    if (!selectedVersion)
-        return [];
-    var match = selectedVersion.match(/^([0-9]+\.q[1-4]\.)(\d+)$/);
-    if (!match)
-        return [selectedVersion];
-    var [, prefix, startNumStr] = match;
-    var startNum = parseInt(startNumStr);
-    return Object.keys(allVersions)
-        .filter(x => x.indexOf(prefix) == 0)
-        .map(v => {
-        var patchVersion = parseInt(v.substring(prefix.length + 1));
-        return { full: v, patch: patchVersion };
-    })
-        .filter(v => v.patch >= startNum)
-        .sort((a, b) => a.patch - b.patch)
-        .map(v => v.full);
-}
 function getPatcherPortalFixSearchLink(tokens, version, projectVersions) {
     if (!(version in projectVersions)) {
         return version;
@@ -3096,6 +3646,10 @@ function addBulkSearchTab() {
 }
 // Run all the changes we need to the page.
 var applyPatcherCustomizations = function () {
+    removeEmptyGetFormFields();
+    setNoReferrerPolicy();
+    addNoReferrerToGetForms();
+    addNoReferrerToPaginationLinks();
     highlightAnalysisNeededBuilds();
     if ((document.location.pathname.indexOf('/-/osb_patcher/fixes/create') != -1) ||
         (document.location.pathname.indexOf('/-/osb_patcher/builds/create') != -1)) {
@@ -3124,8 +3678,11 @@ var applyPatcherCustomizations = function () {
         addProductVersionFilter();
         addEngineerComments();
         updatePreviousBuildsContent();
+        enhanceSearchToggles();
+        if (document.location.pathname.indexOf('/create') == -1) {
+            addFilterColumnLinks();
+        }
         if (activeTabName == 'Fixes') {
-            addFixesVersionInput();
             addKeywordsProjectVersionFilter();
             addBulkSearchTab();
         }
