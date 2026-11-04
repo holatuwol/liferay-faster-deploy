@@ -15,9 +15,8 @@ issue_fields = ['key', 'issuelinks', 'versions', 'fixVersions', 'customfield_105
 
 common_lsv_jql = ' and '.join([
     'project = LSV',
-    '("Issue Classification" is empty or "Issue Classification" not in ("False Positive", "Ignored", "Not Exploitable", "Won\'t Do"))',
-    'status = Closed',
-    'Resolution not in (Discarded, Duplicate, "Not a Bug", "Won\'t Fix")',
+    '("Issue Classification" is empty or "Issue Classification" not in ("False Positive", "Ignored", "Not Exploitable"))',
+    '(resolution is empty or resolution not in (Discarded, Duplicate, "Not a Bug", "Won\'t Fix"))',
 ])
 
 def get_issues_by_key(file_name, issue_keys, target_date, target_tz):
@@ -26,21 +25,35 @@ def get_issues_by_key(file_name, issue_keys, target_date, target_tz):
     if exists(file_path):
         with open(file_path, 'rt') as f:
             old_issues = json.loads(f.read())
-        updated = [x['updated'] for x in old_issues.values() if 'updated' in x]
-        if len(updated) > 0:
-            common_jql = f'and updated > "{datetime.fromisoformat(max(updated)).astimezone(target_tz).strftime("%Y-%m-%d %H:%M")}"'
     else:
         old_issues = {}
-        common_jql = ''
 
-    common_jql = f'{common_jql} and updated < "{target_date.astimezone(target_tz).strftime("%Y-%m-%d %H:%M")}" order by key'
+    upper_bound_jql = f'updated < "{target_date.astimezone(target_tz).strftime("%Y-%m-%d %H:%M")}"'
+
+    updated = [x['updated'] for x in old_issues.values() if 'updated' in x]
+
+    if len(updated) > 0:
+        cached_jql = f'and updated > "{datetime.fromisoformat(max(updated)).astimezone(target_tz).strftime("%Y-%m-%d %H:%M")}" and {upper_bound_jql} order by key'
+    else:
+        cached_jql = f'and {upper_bound_jql} order by key'
+
+    uncached_jql = f'and {upper_bound_jql} order by key'
+
+    # Keys that are not yet cached must be fetched regardless of when they were
+    # last updated, otherwise newly linked issues older than the cache watermark
+    # would never be retrieved.
+
+    unique_keys = sorted(set(issue_keys))
+    cached_keys = [key for key in unique_keys if key in old_issues]
+    uncached_keys = [key for key in unique_keys if key not in old_issues]
 
     issues = {} | old_issues
 
-    for i in range(0, len(issue_keys), 100):
-        issue_keys_batch = issue_keys[i:i+100]
-        new_issues = { issue_key : issue_response['fields'] for issue_key, issue_response in get_issues(f'key in ({','.join(issue_keys_batch)}) {common_jql}', issue_fields, [], False).items() }
-        issues = issues | new_issues
+    for keys, common_jql in [(cached_keys, cached_jql), (uncached_keys, uncached_jql)]:
+        for i in range(0, len(keys), 100):
+            issue_keys_batch = keys[i:i+100]
+            new_issues = { issue_key : issue_response['fields'] for issue_key, issue_response in get_issues(f'key in ({','.join(issue_keys_batch)}) {common_jql}', issue_fields, [], False).items() }
+            issues = issues | new_issues
 
     with open(file_path, 'wb') as f:
         f.write(json.dumps(issues))
@@ -64,8 +77,7 @@ def export_jira_issues(target_date, target_tz):
 
     common_jql = ' and '.join([
         'level is not empty',
-        'status = Closed',
-        'Resolution not in (Discarded, Duplicate, "Won\'t Fix")',
+        '(resolution is empty or resolution not in (Discarded, Duplicate, "Won\'t Fix"))',
         f'updated < "{target_date.astimezone(target_tz).strftime("%Y-%m-%d %H:%M")}"'])
 
     other_keys = {

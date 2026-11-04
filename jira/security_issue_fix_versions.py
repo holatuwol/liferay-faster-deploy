@@ -368,6 +368,66 @@ def get_issue_fix_versions(issue_node):
 
     return fvs
 
+def is_master_only(fix_versions, affects_versions):
+    """
+    Returns True if the issue has no fix versions on any product line, and its
+    only affects version that names anything is master.
+    """
+    if fix_versions:
+        return False
+
+    if any(parse_product_line(ver) for ver in affects_versions):
+        return False
+
+    return any(ver.strip().lower() == 'master' for ver in affects_versions)
+
+OLD_PRODUCT_LINES = {'6.2', '6.2.10', '7.0', '7.1', '7.2', '7.3'}
+
+def get_affects_version_gaps(precomputed):
+    """
+    Finds tickets whose affects versions include an old product line (6.2 to
+    7.3) and at least one later product line (7.4 or a quarterly release), but
+    skip some of the later product lines. This usually means that only the
+    supported releases were listed (e.g. 7.4, 2024.Q1, 2025.Q1), even though
+    the releases in between are also affected.
+
+    The later product lines that are expected run from 7.4 up to the newest
+    later product line in the ticket's affects versions or fix versions.
+    """
+    all_lines = sorted({parse_product_line(v) for v in ALL_VERSIONS} - {None}, key=get_version_rank)
+    later_lines = all_lines[all_lines.index('7.4'):]
+
+    gaps = {}
+
+    for key, data in precomputed.items():
+        affects_lines = {parse_product_line(v) for v in data['affects_versions']} - {None}
+        fix_lines = {parse_product_line(v) for v in data['fix_versions']} - {None}
+
+        if not (affects_lines & OLD_PRODUCT_LINES) or not (affects_lines & set(later_lines)):
+            continue
+
+        newest_line = max((line for line in affects_lines | fix_lines if line in later_lines), key=later_lines.index)
+        expected_lines = later_lines[:later_lines.index(newest_line) + 1]
+        missing_lines = [line for line in expected_lines if line not in affects_lines]
+
+        if not missing_lines:
+            continue
+
+        gaps[key] = {
+            'group': data['group'],
+            'affects_lines': [line.lower() for line in sorted(affects_lines, key=get_version_rank)],
+            'fix_lines': [line.lower() for line in sorted(fix_lines, key=get_version_rank)],
+            'missing_lines': [line.lower() for line in missing_lines],
+            'unfixed_missing_lines': [line.lower() for line in missing_lines if line not in fix_lines],
+        }
+
+    # Tickets where the gaps change the output (missing lines without fixes,
+    # whose releases are reported as not affected) come first
+
+    return dict(sorted(
+        gaps.items(),
+        key=lambda item: (not item[1]['unfixed_missing_lines'], [int(x) if x.isdigit() else x for x in re.split(r'(\d+)', item[0])])))
+
 _PRECOMPUTED_DATA = None
 
 def get_precomputed_data():
@@ -586,7 +646,9 @@ def get_precomputed_data():
         precomputed[key] = {
             'fix_versions': list(fix_versions),
             'affects_versions': list(affects_versions),
-            'group': group
+            'group': group,
+            'lsv_keys': sorted(lsv_keys),
+            'master_only': is_master_only(fix_versions, affects_versions)
         }
 
     _PRECOMPUTED_DATA = precomputed
@@ -671,6 +733,13 @@ def get_target_version_data(target_version):
                     is_affected = True
                     break
 
+            # An issue that only affects master and has no fix versions on any
+            # product line is assumed to be unfixed everywhere, so it affects
+            # every product line (tracked in security_issue_affects_master_only.json
+            # for manual verification)
+            if not is_affected and data['master_only']:
+                is_affected = True
+
         if is_affected:
             if not applicable_fixes:
                 output_data[group][key] = []
@@ -726,6 +795,32 @@ def main():
 
         with open('security_issue_empty_fix_versions.json', 'wb') as f:
             f.write(json.dumps(empty_tickets))
+
+        # Tickets assumed to affect every release only because master is their
+        # only affects version, so they can be verified manually
+
+        precomputed = get_precomputed_data()
+
+        master_only_keys = sorted(
+            [key for key, data in precomputed.items() if data['master_only']],
+            key=lambda k: [int(x) if x.isdigit() else x for x in re.split(r'(\d+)', k)])
+
+        master_only_tickets = {
+            key: {
+                'group': precomputed[key]['group'],
+                'affects_versions': sorted(precomputed[key]['affects_versions']),
+                'lsv_keys': precomputed[key]['lsv_keys'],
+            } for key in master_only_keys
+        }
+
+        with open('security_issue_affects_master_only.json', 'wb') as f:
+            f.write(json.dumps(master_only_tickets, option=json.OPT_INDENT_2))
+
+        # Tickets whose affects versions skip some of the later product lines,
+        # so they can be verified manually
+
+        with open('security_issue_affects_version_gaps.json', 'wb') as f:
+            f.write(json.dumps(get_affects_version_gaps(precomputed), option=json.OPT_INDENT_2))
 
 if __name__ == '__main__':
     main()
