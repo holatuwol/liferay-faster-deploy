@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        11.9
+// @version        12.0
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -32,9 +32,11 @@ a.included-in-baseline:hover {
   width: auto;
 }
 
-textarea[inputcssclass="osb-patcher-input-wide"] {
-  height: 3em;
-  width: 60em;
+textarea[inputcssclass="osb-patcher-input-wide"],
+textarea[maxlength="2000000"] {
+  min-height: 3em;
+  height: auto !important;
+  field-sizing: content;
 }
 
 p[inputcssclass="osb-patcher-input-wide"] {
