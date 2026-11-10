@@ -120,6 +120,13 @@ th.branch-type a {
   margin: 0 !important;
 }
 
+.patcher-inline-fields {
+  align-items: center;
+  column-gap: 5px;
+  display: inline-flex;
+  flex-wrap: wrap;
+}
+
 .patcher-form-row > textarea {
   box-sizing: border-box;
 }
@@ -1024,8 +1031,12 @@ function addProductVersionFilter() {
     ;
     liferayVersionSelect.addEventListener('change', updateProductVersionSelect);
     productVersionSelect.addEventListener('change', setTimeout.bind(null, updateProjectVersionOrder, 500));
-    var productVersionSelectParentElement = productVersionSelect.parentElement;
-    productVersionSelectParentElement.insertBefore(liferayVersionSelect, productVersionSelect);
+    // Keep the two product selects on one line of the form row grid.
+    var productVersionContainer = document.createElement('span');
+    productVersionContainer.classList.add('patcher-inline-fields');
+    productVersionSelect.parentElement.insertBefore(productVersionContainer, productVersionSelect);
+    productVersionContainer.appendChild(liferayVersionSelect);
+    productVersionContainer.appendChild(productVersionSelect);
     if (hadSelectedVersion && selectedVersion) {
         productVersionSelect.setAttribute('data-liferay-version', selectedVersion);
         addProjectVersionFilter(productVersionSelect, selectedVersion);
