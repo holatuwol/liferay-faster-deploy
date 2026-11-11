@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        12.0
+// @version        12.1
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -27,9 +27,10 @@ a.included-in-baseline:hover {
   white-space: nowrap;
 }
 
+#_1_WAR_osbpatcherportlet_liferayVersion,
 #_1_WAR_osbpatcherportlet_patcherProductVersionId,
 #_1_WAR_osbpatcherportlet_patcherProjectVersionId {
-  width: auto;
+  width: fit-content;
 }
 
 textarea[inputcssclass="osb-patcher-input-wide"],
