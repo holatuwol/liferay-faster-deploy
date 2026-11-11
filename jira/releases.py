@@ -29,6 +29,7 @@ quarterly_releases = {
     '2026.q1': 147,
     '2026.q2': 149,
     '2026.q3': 152,
+    '2026.q4': 155,
 }
 
 def compute_old_update_threshold(x):

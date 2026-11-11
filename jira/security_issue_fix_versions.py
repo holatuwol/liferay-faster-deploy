@@ -9,7 +9,7 @@ QUARTERLY_RELEASES = {
     '2023.q3': 92, '2023.q4': 102,
     '2024.q1': 112, '2024.q2': 120, '2024.q3': 125, '2024.q4': 129,
     '2025.q1': 132, '2025.q2': 135, '2025.q3': 138, '2025.q4': 143,
-    '2026.q1': 147, '2026.q2': 149, '2026.q3': 152,
+    '2026.q1': 147, '2026.q2': 149, '2026.q3': 152, '2026.q4': 155,
 }
 
 with open('releases.json', 'rt') as f:
@@ -314,7 +314,17 @@ def add_fix_version(fvs, name):
 
 def get_issue_fix_versions(issue_node):
     """
+    Extracts fix versions, customfield_10886 fix versions, and fixpack labels from an issue node,
+    resolving .x fix versions using only this issue's own fix versions.
+    """
+    fvs, x_lines = get_issue_fix_versions_and_x_lines(issue_node)
+    return resolve_x_lines(fvs, x_lines)
+
+def get_issue_fix_versions_and_x_lines(issue_node):
+    """
     Extracts fix versions, customfield_10886 fix versions, and fixpack labels from an issue node.
+    Returns the concrete fix versions and the product lines named by .x fix versions separately,
+    so that the .x lines can be resolved after merging in the fix versions of linked issues.
     """
     fvs = set()
     x_lines = set()
@@ -349,6 +359,15 @@ def get_issue_fix_versions(issue_node):
         if m_71:
             add_fix_version(fvs, f'7.1.10-fp{m_71.group(1)}')
 
+    return fvs, x_lines
+
+def resolve_x_lines(fvs, x_lines):
+    """
+    For each product line named by a .x fix version that has no concrete fix version,
+    assume the fix is in the latest release of that product line.
+    """
+    fvs = set(fvs)
+
     for product_line in x_lines:
         has_version = False
         for v in fvs:
@@ -367,6 +386,36 @@ def get_issue_fix_versions(issue_node):
                 fvs.add(normalize_version(latest_v))
 
     return fvs
+
+def keep_latest_fix_version_per_stream(fix_versions):
+    """
+    Keeps only the latest fix version within each release stream, because fix versions
+    merged from fix version fields, labels, and linked tickets can name several releases
+    of the same stream (such as both 2025.q1.23 and 2025.q1.24), and the latest one is
+    the release that is known to contain the complete fix.
+
+    The exception is 7.0.10-ga1, which is kept instead of any later 7.0 fix version,
+    because a fix in GA1 means that no 7.0 DE release is affected.
+    """
+    by_stream = defaultdict(set)
+    retained = set()
+
+    for fv in fix_versions:
+        stream = parse_product_line(fv)
+        if stream:
+            by_stream[stream].add(fv)
+        else:
+            retained.add(fv)
+
+    for stream, stream_fvs in by_stream.items():
+        if stream == '7.0' and '7.0.10-ga1' in stream_fvs:
+            retained.add('7.0.10-ga1')
+        elif re.search(r'202[3-6]\.[qQ][1-4]', stream):
+            retained.add(max(stream_fvs, key=get_patch_level))
+        else:
+            retained.add(max(stream_fvs, key=get_standard_ulevel))
+
+    return retained
 
 def is_master_only(fix_versions, affects_versions):
     """
@@ -491,6 +540,16 @@ def get_precomputed_data():
     except FileNotFoundError:
         extra_affects_versions = {}
 
+    # Groups of tickets that are duplicates of each other (such as two LPEs that
+    # upgrade the same dependency), whose fix versions and affects versions are
+    # shared, for duplicates that are not recorded in Jira
+
+    try:
+        with open('security_issue_duplicate_tickets.json','rt', encoding='utf-8') as f:
+            duplicate_tickets = json.loads(f.read())
+    except FileNotFoundError:
+        duplicate_tickets = []
+
     # Combine into a single lookup index
     issues_all = {}
     for src in [commerce_issues, lpe_issues, lps_issues, lpsa_issues, lpd_issues, lsv_issues]:
@@ -544,7 +603,7 @@ def get_precomputed_data():
                         lk = link[side]['key']
                         if lk.startswith('LSV-') and lk in lsv_issues:
                             lsv_keys.add(lk)
-                        elif (lk.startswith('LPS-') or lk.startswith('LPD-') or lk.startswith('LPSA-')) and lk in issues_all:
+                        elif lk.startswith(('LPS-', 'LPD-', 'LPSA-', 'COMMERCE-')) and lk in issues_all:
                             parent_issue = issues_all[lk]
                             for plink in parent_issue.get('issuelinks', []):
                                 for pside in ['inwardIssue', 'outwardIssue']:
@@ -567,9 +626,11 @@ def get_precomputed_data():
         # Note: If the LPE has its own fix versions, we also pull additional fix versions from linked tickets
         # for release streams/product lines that are not already covered by the LPE's own fix versions.
         is_lpe = key.startswith('LPE-')
-        lpe_own_fvs = get_issue_fix_versions(issue)
+        # A .x fix version is only resolved to the latest release of its product line after
+        # all linked tickets are checked, because a linked ticket may name the concrete release.
+        lpe_own_fvs, lpe_own_x_lines = get_issue_fix_versions_and_x_lines(issue)
 
-        if is_lpe and lpe_own_fvs:
+        if is_lpe and (lpe_own_fvs or lpe_own_x_lines):
             covered_lines = set()
             for fv in lpe_own_fvs:
                 line = parse_product_line(fv)
@@ -578,8 +639,11 @@ def get_precomputed_data():
 
             fallback_issues = pooled_issues[1:]
             std_fix_versions = set()
+            x_lines = set(lpe_own_x_lines)
             for issue_node in fallback_issues:
-                std_fix_versions.update(get_issue_fix_versions(issue_node))
+                node_fvs, node_x_lines = get_issue_fix_versions_and_x_lines(issue_node)
+                std_fix_versions.update(node_fvs)
+                x_lines.update(node_x_lines)
 
             additional_fixes = set()
             for fv in std_fix_versions:
@@ -587,15 +651,18 @@ def get_precomputed_data():
                 if line and line not in covered_lines:
                     additional_fixes.add(fv)
 
-            fix_versions = lpe_own_fvs.union(additional_fixes)
+            fix_versions = resolve_x_lines(lpe_own_fvs.union(additional_fixes), x_lines)
         else:
             fallback_issues = pooled_issues[1:] if is_lpe else pooled_issues
 
             std_fix_versions = set()
+            x_lines = set()
             for issue_node in fallback_issues:
-                std_fix_versions.update(get_issue_fix_versions(issue_node))
+                node_fvs, node_x_lines = get_issue_fix_versions_and_x_lines(issue_node)
+                std_fix_versions.update(node_fvs)
+                x_lines.update(node_x_lines)
 
-            fix_versions = std_fix_versions
+            fix_versions = resolve_x_lines(std_fix_versions, x_lines)
 
         affects_versions = set(ver['name'] for issue_node in pooled_issues for ver in issue_node.get('versions', []))
 
@@ -643,6 +710,8 @@ def get_precomputed_data():
         if key in extra_affects_versions:
             affects_versions.update(extra_affects_versions[key])
 
+        fix_versions = keep_latest_fix_version_per_stream(fix_versions)
+
         precomputed[key] = {
             'fix_versions': list(fix_versions),
             'affects_versions': list(affects_versions),
@@ -651,9 +720,59 @@ def get_precomputed_data():
             'master_only': is_master_only(fix_versions, affects_versions)
         }
 
+    apply_duplicate_tickets(precomputed, duplicate_tickets)
+
     _PRECOMPUTED_DATA = precomputed
     return _PRECOMPUTED_DATA
 
+def apply_duplicate_tickets(precomputed, duplicate_tickets):
+    """
+    Gives every ticket in each group of duplicates the fix versions and affects
+    versions of the whole group, so that a fix recorded on one of them (such as
+    LPE-18421 being fixed in 2025.q1.20) also fixes the others (such as
+    LPE-18388, which upgrades the same dependency but has no 2025.q1 fix
+    version). Each ticket keeps its own severity group and linked LSVs.
+    """
+    for group_keys in duplicate_tickets:
+        missing_keys = [key for key in group_keys if key not in precomputed]
+
+        if missing_keys:
+            print('security_issue_duplicate_tickets.json: ignoring tickets that were not evaluated:', ', '.join(missing_keys), file=sys.stderr)
+
+        keys = [key for key in group_keys if key in precomputed]
+
+        if len(keys) < 2:
+            continue
+
+        # keep_latest_fix_version_per_stream keeps the latest fix version of each
+        # stream (or 7.0.10-ga1), so applying it to the tickets' already-kept fix
+        # versions gives the same result as applying it to all of their fix versions
+
+        fix_versions = keep_latest_fix_version_per_stream(set(fv for key in keys for fv in precomputed[key]['fix_versions']))
+        affects_versions = set(ver for key in keys for ver in precomputed[key]['affects_versions'])
+
+        for key in keys:
+            precomputed[key]['fix_versions'] = list(fix_versions)
+            precomputed[key]['affects_versions'] = list(affects_versions)
+            precomputed[key]['master_only'] = is_master_only(fix_versions, affects_versions)
+
+
+def get_lsv_tickets(precomputed):
+    """
+    Returns the evaluated tickets linked to each LSV, inverting the LSV keys found for each ticket.
+    """
+    natural_key = lambda k: [int(x) if x.isdigit() else x for x in re.split(r'(\d+)', k)]
+
+    lsv_tickets = defaultdict(set)
+
+    for key, data in precomputed.items():
+        for lsv_key in data['lsv_keys']:
+            lsv_tickets[lsv_key].add(key)
+
+    return {
+        lsv_key: sorted(lsv_tickets[lsv_key], key=natural_key)
+            for lsv_key in sorted(lsv_tickets.keys(), key=natural_key)
+    }
 
 def get_target_version_data(target_version):
     target_line = parse_product_line(target_version)
@@ -821,6 +940,13 @@ def main():
 
         with open('security_issue_affects_version_gaps.json', 'wb') as f:
             f.write(json.dumps(get_affects_version_gaps(precomputed), option=json.OPT_INDENT_2))
+
+        # The evaluated tickets linked to each LSV (an LSV with no path to an LPE is
+        # evaluated as itself), so that an LSV's affected versions come only from its
+        # own tickets rather than from every ticket sharing one of its CVEs
+
+        with open('security_issue_lsv_tickets.json', 'wb') as f:
+            f.write(json.dumps(get_lsv_tickets(precomputed), option=json.OPT_INDENT_2))
 
 if __name__ == '__main__':
     main()

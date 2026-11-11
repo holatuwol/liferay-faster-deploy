@@ -1,0 +1,440 @@
+<html><head>
+<title>Liferay Security Vulnerabilities By Release</title>
+
+<style>
+	* {
+		box-sizing: border-box;
+	}
+
+	body {
+		color: #333;
+		font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+		font-size: 14px;
+		line-height: 1.43;
+		margin: 0;
+	}
+
+	a {
+		color: #337ab7;
+		text-decoration: none;
+	}
+
+	a:hover {
+		text-decoration: underline;
+	}
+
+	h1 {
+		font-size: 36px;
+		font-weight: 500;
+		margin: 20px 0 10px;
+	}
+
+	p {
+		margin: 0 0 10px;
+	}
+
+	.container {
+		padding: 0 15px;
+	}
+
+	.alert {
+		border: 1px solid transparent;
+		border-radius: 4px;
+		margin-bottom: 20px;
+		padding: 15px;
+	}
+
+	.alert-info {
+		background-color: #d9edf7;
+		border-color: #bce8f1;
+		color: #31708f;
+	}
+
+	.alert-warning {
+		background-color: #fcf8e3;
+		border-color: #faebcc;
+		color: #8a6d3b;
+	}
+
+	.bg-success,
+	.table td.success {
+		background-color: #dff0d8;
+	}
+
+	.table {
+		border-collapse: collapse;
+		margin-bottom: 20px;
+		width: 100%;
+	}
+
+	.table th,
+	.table td {
+		border-top: 1px solid #ddd;
+		padding: 8px;
+		text-align: left;
+	}
+
+	.table thead th {
+		border-bottom: 2px solid #ddd;
+		border-top: none;
+		vertical-align: bottom;
+	}
+
+	.table input[type="text"] {
+		font: inherit;
+		padding: 2px 4px;
+	}
+
+	.label {
+		border-radius: 0.25em;
+		color: #fff;
+		display: inline;
+		font-size: 75%;
+		font-weight: bold;
+		padding: 0.2em 0.6em 0.3em;
+		white-space: nowrap;
+	}
+
+	.label-danger { background-color: #d9534f; }
+	.label-default { background-color: #777; }
+	.label-info { background-color: #5bc0de; }
+	.label-primary { background-color: #337ab7; }
+	.label-success { background-color: #5cb85c; }
+	.label-warning { background-color: #f0ad4e; }
+
+	.lsv-toolbar {
+		align-items: baseline;
+		display: flex;
+		gap: 15px;
+		justify-content: space-between;
+	}
+
+	.lsv-toolbar-buttons {
+		display: flex;
+		gap: 8px;
+	}
+
+	.lsv-toolbar button {
+		font: inherit;
+		white-space: nowrap;
+	}
+
+	.lsv-layout {
+		align-items: flex-start;
+		display: flex;
+		gap: 20px;
+	}
+
+	.lsv-sidebar {
+		flex: 0 0 200px;
+	}
+
+	.lsv-results {
+		flex: 1 1 auto;
+		min-width: 0;
+	}
+
+	.lsv-sidebar fieldset {
+		border: 1px solid #ddd;
+		border-radius: 4px;
+		margin: 0 0 15px;
+		padding: 5px 10px 8px;
+	}
+
+	.lsv-sidebar legend {
+		font-weight: bold;
+		padding: 0 4px;
+	}
+
+	.lsv-sidebar label {
+		align-items: baseline;
+		cursor: pointer;
+		display: flex;
+		gap: 4px;
+		font-weight: normal;
+		margin: 2px 0;
+	}
+
+	.lsv-sidebar input[type="search"] {
+		font: inherit;
+		margin: 4px 0;
+		padding: 2px 4px;
+		width: 100%;
+	}
+
+	.lsv-sidebar textarea {
+		font: inherit;
+		font-size: 90%;
+		margin: 4px 0;
+		padding: 2px 4px;
+		resize: vertical;
+		width: 100%;
+	}
+
+	.lsv-sidebar summary {
+		cursor: pointer;
+		margin: 2px 0;
+	}
+
+	.lsv-sidebar details label {
+		margin-left: 1em;
+	}
+
+	.lsv-line-count {
+		color: #777;
+		font-size: 85%;
+	}
+
+	.lsv-chip {
+		background-color: #337ab7;
+		border-radius: 0.25em;
+		color: #fff;
+		cursor: pointer;
+		display: inline-block;
+		font-size: 85%;
+		margin: 2px 4px 2px 0;
+		padding: 0 0.4em;
+		white-space: nowrap;
+	}
+
+	.lsv-chip:hover {
+		background-color: #286090;
+		color: #fff;
+		text-decoration: none;
+	}
+
+	.lsv-clear {
+		cursor: pointer;
+		font-size: 85%;
+		font-weight: normal;
+		margin-left: 4px;
+		visibility: hidden;
+	}
+
+	.lsv-clear.active {
+		visibility: visible;
+	}
+
+	@media (max-width: 800px) {
+		.lsv-layout {
+			display: block;
+		}
+	}
+
+	/* Printing the page directly (Ctrl+P, or the print buttons' fallback) prints
+	   only the title, warning, counts, and table, with every details row expanded
+	   unless Print Summary marked the page with lsv-print-summary */
+
+	@media print {
+		@page {
+			margin: 1cm;
+			size: landscape;
+		}
+
+		* {
+			-webkit-print-color-adjust: exact;
+			print-color-adjust: exact;
+		}
+
+		.lsv-help,
+		.lsv-sidebar,
+		.lsv-toolbar-buttons,
+		.lsv-toggle,
+		#nameFilterHeader {
+			display: none !important;
+		}
+
+		#summary tr.lsv-description {
+			display: table-row !important;
+		}
+
+		body.lsv-print-summary #summary tr.lsv-description {
+			display: none !important;
+		}
+
+		.lsv-layout {
+			display: block;
+		}
+
+		body {
+			font-size: 11px;
+		}
+
+		/* Keep each vulnerability's row on one page and with its details, but let
+		   long details break across pages */
+
+		#summary tr:not(.lsv-description) {
+			break-inside: avoid;
+		}
+
+		#summary tr:has(+ tr.lsv-description) {
+			break-after: avoid;
+		}
+	}
+
+	#summary td {
+		vertical-align: top;
+	}
+
+	#summary tr.not-affected td {
+		color: rgba(0,0,0,0.6);
+	}
+
+	#summary tr.lsv-description td {
+		background-color: #fafafa;
+		border-top: none;
+	}
+
+	/* Tables in the details size to their content rather than the full width */
+
+	#summary tr.lsv-description .table {
+		width: auto;
+	}
+
+	/* Tables in the details have a border around every cell (overriding the
+	   details row's own cell style, which removes the top border) */
+
+	#summary tr.lsv-description .table th,
+	#summary tr.lsv-description .table td {
+		border: 1px solid #ddd;
+	}
+
+	#summary tr.lsv-description h4,
+	#summary tr.lsv-description h5,
+	#summary tr.lsv-description h6 {
+		font-weight: bold;
+		margin-top: 1em;
+	}
+
+	.lsv-category,
+	.lsv-classification,
+	.lsv-cves,
+	.lsv-fix-versions {
+		font-size: 90%;
+	}
+
+	/* Puts the fix versions or reason on its own line below the affected / not
+	   affected badge */
+
+	.lsv-status-text {
+		display: block;
+		margin-top: 0.3em;
+		font-size: smaller;
+	}
+
+	.lsv-id,
+	.lsv-published {
+		white-space: nowrap;
+	}
+
+	/* Titles can contain long module names without spaces, such as
+	   com.liferay.dynamic.data.mapping.data.provider.impl */
+
+	.lsv-title {
+		overflow-wrap: anywhere;
+	}
+
+	th.lsv-sortable {
+		cursor: pointer;
+		user-select: none;
+		white-space: nowrap;
+	}
+
+	th.lsv-sortable:hover {
+		background-color: #f5f5f5;
+	}
+
+	.lsv-toggle {
+		cursor: pointer;
+		white-space: nowrap;
+	}
+</style>
+
+</head>
+
+<body>
+
+<div class="container" role="main">
+
+<h1>Liferay Security Vulnerabilities By Release</h1>
+
+<p class="lsv-help">Lists the published Liferay security vulnerabilities (LSVs). Check one or more Liferay DXP releases in the sidebar to list only the vulnerabilities that affect them, with a status column for each release showing whether it is affected and which releases fix it. Checking several releases lets you compare them, such as the release you run now and the release you plan to upgrade to.</p>
+
+<p class="alert alert-warning"><strong>Warning</strong>: This is NOT an official Liferay tool, nor is it supported by Liferay in any way. The affected releases are computed from fix versions recorded on the issues linked to each LSV, and the published security advisories remain the authoritative source.</p>
+
+<p class="lsv-help">To check specific vulnerabilities, enter one or more CVE or LSV identifiers in the filter. Matching vulnerabilities are listed even if they do not affect the checked releases, and each status is <span class="bg-success" style="padding: 0 0.3em;">highlighted in green</span> when that release is not affected, along with the reason.</p>
+
+<p class="lsv-help">To narrow the list further, check one or more severities, classifications, or categories in the sidebar. A vulnerability is listed only if it matches one of the checked values in each group you use (leaving a group unchecked does not filter by it), and it matches a category if any of its categories is checked.</p>
+
+<p class="lsv-help">Click the LSV, Severity, Classification, or Published header to sort by that column (newest, most severe, or alphabetically first), or a release's Status header to list the vulnerabilities that are not fixed in that release line first, then those fixed in a later release, then those that do not affect it. Click the same header again to reverse the order.</p>
+
+<div class="lsv-toolbar">
+<p id="counts"></p>
+<span class="lsv-toolbar-buttons">
+<button id="printSummary" type="button" title="Print the table">Print Summary</button>
+<button id="exportSummary" type="button" title="Download the table as a Markdown file">Export Summary</button>
+</span>
+</div>
+
+<div class="lsv-layout">
+
+<aside class="lsv-sidebar">
+<fieldset>
+<legend>Release <a class="lsv-clear" data-filter="versionFilter">clear</a></legend>
+<div id="versionChips"></div>
+<input id="versionSearch" type="search" placeholder="find a release" />
+<div id="versionFilter"></div>
+</fieldset>
+<fieldset>
+<legend>Severity <a class="lsv-clear" data-filter="severityFilter">clear</a></legend>
+<div id="severityFilter"></div>
+</fieldset>
+<fieldset>
+<legend>Classification <a class="lsv-clear" data-filter="classificationFilter">clear</a></legend>
+<div id="classificationFilter"></div>
+</fieldset>
+<fieldset>
+<legend>Category <a class="lsv-clear" data-filter="categoryFilter">clear</a></legend>
+<div id="categoryFilter"></div>
+</fieldset>
+</aside>
+
+<div class="lsv-results">
+
+<table class="table">
+<thead>
+<tr>
+<th id="nameFilterHeader" colspan="7">
+<input id="nameFilter" name="nameFilter" type="text" placeholder="filter by CVE, LSV, or title (separate multiple identifiers with spaces or commas)" style="width: 100%" />
+</th>
+</tr>
+<tr id="columnHeaders">
+<th data-sort="lsv" title="Sort by LSV">LSV</th>
+<th>CVE</th>
+<th>Title</th>
+<th data-sort="severity" title="Sort by severity">Severity</th>
+<th data-sort="classification" title="Sort by classification">Classification</th>
+<th>Category</th>
+<th data-sort="published" title="Sort by publication date">Published</th>
+</tr>
+</thead>
+<tbody id="summary">
+<tr><td colspan="7">Loading...</td></tr>
+</tbody>
+</table>
+
+<div id="notFound"></div>
+
+</div>
+
+</div>
+
+</div>
+
+</body>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js" integrity="sha384-FZY+KSLVXVyc1qAlqH9oCx1JEOlQh6iXfw3o2n3Iy32qGjXmUPWT9I0Z9e9wxYe3" crossorigin="anonymous"></script>
+<script>var lsvDataFile = 'lsv_checker_public.json?t=0';</script>
+<script src='lsv_checker.js?t=0'></script>
+
+</html>

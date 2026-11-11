@@ -7,7 +7,7 @@ import os
 import security_issue_fix_versions
 import unittest
 
-from security_issue_fix_versions import get_issue_fix_versions, is_applicable_fix_version, normalize_version, get_standard_ulevel, get_target_version_data, ALL_VERSIONS, parse_product_line
+from security_issue_fix_versions import get_issue_fix_versions, is_applicable_fix_version, keep_latest_fix_version_per_stream, normalize_version, get_standard_ulevel, get_target_version_data, ALL_VERSIONS, parse_product_line
 
 class TestSecurityIssueFixVersions(unittest.TestCase):
 
@@ -175,6 +175,44 @@ class TestSecurityIssueFixVersions(unittest.TestCase):
         for group in ['sev-1', 'sev-2', 'sev-3', 'unknown']:
             self.assertNotIn('LPE-16733', d_71_12[group])
 
+    def test_x_fix_version_uses_linked_ticket_fix_version(self):
+        # LPE-17586 only has 7.4.X EE for 7.4, but linked LPD-2861 is fixed in 7.4.3.125 CE GA125,
+        # so 7.4.X EE should not be resolved to the latest 7.4 update
+        d_u124 = get_target_version_data('7.4.13-u124')
+        fixes_u124 = [fv for group in d_u124.values() for fv in group.get('LPE-17586', [])]
+        self.assertIn('7.4.13-u125', fixes_u124)
+        self.assertNotIn('7.4.13-u155', fixes_u124)
+
+        d_u125 = get_target_version_data('7.4.13-u125')
+        for group in ['sev-1', 'sev-2', 'sev-3', 'unknown']:
+            self.assertNotIn('LPE-17586', d_u125[group])
+
+    def test_keep_latest_fix_version_per_stream(self):
+        # Several fix versions in the same stream keep only the latest, comparing
+        # patch levels numerically (2025.q1.9 is older than 2025.q1.10)
+        self.assertEqual(
+            keep_latest_fix_version_per_stream({
+                '2024.q1.26', '2024.q1.27', '2025.q1.9', '2025.q1.10',
+                '7.4.13-u148', '7.4.13-u149', '7.3.10-u24'}),
+            {'2024.q1.27', '2025.q1.10', '7.4.13-u149', '7.3.10-u24'})
+
+        # A 7.0 GA1 fix is kept over later DE releases, since it means no DE release is affected
+        self.assertEqual(
+            keep_latest_fix_version_per_stream({'7.0.10-ga1', '7.0.10-de33', '7.1.10-fp12'}),
+            {'7.0.10-ga1', '7.1.10-fp12'})
+
+    def test_linked_ticket_fix_versions_keep_latest_per_stream(self):
+        # LPE-18523 only names streams (DXP 2025.Q1), so its fix versions come from linked
+        # LPD-84426, which is fixed in both 2025.Q1.23 and 2025.Q1.24. Only the latest is kept.
+        d_q1_20 = get_target_version_data('2025.q1.20')
+        fixes_q1_20 = [fv for group in d_q1_20.values() for fv in group.get('LPE-18523', [])]
+        self.assertEqual(fixes_q1_20, ['2025.q1.24'])
+
+        # 2025.q1.23 is still affected, since the complete fix is in 2025.q1.24
+        d_q1_23 = get_target_version_data('2025.q1.23')
+        fixes_q1_23 = [fv for group in d_q1_23.values() for fv in group.get('LPE-18523', [])]
+        self.assertEqual(fixes_q1_23, ['2025.q1.24'])
+
     def test_70_milestone_fix_releases(self):
         # LPE-13050 is linked to LPSA-34026 which was fixed in 7.0.0 M2.
         # It should be recognized as fixed in 7.0 GA and not affect any 7.0 release.
@@ -267,6 +305,70 @@ class TestSecurityIssueFixVersions(unittest.TestCase):
             self.assertNotIn('LPE-99999', de1_data['sev-3'])
             
             # Restore _PRECOMPUTED_DATA to None so it doesn't affect other tests
+            security_issue_fix_versions._PRECOMPUTED_DATA = None
+
+    def test_duplicate_tickets_share_fix_versions(self):
+        original_open = builtins.open
+
+        # LPE-99998 upgrades the same dependency as LPE-99997, but was never
+        # given a 2025.q1 fix version
+
+        lpe_data = {
+            "LPE-99997": {
+                "versions": [{"name": "2025.Q1.0"}],
+                "fixVersions": [{"name": "2025.Q1.20"}],
+                "labels": ["sev-2"],
+                "issuelinks": []
+            },
+            "LPE-99998": {
+                "versions": [{"name": "2025.Q1.0"}],
+                "fixVersions": [],
+                "labels": ["sev-2"],
+                "issuelinks": []
+            },
+            "LPE-99999": {
+                "versions": [{"name": "2025.Q1.0"}],
+                "fixVersions": [],
+                "labels": ["sev-2"],
+                "issuelinks": []
+            }
+        }
+
+        def mock_open_impl(file, *args, **kwargs):
+            if 'releases.json' in str(file):
+                return original_open(file, *args, **kwargs)
+            if 'LPE.json' in str(file):
+                return mock_open(read_data=json.dumps(lpe_data).decode('utf-8'))()
+            if 'security_issue_duplicate_tickets.json' in str(file):
+                return mock_open(read_data='[["LPE-99997", "LPE-99998"]]')()
+            return mock_open(read_data='{}')()
+
+        original_exists = os.path.exists
+        def mock_exists(path):
+            if 'security_issue_export' in str(path) and path.endswith('.json'):
+                return True
+            return original_exists(path)
+
+        with patch('builtins.open', side_effect=mock_open_impl), \
+             patch('os.path.exists', side_effect=mock_exists):
+            security_issue_fix_versions._PRECOMPUTED_DATA = None
+            data = security_issue_fix_versions.get_precomputed_data()
+
+            # The duplicate gets the other ticket's fix version, while a ticket
+            # outside the group keeps having none
+
+            self.assertEqual(data['LPE-99998']['fix_versions'], ['2025.q1.20'])
+            self.assertEqual(data['LPE-99997']['fix_versions'], ['2025.q1.20'])
+            self.assertEqual(data['LPE-99999']['fix_versions'], [])
+
+            before_fix = security_issue_fix_versions.get_target_version_data('2025.q1.10')
+            self.assertEqual(before_fix['sev-2']['LPE-99998'], ['2025.q1.20'])
+            self.assertEqual(before_fix['sev-2']['LPE-99999'], [])
+
+            after_fix = security_issue_fix_versions.get_target_version_data('2025.q1.25')
+            self.assertNotIn('LPE-99998', after_fix['sev-2'])
+            self.assertIn('LPE-99999', after_fix['sev-2'])
+
             security_issue_fix_versions._PRECOMPUTED_DATA = None
 
 if __name__ == '__main__':

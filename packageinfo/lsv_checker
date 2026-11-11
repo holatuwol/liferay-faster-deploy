@@ -1,0 +1,6 @@
+#!/bin/bash
+
+source ../bin/activate
+
+python lsv_export.py
+python lsv_checker.py
