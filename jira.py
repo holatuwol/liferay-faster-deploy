@@ -5,9 +5,12 @@ import requests
 import time
 
 import git
+import onepass
 
-jira_username = git.config('jira.session-username')
-jira_password = git.config('jira.session-password')
+jira_op_item_name = git.config('1password.jira')
+
+jira_username = onepass.item(jira_op_item_name, 'username')['username'] if jira_op_item_name != '' and jira_op_item_name is not None else git.config('jira.session-username')
+jira_password = onepass.item(jira_op_item_name, 'password')['password'] if jira_op_item_name != '' and jira_op_item_name is not None else git.config('jira.session-password')
 
 jira_env = 'production'
 jira_base_url = 'https://liferay.atlassian.net'
