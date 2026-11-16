@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        12.1
+// @version        12.2
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -2567,6 +2567,38 @@ function addEngineerComments() {
     xhr1.send(null);
 }
 var pastTicketsCache = {};
+/**
+ * Returns a map from the column names of the builds table (the suffix of the
+ * header IDs, such as "build-id" or "project-version") to their cell index,
+ * so that the columns can be found even when new columns are added.
+ */
+function getBuildsColumnIndices(root) {
+    var headerCells = Array.from(root.querySelectorAll('#' + ns + 'patcherBuildsSearchContainer thead th'));
+    var prefix = 'patcherBuildsSearchContainer_col-';
+    return headerCells.reduce((acc, next, index) => {
+        var pos = next.id.indexOf(prefix);
+        if (pos != -1) {
+            acc[next.id.substring(pos + prefix.length)] = index;
+        }
+        return acc;
+    }, {});
+}
+/**
+ * Returns the cell of the given row for the named column, or null if the
+ * column is not present.
+ */
+function getBuildsCell(row, columns, name) {
+    var index = columns[name];
+    return (index === undefined) ? null : (row.cells[index] || null);
+}
+/**
+ * Returns the trimmed text of the given row for the named column, or an
+ * empty string if the column is not present.
+ */
+function getBuildsCellText(row, columns, name) {
+    var cell = getBuildsCell(row, columns, name);
+    return cell ? (cell.textContent || '').trim() : '';
+}
 function getHotfixShortNames(hotfixes) {
     debugger;
     return hotfixes.map(it => {
@@ -2665,24 +2697,32 @@ function updateFixesFromPreviousBuilds(accountNode, buildNameNode, projectNode, 
         // https://stackoverflow.com/questions/20583396/queryselectorall-to-html-from-another-page
         var container = document.implementation.createHTMLDocument().documentElement;
         container.innerHTML = xhr.responseText;
-        pastTicketsCache[accountBuildsURL] = Array.from(container.querySelectorAll('td > a[title]')).
+        var columns = getBuildsColumnIndices(container);
+        var contentLinks = Array.from(container.querySelectorAll('#' + ns + 'patcherBuildsSearchContainer tbody tr')).
+            map((row) => {
+            var contentCell = getBuildsCell(row, columns, 'content');
+            return contentCell ? contentCell.querySelector('a[title]') : null;
+        }).
+            filter(it => it != null);
+        pastTicketsCache[accountBuildsURL] = contentLinks.
             reduce((acc, next) => {
             var row = next.closest('tr');
-            if ((row.cells[2].textContent || '').trim().toLowerCase() == 'ignore') {
+            if (getBuildsCellText(row, columns, 'type').toLowerCase() == 'ignore') {
                 return acc;
             }
-            if ((row.cells[7].textContent || '').trim().toLowerCase().indexOf('conflict') != -1) {
+            var patcherStatus = getBuildsCellText(row, columns, 'patcher-status').toLowerCase();
+            if (patcherStatus.indexOf('conflict') != -1) {
                 return acc;
             }
-            if ((row.cells[7].textContent || '').trim().toLowerCase().indexOf('failed') != -1) {
+            if (patcherStatus.indexOf('failed') != -1) {
                 return acc;
             }
-            if ((row.cells[9].textContent || '').trim().toLowerCase().indexOf('ignore') != -1) {
+            if (getBuildsCellText(row, columns, 'engineer-comments').toLowerCase().indexOf('ignore') != -1) {
                 return acc;
             }
-            var hotfixId = (row.cells[12].textContent || '').trim();
+            var hotfixId = getBuildsCellText(row, columns, 'hotfix');
             if (hotfixId == '') {
-                hotfixId = 'build-' + (row.cells[1].textContent || '').trim();
+                hotfixId = 'build-' + getBuildsCellText(row, columns, 'build-id');
             }
             var newTickets = (next.getAttribute('title') || '').split(/\s*,\s*/g);
             for (var i = 0; i < newTickets.length; i++) {
@@ -2743,9 +2783,9 @@ function getFixesFromPreviousBuilds() {
     }
     return previousBuildsContainer;
 }
-function getBuildLabel(row) {
-    return (row.cells[12].textContent || '').trim() ||
-        (row.cells[7].textContent || '').toLowerCase() + ' build ' + (row.cells[1].textContent || '').trim();
+function getBuildLabel(row, columns) {
+    return getBuildsCellText(row, columns, 'hotfix') ||
+        getBuildsCellText(row, columns, 'patcher-status').toLowerCase() + ' build ' + getBuildsCellText(row, columns, 'build-id');
 }
 function getClosestBuildParentIndices(fixes, projectVersions) {
     return fixes.map((element, index, array) => {
@@ -2773,7 +2813,7 @@ function createFixItemElement(ticket, includedInBaseline) {
     fixSpan.appendChild(fixLink);
     return fixSpan;
 }
-function renderBuildComparisons(contentRows, contentCells, fixes, projectVersions, baselineValue) {
+function renderBuildComparisons(columns, contentRows, contentCells, fixes, projectVersions, baselineValue) {
     contentCells.forEach((element) => {
         var existingSummary = element.querySelector('.shortened-content');
         if (existingSummary) {
@@ -2792,11 +2832,11 @@ function renderBuildComparisons(contentRows, contentCells, fixes, projectVersion
         var shortContentElement = document.createElement('p');
         shortContentElement.classList.add('shortened-content');
         if (projectVersions[index] != projectVersions[parent]) {
-            shortContentElement.appendChild(document.createTextNode('comparison not possible (project version differs from ' + getBuildLabel(contentRows[parent]) + ')'));
+            shortContentElement.appendChild(document.createTextNode('comparison not possible (project version differs from ' + getBuildLabel(contentRows[parent], columns) + ')'));
             element.append(shortContentElement);
             return;
         }
-        shortContentElement.appendChild(document.createTextNode(getBuildLabel(contentRows[parent])));
+        shortContentElement.appendChild(document.createTextNode(getBuildLabel(contentRows[parent], columns)));
         Array.from(fixes[index]).filter(it => !fixes[parent].has(it)).forEach(it => {
             shortContentElement.appendChild(createFixItemElement(it, false));
         });
@@ -2814,14 +2854,19 @@ async function updatePreviousBuildsContent() {
     }
     var buildsContainer = await waitForElement('patcherBuildsSearchContainer');
     var contentHeader = await waitForElement('patcherBuildsSearchContainer_col-content');
-    var contentRows = Array.from(buildsContainer.querySelectorAll('tbody tr'));
-    var contentCells = contentRows.map((element) => element.cells[6]);
+    var columns = getBuildsColumnIndices(document);
+    if ((columns['content'] === undefined) || (columns['project-version'] === undefined)) {
+        return;
+    }
+    var contentRows = Array.from(buildsContainer.querySelectorAll('tbody tr')).
+        filter((row) => getBuildsCell(row, columns, 'content') != null);
+    var contentCells = contentRows.map((element) => getBuildsCell(element, columns, 'content'));
     var fixes = contentCells.map((element) => {
         var fixesLink = element.querySelector('a');
         var fixesList = fixesLink ? fixesLink.getAttribute('title') || '' : '';
         return new Set(fixesList.split(/\s*,\s*/gi));
     });
-    var projectVersions = contentRows.map((row) => (row.cells[5].textContent || '').trim());
+    var projectVersions = contentRows.map((row) => getBuildsCellText(row, columns, 'project-version'));
     var baselineLabel = document.createElement('label');
     baselineLabel.setAttribute('for', ns + 'patcherBuildsBaselineSelect');
     baselineLabel.textContent = 'Content (comparison)';
@@ -2834,14 +2879,14 @@ async function updatePreviousBuildsContent() {
     contentRows.forEach((row, index) => {
         var buildOption = document.createElement('option');
         buildOption.value = '' + index;
-        buildOption.textContent = getBuildLabel(row);
+        buildOption.textContent = getBuildLabel(row, columns);
         baselineSelect.appendChild(buildOption);
     });
     baselineSelect.addEventListener('change', function () {
-        renderBuildComparisons(contentRows, contentCells, fixes, projectVersions, baselineSelect.value);
+        renderBuildComparisons(columns, contentRows, contentCells, fixes, projectVersions, baselineSelect.value);
     });
     contentHeader.appendChild(baselineSelect);
-    renderBuildComparisons(contentRows, contentCells, fixes, projectVersions, baselineSelect.value);
+    renderBuildComparisons(columns, contentRows, contentCells, fixes, projectVersions, baselineSelect.value);
 }
 // Extract project version text directly from the select options
 function getProjectVersionsFromDOM() {
