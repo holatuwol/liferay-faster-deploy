@@ -126,7 +126,22 @@ def export_jira_issues(target_date, target_tz):
         with open(f'security_issue_export/COMMERCE.json', 'wb') as f:
             f.write(json.dumps(issues))
 
-    get_issues_by_key('LPE', issue_link_keys['LPE'], target_date, target_tz)
+    lpe_issues = get_issues_by_key('LPE', issue_link_keys['LPE'], target_date, target_tz)
+
+    # An LPE can record its fix versions only on another LPE that it links to
+    # (such as LPE-18161, whose backports are on LPE-18170 through a Fix link),
+    # so also export the LPEs that the exported LPEs link to, one hop away, so
+    # that security_issue_fix_versions.py can pool their fix versions
+
+    lpe_link_keys = defaultdict(list)
+
+    process_issue_links(lpe_issues, lpe_link_keys)
+
+    linked_lpe_keys = [key for key in lpe_link_keys['LPE'] if key not in lpe_issues]
+
+    if linked_lpe_keys:
+        get_issues_by_key('LPE', issue_link_keys['LPE'] + linked_lpe_keys, target_date, target_tz)
+
     get_issues_by_key('LSV', issue_link_keys['LSV'], target_date, target_tz)
 
 def check_missing_lsvs(target_date, target_tz):

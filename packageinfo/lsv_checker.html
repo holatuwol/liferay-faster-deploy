@@ -370,7 +370,7 @@
 
 <p class="lsv-help">To check specific vulnerabilities, enter one or more CVE or LSV identifiers in the filter. Matching vulnerabilities are listed even if they do not affect the checked releases, and each status is <span class="bg-success" style="padding: 0 0.3em;">highlighted in green</span> when that release is not affected, along with the reason.</p>
 
-<p class="lsv-help">If you have installed a hotfix, paste the LPE tickets it includes (such as LPE-12345) into the Hotfix Tickets field in the sidebar. A vulnerability is treated as fixed in a checked release if the hotfix includes every one of its LPE tickets that is not yet fixed in that release (or, for a few vulnerabilities, one LPE ticket that fixes it on its own), and it stays listed with a status explaining which hotfix tickets fixed it.</p>
+<p class="lsv-help">If a customer has installed a hotfix, paste its tokens (the tickets it includes, such as LPD-12345 or LPE-12345) into the Hotfix Tickets field in the sidebar. Development tickets (LPD, LPS, LPSA, COMMERCE) are mapped to the LPE tickets they are linked to. A vulnerability is treated as fixed in a checked release if the hotfix includes every one of its LPE tickets that is not yet fixed in that release (or, for a few vulnerabilities, one LPE ticket that fixes it on its own), and it stays listed with a status explaining which hotfix tickets fixed it.</p>
 
 <p class="lsv-help">To narrow the list further, check one or more severities, classifications, or categories in the sidebar (or, when some vulnerabilities have only been published to customers, whether they are public). A vulnerability is listed only if it matches one of the checked values in each group you use (leaving a group unchecked does not filter by it), and it matches a category if any of its categories is checked.</p>
 
@@ -397,7 +397,7 @@
 </fieldset>
 <fieldset>
 <legend>Hotfix Tickets</legend>
-<textarea id="hotfixTickets" rows="4" placeholder="paste the LPE tickets in your hotfix"></textarea>
+<textarea id="hotfixTickets" rows="4" placeholder="paste the hotfix tokens (LPD, LPE, or LPS tickets)"></textarea>
 <div id="hotfixSummary" class="lsv-hotfix-summary"></div>
 </fieldset>
 <fieldset>
@@ -453,7 +453,7 @@
 </body>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js" integrity="sha384-FZY+KSLVXVyc1qAlqH9oCx1JEOlQh6iXfw3o2n3Iy32qGjXmUPWT9I0Z9e9wxYe3" crossorigin="anonymous"></script>
-<script>var lsvDataFile = 'lsv_checker.json?t=0';</script>
+<script>var lsvDataFile = 'lsv_checker.json?t=0'; var lsvHotfixDataFile = 'lsv_checker_hotfix.json?t=0';</script>
 <script src='lsv_checker.js?t=0'></script>
 
 </html>

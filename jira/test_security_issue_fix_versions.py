@@ -307,6 +307,55 @@ class TestSecurityIssueFixVersions(unittest.TestCase):
             # Restore _PRECOMPUTED_DATA to None so it doesn't affect other tests
             security_issue_fix_versions._PRECOMPUTED_DATA = None
 
+    def test_quarterly_baseline_fixes(self):
+        add_baseline = security_issue_fix_versions.add_quarterly_baseline_fixes
+
+        # A fix in the first release of a quarterly line was already in the
+        # 7.4.13 update the line is based on (2024.q1 has no .0 release)
+
+        self.assertEqual(add_baseline({'2025.q2.0'}), {'2025.q2.0', '7.4.13-u135'})
+        self.assertEqual(add_baseline({'2024.q1.1'}), {'2024.q1.1', '7.4.13-u112'})
+
+        # A later quarterly release says nothing about the baseline
+
+        self.assertEqual(add_baseline({'2025.q2.3'}), {'2025.q2.3'})
+
+        # A 7.4 fix that is already named is kept as is
+
+        self.assertEqual(add_baseline({'2025.q2.0', '7.4.13-u130'}), {'2025.q2.0', '7.4.13-u130'})
+
+        # The baseline is a concrete 7.4 fix, so a 7.4.x fix version does not
+        # resolve to the latest 7.4 release
+
+        self.assertEqual(
+            security_issue_fix_versions.resolve_x_lines(add_baseline({'2025.q2.0'}), {'7.4'}),
+            {'2025.q2.0', '7.4.13-u135'})
+
+    def test_duplicate_tickets_prefer_recorded_74_fix(self):
+        # One duplicate records u145, and the other only has the u147 baseline
+        # inferred from 2026.q1.0, so the recorded u145 is kept
+
+        precomputed = {
+            'LPE-1': {'fix_versions': ['7.4.13-u145'], 'affects_versions': [], 'baseline_fix_versions': []},
+            'LPE-2': {'fix_versions': ['2026.q1.0', '7.4.13-u147'], 'affects_versions': [], 'baseline_fix_versions': ['7.4.13-u147']},
+        }
+
+        security_issue_fix_versions.apply_duplicate_tickets(precomputed, [['LPE-1', 'LPE-2']])
+
+        self.assertEqual(sorted(precomputed['LPE-2']['fix_versions']), ['2026.q1.0', '7.4.13-u145'])
+        self.assertEqual(precomputed['LPE-2']['baseline_fix_versions'], [])
+
+        # Without a recorded 7.4 fix version, the inferred baseline is kept
+
+        precomputed = {
+            'LPE-1': {'fix_versions': ['2025.q1.20'], 'affects_versions': [], 'baseline_fix_versions': []},
+            'LPE-2': {'fix_versions': ['2026.q1.0', '7.4.13-u147'], 'affects_versions': [], 'baseline_fix_versions': ['7.4.13-u147']},
+        }
+
+        security_issue_fix_versions.apply_duplicate_tickets(precomputed, [['LPE-1', 'LPE-2']])
+
+        self.assertEqual(sorted(precomputed['LPE-1']['fix_versions']), ['2025.q1.20', '2026.q1.0', '7.4.13-u147'])
+
     def test_duplicate_tickets_share_fix_versions(self):
         original_open = builtins.open
 

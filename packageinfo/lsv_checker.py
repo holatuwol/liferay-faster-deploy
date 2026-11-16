@@ -13,16 +13,20 @@ script_folder = dirname(abspath(inspect.getfile(inspect.currentframe())))
 
 jira_folder = join(dirname(script_folder), 'jira')
 
-# Builds lsv_checker.json for lsv_checker.html (customer-facing) and
+# Builds lsv_checker.json for lsv_checker.html (internal-facing) and
 # lsv_checker_public.json for lsv_checker_public.html (public-facing) by
 # combining the published LSVs exported by lsv_export.py (LSV.json) with the
 # per-version affected issues computed by security_issue_fix_versions.py
 #
 # Both files list every exported LSV with its affected versions combined across
-# its tickets (see combine_affected). The customer file also lists the LPE
+# its tickets (see combine_affected). The internal file also lists the LPE
 # tickets of each LSV, so that the page can treat an LSV as fixed by a hotfix,
 # and records whether each LSV has been made public. The public file has no
 # ticket keys.
+#
+# The internal page also gets lsv_checker_hotfix.json, which maps the
+# development tickets (LPD, LPS, LPSA, COMMERCE) linked to each of those tickets
+# back to them, so that a customer's hotfix tokens can be pasted as is.
 #
 # An LSV affects a version if the LSV itself or any ticket linked to it (as
 # recorded in security_issue_lsv_tickets.json) is listed as outstanding for that
@@ -153,7 +157,8 @@ export_file_name = 'LSV.json'
 published_fields = ['customfield_10955', 'customfield_10956']
 public_published_field = 'customfield_10956'
 
-# (page data file, whether to include LPE tickets and audience)
+# (page data file, whether to include LPE tickets and audience, which only the
+# internal page gets)
 
 builds = [
     ('lsv_checker.json', True),
@@ -281,10 +286,9 @@ def build(lsv_issues, output_file_name, include_tickets):
         return fix_list_indices[fix_list_key]
 
     # Both pages get each LSV's affected versions combined across its tickets.
-    # The customer page also gets each LSV's tickets, so that an LSV can be
-    # treated as fixed when a customer's hotfix includes one of its LPE tickets.
-    # Only the LSV and LPE keys are published (never the linked LPS or LPD keys),
-    # so the page does not reveal which development tickets fixed an LSV. The
+    # The internal page also gets each LSV's tickets, so that an LSV can be
+    # treated as fixed when a customer's hotfix includes one of its LPE tickets
+    # (or a development ticket linked to one, see write_hotfix_tickets). The
     # public page gets no ticket keys (and so no LPE mappings).
 
     issues = {}
@@ -470,6 +474,18 @@ def get_named_release_line(name):
 
     return version_match.group(0) if version_match else lower_name
 
+def is_release_line_name(name):
+    """
+    Whether a Jira version name names a whole release line rather than a single
+    release, such as DXP 2024.Q1 or 7.3 DXP (7.3.10).
+    """
+
+    lower_name = name.strip().lower()
+
+    return bool(
+        re.fullmatch(r'(?:dxp )?\d{4}\.q[1-4]', lower_name) or
+        re.fullmatch(r'\d+\.\d+ dxp \(\d+\.\d+\.\d+\)', lower_name))
+
 def write_mismatches(lsv_issues, data):
     versions = data['versions']
     fix_lists = data['fixLists']
@@ -579,14 +595,26 @@ def write_mismatches(lsv_issues, data):
         if issue_mismatches:
             mismatches.setdefault(severity, {})[lsv_key] = issue_mismatches
 
-        if unrecognized_line_names:
-            unrecognized.setdefault(severity, {})[lsv_key] = {
-                release_line: {
-                    'computed': get_computed(release_line),
+        issue_unrecognized = {}
+
+        for release_line, names in sorted(unrecognized_line_names.items(), key=lambda x: natural_key(x[0] or '')):
+            computed = get_computed(release_line)
+
+            # A name for the whole release line (such as DXP 2024.Q1) agrees with
+            # no release of that line being affected, which is the case when the
+            # fix is in the line's first release (such as 2024.q1.1)
+
+            if computed is None:
+                names = [name for name in names if not is_release_line_name(name)]
+
+            if names:
+                issue_unrecognized[release_line] = {
+                    'computed': computed,
                     'field': names,
                 }
-                for release_line, names in sorted(unrecognized_line_names.items(), key=lambda x: natural_key(x[0] or ''))
-            }
+
+        if issue_unrecognized:
+            unrecognized.setdefault(severity, {})[lsv_key] = issue_unrecognized
 
     # Most severe first, with any unexpected severities last
 
@@ -619,6 +647,80 @@ def write_mismatches(lsv_issues, data):
 
         print(file_name + ':', len(mismatches.get(severity, {})), 'LSVs with', sum(len(x) for x in mismatches.get(severity, {}).values()), 'release lines that differ;', sum(len(x) for x in unrecognized.get(severity, {}).values()), 'release lines not compared in', len(unrecognized.get(severity, {})), 'LSVs')
 
+# Maps the development tickets that a hotfix lists (such as LPD-62070) to the
+# tickets of the internal page's LSVs that they are linked to (such as
+# LPE-18301), so that the page can accept a customer's hotfix tokens without
+# first looking up each LPE ticket
+
+hotfix_tickets_file_name = 'lsv_checker_hotfix.json'
+
+development_projects = ('LPD', 'LPS', 'LPSA', 'COMMERCE')
+jira_export_projects = ('LPE', 'LSV') + development_projects
+
+def get_linked_keys(fields):
+    for issue_link in fields.get('issuelinks', []):
+        for side in ['inwardIssue', 'outwardIssue']:
+            if side in issue_link:
+                yield issue_link[side]['key']
+
+def get_project(issue_key):
+    return issue_key[:issue_key.find('-')]
+
+def write_hotfix_tickets(data):
+    """
+    Writes development ticket -> the LSV tickets (LPE tickets, or an LSV that has
+    no LPE ticket, such as LSV-1369) that it is linked to. A link is used from
+    either side, since security_issue_export.py only exports the development
+    tickets that are marked as security vulnerabilities, and an LPE can link to
+    a development ticket that is not.
+
+    Only direct links are used: a development ticket that is only linked to the
+    LSV is not mapped to the LSV's LPE tickets, since an LSV with several LPE
+    tickets needs every outstanding one of them in the hotfix.
+    """
+
+    ticket_keys = {ticket_key for issue in data['issues'].values() for ticket_key in issue['tickets']}
+
+    hotfix_tickets = {}
+
+    def add_link(development_key, ticket_key):
+        if (get_project(development_key) in development_projects) and (ticket_key in ticket_keys):
+            hotfix_tickets.setdefault(development_key, set()).add(ticket_key)
+
+    export_folder = join(jira_folder, 'security_issue_export')
+
+    for project in jira_export_projects:
+        file_name = join(export_folder, project + '.json')
+
+        if not exists(file_name):
+            print('Skipping:', 'security_issue_export/' + project + '.json', 'does not exist (run security_issue_export.py)')
+            continue
+
+        with open(file_name, 'rb') as f:
+            issues = json.loads(f.read())
+
+        for issue_key, fields in issues.items():
+            for linked_key in get_linked_keys(fields):
+                add_link(issue_key, linked_key)
+                add_link(linked_key, issue_key)
+
+    output = {
+        development_key: sorted(hotfix_tickets[development_key], key=natural_key)
+            for development_key in sorted(hotfix_tickets.keys(), key=natural_key)
+    }
+
+    with open(join(script_folder, hotfix_tickets_file_name), 'wb') as f:
+        f.write(json.dumps(output, option=json.OPT_INDENT_2))
+
+    mapped_keys = {ticket_key for values in output.values() for ticket_key in values}
+
+    print(hotfix_tickets_file_name + ':', len(output), 'development tickets mapped to', len(mapped_keys), 'of', len(ticket_keys), 'LSV tickets')
+
+    unmapped_keys = sorted(ticket_keys - mapped_keys, key=natural_key)
+
+    if unmapped_keys:
+        print(hotfix_tickets_file_name + ':', 'no development ticket is linked to', ', '.join(unmapped_keys))
+
 def main():
     if not exists(join(script_folder, 'lsv_export', export_file_name)):
         print('Skipping:', 'lsv_export/' + export_file_name, 'does not exist (run lsv_export.py)')
@@ -640,10 +742,11 @@ def main():
     for output_file_name, include_tickets in builds:
         data = build(lsv_issues, output_file_name, include_tickets)
 
-        # The customer data has every LSV's computed fix versions
+        # The internal data has every LSV's computed fix versions
 
         if include_tickets:
             write_mismatches(lsv_issues, data)
+            write_hotfix_tickets(data)
 
 if __name__ == '__main__':
     main()

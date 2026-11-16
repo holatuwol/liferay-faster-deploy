@@ -1,16 +1,29 @@
+import ast
 import os
 import sys
 import orjson as json
 import re
 from collections import defaultdict, deque
 
-# Precise mapping of Liferay DXP quarterly releases to chronological update levels (7.4.13+)
-QUARTERLY_RELEASES = {
-    '2023.q3': 92, '2023.q4': 102,
-    '2024.q1': 112, '2024.q2': 120, '2024.q3': 125, '2024.q4': 129,
-    '2025.q1': 132, '2025.q2': 135, '2025.q3': 138, '2025.q4': 143,
-    '2026.q1': 147, '2026.q2': 149, '2026.q3': 152, '2026.q4': 155,
-}
+def read_quarterly_releases():
+    """
+    Returns the 7.4.13 update that each quarterly release line is based on, from
+    quarterly_releases in releases.py. The dictionary is read from the source
+    rather than imported, since importing releases.py pulls releases from Jira.
+    """
+    releases_py = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'releases.py')
+
+    with open(releases_py, 'rt', encoding='utf-8') as f:
+        tree = ast.parse(f.read())
+
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == 'quarterly_releases' for target in node.targets):
+            return ast.literal_eval(node.value)
+
+    raise ValueError('quarterly_releases not found in ' + releases_py)
+
+# Mapping of Liferay DXP quarterly releases to the 7.4.13 update they are based on
+QUARTERLY_RELEASES = read_quarterly_releases()
 
 with open('releases.json', 'rt') as f:
     ALL_VERSIONS = list(json.loads(f.read()).keys())
@@ -361,6 +374,47 @@ def get_issue_fix_versions_and_x_lines(issue_node):
 
     return fvs, x_lines
 
+def get_first_quarterly_baselines(fvs):
+    """
+    Returns the 7.4.13 baseline updates (such as 7.4.13-u135) of the fix versions
+    that are the first release of a quarterly release line (such as 2025.q2.0, or
+    2024.q1.1 since there was no 2024.q1.0).
+    """
+    baselines = set()
+
+    for v in fvs:
+        product_line = parse_product_line(v)
+
+        if not product_line or not re.fullmatch(r'202\d\.Q[1-4]', product_line):
+            continue
+
+        line_versions = [x for x in ALL_VERSIONS if parse_product_line(x) == product_line]
+
+        if not line_versions or v != min(line_versions, key=get_patch_level):
+            continue
+
+        baseline = QUARTERLY_RELEASES.get(product_line.lower())
+
+        if baseline is not None:
+            baselines.add(normalize_version('7.4.13-u%d' % baseline))
+
+    return baselines
+
+def add_quarterly_baseline_fixes(fvs):
+    """
+    A fix in the first release of a quarterly release line (such as 2025.q2.0, or
+    2024.q1.1 since there was no 2024.q1.0) means that the fix was already in the
+    7.4.13 update that the line is based on (such as 7.4.13-u135 for 2025.q2), so
+    add that update as a fix version. It is only added if no 7.4 release is
+    already named, so that an earlier 7.4 fix is not replaced by a later one.
+    """
+    fvs = set(fvs)
+
+    if any(parse_product_line(v) == '7.4' for v in fvs):
+        return fvs
+
+    return fvs | get_first_quarterly_baselines(fvs)
+
 def resolve_x_lines(fvs, x_lines):
     """
     For each product line named by a .x fix version that has no concrete fix version,
@@ -651,7 +705,7 @@ def get_precomputed_data():
                 if line and line not in covered_lines:
                     additional_fixes.add(fv)
 
-            fix_versions = resolve_x_lines(lpe_own_fvs.union(additional_fixes), x_lines)
+            known_fix_versions = lpe_own_fvs.union(additional_fixes)
         else:
             fallback_issues = pooled_issues[1:] if is_lpe else pooled_issues
 
@@ -662,7 +716,17 @@ def get_precomputed_data():
                 std_fix_versions.update(node_fvs)
                 x_lines.update(node_x_lines)
 
-            fix_versions = resolve_x_lines(std_fix_versions, x_lines)
+            known_fix_versions = std_fix_versions
+
+        # The 7.4.13 baseline of a quarterly line's first release is added before
+        # .x fix versions are resolved, so that a 7.4.x fix version resolves to
+        # the baseline rather than to the latest 7.4 release. The added baselines
+        # are remembered, so that merging duplicate tickets can prefer a 7.4 fix
+        # version that was recorded on a ticket.
+
+        fix_versions = add_quarterly_baseline_fixes(known_fix_versions)
+        baseline_fix_versions = fix_versions - known_fix_versions
+        fix_versions = resolve_x_lines(fix_versions, x_lines)
 
         affects_versions = set(ver['name'] for issue_node in pooled_issues for ver in issue_node.get('versions', []))
 
@@ -717,7 +781,8 @@ def get_precomputed_data():
             'affects_versions': list(affects_versions),
             'group': group,
             'lsv_keys': sorted(lsv_keys),
-            'master_only': is_master_only(fix_versions, affects_versions)
+            'master_only': is_master_only(fix_versions, affects_versions),
+            'baseline_fix_versions': sorted(baseline_fix_versions & set(fix_versions)),
         }
 
     apply_duplicate_tickets(precomputed, duplicate_tickets)
@@ -748,13 +813,27 @@ def apply_duplicate_tickets(precomputed, duplicate_tickets):
         # stream (or 7.0.10-ga1), so applying it to the tickets' already-kept fix
         # versions gives the same result as applying it to all of their fix versions
 
-        fix_versions = keep_latest_fix_version_per_stream(set(fv for key in keys for fv in precomputed[key]['fix_versions']))
+        fix_versions = set(fv for key in keys for fv in precomputed[key]['fix_versions'])
+
+        # A 7.4.13 baseline that was only inferred from a quarterly fix version
+        # (see add_quarterly_baseline_fixes) gives way to a 7.4 fix version that
+        # another ticket in the group records, rather than replacing it because
+        # it happens to be a later update
+
+        baseline_fix_versions = set(fv for key in keys for fv in precomputed[key].get('baseline_fix_versions', []))
+        recorded_fix_versions = fix_versions - baseline_fix_versions
+
+        if any(parse_product_line(fv) == '7.4' for fv in recorded_fix_versions):
+            fix_versions = recorded_fix_versions
+
+        fix_versions = keep_latest_fix_version_per_stream(fix_versions)
         affects_versions = set(ver for key in keys for ver in precomputed[key]['affects_versions'])
 
         for key in keys:
             precomputed[key]['fix_versions'] = list(fix_versions)
             precomputed[key]['affects_versions'] = list(affects_versions)
             precomputed[key]['master_only'] = is_master_only(fix_versions, affects_versions)
+            precomputed[key]['baseline_fix_versions'] = sorted(baseline_fix_versions & fix_versions)
 
 
 def get_lsv_tickets(precomputed):

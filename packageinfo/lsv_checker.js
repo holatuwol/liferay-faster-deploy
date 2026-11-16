@@ -51,11 +51,22 @@ var versionChips = document.getElementById('versionChips');
 
 var listedResults = {issueKeys: [], versionIndices: []};
 
-// Only the customer page has the hotfix field, since only its data lists each
+// Only the internal page has the hotfix field, since only its data lists each
 // vulnerability's LPE tickets
 
 var hotfixTickets = document.getElementById('hotfixTickets');
 var hotfixSummary = document.getElementById('hotfixSummary');
+
+// Development ticket (LPD) -> the vulnerability tickets (such as LPE) that it
+// is linked to, from the internal page's lsvHotfixDataFile, so that a hotfix's
+// tokens can be pasted without looking up its LPE tickets
+
+var hotfixTicketMap = {};
+
+// Vulnerability ticket -> the hotfix tickets entered for it (itself, or the
+// development tickets that map to it), set by applyHotfix
+
+var hotfixTicketSources = {};
 
 // URL parameters, read and written the same way as security_utils.js in
 // okr-cloud-health-index, so that the page also works when served by Google Apps
@@ -350,16 +361,18 @@ function parseNameFilter(value) {
 }
 
 /**
- * Returns the LPE tickets entered in the hotfix field, in the order entered.
+ * Returns the tickets entered in the hotfix field (LPE tickets, and development
+ * tickets such as LPD-12345 that lsvHotfixDataFile maps to them), in the order
+ * entered.
  */
 function parseHotfixTickets(value) {
-	var keys = (value.match(/\bLPE-\d+\b/gi) || []).map(function(key) { return key.toUpperCase(); });
+	var keys = (value.match(/\b(?:LPE|LPD|LPS|LPSA|COMMERCE)-\d+\b/gi) || []).map(function(key) { return key.toUpperCase(); });
 
 	return keys.filter(function(key, i) { return keys.indexOf(key) == i; });
 }
 
 /**
- * Returns the LPE tickets entered in the hotfix field, or none if the page has no
+ * Returns the tickets entered in the hotfix field, or none if the page has no
  * hotfix field.
  */
 function getHotfixKeys() {
@@ -424,12 +437,24 @@ function getOutstandingTickets(issue, versionIndex) {
 function applyHotfix(hotfixKeys) {
 	var matchedKeys = new Set();
 
-	var inHotfix = function(ticketKey) { return hotfixKeys.indexOf(ticketKey) != -1; };
+	// A development ticket stands in for the vulnerability tickets it maps to
+
+	hotfixTicketSources = {};
+
+	hotfixKeys.forEach(function(hotfixKey) {
+		[hotfixKey].concat(hotfixTicketMap[hotfixKey] || []).forEach(function(ticketKey) {
+			(hotfixTicketSources[ticketKey] = hotfixTicketSources[ticketKey] || []).push(hotfixKey);
+		});
+	});
+
+	var inHotfix = function(ticketKey) { return hotfixTicketSources[ticketKey] !== undefined; };
 
 	for (var issueKey in lsvData.issues) {
 		var issue = lsvData.issues[issueKey];
 
-		issue.tickets.filter(inHotfix).forEach(function(ticketKey) { matchedKeys.add(ticketKey); });
+		issue.tickets.filter(inHotfix).forEach(function(ticketKey) {
+			hotfixTicketSources[ticketKey].forEach(function(hotfixKey) { matchedKeys.add(hotfixKey); });
+		});
 
 		var resolvingKeys = (issue.resolvedBy || []).filter(inHotfix);
 
@@ -466,9 +491,27 @@ function updateHotfixSummary(hotfixKeys, matchedKeys) {
 
 	var unmatchedKeys = hotfixKeys.filter(function(key) { return !matchedKeys.has(key); });
 
-	hotfixSummary.textContent = hotfixKeys.length + ((hotfixKeys.length == 1) ? ' LPE ticket' : ' LPE tickets') + ', ' +
+	hotfixSummary.textContent = hotfixKeys.length + ((hotfixKeys.length == 1) ? ' ticket' : ' tickets') + ', ' +
 		matchedKeys.size + ' related to a published vulnerability' +
 		((unmatchedKeys.length > 0) && (unmatchedKeys.length <= 10) ? ' (not related: ' + unmatchedKeys.join(', ') + ')' : '');
+}
+
+/**
+ * Returns HTML for a vulnerability ticket that the hotfix includes, naming the
+ * development tickets entered for it, such as LPD-62070 (LPE-18301).
+ */
+function getHotfixTicketHtml(ticketKey) {
+	var ticketHtml = '<span class="lsv-id">' + escapeHtml(ticketKey) + '</span>';
+
+	var developmentKeys = (hotfixTicketSources[ticketKey] || []).filter(function(hotfixKey) { return hotfixKey != ticketKey; });
+
+	if ((developmentKeys.length == 0) || (hotfixTicketSources[ticketKey].indexOf(ticketKey) != -1)) {
+		return ticketHtml;
+	}
+
+	return developmentKeys.map(function(hotfixKey) {
+		return '<span class="lsv-id">' + escapeHtml(hotfixKey) + '</span>';
+	}).join(', ') + ' (' + ticketHtml + ')';
 }
 
 /**
@@ -483,9 +526,7 @@ function getNotAffectedReason(issue, versionIndex) {
 	}
 
 	if (issue.hotfixFixed[versionIndex] !== undefined) {
-		return 'fixed by hotfix (' + issue.hotfixFixed[versionIndex].map(function(key) {
-			return '<span class="lsv-id">' + escapeHtml(key) + '</span>';
-		}).join(', ') + ')';
+		return 'fixed by hotfix (' + issue.hotfixFixed[versionIndex].map(getHotfixTicketHtml).join(', ') + ')';
 	}
 
 	var versions = lsvData.versions;
@@ -1419,7 +1460,7 @@ function getResultsMarkdown(includeDetails) {
 	var hotfixKeys = getHotfixKeys();
 
 	if (hotfixKeys.length > 0) {
-		lines.push('', 'Treated as fixed by the hotfix LPE tickets: ' + hotfixKeys.join(', '));
+		lines.push('', 'Treated as fixed by the hotfix tickets: ' + hotfixKeys.join(', '));
 	}
 
 	listedResults.issueKeys.forEach(function(issueKey) {
@@ -1524,7 +1565,7 @@ function getPrintHtml(includeDetails) {
 		document.querySelector('h1').outerHTML +
 		document.querySelector('.alert-warning').outerHTML +
 		'<p>' + escapeHtml(document.getElementById('counts').textContent) + '</p>' +
-		((hotfixKeys.length > 0) ? '<p>Treated as fixed by the hotfix LPE tickets: ' + escapeHtml(hotfixKeys.join(', ')) + '</p>' : '') +
+		((hotfixKeys.length > 0) ? '<p>Treated as fixed by the hotfix tickets: ' + escapeHtml(hotfixKeys.join(', ')) + '</p>' : '') +
 		table.outerHTML + '</body></html>';
 }
 
@@ -1651,13 +1692,17 @@ async function fetchJson(url) {
 // The URL's parameters are read once both the data and (under Apps Script) the
 // URL the user sees have loaded
 
-// Each page names its own data file (lsvDataFile), rather than this script, so
-// that upload.sh and inline_html_files.py, which look for data file names in a
-// page and its scripts, only include that page's data (the public page must not
-// include the customer-facing data)
+// Each page names its own data files (lsvDataFile, and lsvHotfixDataFile on the
+// internal page), rather than this script, so that upload.sh and
+// inline_html_files.py, which look for data file names in a page and its
+// scripts, only include that page's data (the public page must not include the
+// internal data)
 
-Promise.all([fetchJson(lsvDataFile), initUrlParams()]).then(([data]) => {
+var hotfixDataPromise = (typeof lsvHotfixDataFile !== 'undefined') ? fetchJson(lsvHotfixDataFile) : Promise.resolve({});
+
+Promise.all([fetchJson(lsvDataFile), initUrlParams(), hotfixDataPromise]).then(([data, , hotfixData]) => {
 	lsvData = data;
+	hotfixTicketMap = hotfixData;
 
 	initAffected();
 
