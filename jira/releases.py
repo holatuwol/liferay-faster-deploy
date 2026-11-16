@@ -321,6 +321,11 @@ def update_releases():
             short_name = '7.4.13-u%d' % release_num
         elif len(name) > 8 and (name[4:6] == '.Q' or name[4:6] == '.q'):
             short_name = name.lower().strip()
+
+            if short_name[-4:] == '-cms':
+                return False
+            if short_name[-4:] == '-lts':
+                short_name = short_name[:-4]
         elif name[:6] == '7.3.10' and name.find(' DXP U') != -1:
             release_num = int(name[name.rfind('U')+1:])
             short_name = '7.3.10-u%d' % release_num
