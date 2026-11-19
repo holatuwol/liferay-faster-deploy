@@ -30,7 +30,8 @@ jira_folder = join(dirname(script_folder), 'jira')
 #
 # An LSV affects a version if the LSV itself or any ticket linked to it (as
 # recorded in security_issue_lsv_tickets.json) is listed as outstanding for that
-# version in security_issue_fix_versions.ndjson.
+# version in security_issue_fix_versions.ndjson, unless one of its resolving
+# tickets (see read_resolving_tickets) has resolved the LSV in that version.
 #
 # Only the LSV's own linked tickets are used, rather than every ticket that
 # shares one of its CVEs (security_issue_synonyms.ndjson), because a later LSV
@@ -192,13 +193,31 @@ def get_release_line(version):
 # LSVs mapped to the tickets that fully resolve the LSV on their own, even if
 # its other tickets are still outstanding (such as LPE-18800, fixed in
 # 2025.q1.28, which resolves LSV-1793 although LPE-18843 was never fixed in
-# 2025.q1)
+# 2025.q1). security_issue_fix_versions.py finds these tickets by matching them
+# against the LSV's own fix versions.
 
-resolving_tickets_file_name = 'lsv_resolving_tickets.json'
+resolving_tickets_file_name = 'security_issue_lsv_resolving_tickets.json'
 
 def read_resolving_tickets():
-    with open(join(script_folder, resolving_tickets_file_name), 'rb') as f:
-        return json.loads(f.read())
+    """
+    Returns LSV key -> a dictionary with:
+
+    - tickets: the resolving tickets
+    - fix_versions: the releases they resolve the LSV in, along with the later
+      releases of the same release lines
+    - alone: whether any one of the tickets resolves the LSV by itself (such as
+      in a hotfix), which is unknown when several tickets matched the LSV's fix
+      versions equally well
+    """
+
+    with open(join(jira_folder, resolving_tickets_file_name), 'rb') as f:
+        return {
+            lsv_key: {
+                'tickets': value['tickets'],
+                'fix_versions': value['fix_versions'],
+                'alone': len(value['tickets']) == 1,
+            } for lsv_key, value in json.loads(f.read()).items()
+        }
 
 def is_fixed_by(version_index, fix_version_indices, versions):
     # Whether one of the fix versions is this release or an earlier release of
@@ -210,12 +229,12 @@ def is_fixed_by(version_index, fix_version_indices, versions):
         fix_version_index <= version_index and get_release_line(versions[fix_version_index]) == release_line
         for fix_version_index in fix_version_indices)
 
-def combine_affected(ticket_keys, resolving_ticket_keys, outstanding, versions, version_indices):
+def combine_affected(ticket_keys, resolving, outstanding, versions, version_indices):
     """
     Returns version index -> fix versions for an LSV, combining its tickets. An
     LSV affects a release if any of its tickets is outstanding there, except
-    where one of its resolving tickets has been fixed in that release or an
-    earlier release of the same release line.
+    where it has been resolved (see read_resolving_tickets) in that release or
+    an earlier release of the same release line.
     """
 
     affected = {}
@@ -226,9 +245,8 @@ def combine_affected(ticket_keys, resolving_ticket_keys, outstanding, versions, 
 
     resolving_fix_version_indices = {
         version_indices[fix_version]
-        for ticket_key in resolving_ticket_keys if ticket_key in outstanding
-        for version_index, values in outstanding[ticket_key]
-        for fix_version in values if fix_version in version_indices
+        for fix_version in (resolving['fix_versions'] if resolving else [])
+        if fix_version in version_indices
     }
 
     for version_index in list(affected.keys()):
@@ -309,7 +327,7 @@ def build(lsv_issues, output_file_name, include_tickets):
                 if ticket_key in outstanding
             ]
 
-            issue_affected = combine_affected(issue_tickets, resolving_tickets.get(lsv_key, []), outstanding, versions, version_indices)
+            issue_affected = combine_affected(issue_tickets, resolving_tickets.get(lsv_key), outstanding, versions, version_indices)
 
         description = fields.get('customfield_10960')
 
@@ -347,12 +365,24 @@ def build(lsv_issues, output_file_name, include_tickets):
                     for ticket_key in issue_tickets
                 }
 
-            # A hotfix that includes a resolving ticket fixes the LSV on its own
+            # A hotfix that includes a resolving ticket fixes the LSV on its own,
+            # on the release lines of the LSV's fix versions
 
-            issue_resolving_tickets = [ticket_key for ticket_key in resolving_tickets.get(lsv_key, []) if ticket_key in issue_tickets]
+            resolving = resolving_tickets.get(lsv_key)
+
+            issue_resolving_tickets = [
+                ticket_key for ticket_key in resolving['tickets'] if ticket_key in issue_tickets
+            ] if resolving and resolving['alone'] else []
 
             if issue_resolving_tickets:
                 issues[lsv_key]['resolvedBy'] = issue_resolving_tickets
+
+                resolved_lines = {get_release_line(fix_version) for fix_version in resolving['fix_versions']}
+
+                issues[lsv_key]['resolvedIn'] = [
+                    version_index for version_index in sorted(issue_affected.keys())
+                    if get_release_line(versions[version_index]) in resolved_lines
+                ]
             issues[lsv_key]['audience'] = 'Public' if is_public(fields, now) else 'Customers Only'
         else:
             # The public page does not have any descriptions
@@ -734,8 +764,8 @@ def main():
     with open(join(jira_folder, 'security_issue_lsv_tickets.json'), 'rb') as f:
         lsv_tickets = json.loads(f.read())
 
-    for lsv_key, ticket_keys in read_resolving_tickets().items():
-        for ticket_key in ticket_keys:
+    for lsv_key, resolving in read_resolving_tickets().items():
+        for ticket_key in resolving['tickets']:
             if ticket_key not in lsv_tickets.get(lsv_key, []):
                 print(resolving_tickets_file_name + ':', ticket_key, 'is not linked to', lsv_key)
 

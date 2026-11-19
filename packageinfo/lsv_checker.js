@@ -428,7 +428,8 @@ function getOutstandingTickets(issue, versionIndex) {
 /**
  * A hotfix fixes a vulnerability in a version if it includes every ticket that
  * is still outstanding in that version, or one of the tickets that resolve the
- * vulnerability on their own (issue.resolvedBy).
+ * vulnerability on their own (issue.resolvedBy), in the versions they resolve
+ * it in (issue.resolvedIn).
  * Sets issue.affected (version index -> fix versions) with the hotfix applied
  * (issue.allAffected is without it), and issue.hotfixFixed (version index -> the
  * hotfix tickets that fix it there). Returns the hotfix tickets that belong to
@@ -464,7 +465,7 @@ function applyHotfix(hotfixKeys) {
 		for (var versionIndex in issue.allAffected) {
 			var outstandingKeys = getOutstandingTickets(issue, versionIndex);
 
-			if (resolvingKeys.length > 0) {
+			if ((resolvingKeys.length > 0) && (issue.resolvedIn.indexOf(parseInt(versionIndex)) != -1)) {
 				issue.hotfixFixed[versionIndex] = resolvingKeys;
 			}
 			else if ((outstandingKeys.length > 0) && outstandingKeys.every(inHotfix)) {

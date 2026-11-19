@@ -84,7 +84,13 @@ done
 source ../bin/activate
 
 if [ "lsv_checker.html" == "${1}" ]; then
+	PUBLIC_MODIFIED=$(date -u -r lsv_checker_public.json +"%Y-%m-%dT%H:%M:%SZ")
+
+	sed -i "s@<time .*</time>@<time datetime=\"${PUBLIC_MODIFIED}\">${PUBLIC_MODIFIED}</time>@" lsv_checker_public.html
+
 	for file in lsv_checker.js lsv_checker_public.json lsv_checker_public.html; do
 		S3_BUCKET=mdang.grow ./s3upload ${file}
 	done
+
+	sed -i "s@<time .*</time>@<time datetime=\"\"></time>@" lsv_checker_public.html
 fi

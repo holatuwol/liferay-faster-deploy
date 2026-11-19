@@ -853,6 +853,117 @@ def get_lsv_tickets(precomputed):
             for lsv_key in sorted(lsv_tickets.keys(), key=natural_key)
     }
 
+def get_fix_level(vname):
+    """
+    Returns a number for comparing two fix versions on the same release line.
+    """
+    if re.search(r'202[3-6]\.[qQ][1-4]', vname):
+        return get_patch_level(vname)
+
+    return get_standard_ulevel(vname)
+
+def get_fix_versions_by_line(fix_versions, include_quarterly_from_74=False):
+    """
+    Returns release line -> fix version, keeping the latest fix version of each
+    line.
+
+    With include_quarterly_from_74, a 7.4.13 update also fixes every quarterly
+    line based on that update or a later one (such as 7.4.13-u52 fixing 2024.q1,
+    which is based on 7.4.13-u112), since each quarterly line was branched from
+    a 7.4.13 update. Those lines are given their first release, unless the line
+    has a fix version of its own.
+    """
+    by_line = {}
+
+    for fv in keep_latest_fix_version_per_stream(fix_versions):
+        line = parse_product_line(fv)
+
+        if line:
+            by_line[line] = fv
+
+    if include_quarterly_from_74 and by_line.get('7.4', '').startswith('7.4.13-u'):
+        fix_level = get_standard_ulevel(by_line['7.4'])
+
+        for q_str, baseline in QUARTERLY_RELEASES.items():
+            line = q_str.upper()
+
+            if baseline < fix_level or line in by_line:
+                continue
+
+            line_versions = [v for v in ALL_VERSIONS if parse_product_line(v) == line]
+            by_line[line] = min(line_versions, key=get_patch_level) if line_versions else q_str + '.0'
+
+    return by_line
+
+def get_lsv_resolving_tickets(precomputed, lsv_issues, lsv_tickets):
+    """
+    When an LSV has more than one ticket, a single ticket often resolves the LSV
+    on its own, and the other tickets are follow-ups (such as LPE-18800, fixed in
+    2025.q1.28 like LSV-1793, while LPE-18843 was fixed in 2025.q1.30). Returns
+    LSV key -> the resolving tickets and the releases they resolve the LSV in.
+
+    Only the release lines that the LSV itself has fix versions on are checked.
+    A ticket resolves the LSV if it is fixed on each of those lines in the LSV's
+    fix version or earlier. If several tickets qualify and some of them are
+    fixed in exactly the LSV's fix versions, only those are kept.
+
+    Several tickets can still be left (such as identical tickets for different
+    modules). Each of them is fixed wherever the LSV is, so the LSV is still
+    fixed there, but it is unknown whether any one of them would resolve the
+    LSV on its own (such as in a hotfix).
+    """
+    resolving = {}
+
+    for lsv_key, ticket_keys in lsv_tickets.items():
+        if len(ticket_keys) < 2 or lsv_key not in lsv_issues:
+            continue
+
+        lsv_fixes = get_fix_versions_by_line(get_issue_fix_versions(lsv_issues[lsv_key]))
+
+        if not lsv_fixes:
+            continue
+
+        ticket_fixes = {
+            key: get_fix_versions_by_line(precomputed[key]['fix_versions'], include_quarterly_from_74=True)
+                for key in ticket_keys
+        }
+
+        candidates = [
+            key for key in ticket_keys
+            if all(line in ticket_fixes[key] and get_fix_level(ticket_fixes[key][line]) <= get_fix_level(fv) for line, fv in lsv_fixes.items())
+        ]
+
+        exact_candidates = [
+            key for key in candidates
+            if all(ticket_fixes[key][line] == fv for line, fv in lsv_fixes.items())
+        ]
+
+        if exact_candidates:
+            candidates = exact_candidates
+
+        if not candidates:
+            continue
+
+        # On release lines that the LSV has no fix versions on, the resolving
+        # tickets' own recorded fix versions are trusted instead (such as
+        # LPE-19127 fixing LSV-2089 in 7.4.13-u155, although LSV-2089 only
+        # records 2026.q3.10). If there are several resolving tickets, a line
+        # is only fixed once all of them are.
+
+        fix_versions = dict(lsv_fixes)
+
+        candidate_fixes = [get_fix_versions_by_line(precomputed[key]['fix_versions']) for key in candidates]
+
+        for line in set.intersection(*(set(fixes) for fixes in candidate_fixes)) - set(lsv_fixes):
+            fix_versions[line] = max((fixes[line] for fixes in candidate_fixes), key=get_fix_level)
+
+        resolving[lsv_key] = {
+            'tickets': candidates,
+            'fix_versions': sorted(fix_versions.values(), key=lambda fv: (get_version_rank(fv), get_fix_level(fv))),
+        }
+
+    return resolving
+
 def get_target_version_data(target_version):
     target_line = parse_product_line(target_version)
     target_q_level = get_quarterly_level(target_version)
@@ -1024,8 +1135,19 @@ def main():
         # evaluated as itself), so that an LSV's affected versions come only from its
         # own tickets rather than from every ticket sharing one of its CVEs
 
+        lsv_tickets = get_lsv_tickets(precomputed)
+
         with open('security_issue_lsv_tickets.json', 'wb') as f:
-            f.write(json.dumps(get_lsv_tickets(precomputed), option=json.OPT_INDENT_2))
+            f.write(json.dumps(lsv_tickets, option=json.OPT_INDENT_2))
+
+        # The ticket that resolves each LSV with several tickets on its own, on
+        # the release lines the LSV has fix versions on
+
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'security_issue_export', 'LSV.json'), 'rb') as f:
+            lsv_issues = json.loads(f.read())
+
+        with open('security_issue_lsv_resolving_tickets.json', 'wb') as f:
+            f.write(json.dumps(get_lsv_resolving_tickets(precomputed, lsv_issues, lsv_tickets), option=json.OPT_INDENT_2))
 
 if __name__ == '__main__':
     main()

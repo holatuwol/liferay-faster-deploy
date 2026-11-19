@@ -166,6 +166,16 @@ When a ticket affects the target, it's written under its severity group, with it
   - `unfixed_missing_lines`, the skipped lines that also have no fix. The releases on these lines are currently reported as *not affected*, so they change the output.
 
   Tickets with `unfixed_missing_lines` are listed first. Lines newer than the newest one mentioned aren't checked, because the fix may have reached master before those lines branched. To correct a ticket, add the missing lines to `security_issue_extra_affects_versions.json`. The values in `missing_lines` can be copied as they are, and the ticket drops out of the file on the next run.
+- **`security_issue_lsv_tickets.json`** lists the evaluated tickets linked to each LSV.
+- **`security_issue_lsv_resolving_tickets.json`** lists, for each LSV with more than one ticket, the ticket that resolves the LSV on its own. Usually the other tickets are follow-ups that were fixed later. `lsv_checker.py` uses this file. A ticket resolves the LSV when:
+  - the LSV has its own fix versions (`customfield_10978`). Only the release lines of those fix versions are checked, and other lines are ignored;
+  - on each of those lines, the ticket is fixed in the LSV's fix version or in an earlier release. A 7.4.13 update counts as a fix in the first release of every quarterly line based on that update or a later one. For example, `7.4.13-u52` counts as a fix in `2024.q1.1`, because 2024.q1 is based on `7.4.13-u112`.
+
+  If several tickets resolve the LSV, the ones fixed in exactly the LSV's fix versions are kept. If several tickets are still left, they are all listed, and `lsv_checker.py` doesn't treat any one of them as resolving the LSV in a hotfix.
+
+  Each entry also gives `fix_versions`, the releases where the LSV stops being affected:
+  - on the release lines the LSV has fix versions on, the LSV's own fix versions;
+  - on any other line, the resolving ticket's own recorded fix version. For example, LPE-19127 resolves LSV-2089 in `7.4.13-u155`, although LSV-2089 only records `2026.q3.10`. When several tickets are listed, a line is only included if all of them have a fix on it, and the latest of their fixes is used.
 - **Debug mode:** `python security_issue_fix_versions.py <TICKET>` writes `security_issue_fix_versions.debug.json` instead. It contains the group and applicable fixes of that one ticket for every release it affects.
 
 ## Troubleshooting a missing ticket

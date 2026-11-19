@@ -331,6 +331,88 @@ class TestSecurityIssueFixVersions(unittest.TestCase):
             security_issue_fix_versions.resolve_x_lines(add_baseline({'2025.q2.0'}), {'7.4'}),
             {'2025.q2.0', '7.4.13-u135'})
 
+    def test_fix_versions_by_line_quarterly_from_74(self):
+        by_line = security_issue_fix_versions.get_fix_versions_by_line
+
+        # Without the inference, only the recorded lines are returned
+
+        self.assertEqual(by_line({'7.4.13-u147', '2025.q1.18'}), {'7.4': '7.4.13-u147', '2025.Q1': '2025.q1.18'})
+
+        # 2026.q2 is based on u149 and 2026.q1 on u147, so a u147 fix is in
+        # their first releases, while 2025.q4 (u143) keeps needing its own fix
+
+        inferred = by_line({'7.4.13-u147', '2025.q1.18'}, include_quarterly_from_74=True)
+
+        self.assertEqual(inferred['2025.Q1'], '2025.q1.18')
+        self.assertEqual(inferred['2026.Q1'], '2026.q1.0')
+        self.assertEqual(inferred['2026.Q2'], '2026.q2.0')
+        self.assertNotIn('2025.Q4', inferred)
+
+        # 2024.q1 has no .0 release
+
+        self.assertEqual(by_line({'7.4.13-u52'}, include_quarterly_from_74=True)['2024.Q1'], '2024.q1.1')
+
+    def test_lsv_resolving_tickets(self):
+        resolving_tickets = security_issue_fix_versions.get_lsv_resolving_tickets
+
+        def lsv(*names):
+            return {'customfield_10978': [{'name': name} for name in names]}
+
+        precomputed = {
+            'LPE-1': {'fix_versions': ['7.4.13-u154', '2025.q1.28', '2026.q1.13']},
+            'LPE-2': {'fix_versions': ['7.4.13-u154', '2025.q1.30', '2026.q1.14']},
+            'LPE-3': {'fix_versions': []},
+            'LPE-4': {'fix_versions': ['7.4.13-u52']},
+            'LPE-5': {'fix_versions': ['7.3.10-u36']},
+            'LPE-6': {'fix_versions': ['2025.q1.27', '2026.q1.12']},
+        }
+
+        lsv_issues = {
+            'LSV-1': lsv('2025.Q1.28', '2026.Q1.13'),
+            'LSV-2': lsv('2025.Q1.30', '2026.Q1.14'),
+            'LSV-3': lsv('2024.Q1.1', '2025.Q1.0'),
+            'LSV-4': lsv('2025.Q1.29', '2026.Q2.5'),
+            'LSV-5': lsv(),
+            'LSV-6': lsv('2025.Q1.30'),
+        }
+
+        lsv_tickets = {
+            'LSV-1': ['LPE-1', 'LPE-2', 'LPE-3'],
+            'LSV-2': ['LPE-1', 'LPE-2'],
+            'LSV-3': ['LPE-4', 'LPE-5'],
+            'LSV-4': ['LPE-2', 'LPE-3'],
+            'LSV-5': ['LPE-1', 'LPE-2'],
+            'LSV-6': ['LPE-1', 'LPE-6'],
+        }
+
+        result = resolving_tickets(precomputed, lsv_issues, lsv_tickets)
+
+        # Only the LSV's own release lines are checked, but the resolving
+        # ticket's fix on another line (7.4) also resolves the LSV there
+
+        self.assertEqual(result['LSV-1'], {'tickets': ['LPE-1'], 'fix_versions': ['7.4.13-u154', '2025.q1.28', '2026.q1.13']})
+
+        # A ticket fixed earlier qualifies, but the exact match is preferred
+
+        self.assertEqual(result['LSV-2']['tickets'], ['LPE-2'])
+
+        # A 7.4.13 fix covers the quarterly lines based on a later update
+
+        self.assertEqual(result['LSV-3']['tickets'], ['LPE-4'])
+
+        # No ticket is fixed by 2025.q1.29 and on 2026.q2, and an LSV without
+        # fix versions is not checked
+
+        self.assertNotIn('LSV-4', result)
+        self.assertNotIn('LSV-5', result)
+
+        # Without an exact match, every ticket fixed at or before the LSV's
+        # fix versions is kept, and a line the LSV has no fix versions on is
+        # only resolved if every one of them is fixed there (LPE-6 has no 7.4
+        # fix, and 2026.q1 uses the later of the two fixes)
+
+        self.assertEqual(result['LSV-6'], {'tickets': ['LPE-1', 'LPE-6'], 'fix_versions': ['2025.q1.30', '2026.q1.13']})
+
     def test_duplicate_tickets_prefer_recorded_74_fix(self):
         # One duplicate records u145, and the other only has the u147 baseline
         # inferred from 2026.q1.0, so the recorded u145 is kept
