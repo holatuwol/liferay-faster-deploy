@@ -126,6 +126,81 @@ class TestSecurityIssueFixVersions(unittest.TestCase):
         self.assertIn('7.0.10-de60', res)
         self.assertIn('7.1.10-fp3', res)
 
+    def test_normalize_version_72_service_packs(self):
+        self.assertEqual(normalize_version('7.2.10 DXP SP1'), '7.2.10-fp2')
+        self.assertEqual(normalize_version('7.2.10.3 DXP SP3'), '7.2.10-fp8')
+        self.assertEqual(normalize_version('7.2.10-sp6'), '7.2.10-fp17')
+        self.assertEqual(normalize_version('7.2.10 DXP SP8'), '7.2.10-fp20')
+        self.assertIsNone(normalize_version('7.2.10 DXP SP9'))
+
+    def test_normalize_version_hyphenated_fix_packs(self):
+        self.assertEqual(normalize_version('7.2.10-dxp-17'), '7.2.10-fp17')
+        self.assertEqual(normalize_version('7.1.10-dxp-27'), '7.1.10-fp27')
+        self.assertEqual(normalize_version('7.0.10-de-65'), '7.0.10-de65')
+
+    def test_normalize_version_74_ce_gas(self):
+        self.assertEqual(normalize_version('7.4.3.120 CE GA120'), '7.4.13-u120')
+        self.assertEqual(normalize_version('7.4.13.125 CE GA125'), '7.4.13-u125')
+        self.assertEqual(normalize_version('7.4.3.100 GA100'), '7.4.13-u100')
+        self.assertEqual(normalize_version('7.4.3.10 CE GA10'), '7.4.13-u6')
+        self.assertEqual(normalize_version('7.4.3.4 CE GA4'), '7.4.13-ga1')
+        self.assertEqual(normalize_version('7.4.3.4-ga4'), '7.4.13-ga1')
+
+    def test_normalize_version_milestones(self):
+        self.assertEqual(normalize_version('7.0.0 M3'), '7.0.10-ga1')
+        self.assertEqual(normalize_version('7.1.0 M1'), '7.1.10-ga1')
+        self.assertEqual(normalize_version('7.1.0 M2'), '7.1.10-ga1')
+        self.assertEqual(normalize_version('7.2.0 M2'), '7.2.10-ga1')
+        self.assertEqual(normalize_version('7.3.0 Milestone 1'), '7.3.10-ga1')
+        self.assertEqual(normalize_version('7.4.0 CE M1'), '7.4.13-ga1')
+
+    def test_normalize_version_73_ce_gas(self):
+        self.assertEqual(normalize_version('7.3.1 CE GA2'), '7.3.10-ga1')
+        self.assertEqual(normalize_version('7.3.5 CE GA6'), '7.3.10-ga1')
+        self.assertEqual(normalize_version('7.3.5-ga6'), '7.3.10-ga1')
+        self.assertEqual(normalize_version('7.3.6 CE GA7'), '7.3.10-u1')
+        self.assertEqual(normalize_version('7.3.6-ga7'), '7.3.10-u1')
+        self.assertEqual(normalize_version('7.3.7 CE GA8'), '7.3.10-u2')
+        self.assertIsNone(normalize_version('7.3.8 CE GA9'))
+
+    def test_normalize_version_first_ce_gas(self):
+        self.assertEqual(normalize_version('7.1.0 CE GA1'), '7.1.10-ga1')
+        self.assertEqual(normalize_version('7.1.0-ga1'), '7.1.10-ga1')
+        self.assertEqual(normalize_version('7.2.0 GA1'), '7.2.10-ga1')
+        self.assertEqual(normalize_version('7.2.0 CE GA1'), '7.2.10-ga1')
+        self.assertEqual(normalize_version('7.2.0-ga1'), '7.2.10-ga1')
+        self.assertEqual(normalize_version('7.3.0 CE GA1'), '7.3.10-ga1')
+        self.assertEqual(normalize_version('7.3.0-ga1'), '7.3.10-ga1')
+        self.assertEqual(normalize_version('7.4.0 CE GA1'), '7.4.13-ga1')
+        self.assertEqual(normalize_version('7.4.1 CE GA2'), '7.4.13-ga1')
+        self.assertEqual(normalize_version('7.4.2 CE GA3'), '7.4.13-ga1')
+        self.assertEqual(normalize_version('7.4.2-ga3'), '7.4.13-ga1')
+        self.assertIsNone(normalize_version('7.2.1 CE GA2'))
+
+    def test_normalize_version_70_service_packs(self):
+        self.assertEqual(normalize_version('7.0.10 DXP SP1'), '7.0.10-de7')
+        self.assertEqual(normalize_version('7.0.10.10 DXP SP11'), '7.0.10-de80')
+        self.assertEqual(normalize_version('7.0.10-sp9'), '7.0.10-de60')
+        self.assertEqual(normalize_version('7.0.10 DXP SP17'), '7.0.10-de102')
+        self.assertIsNone(normalize_version('7.0.10 DXP SP18'))
+
+    def test_normalize_version_71_service_packs(self):
+        self.assertEqual(normalize_version('7.1.10 DXP SP1'), '7.1.10-fp5')
+        self.assertEqual(normalize_version('7.1.10.3 SP3'), '7.1.10-fp15')
+        self.assertEqual(normalize_version('7.1.10-sp6'), '7.1.10-fp23')
+        self.assertEqual(normalize_version('7.1.10 DXP SP8'), '7.1.10-fp28')
+        self.assertIsNone(normalize_version('7.1.10 DXP SP9'))
+
+    def test_normalize_version_73_service_packs(self):
+        self.assertEqual(normalize_version('7.3.10 DXP SP1'), '7.3.10-u1')
+        self.assertEqual(normalize_version('7.3.10.3 DXP SP3'), '7.3.10-u3')
+        self.assertEqual(normalize_version('7.3.10-sp2'), '7.3.10-u2')
+        self.assertIsNone(normalize_version('7.3.10 DXP SP4'))
+
+    def test_get_issue_fix_versions_service_packs(self):
+        issue = {'fixVersions': [{'name': '7.2.10.4 DXP SP4'}, {'name': '7.1.10.2 SP2'}, {'name': '7.0.10.13 DXP SP14'}, {'name': '7.3.10 DXP U5'}]}
+        self.assertEqual(get_issue_fix_versions(issue), {'7.2.10-fp11', '7.1.10-fp10', '7.0.10-de93', '7.3.10-u5'})
+
     def test_normalize_version_70_and_71(self):
         self.assertEqual(normalize_version('7.0.10-de60'), '7.0.10-de60')
         self.assertEqual(normalize_version('7.1.10-fp3'), '7.1.10-fp3')
@@ -324,6 +399,12 @@ class TestSecurityIssueFixVersions(unittest.TestCase):
 
         self.assertEqual(add_baseline({'2025.q2.0', '7.4.13-u130'}), {'2025.q2.0', '7.4.13-u130'})
 
+        # A later quarterly line that needed a backport already existed when the
+        # issue was fixed, so the first release is not evidence of the baseline
+
+        self.assertEqual(add_baseline({'2025.q2.0', '2025.q3.4'}), {'2025.q2.0', '2025.q3.4'})
+        self.assertEqual(add_baseline({'2025.q2.0', '2025.q1.4'}), {'2025.q2.0', '2025.q1.4', '7.4.13-u135'})
+
         # The baseline is a concrete 7.4 fix, so a 7.4.x fix version does not
         # resolve to the latest 7.4 release
 
@@ -351,6 +432,14 @@ class TestSecurityIssueFixVersions(unittest.TestCase):
         # 2024.q1 has no .0 release
 
         self.assertEqual(by_line({'7.4.13-u52'}, include_quarterly_from_74=True)['2024.Q1'], '2024.q1.1')
+
+        # A 7.4.13 GA1 fix came before every update, so it is in every quarterly line
+
+        ga1 = by_line({'7.4.13-ga1'}, include_quarterly_from_74=True)
+
+        self.assertEqual(ga1['2023.Q3'], '2023.q3.0')
+        self.assertEqual(ga1['2024.Q1'], '2024.q1.1')
+        self.assertEqual(ga1['2026.Q4'], '2026.q4.0')
 
     def test_lsv_resolving_tickets(self):
         resolving_tickets = security_issue_fix_versions.get_lsv_resolving_tickets

@@ -5,11 +5,11 @@ import orjson as json
 import re
 from collections import defaultdict, deque
 
-def read_quarterly_releases():
+def read_releases_py_value(name):
     """
-    Returns the 7.4.13 update that each quarterly release line is based on, from
-    quarterly_releases in releases.py. The dictionary is read from the source
-    rather than imported, since importing releases.py pulls releases from Jira.
+    Returns the value of a module-level literal (such as quarterly_releases) in
+    releases.py. The value is read from the source rather than imported, since
+    importing releases.py pulls releases from Jira.
     """
     releases_py = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'releases.py')
 
@@ -17,13 +17,46 @@ def read_quarterly_releases():
         tree = ast.parse(f.read())
 
     for node in tree.body:
-        if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == 'quarterly_releases' for target in node.targets):
+        if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == name for target in node.targets):
             return ast.literal_eval(node.value)
 
-    raise ValueError('quarterly_releases not found in ' + releases_py)
+    raise ValueError(name + ' not found in ' + releases_py)
+
+def read_quarterly_releases():
+    """
+    Returns the 7.4.13 update that each quarterly release line is based on, from
+    quarterly_releases in releases.py.
+    """
+    return read_releases_py_value('quarterly_releases')
 
 # Mapping of Liferay DXP quarterly releases to the 7.4.13 update they are based on
 QUARTERLY_RELEASES = read_quarterly_releases()
+
+# Mapping of Liferay DXP 7.0 to 7.3 service packs to the fix pack (or update) they are equivalent to
+SERVICE_PACK_FIX_PACKS = read_releases_py_value('service_pack_fix_packs')
+
+# The kind of release that the service packs of each line map to, if not a fix pack
+SERVICE_PACK_RELEASE_TYPES = read_releases_py_value('service_pack_release_types')
+
+# 7.0 to 7.3 service pack names, such as 7.2.10 DXP SP3, 7.2.10.3 DXP SP3,
+# 7.0.10.10 DXP SP11, 7.1.10.1 SP1 or 7.2.10-sp3
+SERVICE_PACK_PATTERN = re.compile(r'^(7\.[0-3])\.\d+(?:\.\d+)?[\s.-]*(?:dxp\s*)?sp\s*(\d+)$', re.IGNORECASE)
+
+# 7.4 CE GA names, such as 7.4.3.120 CE GA120, 7.4.3.4-ga4, 7.4.3.100 GA100 or
+# 7.4.13.125 CE GA125 (where 7.4.13 is a typo for 7.4.3)
+CE_GA_74_PATTERN = re.compile(r'^7\.4\.(?:3|13)\.(\d+)(?:\s+(?:ce\s+)?ga\d*|-ga\d*)$', re.IGNORECASE)
+
+# Fix pack names with an extra hyphen, such as 7.2.10-dxp-17 or 7.0.10-de-65
+HYPHENATED_FIX_PACK_PATTERN = re.compile(r'^(7\.[0-2])\.10-(?:dxp|de)-(\d+)$', re.IGNORECASE)
+
+# 7.3 CE GA names, such as 7.3.5 CE GA6 or 7.3.6-ga7. CE GA1 to GA6 came before
+# 7.3 DXP GA1, and later CE GAs are each equivalent to a 7.3 DXP service pack.
+CE_GA_73_SERVICE_PACKS = {7: 1, 8: 2}
+# 7.4 CE GAs before 7.4.3 (7.4.0 CE GA1, 7.4.1 CE GA2 and 7.4.2 CE GA3), which
+# came before the first 7.4.13 update, so a fix in them is a fix in 7.4.13 GA1
+EARLY_CE_GA_74_PATTERN = re.compile(r'^7\.4\.[0-2](?:\s+ce\s+ga|-ga)\d+$', re.IGNORECASE)
+
+CE_GA_73_PATTERN = re.compile(r'^7\.3\.\d+(?:\s+ce\s+ga|-ga)(\d+)$', re.IGNORECASE)
 
 with open('releases.json', 'rt') as f:
     ALL_VERSIONS = list(json.loads(f.read()).keys())
@@ -45,19 +78,31 @@ def normalize_version(name):
     short_name = None
     if v_clean[0] == 'u':
         short_name = '7.4.13-%s' % v_clean
-    elif name[:6] == '7.4.3.' and name.find(' CE GA') != -1:
-        release_num = int(name[6:name.find(' ')])
+    elif SERVICE_PACK_PATTERN.match(v_clean):
+        line, service_pack = SERVICE_PACK_PATTERN.match(v_clean).groups()
+        if int(service_pack) in SERVICE_PACK_FIX_PACKS[line]:
+            release_type = SERVICE_PACK_RELEASE_TYPES.get(line, 'fp')
+            short_name = '%s.10-%s%d' % (line, release_type, SERVICE_PACK_FIX_PACKS[line][int(service_pack)])
+    elif CE_GA_74_PATTERN.match(v_clean):
+        release_num = int(CE_GA_74_PATTERN.match(v_clean).group(1))
         if release_num >= 15:
             short_name = '7.4.13-u%d' % release_num
         elif release_num > 4:
             short_name = '7.4.13-u%d' % (release_num - 4)
-    elif name[:6] == '7.4.3.' and name.find('-ga') != -1:
-        release_num = int(name[6:name.find('-ga')])
-        if release_num >= 15:
-            short_name = '7.4.13-u%d' % release_num
-        elif release_num > 4:
-            short_name = '7.4.13-u%d' % (release_num - 4)
-    elif name == '7.4.13 DXP GA1':
+        else:
+            # CE GAs up to GA4 came before the first 7.4.13 update, so like a
+            # milestone, a fix in them is a fix in 7.4.13 GA1
+            short_name = '7.4.13-ga1'
+    elif CE_GA_73_PATTERN.match(v_clean):
+        ce_ga = int(CE_GA_73_PATTERN.match(v_clean).group(1))
+        if ce_ga <= 6:
+            short_name = '7.3.10-ga1'
+        elif ce_ga in CE_GA_73_SERVICE_PACKS:
+            return normalize_version('7.3.10-sp%d' % CE_GA_73_SERVICE_PACKS[ce_ga])
+    elif HYPHENATED_FIX_PACK_PATTERN.match(v_clean):
+        line, release_num = HYPHENATED_FIX_PACK_PATTERN.match(v_clean).groups()
+        short_name = '%s.10-%s%d' % (line, 'de' if line == '7.0' else 'fp', int(release_num))
+    elif name == '7.4.13 DXP GA1' or EARLY_CE_GA_74_PATTERN.match(v_clean):
         short_name = '7.4.13-ga1'
     elif name[:12] == '7.4.13 DXP U':
         try:
@@ -73,13 +118,7 @@ def normalize_version(name):
             short_name = '7.3.10-u%d' % release_num
         except ValueError:
             pass
-    elif name[:6] == '7.3.10' and name.find(' DXP SP') != -1:
-        try:
-            release_num = int(name[name.rfind('SP')+2:])
-            short_name = '7.3.10-u%d' % release_num
-        except ValueError:
-            pass
-    elif name == '7.3.10 DXP GA1':
+    elif name == '7.3.10 DXP GA1' or v_clean in ('7.3.0 ce ga1', '7.3.0-ga1'):
         short_name = '7.3.10-ga1'
     elif name[:6] == '7.3.10' and name.find(' DXP FP') != -1:
         try:
@@ -93,7 +132,7 @@ def normalize_version(name):
             short_name = '7.2.10-fp%d' % release_num
         except ValueError:
             pass
-    elif name == '7.2.10 DXP GA1' or name == '7.2.0 GA1':
+    elif name == '7.2.10 DXP GA1' or v_clean in ('7.2.0 ga1', '7.2.0 ce ga1', '7.2.0-ga1'):
         short_name = '7.2.10-ga1'
     elif name[:6] == '7.1.10' and name.find(' DXP FP') != -1:
         try:
@@ -101,7 +140,7 @@ def normalize_version(name):
             short_name = '7.1.10-fp%d' % release_num
         except ValueError:
             pass
-    elif name == '7.1.10 DXP GA1' or name == '7.1.0 CE GA1':
+    elif name == '7.1.10 DXP GA1' or v_clean in ('7.1.0 ce ga1', '7.1.0-ga1'):
         short_name = '7.1.10-ga1'
     elif (name[:6] == '7.0.10' or name[:5] == '7.0.0') and name.find(' DXP FP') != -1:
         try:
@@ -113,13 +152,13 @@ def normalize_version(name):
         short_name = '7.0.10-ga1'
     elif re.match(r'^7\.0\.\d+(?:\s+ce)?\s+(?:ga\d*|m\d+|milestone(?:\s+\d+)?|rc\d*|release\s+candidate(?:\s+\d+)?|alpha(?:\s+\d+)?|beta(?:\s+\d+)?)$', v_clean, re.IGNORECASE):
         short_name = '7.0.10-ga1'
-    elif re.match(r'^7\.1\.\d+(?:\s+ce)?\s+(?:rc\d*|release\s+candidate(?:\s+\d+)?|alpha(?:\s+\d+)?|beta(?:\s+\d+)?)$', v_clean, re.IGNORECASE):
+    elif re.match(r'^7\.1\.\d+(?:\s+ce)?\s+(?:m\d+|milestone(?:\s+\d+)?|rc\d*|release\s+candidate(?:\s+\d+)?|alpha(?:\s+\d+)?|beta(?:\s+\d+)?)$', v_clean, re.IGNORECASE):
         short_name = '7.1.10-ga1'
-    elif re.match(r'^7\.2\.\d+(?:\s+ce)?\s+(?:rc\d*|release\s+candidate(?:\s+\d+)?|alpha(?:\s+\d+)?|beta(?:\s+\d+)?)$', v_clean, re.IGNORECASE):
+    elif re.match(r'^7\.2\.\d+(?:\s+ce)?\s+(?:m\d+|milestone(?:\s+\d+)?|rc\d*|release\s+candidate(?:\s+\d+)?|alpha(?:\s+\d+)?|beta(?:\s+\d+)?)$', v_clean, re.IGNORECASE):
         short_name = '7.2.10-ga1'
-    elif re.match(r'^7\.3\.\d+(?:\s+ce)?\s+(?:rc\d*|release\s+candidate(?:\s+\d+)?|alpha(?:\s+\d+)?|beta(?:\s+\d+)?)$', v_clean, re.IGNORECASE):
+    elif re.match(r'^7\.3\.\d+(?:\s+ce)?\s+(?:m\d+|milestone(?:\s+\d+)?|rc\d*|release\s+candidate(?:\s+\d+)?|alpha(?:\s+\d+)?|beta(?:\s+\d+)?)$', v_clean, re.IGNORECASE):
         short_name = '7.3.10-ga1'
-    elif re.match(r'^7\.4\.\d+(?:\s+ce)?\s+(?:rc\d*|release\s+candidate(?:\s+\d+)?|alpha(?:\s+\d+)?|beta(?:\s+\d+)?)$', v_clean, re.IGNORECASE):
+    elif re.match(r'^7\.4\.\d+(?:\s+ce)?\s+(?:m\d+|milestone(?:\s+\d+)?|rc\d*|release\s+candidate(?:\s+\d+)?|alpha(?:\s+\d+)?|beta(?:\s+\d+)?)$', v_clean, re.IGNORECASE):
         short_name = '7.4.13-ga1'
     elif name[:10] == '7.0.10-de':
         try:
@@ -318,9 +357,6 @@ def add_fix_version(fvs, name):
     if lower_name[:3] in ['5.1', '5.2', '6.0', '6.1', '6.2']:
         return
     
-    if lower_name[:3] == '7.2' and 'sp' in lower_name:
-        return
-
     normalized_version = normalize_version(name)
     if normalized_version is not None:
         fvs.add(normalized_version)
@@ -374,23 +410,41 @@ def get_issue_fix_versions_and_x_lines(issue_node):
 
     return fvs, x_lines
 
+def is_first_quarterly_release(v):
+    """
+    Returns whether a fix version is the first release of a quarterly release
+    line (such as 2025.q2.0, or 2024.q1.1 since there was no 2024.q1.0).
+    """
+    product_line = parse_product_line(v)
+
+    if not product_line or not re.fullmatch(r'202\d\.Q[1-4]', product_line):
+        return False
+
+    line_versions = [x for x in ALL_VERSIONS if parse_product_line(x) == product_line]
+
+    return bool(line_versions) and v == min(line_versions, key=get_patch_level)
+
 def get_first_quarterly_baselines(fvs):
     """
     Returns the 7.4.13 baseline updates (such as 7.4.13-u135) of the fix versions
     that are the first release of a quarterly release line (such as 2025.q2.0, or
     2024.q1.1 since there was no 2024.q1.0).
+
+    A first release is skipped if a later quarterly release line was only fixed
+    in a later release of that line (such as 2025.q3.4), since that line already
+    existed when the issue was fixed, so the fix was not in master when the
+    earlier line was branched.
     """
     baselines = set()
 
-    for v in fvs:
-        product_line = parse_product_line(v)
+    quarterly_lines = {v: parse_product_line(v) for v in fvs if re.fullmatch(r'202\d\.Q[1-4]', parse_product_line(v) or '')}
+    backported_lines = {line for v, line in quarterly_lines.items() if not is_first_quarterly_release(v)}
 
-        if not product_line or not re.fullmatch(r'202\d\.Q[1-4]', product_line):
+    for v, product_line in quarterly_lines.items():
+        if not is_first_quarterly_release(v):
             continue
 
-        line_versions = [x for x in ALL_VERSIONS if parse_product_line(x) == product_line]
-
-        if not line_versions or v != min(line_versions, key=get_patch_level):
+        if any(line > product_line for line in backported_lines):
             continue
 
         baseline = QUARTERLY_RELEASES.get(product_line.lower())
@@ -870,7 +924,9 @@ def get_fix_versions_by_line(fix_versions, include_quarterly_from_74=False):
     With include_quarterly_from_74, a 7.4.13 update also fixes every quarterly
     line based on that update or a later one (such as 7.4.13-u52 fixing 2024.q1,
     which is based on 7.4.13-u112), since each quarterly line was branched from
-    a 7.4.13 update. Those lines are given their first release, unless the line
+    a 7.4.13 update. A fix in 7.4.13 GA1 (or anything else normalized to it,
+    such as a 7.4 milestone) came before every update, so it fixes every
+    quarterly line. Those lines are given their first release, unless the line
     has a fix version of its own.
     """
     by_line = {}
@@ -881,7 +937,7 @@ def get_fix_versions_by_line(fix_versions, include_quarterly_from_74=False):
         if line:
             by_line[line] = fv
 
-    if include_quarterly_from_74 and by_line.get('7.4', '').startswith('7.4.13-u'):
+    if include_quarterly_from_74 and by_line.get('7.4', '').startswith(('7.4.13-u', '7.4.13-ga')):
         fix_level = get_standard_ulevel(by_line['7.4'])
 
         for q_str, baseline in QUARTERLY_RELEASES.items():

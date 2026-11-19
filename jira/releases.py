@@ -32,6 +32,70 @@ quarterly_releases = {
     '2026.q4': 155,
 }
 
+# The fix pack (or update, for 7.3) that each 7.0, 7.1, 7.2 and 7.3 service pack
+# is equivalent to (7.2.10-sp3 is 7.2.10-fp8, and 7.0.10-sp9 is 7.0.10-de60)
+service_pack_fix_packs = {
+    '7.0': {
+        1: 7,
+        2: 12,
+        3: 14,
+        4: 22,
+        5: 30,
+        6: 32,
+        7: 40,
+        8: 50,
+        9: 60,
+        10: 70,
+        11: 80,
+        12: 87,
+        13: 90,
+        14: 93,
+        15: 96,
+        16: 99,
+        17: 102,
+    },
+    '7.1': {
+        1: 5,
+        2: 10,
+        3: 15,
+        4: 17,
+        5: 20,
+        6: 23,
+        7: 26,
+        8: 28,
+    },
+    '7.2': {
+        1: 2,
+        2: 5,
+        3: 8,
+        4: 11,
+        5: 14,
+        6: 17,
+        7: 19,
+        8: 20,
+    },
+    '7.3': {
+        1: 1,
+        2: 2,
+        3: 3,
+    },
+}
+
+# The kind of release that the service packs of each line map to, if not a fix
+# pack (7.0 has de releases and 7.3 has updates)
+service_pack_release_types = {
+    '7.0': 'de',
+    '7.3': 'u',
+}
+
+# 7.0 to 7.3 service pack names, such as 7.2.10 DXP SP3, 7.2.10.3 DXP SP3,
+# 7.0.10.10 DXP SP11, 7.1.10.1 SP1 or 7.2.10-sp3
+service_pack_pattern = re.compile(r'^(7\.[0-3])\.\d+(?:\.\d+)?[\s.-]*(?:dxp\s*)?sp\s*(\d+)$', re.IGNORECASE)
+
+# 7.4 CE GA names, such as 7.4.3.120 CE GA120, 7.4.3.100 GA100 or
+# 7.4.13.125 CE GA125 (where 7.4.13 is a typo for 7.4.3)
+ce_ga_74_pattern = re.compile(r'^7\.4\.(?:3|13)\.(\d+)\s+(?:ce\s+)?ga\d*$', re.IGNORECASE)
+
 def compute_old_update_threshold(x):
     if x == '2023.q3':
         return 92
@@ -307,8 +371,8 @@ def update_releases():
         name = release['name']
         short_name = None
 
-        if name[:6] == '7.4.3.' and name.find(' CE GA') != -1:
-            release_num = int(name[6:name.find(' ')])
+        if ce_ga_74_pattern.match(name.strip()):
+            release_num = int(ce_ga_74_pattern.match(name.strip()).group(1))
             if release_num >= 15:
                 short_name = '7.4.13-u%d' % release_num
             elif release_num > 4:
@@ -329,15 +393,18 @@ def update_releases():
         elif name[:6] == '7.3.10' and name.find(' DXP U') != -1:
             release_num = int(name[name.rfind('U')+1:])
             short_name = '7.3.10-u%d' % release_num
-        elif name[:6] == '7.3.10' and name.find(' DXP SP') != -1:
-            release_num = int(name[name.rfind('SP')+2:])
-            short_name = '7.3.10-u%d' % release_num
         elif name == '7.3.10 DXP GA1':
             release_num = 0
             short_name = '7.3.10-ga1'
         elif name[:6] == '7.3.10' and name.find(' DXP FP') != -1:
             release_num = int(name[name.rfind('FP')+2:])
             short_name = '7.3.10-u%d' % release_num
+        elif service_pack_pattern.match(name.strip()):
+            line, service_pack = service_pack_pattern.match(name.strip()).groups()
+            if int(service_pack) not in service_pack_fix_packs[line]:
+                return False
+            release_num = service_pack_fix_packs[line][int(service_pack)]
+            short_name = '%s.10-%s%d' % (line, service_pack_release_types.get(line, 'fp'), release_num)
         elif name[:6] == '7.2.10' and name.find(' DXP FP') != -1:
             release_num = int(name[name.rfind('FP')+2:].strip())
             short_name = '7.2.10-fp%d' % release_num
