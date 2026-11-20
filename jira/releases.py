@@ -367,6 +367,9 @@ def update_releases():
     unsorted_releases['7.4.13-u111'] = ['16242', '16749']
     unsorted_releases['7.4.13-u112'] = ['16243']
 
+    unsorted_releases['2024.q1.33'] = ['31779']
+    unsorted_releases['2026.q3.10'] = ['31774']
+
     def add_release(project, release):
         name = release['name']
         short_name = None
