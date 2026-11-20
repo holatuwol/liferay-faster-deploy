@@ -1,22 +1,258 @@
 <html>
 <head>
 <title>Flattened Release Notes Generator</title>
-<!-- Latest compiled and minified CSS -->
-<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
-
-<!-- Optional theme -->
-<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
-
-<!-- Latest compiled and minified JavaScript -->
-<script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
-
 <!-- Latest minified Javascript -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js" integrity="sha512-dfX5uYVXzyU8+KHqj8bjo7UkOdg18PaOtpa48djpNbZHwExddghZ+ZmzWT06R5v6NSk3ZUfsH6FNEDepLx9hPQ==" crossorigin="anonymous"></script>
 
 <style>
-	#release-notes-count input {
-		margin-right: 1em;
+	* {
+		box-sizing: border-box;
+	}
+
+	body {
+		color: #333;
+		font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+		font-size: 14px;
+		line-height: 1.43;
+		margin: 0;
+	}
+
+	a {
+		color: #337ab7;
+		text-decoration: none;
+	}
+
+	a:hover {
+		text-decoration: underline;
+	}
+
+	a:not([href]) {
+		color: #ddd;
+		cursor: pointer;
+	}
+
+	h1, h2, h3, h4 {
+		font-weight: 500;
+		line-height: 1.1;
+	}
+
+	h1 {
+		font-size: 36px;
+		margin: 20px 0 10px;
+	}
+
+	h2 {
+		font-size: 30px;
+		margin: 20px 0 10px;
+	}
+
+	h3 {
+		font-size: 24px;
+		margin: 20px 0 10px;
+	}
+
+	h4 {
+		font-size: 18px;
+		margin: 10px 0;
+	}
+
+	p {
+		margin: 0 0 10px;
+	}
+
+	hr {
+		border: 0;
+		border-top: 1px solid #eee;
+		margin: 20px 0;
+	}
+
+	img {
+		max-width: 100%;
+		vertical-align: middle;
+	}
+
+	code {
+		background-color: #f9f2f4;
+		border-radius: 4px;
+		color: #c7254e;
+		font-size: 90%;
+		padding: 2px 4px;
+	}
+
+	pre {
+		background-color: #f5f5f5;
+		border: 1px solid #ccc;
+		border-radius: 4px;
+		font-size: 13px;
+		margin: 0 0 10px;
+		overflow: auto;
+		padding: 9.5px;
+	}
+
+	pre code {
+		background-color: transparent;
+		color: inherit;
+		font-size: inherit;
+		padding: 0;
+	}
+
+	.container {
+		padding: 0 15px;
+	}
+
+	.hide {
+		display: none !important;
+	}
+
+	.alert {
+		border: 1px solid transparent;
+		border-radius: 4px;
+		margin-bottom: 20px;
+		padding: 15px;
+	}
+
+	.alert-success {
+		background-color: #dff0d8;
+		border-color: #d6e9c6;
+		color: #3c763d;
+	}
+
+	.alert-warning {
+		background-color: #fcf8e3;
+		border-color: #faebcc;
+		color: #8a6d3b;
+	}
+
+	.alert-dismissible {
+		margin: 10px 0 0;
+		padding: 8px 35px 8px 15px;
+		position: relative;
+	}
+
+	.alert-dismissible .close {
+		background: none;
+		border: 0;
+		color: inherit;
+		cursor: pointer;
+		font-size: 21px;
+		font-weight: bold;
+		line-height: 1;
+		opacity: 0.2;
+		padding: 0;
+		position: absolute;
+		right: 12px;
+		top: 6px;
+	}
+
+	.alert-dismissible .close:hover {
+		opacity: 0.5;
+	}
+
+	.table {
+		border-collapse: collapse;
+		margin-bottom: 20px;
+	}
+
+	.table th,
+	.table td {
+		border-top: 1px solid #ddd;
+		padding: 8px 20px 8px 8px;
+		text-align: left;
+	}
+
+	.table thead th {
+		border-bottom: 2px solid #ddd;
+		border-top: none;
+		vertical-align: bottom;
+	}
+
+	.table input {
+		font: inherit;
+		padding: 2px 4px;
+	}
+
+	.list-group {
+		margin: 0 0 20px;
+		padding-left: 0;
+	}
+
+	.list-group-item {
+		background-color: #fff;
+		border: 1px solid #ddd;
+		display: block;
+		margin-bottom: -1px;
+		padding: 10px 15px;
+	}
+
+	.list-group-item:first-child {
+		border-top-left-radius: 4px;
+		border-top-right-radius: 4px;
+	}
+
+	.list-group-item:last-child {
+		border-bottom-left-radius: 4px;
+		border-bottom-right-radius: 4px;
+		margin-bottom: 0;
+	}
+
+	.list-group-item.active {
+		background-color: #337ab7;
+		border-color: #337ab7;
+		color: #fff;
+	}
+
+	.list-group-item input[type="checkbox"] {
+		margin: 0 6px 0 0;
+	}
+
+	.badge {
+		background-color: #777;
+		border-radius: 10px;
+		color: #fff;
+		display: inline-block;
+		float: right;
+		font-size: 12px;
+		font-weight: bold;
+		line-height: 1;
+		min-width: 10px;
+		padding: 3px 7px;
+		text-align: center;
+		white-space: nowrap;
+	}
+
+	.list-group-item.active .badge {
+		background-color: #fff;
+		color: #337ab7;
+	}
+
+	#release-notes-jql-container {
+		margin-bottom: 20px;
+	}
+
+	#release-notes-jql-container label {
+		font-weight: bold;
+		margin-right: 8px;
+	}
+
+	#release-notes-jql-container label[for="release-notes-jql-names"] {
+		display: inline-block;
+		margin-top: 8px;
+	}
+
+	#release-notes-jql,
+	#release-notes-jql-names {
+		display: block;
+		font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+		font-size: 13px;
+		margin-top: 4px;
+		padding: 4px 6px;
+		width: 100%;
+	}
+
+	#release-notes-jql-notes {
+		color: #777;
+		font-size: 90%;
+		margin-top: 4px;
 	}
 
 	.release-notes-component-name {
@@ -27,11 +263,6 @@
 
 	.container:has(a#exportToCSV:not([href])) {
 		opacity: 0.5;
-	}
-
-	a:not([href]) {
-		color: #ddd;
-		cursor: pointer;
 	}
 
 	@media print {
@@ -51,10 +282,6 @@
 			flex-flow: column;
 			align-items: center;
 			justify-content: center;
-		}
-
-		a[href]:after {
-			content: none !important;
 		}
 
 		img {
@@ -85,10 +312,10 @@
 <table class="table">
 <thead>
 <tr>
-<th class="col-md-3">Source Version</th>
-<th class="col-md-3">Target Version</th>
-<th class="col-md-2">&nbsp;</th>
-<th class="col-md-4">&nbsp;</th>
+<th>Source Version</th>
+<th>Target Version</th>
+<th>&nbsp;</th>
+<th>&nbsp;</th>
 </tr>
 </thead>
 <tbody>
@@ -108,9 +335,18 @@
 <a href="javascript:window.print();">Print</a> |
 <a id="exportToCSV">CSV</a>
 </div>
+</td>
 </tr>
 </tbody>
 </table>
+
+<div id="release-notes-jql-container">
+<label for="release-notes-jql" title="These release notes also use information that a Jira query cannot express (such as cf[10210] history and tickets already fixed in earlier updates), so the results will not match exactly">Approximate Jira Query</label> <a id="release-notes-jql-link" target="_blank">open in Jira</a>
+<input id="release-notes-jql" type="text" readonly onfocus="this.select();" />
+<label for="release-notes-jql-names" title="The same query using fix version names instead of release IDs, which is easier to read, but can also match releases with the same name in other projects">By Fix Version Name</label> <a id="release-notes-jql-names-link" target="_blank">open in Jira</a>
+<input id="release-notes-jql-names" type="text" readonly onfocus="this.select();" />
+<div id="release-notes-jql-notes"></div>
+</div>
 
 </div>
 
@@ -121,5 +357,5 @@
 </div>
 
 </body>
-<script src="releases.js?t=1794453508"></script>
+<script src="releases.js?t=1795152807"></script>
 </html>

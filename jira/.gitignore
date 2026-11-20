@@ -6,4 +6,5 @@ releases
 *.json
 *.log
 *.ndjson
+*.sha256
 *.txt

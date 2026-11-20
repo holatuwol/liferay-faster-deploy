@@ -9,11 +9,9 @@ import sys
 
 sys.path.insert(0, dirname(dirname(abspath(inspect.getfile(inspect.currentframe())))))
 
-from jira import get_issues, get_issue_changelog, get_releases, jira_env
+from jira import await_get_request, get_issues, get_issue_changelog, get_releases, jira_base_url, jira_env
 
 reload_fixed_issues = False
-
-lsv_pattern = re.compile('LSV-[0-9]+')
 
 quarterly_releases = {
     '2023.q3': 92,
@@ -274,62 +272,28 @@ def get_jira_fixed_issues(release_name, release_ids):
         print('No issues found with query %s' % query)
         return release_issues
 
-    secure_issue_keys = []
+    # Tickets with a security level (security vulnerabilities) are left out,
+    # since this data is shared publicly
 
     for fixed_issue_key, fixed_issue in fixed_issues.items():
-        if fixed_issue['fields']['security'] is None:
+        if is_shareable_issue(fixed_issue):
             release_issues[fixed_issue_key] = fixed_issue
-        else:
-            secure_issue_keys.append(fixed_issue_key)
-
-    lsv_issue_keys = {}
-
-    if len(secure_issue_keys) > 0:
-        secure_issue_query = 'project = LPE and (%s)' % ' or '.join(['issue in linkedIssues(%s)' % secure_issue_key for secure_issue_key in secure_issue_keys])
-        secure_issues = get_issues(secure_issue_query, ['summary'])
-
-        for secure_issue_key, secure_issue in secure_issues.items():
-            summary = secure_issue['fields']['summary']
-            lsv_matcher = lsv_pattern.search(summary)
-
-            if lsv_matcher is not None:
-                lsv_issue_keys[lsv_matcher[0]] = secure_issue_key
-
-    cve_issues = []
-
-    if len(lsv_issue_keys) > 0:
-        lsv_issue_query = 'key in (%s)' % ','.join(lsv_issue_keys.keys())
-        lsv_issues = get_issues(lsv_issue_query, None, render=True)
-
-        for lsv_issue_key, lsv_issue in lsv_issues.items():
-            cve_issue = lsv_issue['fields']['customfield_10563']
-            if cve_issue is None:
-                continue
-
-            if cve_issue[:4] == 'CWE-' or cve_issue[:4] == 'LSV-':
-                continue
-
-            if cve_issue[:4] == 'CVE-':
-                cve_issues.append(cve_issue)
-                release_issues[cve_issue] = lsv_issue
-                continue
-    
-            if lsv_issue_key == 'LSV-1684':
-                for hard_coded_cve_issue in ['CVE-2026-22735', 'CVE-2026-22737', 'CVE-2026-22740', 'CVE-2026-22741', 'CVE-2026-41838', 'CVE-2026-41839', 'CVE-2026-41840', 'CVE-2026-41841', 'CVE-2026-41842', 'CVE-2026-41843', 'CVE-2026-41844', 'CVE-2026-41845', 'CVE-2026-41846', 'CVE-2026-41848', 'CVE-2026-41850', 'CVE-2026-41851', 'CVE-2026-41852', 'CVE-2026-41853', 'CVE-2026-41854']:
-                    cve_issues.append(hard_coded_cve_issue)
-                    release_issues[hard_coded_cve_issue] = lsv_issue
-                continue
-
-            print(lsv_issue_key)
-            assert(False)
-
-    if len(secure_issue_keys) > 0:
-        print('Found [%s] = [%s] = [%s] for %s' % (','.join(secure_issue_keys), ','.join(lsv_issue_keys.keys()), ','.join(cve_issues), release_name))
 
     with open(release_raw_file_name, 'w') as f:
         json.dump(release_issues, f, sort_keys=False, separators=(',', ':'))
 
     return release_issues
+
+# Whether a ticket can be included in the publicly shared release notes, so
+# that security vulnerabilities are never shared: LSV tickets are always left
+# out (they do not have a security level), and tickets from other projects are
+# only included if they do not have a security level
+
+def is_shareable_issue(issue):
+    if issue['fields']['project']['key'] == 'LSV':
+        return False
+
+    return issue['fields'].get('security') is None
 
 def get_fixed_issues(release_name, release_ids):
     jira_fixed_issues = get_jira_fixed_issues(release_name, release_ids)
@@ -337,11 +301,13 @@ def get_fixed_issues(release_name, release_ids):
     return {
         issue_key: get_issue_compact(issue)
             for issue_key, issue in jira_fixed_issues.items()
+                if is_shareable_issue(issue)
     }
 
 def update_releases():
     project_releases = defaultdict(list)
     unsorted_releases = defaultdict(list)
+    release_names = {}
 
     unsorted_releases.update({'6.1.%d-ga%d' % (i * 10, i): [] for i in range(1, 4)})
     unsorted_releases.update({'6.1.30-sp%d' % i: [] for i in range(1, 6)})
@@ -443,6 +409,7 @@ def update_releases():
             print(name)
             return False
 
+        release_names[str(release['id'])] = release['name']
         project_releases[project].append(str(release['id']))
         unsorted_releases[short_name].append(str(release['id']))
         unsorted_releases[short_name] = sorted(unsorted_releases[short_name])
@@ -469,6 +436,41 @@ def update_releases():
 
     with open(f'releases.{jira_env}.projects.json', 'w') as f:
         json.dump(project_releases, f, sort_keys=False, indent=2, separators=(',', ': '))
+
+    save_release_names(sorted_releases, release_names)
+
+# Saves the Jira name of each release ID in releases.json, so that releases.js
+# can show its Jira query by fix version name. IDs that were not returned by
+# get_releases (such as the hard-coded ones, which may not be marked as
+# released) are looked up individually, reusing the names from the last run.
+
+def save_release_names(sorted_releases, release_names):
+    release_names_file_name = f'releases.{jira_env}.names.json'
+
+    saved_release_names = {}
+
+    if exists(release_names_file_name):
+        with open(release_names_file_name, 'r') as f:
+            saved_release_names = json.load(f)
+
+    names = {}
+
+    for release_ids in sorted_releases.values():
+        for release_id in release_ids:
+            if release_id in release_names:
+                names[release_id] = release_names[release_id]
+            elif release_id in saved_release_names:
+                names[release_id] = saved_release_names[release_id]
+            else:
+                print(f'Looking up name of release {release_id}')
+
+                r = await_get_request(f'{jira_base_url}/rest/api/3/version/{release_id}', {})
+
+                if r.status_code == 200:
+                    names[release_id] = r.json()['name']
+
+    with open(release_names_file_name, 'w') as f:
+        json.dump(dict(sorted(names.items(), key=lambda x: int(x[0]))), f, sort_keys=False, indent=2, separators=(',', ': '))
 
 update_releases()
 
@@ -596,9 +598,6 @@ def check_changelogs():
          post92_fixed_issues.update(issue_keys)
 
     for i, issue_key in enumerate(sorted(post92_fixed_issues, key=ticket_sort_key)):
-        if issue_key[:4] == 'CVE-':
-            continue
-
         print('Checking issue %d of %d (%s)' % (i + 1, len(post92_fixed_issues), issue_key))
 
         check_issue_changelog(issue_key)
@@ -644,3 +643,61 @@ def save_fix_versions():
             f.write(f'{issue_key}\t{",".join(ticket_fix_versions[issue_key])}\n')
 
 save_fix_versions()
+
+# Combines every release's metadata into a single newline-delimited JSON file,
+# so that releases.js can load all releases at once (for example, when the page
+# and its data files are inlined for hosting on Google Drive) instead of
+# fetching each one separately. Since many tickets are fixed in several
+# releases, each ticket is stored once, as a {"key": ..., "ticket": ...} line,
+# followed by one {"name": ..., "keys": [...]} line per release listing its
+# ticket keys in order. A ticket's key is stored separately from the ticket
+# because moved tickets keep their old key in the release files. If copies of a
+# ticket differ between releases, the copy from the last release is kept, and
+# the release files with older copies are rewritten to use it.
+
+def save_releases_ndjson():
+    with open(f'releases.{jira_env}.json', 'r') as f:
+        releases = json.load(f)
+
+    tickets = {}
+    release_keys = {}
+
+    for release_name in releases.keys():
+        release_file_name = f'releases.{jira_env}/{release_name}.json'
+
+        if not exists(release_file_name):
+            continue
+
+        with open(release_file_name, 'r') as f:
+            release_tickets = json.load(f)
+
+        tickets.update(release_tickets)
+        release_keys[release_name] = list(release_tickets.keys())
+
+    # Second pass: rewrite the release files from earlier pulls that still
+    # have outdated copies of a ticket, so that they match the ndjson file
+
+    for release_name in release_keys.keys():
+        release_file_name = f'releases.{jira_env}/{release_name}.json'
+
+        with open(release_file_name, 'r') as f:
+            release_tickets = json.load(f)
+
+        updated_tickets = {key: tickets[key] for key in release_tickets.keys()}
+
+        if updated_tickets != release_tickets:
+            print(f'Updating outdated tickets in {release_name} metadata')
+
+            with open(release_file_name, 'w') as f:
+                json.dump(updated_tickets, f, sort_keys=False, separators=(',', ':'))
+
+    with open(f'releases.{jira_env}.ndjson', 'w') as out:
+        for key in sorted(tickets.keys(), key=ticket_sort_key):
+            out.write(json.dumps({'key': key, 'ticket': tickets[key]}, separators=(',', ':')))
+            out.write('\n')
+
+        for release_name, keys in release_keys.items():
+            out.write(json.dumps({'name': release_name, 'keys': keys}, separators=(',', ':')))
+            out.write('\n')
+
+save_releases_ndjson()

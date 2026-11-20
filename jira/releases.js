@@ -28,6 +28,16 @@ var renderedComponents = {};
 var renderedTicketsByType = {};
 var renderedTicketsByComponent = {};
 
+// The versions and tickets behind the release notes currently rendered, used
+// to build an approximate Jira query
+
+var renderedQuery = null;
+
+// Jira release ID -> its name (fix version), for showing the Jira query by
+// fix version name
+
+var releaseNames = {};
+
 function debounce(callback) {
 	var timer;
 
@@ -84,6 +94,9 @@ function checkReleaseDetails() {
 
 	releaseCountsElement.textContent = 'Loading...';
 
+	renderedQuery = null;
+	updateJiraQuery();
+
 	var releaseNotesElement = document.getElementById('release-notes-details');
 
 	releaseNotesElement.innerHTML = '';
@@ -123,9 +136,9 @@ function copyReleaseNotesToClipboard() {
 		var closeButton = document.createElement('button');
 		closeButton.classList.add('close');
 		closeButton.setAttribute('aria-label', 'Close');
-		closeButton.setAttribute('data-dismiss', 'alert');
 		closeButton.setAttribute('type', 'button');
 		closeButton.innerHTML = '&times;';
+		closeButton.onclick = () => alertElement.remove();
 
 		alertElement.appendChild(closeButton);
 		alertElement.appendChild(document.createTextNode('Copied to clipboard!'));
@@ -295,7 +308,7 @@ function getTicketElement(ticket, componentElementId) {
 
 	var headerElement = document.createElement('h3');
 
-	var ticketURL = ticketKey.startsWith('CVE-') ? ('https://cve.mitre.org/cgi-bin/cvename.cgi?name=' + ticketKey) : ('https://liferay.atlassian.net/browse/' + ticketKey);
+	var ticketURL = 'https://liferay.atlassian.net/browse/' + ticketKey;
 
 	var ticketAnchorElement = document.createElement('a');
 	ticketAnchorElement.setAttribute('href', ticketURL);
@@ -416,6 +429,163 @@ function generateReleaseNotes(fetchVersions, releasesToAdd, releasesToRemove, so
 
 	generateReleaseNotesHelper(tickets);
 	exportReleaseNotesToCSV(new Set(Object.keys(tickets)));
+
+	var versionsToAdd = new Set([targetVersion]);
+	var versionsToRemove = new Set();
+
+	if (sourceVersion != targetVersion) {
+		releasesToAdd.forEach(version => versionsToAdd.add(version));
+		releasesToRemove.forEach(version => versionsToRemove.add(version));
+	}
+
+	renderedQuery = {
+		tickets: tickets,
+		versionsToAdd: Array.from(versionsToAdd),
+		versionsToRemove: Array.from(versionsToRemove)
+	};
+
+	updateJiraQuery();
+};
+
+function getJqlString(value) {
+	return '"' + value.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+};
+
+// An 'in' clause for the given values, or 'is EMPTY' if there are none, since
+// Jira rejects an empty list
+
+function getJqlInClause(field, values) {
+	if (values.length == 0) {
+		return field + ' is EMPTY';
+	}
+
+	return field + ' in (' + values.slice().sort().map(getJqlString).join(', ') + ')';
+};
+
+// The fix version names of the given release IDs, quoted for JQL, falling back
+// to the ID if its name is unknown. Several projects can have a release with
+// the same name, so the names are deduplicated.
+
+function getJqlReleaseNames(releaseIds) {
+	return Array.from(new Set(releaseIds.map(releaseId => (releaseId in releaseNames) ? getJqlString(releaseNames[releaseId]) : releaseId)));
+};
+
+function getJqlReleaseIds(versions) {
+	var releaseIds = new Set(versions.flatMap(version => releaseVersions[version] || []));
+
+	return Array.from(releaseIds).sort((a, b) => parseInt(a) - parseInt(b));
+};
+
+/**
+ * Shows a Jira query approximating the release notes currently rendered, so
+ * that they can be checked against live Jira. It is only approximate, since the
+ * release notes also use information that a query cannot express (such as
+ * cf[10210] history and tickets already fixed in earlier updates). The query
+ * matches tickets fixed in the Jira
+ * releases for the versions being added, minus those fixed in the Jira releases
+ * for the versions being removed, limited to the checked types and components.
+ * Versions with no Jira release (whose tickets come from cf[10210] or a saved
+ * list of keys instead) are listed below the query, since it cannot match them.
+ * The same query is also shown by fix version name, which is easier to read,
+ * but can also match releases with the same name in other projects.
+ */
+function updateJiraQuery() {
+	var queryElement = document.getElementById('release-notes-jql');
+	var linkElement = document.getElementById('release-notes-jql-link');
+	var notesElement = document.getElementById('release-notes-jql-notes');
+
+	var namesQueryElement = document.getElementById('release-notes-jql-names');
+	var namesLinkElement = document.getElementById('release-notes-jql-names-link');
+
+	queryElement.value = '';
+	linkElement.removeAttribute('href');
+	namesQueryElement.value = '';
+	namesLinkElement.removeAttribute('href');
+	notesElement.textContent = '';
+
+	if (!renderedQuery) {
+		return;
+	}
+
+	var clauses = [];
+
+	var addReleaseIds = getJqlReleaseIds(renderedQuery.versionsToAdd);
+	var removeReleaseIds = getJqlReleaseIds(renderedQuery.versionsToRemove);
+
+	if (addReleaseIds.length == 0) {
+		notesElement.textContent = 'None of the versions being compared have a Jira release, so there is no Jira query to approximate them.';
+		return;
+	}
+
+	var versionClauses = ['fixVersion in (' + addReleaseIds.join(', ') + ')'];
+	var versionNameClauses = ['fixVersion in (' + getJqlReleaseNames(addReleaseIds).join(', ') + ')'];
+
+	if (removeReleaseIds.length > 0) {
+		versionClauses.push('fixVersion not in (' + removeReleaseIds.join(', ') + ')');
+		versionNameClauses.push('fixVersion not in (' + getJqlReleaseNames(removeReleaseIds).join(', ') + ')');
+	}
+
+	var tickets = Object.values(renderedQuery.tickets);
+
+	// Security: releases.py leaves out LSV tickets, and tickets from other
+	// projects that have a security level
+
+	clauses.push('project != LSV');
+	clauses.push('level is EMPTY');
+
+	// Types: only filtered when some are unchecked
+
+	var typesFilter = document.getElementById('release-notes-types-filter');
+
+	if (typesFilter) {
+		var visibleTypes = Array.from(typesFilter.querySelectorAll('input[value]:checked')).map(it => it.value);
+
+		if (typesFilter.querySelector('input[value]:not(:checked)')) {
+			clauses.push(getJqlInClause('issuetype', visibleTypes));
+		}
+	}
+
+	// Components: the page groups tickets by top-level component and leaves
+	// out tickets without one, so the query lists every full component name
+	// under the checked top-level components
+
+	var componentsFilter = document.getElementById('release-notes-components-filter');
+
+	if (componentsFilter) {
+		var visibleComponentIds = new Set(Array.from(componentsFilter.querySelectorAll('input[value]:checked')).map(it => it.value));
+
+		if (!componentsFilter.querySelector('input[value]:not(:checked)')) {
+			clauses.push('component is not EMPTY');
+		}
+		else {
+			var componentNames = new Set(tickets.flatMap(ticket => ticket['components']).filter(componentName => {
+				var topLevelName = componentName.split(' > ')[0];
+				return visibleComponentIds.has(topLevelName.toLowerCase().replace(/[^a-z]+/g, '_'));
+			}));
+
+			clauses.push(getJqlInClause('component', Array.from(componentNames)));
+		}
+	}
+
+	var jql = versionClauses.concat(clauses).join(' AND ') + ' ORDER BY key';
+
+	queryElement.value = jql;
+	linkElement.setAttribute('href', 'https://liferay.atlassian.net/issues/?jql=' + encodeURIComponent(jql));
+
+	var namesJql = versionNameClauses.concat(clauses).join(' AND ') + ' ORDER BY key';
+
+	namesQueryElement.value = namesJql;
+	namesLinkElement.setAttribute('href', 'https://liferay.atlassian.net/issues/?jql=' + encodeURIComponent(namesJql));
+
+	var notes = [];
+
+	var missingVersions = renderedQuery.versionsToAdd.concat(renderedQuery.versionsToRemove).filter(version => !(releaseVersions[version] || []).length && Object.keys(releaseDetails[version] || {}).length);
+
+	if (missingVersions.length > 0) {
+		notes.push('No Jira release for ' + missingVersions.join(', ') + ', so the query does not include its tickets.');
+	}
+
+	notesElement.textContent = notes.join(' ');
 };
 
 function generateReleaseNotesHelper(tickets) {
@@ -706,7 +876,7 @@ function getUpdate(version) {
 		var baseVersion = parseInt(version.substring(0, 6).substring(0, 6).replaceAll('.', ''));
 		return (baseVersion * 1000) + parseInt(version.substring(version.indexOf('-sp') + 3));
 	}
-	else if (version.indexOf('-ga1') != -1) {
+	else if (/-ga[0-9]+$/.test(version)) {
 		var baseVersion = parseInt(version.substring(0, 6).substring(0, 6).replaceAll('.', ''));
 		return (baseVersion * 1000);
 	}
@@ -715,9 +885,117 @@ function getUpdate(version) {
 	}
 };
 
+/**
+ * Returns the response for a data file, the same way as lsv_checker.js: if the
+ * page has an element whose id is the file name (a <script type="text/plain">
+ * holding the gzipped, base64-encoded file, as staged by upload.sh for hosting
+ * on Google Drive), the file is decoded from it, and otherwise the file is
+ * fetched. The element is looked up by the file name rather than the whole URL,
+ * since the URL may point to S3.
+ */
+async function getResponse(url) {
+	var path = (url.indexOf('?') != -1) ? url.substring(0, url.indexOf('?')) : url;
+	var elementId = path.substring(path.lastIndexOf('/') + 1);
+	var element = document.getElementById(elementId);
+
+	if (!element) {
+		var res = await fetch(url);
+
+		if (!res.ok) {
+			throw new Error(res.status + ' ' + res.statusText + ' for ' + url);
+		}
+
+		return res;
+	}
+
+	var compressedStream = new Blob([Uint8Array.fromBase64(element.textContent.replace(/\s/g, ''))]).stream();
+	var decompressedStream = compressedStream.pipeThrough(new DecompressionStream('gzip'));
+
+	return new Response(decompressedStream);
+};
+
+function getReleasesDataFile() {
+	if (typeof releasesDataFile !== 'undefined') {
+		return releasesDataFile;
+	}
+
+	return (document.location.hostname == 'localhost') ? 'releases.json' : ('https://s3-us-west-2.amazonaws.com/mdang.grow/releases.json?t=' + new Date().getTime());
+};
+
+function getReleaseNamesDataFile() {
+	if (typeof releaseNamesDataFile !== 'undefined') {
+		return releaseNamesDataFile;
+	}
+
+	return (document.location.hostname == 'localhost') ? 'releases.names.json' : ('https://s3-us-west-2.amazonaws.com/mdang.grow/releases.names.json?t=' + new Date().getTime());
+};
+
+// If the page sets releaseDetailsDataFile (such as releases.production.ndjson,
+// generated by releases.py), every release's tickets are loaded from that one
+// newline-delimited JSON file rather than fetching releases/<name>.json for
+// each release. Each ticket is stored once, as a {"key": ..., "ticket": ...}
+// line, and each release as a {"name": ..., "keys": [...]} line listing its
+// ticket keys. The file is read as a stream so that the whole file never has
+// to be held as one string.
+
+var allReleaseDetailsPromise = null;
+
+async function loadAllReleaseDetails(url) {
+	var res = await getResponse(url);
+	var reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+	var buffer = '';
+
+	var tickets = {};
+	var releaseKeys = {};
+
+	var addLine = function(line) {
+		if (line.trim().length == 0) {
+			return;
+		}
+
+		var entry = JSON.parse(line);
+
+		if ('ticket' in entry) {
+			tickets[entry.key] = entry.ticket;
+		}
+		else {
+			releaseKeys[entry.name] = entry.keys;
+		}
+	};
+
+	while (true) {
+		var {done, value} = await reader.read();
+
+		if (done) {
+			break;
+		}
+
+		buffer += value;
+
+		var lines = buffer.split('\n');
+		buffer = lines.pop();
+		lines.forEach(addLine);
+	}
+
+	addLine(buffer);
+
+	Object.keys(releaseKeys).forEach(releaseName => {
+		releaseDetails[releaseName] = Object.fromEntries(releaseKeys[releaseName].map(key => [key, tickets[key]]));
+	});
+};
+
 function loadReleaseDetails(releaseName, joinCallback) {
 	if (!(releaseName in releaseVersions) || (releaseName in releaseDetails)) {
 		joinCallback(releaseName);
+		return;
+	}
+
+	if (typeof releaseDetailsDataFile !== 'undefined') {
+		if (!allReleaseDetailsPromise) {
+			allReleaseDetailsPromise = loadAllReleaseDetails(releaseDetailsDataFile);
+		}
+
+		allReleaseDetailsPromise.then(joinCallback.bind(null, releaseName), joinCallback.bind(null, releaseName));
 		return;
 	}
 
@@ -846,13 +1124,19 @@ var updateFacets = debounce(function() {
 	totalTicketCountElements.forEach(element => element.textContent = getTicketCountString(ticketCount));
 
 	exportReleaseNotesToCSV(allTicketKeys);
+
+	updateJiraQuery();
 });
 
 function initUI() {
-	var requestURL = (document.location.hostname == 'localhost') ? 'releases.json' : ('https://s3-us-west-2.amazonaws.com/mdang.grow/releases.json?t=' + new Date().getTime());
+	// The release names are only used for the Jira query, so the page still
+	// works without them
 
-	fetch(requestURL).then(x => x.json()).then(releases => {
+	var releaseNamesPromise = getResponse(getReleaseNamesDataFile()).then(x => x.json()).catch(() => ({}));
+
+	Promise.all([getResponse(getReleasesDataFile()).then(x => x.json()), releaseNamesPromise]).then(([releases, names]) => {
 		releaseVersions = releases;
+		releaseNames = names;
 
 		Object.keys(releases).forEach(it => {
 			var option = document.createElement('option');
