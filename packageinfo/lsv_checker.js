@@ -443,7 +443,10 @@ function initAffected() {
 		issue.classification = issue.classification || '';
 		issue.products = issue.products || [];
 		issue.published = issue.published || '';
-		issue.advisory = issue.advisory || null;
+		// An advisory is a single URL, or for the public page's vulnerabilities
+		// with advisories on liferay.dev, a list of URLs
+
+		issue.advisories = [].concat(issue.advisory || []);
 		issue.description = issue.description || '';
 		issue.tickets = issue.tickets || [];
 
@@ -646,12 +649,29 @@ function getCvesHtml(issue) {
 	}).join('<br>') + '</span>';
 }
 
-function getTitleHtml(issueKey, issue) {
-	var html = '<span class="lsv-title">' + escapeHtml(issue.title) + '</span>';
+/**
+ * Returns what to call a link to an advisory: liferay.dev if it is on
+ * liferay.dev, and otherwise an advisory (such as a customer-facing article on
+ * help.liferay.com).
+ */
+function getAdvisoryLabel(advisory) {
+	return /^https:\/\/liferay\.dev[:\/]/.test(advisory) ? 'liferay.dev' : 'Advisory';
+}
 
-	if (issue.advisory) {
-		html += ' <a href="' + escapeHtml(issue.advisory) + '" target="_blank" rel="noopener">(advisory)</a>';
-	}
+/**
+ * Returns the HTML for a title, showing the text between backticks (such as
+ * `backURL`) as code.
+ */
+function getTitleTextHtml(title) {
+	return escapeHtml(title).replace(/`([^`]+)`/g, '<code>$1</code>');
+}
+
+function getTitleHtml(issueKey, issue) {
+	var html = '<span class="lsv-title">' + getTitleTextHtml(issue.title) + '</span>';
+
+	issue.advisories.forEach(function(advisory) {
+		html += ' <a href="' + escapeHtml(advisory) + '" target="_blank" rel="noopener">(' + getAdvisoryLabel(advisory).toLowerCase() + ')</a>';
+	});
 
 	if (issue.description) {
 		html += ' <a class="lsv-toggle" data-issue-key="' + issueKey + '">(details)</a>';
@@ -1350,6 +1370,16 @@ function escapeMarkdown(text) {
 }
 
 /**
+ * Returns the Markdown for a title, keeping the text between backticks (such as
+ * `backURL`) as code and escaping the rest.
+ */
+function getTitleMarkdown(title) {
+	return title.split(/(`[^`]+`)/).map(function(part, i) {
+		return (i % 2) ? part : escapeMarkdown(part);
+	}).join('');
+}
+
+/**
  * Wraps inline Markdown in a marker (such as ** for bold), keeping surrounding
  * whitespace outside the marker so that the formatting still applies.
  */
@@ -1557,7 +1587,7 @@ function getResultsMarkdown(includeDetails) {
 	listedResults.issueKeys.forEach(function(issueKey) {
 		var issue = lsvData.issues[issueKey];
 
-		lines.push('', '## ' + (escapeMarkdown(issue.title) || issueKey));
+		lines.push('', '## ' + (getTitleMarkdown(issue.title) || issueKey));
 
 		if (issue.cves.length > 0) {
 			lines.push('', '### ' + issue.cves.join(', '));
@@ -1581,9 +1611,9 @@ function getResultsMarkdown(includeDetails) {
 			lines.push('- **Published**: ' + issue.published);
 		}
 
-		if (issue.advisory) {
-			lines.push('- **Advisory**: <' + issue.advisory + '>');
-		}
+		issue.advisories.forEach(function(advisory) {
+			lines.push('- **' + getAdvisoryLabel(advisory) + '**: <' + advisory + '>');
+		});
 
 		listedResults.versionIndices.forEach(function(versionIndex) {
 			lines.push('- **Status in ' + lsvData.versions[versionIndex] + '**: ' + getStatusMarkdown(issue, versionIndex));
@@ -1624,6 +1654,27 @@ if (document.getElementById('exportDetails')) {
 }
 
 /**
+ * Returns the page's styles for the printable document. The page's stylesheet is
+ * linked when served as files (such as from S3), but inlined when served by Google
+ * Apps Script, so the rules of every stylesheet are copied into a style element,
+ * which also means that printing does not have to wait for a stylesheet to load.
+ * A stylesheet whose rules cannot be read (such as one from another origin) is
+ * linked by its absolute URL instead.
+ */
+function getPrintStyles() {
+	return Array.from(document.styleSheets).map(function(styleSheet) {
+		try {
+			var cssText = Array.from(styleSheet.cssRules).map(function(rule) { return rule.cssText; }).join('\n');
+
+			return '<style>' + cssText.replace(/<\/style/gi, '<\\/style') + '</style>';
+		}
+		catch (e) {
+			return styleSheet.href ? '<link rel="stylesheet" href="' + escapeHtml(styleSheet.href) + '">' : '';
+		}
+	}).join('');
+}
+
+/**
  * Returns a standalone document with the title, warning, counts, and the table as
  * it is currently shown, with every vulnerability's details expanded or with no
  * details at all (and without the filter row or the details links), styled with
@@ -1647,7 +1698,7 @@ function getPrintHtml(includeDetails) {
 		}
 	});
 
-	var styles = Array.from(document.querySelectorAll('style')).map(function(style) { return style.outerHTML; }).join('');
+	var styles = getPrintStyles();
 
 	var hotfixKeys = getHotfixKeys();
 

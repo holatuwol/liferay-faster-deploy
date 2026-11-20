@@ -1,3 +1,4 @@
+from bs4 import BeautifulSoup
 from datetime import datetime, timezone
 from html import escape
 import inspect
@@ -22,7 +23,8 @@ jira_folder = join(dirname(script_folder), 'jira')
 # its tickets (see combine_affected). The internal file also lists the LPE
 # tickets of each LSV, so that the page can treat an LSV as fixed by a hotfix,
 # and records whether each LSV has been made public. The public file has no
-# ticket keys.
+# ticket keys or descriptions, and links to the LSV's advisories on liferay.dev
+# where there are any (see read_public_advisories).
 #
 # The internal page also gets lsv_checker_hotfix.json, which maps the
 # development tickets (LPD, LPS, LPSA, COMMERCE) linked to each of those tickets
@@ -150,6 +152,136 @@ def get_advisory_url(node):
 
     return None
 
+# The public advisories on https://liferay.dev/vulnerabilities, which
+# security_issue_public_export.py saves as one HTML file per advisory (named by
+# its external reference code), along with an index of their URLs and titles
+
+public_export_folder = join(jira_folder, 'security_issue_public_export')
+
+def normalize_title(title):
+    """
+    Returns an advisory title without its leading identifiers (such as CVE-2020-
+    7961, CST-7113, or LPS-46552) and with only lowercase letters and digits
+    separated by single spaces, so that an LSV's title can be compared with the
+    title of its public advisory.
+    """
+
+    title = re.sub(r'^\s*(?:(?:CVE-\d{4}-\d+|CST-[\d-]+|LPS-\d+)[\s,:-]*)+', '', title, flags=re.IGNORECASE)
+
+    return re.sub(r'[^a-z0-9]+', ' ', title.lower()).strip()
+
+cve_list_pattern = re.compile(r'(?:(?:CVE|PRISMA)-\d{4}-\d+[\s,]*)+', re.IGNORECASE)
+
+def get_public_advisory_elements(soup, content):
+    """
+    Returns the elements of a public advisory that hold its sections (such as
+    Description, Severity, and Fixed Version(s)), leaving out the title, the
+    publication date, and the links to each CVE at the end.
+    """
+
+    # Older advisories are a single web content article
+
+    if 'journal-content-article' in (content.get('class') or []):
+        article = content.find('article') or content
+
+        return [
+            child for child in article.find_all(recursive=False)
+            if 'publication date' not in child.get_text(' ').lower()
+        ]
+
+    # Newer advisories are a display page, with a heading and a paragraph
+    # fragment for each section, followed by a heading for each CVE
+
+    title = soup.find('h1', class_='autofit-row')
+    container = title.find_parent(class_='lfr-layout-structure-item-container') if title else None
+
+    if container is None:
+        return []
+
+    def is_section(tag):
+        classes = tag.get('class') or []
+
+        return (tag.name == 'h3' and 'component-heading' in classes) or ('component-paragraph' in classes)
+
+    # The publication date is filled in by another fragment, which leaves only
+    # its label in the paragraph fragment
+
+    return [
+        tag for tag in container.find_all(is_section)
+        if not cve_list_pattern.fullmatch(tag.get_text(' ', strip=True))
+            and 'publication date' not in tag.get_text(' ').lower()
+    ]
+
+def read_public_advisories():
+    """
+    Returns the public advisories saved by security_issue_public_export.py, each
+    with its URL, title, and CVEs. An advisory's CVEs are the
+    ones in its title, or if its title has none, the ones in its content, since
+    an advisory can mention the CVE of an earlier, incomplete fix.
+    """
+
+    index_file_name = join(public_export_folder, 'index.json')
+
+    if not exists(index_file_name):
+        print('Skipping public advisories:', 'security_issue_public_export/index.json', 'does not exist (run security_issue_public_export.py)')
+        return []
+
+    with open(index_file_name, 'rb') as f:
+        index = json.loads(f.read())
+
+    advisories = []
+
+    for external_reference_code, entry in index.items():
+        file_name = join(public_export_folder, external_reference_code + '.html')
+
+        if not exists(file_name):
+            continue
+
+        with open(file_name, 'rb') as f:
+            soup = BeautifulSoup(f.read(), 'html.parser')
+
+        content = soup.find(attrs={'data-analytics-external-reference-code': True})
+
+        if content is None:
+            continue
+
+        title = content.get('data-analytics-asset-title') or entry['title']
+        elements = get_public_advisory_elements(soup, content)
+
+        if not elements:
+            print('security_issue_public_export:', 'no content found for', entry['url'])
+            continue
+
+        cves = {x.upper() for x in cve_pattern.findall(title)}
+
+        if not cves:
+            cves = {x.upper() for element in elements for x in cve_pattern.findall(element.get_text(' '))}
+
+        advisories.append({
+            'url': entry['url'],
+            'title': title,
+            'cves': cves,
+        })
+
+    return advisories
+
+def get_public_advisories(fields, cves, advisories_by_cve, advisories_by_title):
+    """
+    Returns the public advisories for an LSV: the ones for any of the LSV's own
+    CVEs, or if there are none, the one advisory with the same title as the LSV
+    (such as the CST advisories for LSVs that never had a CVE).
+    """
+
+    advisories = {id(x): x for cve in cves for x in advisories_by_cve.get(cve, [])}
+
+    if not advisories:
+        title_advisories = advisories_by_title.get(normalize_title(fields.get('customfield_10959') or ''), [])
+
+        if len(title_advisories) == 1:
+            advisories = {id(x): x for x in title_advisories}
+
+    return sorted(advisories.values(), key=lambda x: natural_key(x['title']))
+
 export_file_name = 'LSV.json'
 
 # The customer-facing (cf[10955]) and public-facing (cf[10956]) publication date
@@ -264,6 +396,19 @@ def combine_affected(ticket_keys, resolving, outstanding, versions, version_indi
 
 def build(lsv_issues, output_file_name, include_tickets):
     now = datetime.now(timezone.utc)
+
+    # Only the public page gets the public advisories, since the internal page
+    # has each LSV's own description
+
+    advisories_by_cve = {}
+    advisories_by_title = {}
+
+    if not include_tickets:
+        for advisory in read_public_advisories():
+            for cve in advisory['cves']:
+                advisories_by_cve.setdefault(cve, []).append(advisory)
+
+            advisories_by_title.setdefault(normalize_title(advisory['title']), []).append(advisory)
 
     fix_versions = read_ndjson(join(jira_folder, 'security_issue_fix_versions.ndjson'))
 
@@ -385,9 +530,18 @@ def build(lsv_issues, output_file_name, include_tickets):
                 ]
             issues[lsv_key]['audience'] = 'Public' if is_public(fields, now) else 'Customers Only'
         else:
-            # The public page does not have any descriptions
+            # The public page does not have any descriptions, and links to the
+            # LSV's advisories on liferay.dev rather than the advisory linked
+            # from the LSV's description (if any). An LSV can have more than one
+            # advisory on liferay.dev (one for each of its CVEs), so the page
+            # accepts a list of advisories as well as a single advisory.
 
             del issues[lsv_key]['description']
+
+            public_advisories = get_public_advisories(fields, cves, advisories_by_cve, advisories_by_title)
+
+            if public_advisories:
+                issues[lsv_key]['advisory'] = [x['url'] for x in public_advisories]
 
             # An LSV whose public publication date has not passed yet only lists
             # its CVEs, severity, classification, and categories (and the versions
@@ -410,6 +564,7 @@ def build(lsv_issues, output_file_name, include_tickets):
         print(output_file_name + ':', sum(1 for x in issues.values() if x['audience'] != 'Public'), 'issues not public')
     else:
         print(output_file_name + ':', sum(1 for x in issues.values() if 'title' not in x), 'issues without details (not public)')
+        print(output_file_name + ':', sum(1 for x in issues.values() if isinstance(x.get('advisory'), list)), 'issues with an advisory on liferay.dev')
 
     return data
 
