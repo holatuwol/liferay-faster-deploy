@@ -15,6 +15,7 @@ var severityLabels = {
 var notAffectedClassifications = ['Not Exploitable', 'False Positive', 'Ignored'];
 
 var nameFilter = document.getElementById('nameFilter');
+var titleFilter = document.getElementById('titleFilter');
 
 // Checkbox value standing in for an issue with no severity, classification, or
 // category
@@ -227,6 +228,14 @@ function getParameter(name) {
 }
 
 /**
+ * Returns every value of a URL parameter that is repeated for each value, such
+ * as the title filter phrases, which can contain commas.
+ */
+function getRepeatedParameterValues(name) {
+	return readUrlParams().getAll(name).filter(function(value) { return value; });
+}
+
+/**
  * Returns the comma-separated values of a URL parameter.
  */
 function getParameterValues(name) {
@@ -341,23 +350,60 @@ function getIssueNumber(issueKey) {
 }
 
 /**
- * Splits the filter text into the CVE and LSV identifiers it contains (which
- * select those specific vulnerabilities, even when the chosen release is not
- * affected by them) and the remaining text (which filters the affecting
- * vulnerabilities by identifier or title).
+ * Returns the identifier filter text on one line, separated by spaces, so that a
+ * bookmark fills the filter compactly.
+ */
+function getCompactNameFilter(value) {
+	return value.split(/[\s,;]+/).filter(function(token) { return token; }).join(' ');
+}
+
+/**
+ * Returns the CVE and LSV identifiers in the identifier filter (which select
+ * those specific vulnerabilities, even when the checked releases are not
+ * affected by them), along with any other text in it, which is most likely an
+ * identifier that is mistyped or that this page does not know (such as a GHSA
+ * one), so that it can be reported.
  */
 function parseNameFilter(value) {
 	var identifiers = [];
+	var unrecognized = [];
 
-	var text = value.replace(/(?:CVE|PRISMA)-\d{4}-\d+|LSV-\d+/gi, function(match) {
-		identifiers.push(match.toUpperCase());
-		return ' ';
+	value.split(/[\s,;]+/).forEach(function(token) {
+		if (!token) {
+			return;
+		}
+
+		var text = token.replace(/(?:CVE|PRISMA)-\d{4}-\d+|LSV-\d+/gi, function(match) {
+			identifiers.push(match.toUpperCase());
+			return ' ';
+		}).trim();
+
+		// Ignore what only punctuation is left of, such as the parentheses
+		// around an identifier
+
+		if (/[a-z0-9]/i.test(text)) {
+			unrecognized.push(text);
+		}
 	});
 
 	return {
-		identifiers: identifiers.filter(function(x, i) { return identifiers.indexOf(x) == i; }),
-		text: text.replace(/[\s,;]+/g, ' ').trim().toLowerCase()
+		identifiers: identifiers.filter(isFirstIgnoringCase),
+		unrecognized: unrecognized.filter(isFirstIgnoringCase)
 	};
+}
+
+/**
+ * Returns the phrases in the title filter, one per line, which each list the
+ * vulnerabilities with that text in their identifier or title.
+ */
+function parseTitleFilter(value) {
+	return value.split('\n').map(function(phrase) {
+		return phrase.replace(/\s+/g, ' ').trim();
+	}).filter(function(phrase) { return phrase; }).filter(isFirstIgnoringCase);
+}
+
+function isFirstIgnoringCase(x, i, array) {
+	return array.findIndex(function(y) { return y.toLowerCase() == x.toLowerCase(); }) == i;
 }
 
 /**
@@ -806,9 +852,15 @@ function updateURL(versionIndices, pushState) {
 		params.set('releases', versionIndices.map(function(i) { return lsvData.versions[i]; }).join(','));
 	}
 
-	if (nameFilter.value) {
-		params.set('nameFilter', nameFilter.value);
+	var compactNameFilter = getCompactNameFilter(nameFilter.value);
+
+	if (compactNameFilter) {
+		params.set('nameFilter', compactNameFilter);
 	}
+
+	parseTitleFilter(titleFilter.value).forEach(function(phrase) {
+		params.append('titleFilter', phrase);
+	});
 
 	var hotfixKeys = getHotfixKeys();
 
@@ -843,11 +895,27 @@ function checkLsvInfoWithHistory() {
 }
 
 /**
+ * Grows a filter textarea to fit its text in browsers that do not support the
+ * CSS field-sizing property (the CSS minimum height keeps it at two rows).
+ */
+function fitTextarea(textarea) {
+	if (window.CSS && CSS.supports('field-sizing', 'content')) {
+		return;
+	}
+
+	textarea.style.height = 'auto';
+	textarea.style.height = (textarea.scrollHeight + textarea.offsetHeight - textarea.clientHeight) + 'px';
+}
+
+/**
  * Sets the fields, releases, and filters from the URL, on page load and after the
  * user goes back or forward.
  */
 function applyUrlParameters() {
 	nameFilter.value = getParameter('nameFilter');
+	titleFilter.value = getRepeatedParameterValues('titleFilter').join('\n');
+	fitTextarea(nameFilter);
+	fitTextarea(titleFilter);
 	if (hotfixTickets) {
 		hotfixTickets.value = getParameterValues('hotfix').join('\n');
 	}
@@ -954,13 +1022,16 @@ function checkLsvInfo() {
 	var columnCount = updateColumnHeaders(versionIndices);
 
 	var filter = parseNameFilter(nameFilter.value);
+	var phrases = parseTitleFilter(titleFilter.value);
 
-	var isMatchingText = function(issueKey) {
+	var isMatchingTerm = function(issueKey, term) {
 		var issue = lsvData.issues[issueKey];
 
-		return (issueKey.toLowerCase().indexOf(filter.text) != -1) ||
-			(issue.title.toLowerCase().indexOf(filter.text) != -1) ||
-			issue.cves.some(function(cve) { return cve.toLowerCase().indexOf(filter.text) != -1; });
+		term = term.toLowerCase();
+
+		return (issueKey.toLowerCase().indexOf(term) != -1) ||
+			(issue.title.toLowerCase().indexOf(term) != -1) ||
+			issue.cves.some(function(cve) { return cve.toLowerCase().indexOf(term) != -1; });
 	};
 
 	// A vulnerability that the hotfix fixes is still listed, with its status
@@ -973,18 +1044,27 @@ function checkLsvInfo() {
 		});
 	};
 
-	// Identifiers list those vulnerabilities whether or not they affect the
-	// checked releases; otherwise, list the vulnerabilities that affect any of
-	// the checked releases, or every vulnerability if no release is checked
+	// Without a filter, list the vulnerabilities that affect any of the checked
+	// releases, or every vulnerability if no release is checked. Otherwise, list
+	// the vulnerabilities for each identifier whether or not they affect the
+	// checked releases, along with those vulnerabilities that match any title
+	// phrase, and report the identifiers and other text that match nothing
+
+	var allKeys = Object.keys(lsvData.issues);
+	var baseKeys = (versionIndices.length > 0) ? allKeys.filter(isAffectingAny) : allKeys;
 
 	var issueKeys;
-	var notFound = [];
+	var notFound = filter.unrecognized.slice();
+	var notAffectingPhrases = [];
 
-	if (filter.identifiers.length > 0) {
+	if ((filter.identifiers.length == 0) && (filter.unrecognized.length == 0) && (phrases.length == 0)) {
+		issueKeys = baseKeys;
+	}
+	else {
 		var selectedKeys = new Set();
 
 		filter.identifiers.forEach(function(identifier) {
-			var matchingKeys = Object.keys(lsvData.issues).filter(function(issueKey) {
+			var matchingKeys = allKeys.filter(function(issueKey) {
 				return (issueKey == identifier) || (lsvData.issues[issueKey].cves.indexOf(identifier) != -1);
 			});
 
@@ -995,17 +1075,23 @@ function checkLsvInfo() {
 			matchingKeys.forEach(function(issueKey) { selectedKeys.add(issueKey); });
 		});
 
-		issueKeys = Array.from(selectedKeys);
-	}
-	else if (versionIndices.length > 0) {
-		issueKeys = Object.keys(lsvData.issues).filter(isAffectingAny);
-	}
-	else {
-		issueKeys = Object.keys(lsvData.issues);
-	}
+		// A phrase can match vulnerabilities that do not affect the checked
+		// releases, so report those phrases separately from the ones that match
+		// no vulnerability at all
 
-	if (filter.text) {
-		issueKeys = issueKeys.filter(isMatchingText);
+		phrases.forEach(function(phrase) {
+			var isMatching = function(issueKey) { return isMatchingTerm(issueKey, phrase); };
+
+			var matchingKeys = baseKeys.filter(isMatching);
+
+			if (matchingKeys.length == 0) {
+				(allKeys.some(isMatching) ? notAffectingPhrases : notFound).push('"' + phrase + '"');
+			}
+
+			matchingKeys.forEach(function(issueKey) { selectedKeys.add(issueKey); });
+		});
+
+		issueKeys = Array.from(selectedKeys);
 	}
 
 	issueKeys = issueKeys.filter(function(issueKey) { return isMatchingAttributes(lsvData.issues[issueKey]); });
@@ -1068,14 +1154,18 @@ function checkLsvInfo() {
 
 	var notFoundElement = document.getElementById('notFound');
 
+	var messages = [];
+
 	if (notFound.length > 0) {
-		notFoundElement.className = 'alert alert-info';
-		notFoundElement.textContent = 'No published security vulnerabilities were found for: ' + notFound.join(', ');
+		messages.push('No published security vulnerabilities were found for: ' + notFound.join(', '));
 	}
-	else {
-		notFoundElement.className = '';
-		notFoundElement.textContent = '';
+
+	if (notAffectingPhrases.length > 0) {
+		messages.push('No published security vulnerabilities that affect the checked releases were found for: ' + notAffectingPhrases.join(', '));
 	}
+
+	notFoundElement.className = (messages.length > 0) ? 'alert alert-warning' : '';
+	notFoundElement.innerHTML = messages.map(function(message) { return '<div>' + escapeHtml(message) + '</div>'; }).join('');
 
 	updateCounts(issueKeys, versionIndices);
 
@@ -1713,7 +1803,12 @@ Promise.all([fetchJson(lsvDataFile), initUrlParams(), hotfixDataPromise]).then((
 
 	applyUrlParameters();
 
-	nameFilter.oninput = checkLsvInfo;
+	[nameFilter, titleFilter].forEach(function(textarea) {
+		textarea.oninput = function() {
+			fitTextarea(textarea);
+			checkLsvInfo();
+		};
+	});
 	if (hotfixTickets) {
 		hotfixTickets.oninput = checkLsvInfo;
 	}

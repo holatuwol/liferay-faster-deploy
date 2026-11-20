@@ -88,7 +88,7 @@ if [ "lsv_checker.html" == "${1}" ]; then
 
 	sed -i "s@<time .*</time>@<time datetime=\"${PUBLIC_MODIFIED}\">${PUBLIC_MODIFIED}</time>@" lsv_checker_public.html
 
-	for file in lsv_checker.js lsv_checker_public.json lsv_checker_public.html; do
+	for file in lsv_checker.css lsv_checker.js lsv_checker_public.json lsv_checker_public.html; do
 		S3_BUCKET=mdang.grow ./s3upload ${file}
 	done
 
