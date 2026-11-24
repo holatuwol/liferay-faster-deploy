@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        12.2
+// @version        12.3
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -2236,16 +2236,77 @@ function getBuildMetadata(row) {
     };
 }
 /**
+ * Translates a Patcher project version name into the name that the LSV
+ * checker uses for the same release. Quarterly releases (2025.q1.10) and
+ * 7.4 updates (7.4.13-ga1, 7.4.13-u112) already use the same name. Returns null for
+ * any name whose LSV checker release is not known for certain (such as
+ * 6.2.10, whose patch level comes from its fix pack, or DXP 7.4 EP2).
+ *
+ *   fix-pack-base-7310     -> 7.3.10-ga1
+ *   fix-pack-de-25-7010    -> 7.0.10-de25
+ *   fix-pack-dxp-12-7110   -> 7.1.10-fp12 (also 7.2)
+ *   fix-pack-dxp-12-7310   -> 7.3.10-u12
+ *   6.2.10 SP13            -> 6.2.10-sp13
+ */
+function getLsvCheckerRelease(projectVersionName) {
+    // The LSV checker names releases without the -private suffix that
+    // some Patcher project versions have.
+    var name = projectVersionName.trim().replace(/-private$/, '');
+    // Patcher's four digit version code (7310) -> 7.3.10
+    var getVersion = function (code) {
+        return code.charAt(0) + '.' + code.charAt(1) + '.' + code.substring(2);
+    };
+    if (/^\d{4}\.q[1-4]\.\d+$/.test(name) || /^7\.4\.13-(ga1|u\d+)$/.test(name)) {
+        return name;
+    }
+    var match = /^fix-pack-base-(7010|7110|7210|7310|7413)$/.exec(name);
+    if (match) {
+        return getVersion(match[1]) + '-ga1';
+    }
+    match = /^fix-pack-de-(\d+)-(7010)$/.exec(name);
+    if (match) {
+        return getVersion(match[2]) + '-de' + match[1];
+    }
+    match = /^fix-pack-dxp-(\d+)-(7110|7210|7310)$/.exec(name);
+    if (match) {
+        // DXP 7.3 releases after the first few fix packs were called updates,
+        // and the LSV checker names all of them as updates.
+        return getVersion(match[2]) + ((match[2] == '7310') ? '-u' : '-fp') + match[1];
+    }
+    match = /^(6\.\d\.\d+) SP(\d+)$/i.exec(name);
+    if (match) {
+        return match[1] + '-sp' + match[2];
+    }
+    return null;
+}
+/**
+ * Returns a table row with a link to the LSV checker, which lists the
+ * security vulnerabilities that remain in the given release once the
+ * given tickets are applied as a hotfix. Returns an empty string when the
+ * LSV checker release for the build's project version is not known.
+ */
+function getSecurityCheckRowHTML(build, colspan) {
+    var release = getLsvCheckerRelease(build.branchName);
+    if (!release) {
+        return '';
+    }
+    var lsvCheckerURL = 'https://script.google.com/a/macros/liferay.com/s/AKfycbxJ_tTdLU6ixSqFcSu_CautaJYf1FppWa1wtyw-UVyhmpyUFqQopnd8HV-ijtZ_06czIg/exec' +
+        '?releases=' + encodeURIComponent(release) +
+        '&hotfix=' + encodeURIComponent(build.fixes.join(',')) +
+        '&dashboard=lsv_checker&folder=1NifZkK76EzPqXA-sPSrqiolsK64IdkQ1';
+    return '<tr><td colspan="' + colspan + '"><a href="' + lsvCheckerURL + '" target="_blank">check what security vulnerabilities remain unaddressed with this hotfix</a></td></tr>';
+}
+/**
  * Processes the child build text.
  */
-function processChildBuilds(xhr, oldFixesNode) {
+function processChildBuilds(xhr, oldFixesNode, extraRowsHTML) {
     // https://stackoverflow.com/questions/20583396/queryselectorall-to-html-from-another-page
     var container = document.implementation.createHTMLDocument().documentElement;
     container.innerHTML = xhr.responseText;
     var rows = Array.from(container.querySelectorAll('table tbody tr')).filter(row => !row.classList.contains('lfr-template'));
     var childBuildsMetadata = rows.map(getBuildMetadata);
     var childBuildFixesHTML = childBuildsMetadata.map(build => '<tr><th class="branch-type">' + getBuildLinkHTML(build) + '</th><td>' + build.fixesHTML + '</td><td></td></tr>');
-    replaceNode(oldFixesNode, '<table class="table table-bordered table-hover"><tbody class="table-data">' + childBuildFixesHTML.join('') + '</tbody></table>');
+    replaceNode(oldFixesNode, '<table class="table table-bordered table-hover"><tbody class="table-data">' + childBuildFixesHTML.join('') + extraRowsHTML + '</tbody></table>');
     replaceGitHashes(childBuildsMetadata);
 }
 function replaceBuild() {
@@ -2279,14 +2340,15 @@ function replaceBuild() {
         var jql = "key in (" + build.fixes.join(",") + ") and cf[10886] ~ \"" + branchName.substring(0, branchName.lastIndexOf(".")) + ".*\"";
         fixedInLaterVersionsHTML = "<tr><td colspan=\"2\"><a href=\"https://issues.liferay.com/issues/?jql=" + encodeURIComponent(jql) + "\" target=\"_blank\">check if fixed in newer patch level of this quarterly release</a></td></tr>";
     }
+    var securityCheckHTML = getSecurityCheckRowHTML(build, 2);
     if (childBuildsButton.length == 0) {
-        replaceNode(buildNode, '<table class="table table-bordered table-hover"><tbody class="table-data">' + childBuildFixesHTML + fixedInLaterVersionsHTML + '</tbody></table>');
+        replaceNode(buildNode, '<table class="table table-bordered table-hover"><tbody class="table-data">' + childBuildFixesHTML + fixedInLaterVersionsHTML + securityCheckHTML + '</tbody></table>');
         replaceGitHashes([build]);
     }
     else {
         var xhr = new XMLHttpRequest();
         xhr.open('GET', document.location.pathname + '/childBuilds');
-        xhr.onload = processChildBuilds.bind(null, xhr, buildNode);
+        xhr.onload = processChildBuilds.bind(null, xhr, buildNode, getSecurityCheckRowHTML(build, 3));
         xhr.setRequestHeader('Cache-Control', 'no-cache, no-store, max-age=0');
         xhr.setRequestHeader('Pragma', 'no-cache');
         xhr.send(null);
@@ -2296,7 +2358,7 @@ function replaceBuild() {
         var excludedFixes = originalBuildNode.innerHTML.split(',').map(x => x.trim()).filter(x => !fixes.has(x));
         var excludedHTML = excludedFixes.sort(compareTicket).map(getTicketLink.bind(null, 'included-in-baseline')).join(', ');
         var excludedFixesHTML = '<tr><th class="branch-type">excluded</th><td>' + excludedHTML + '</td></tr>';
-        replaceNode(originalBuildNode, '<table class="table table-bordered table-hover"><tbody class="table-data">' + childBuildFixesHTML + excludedFixesHTML + fixedInLaterVersionsHTML + '</tbody></table>');
+        replaceNode(originalBuildNode, '<table class="table table-bordered table-hover"><tbody class="table-data">' + childBuildFixesHTML + excludedFixesHTML + fixedInLaterVersionsHTML + securityCheckHTML + '</tbody></table>');
     }
 }
 /**
@@ -2350,6 +2412,18 @@ function layoutFormRows() {
         row.classList.add('patcher-form-row');
     }
 }
+/**
+ * Returns whether the given element, or any of its ancestors up to (but
+ * not including) the given container, is hidden with display: none.
+ */
+function isHiddenWithin(element, container) {
+    for (var node = element; node && node != container; node = node.parentElement) {
+        if (getComputedStyle(node).display == 'none') {
+            return true;
+        }
+    }
+    return false;
+}
 function rearrangeColumns() {
     if (document.location.pathname.indexOf('/-/osb_patcher/builds/') == -1) {
         return;
@@ -2385,6 +2459,13 @@ function rearrangeColumns() {
         controlGroups = columns[i].querySelectorAll('.control-group');
         for (var j = 0; j < controlGroups.length; j++) {
             controlGroup = controlGroups[j];
+            // Patcher renders some suggestion fields (such as security and
+            // regression) inside a hidden wrapper. Moving them out of that
+            // wrapper would reveal them, so leave them to be removed along
+            // with the column.
+            if (isHiddenWithin(controlGroup, columns[i])) {
+                continue;
+            }
             controlGroup.classList.add('verbose');
             tableContainer.appendChild(controlGroup);
             updateCompactContainer(compactContainer, controlGroup);
@@ -2600,7 +2681,6 @@ function getBuildsCellText(row, columns, name) {
     return cell ? (cell.textContent || '').trim() : '';
 }
 function getHotfixShortNames(hotfixes) {
-    debugger;
     return hotfixes.map(it => {
         return (it.indexOf('.q') != -1) ?
             it.substring(it.indexOf('-hotfix') + 1, it.length - 4) :
@@ -3703,7 +3783,24 @@ function addBulkSearchTab() {
         navTabsParent.appendChild(contentArea);
     });
 }
+/**
+ * Suspends Liferay.Poller once it becomes available, so that the page
+ * stops making periodic background requests to the server.
+ */
+function suspendLiferayPoller() {
+    var pollerSuspendInterval = setInterval(function () {
+        // Read from unsafeWindow on every check rather than using the cached
+        // Liferay variable, since Liferay.Poller might be added later.
+        var liferay = unsafeWindow.Liferay;
+        if (!liferay || !liferay.Poller) {
+            return;
+        }
+        clearInterval(pollerSuspendInterval);
+        liferay.Poller.suspend();
+    }, 1000);
+}
 // Run all the changes we need to the page.
+suspendLiferayPoller();
 var applyPatcherCustomizations = function () {
     removeEmptyGetFormFields();
     setNoReferrerPolicy();
