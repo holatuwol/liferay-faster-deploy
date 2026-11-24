@@ -91,14 +91,25 @@ def get_security_issue_synonyms():
     # - LPE <-> LSV
     # - LPE <-> Development projects (LPS, LPD, LPSA, COMMERCE)
     # - LSV <-> Development projects (LPS, LPD, LPSA, COMMERCE)
+    #
+    # Both issues are usually exported, but security_issue_export.py only exports
+    # the development tickets that are marked as security vulnerabilities, and an
+    # LPE or LSV can link to a development ticket that is not (such as LPE-17021,
+    # which links to LPS-114587 as well as LPS-112136). As in lsv_checker.py, a
+    # link from an exported LPE or LSV to a development ticket is kept anyway, so
+    # that a hotfix with that development ticket fixes the LPE.
+    linked_dev_keys = set()
+
     for k, v in issues_all.items():
         k_proj = k.split('-')[0]
         for link in v.get('issuelinks', []):
             for side in ['inwardIssue', 'outwardIssue']:
                 if side in link:
                     lk = link[side]['key']
-                    if lk in issues_all:
-                        lk_proj = lk.split('-')[0]
+                    lk_proj = lk.split('-')[0]
+                    if lk not in issues_all and k_proj in ('LPE', 'LSV') and lk_proj in DEV_PROJECTS:
+                        linked_dev_keys.add(lk)
+                    if lk in issues_all or lk in linked_dev_keys:
                         pair = {k_proj, lk_proj}
                         if (pair == {'LPE', 'LSV'} or
                             (k_proj == 'LPE' and lk_proj in DEV_PROJECTS) or
@@ -108,7 +119,7 @@ def get_security_issue_synonyms():
                             graph[k].add(lk)
                             graph[lk].add(k)
 
-    all_keys = set(issues_all.keys()).union(all_cves)
+    all_keys = set(issues_all.keys()).union(all_cves).union(linked_dev_keys)
 
     # Connected components using BFS
     visited = set()

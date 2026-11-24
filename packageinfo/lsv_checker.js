@@ -55,6 +55,7 @@ var listedResults = {issueKeys: [], versionIndices: []};
 
 var hotfixTickets = document.getElementById('hotfixTickets');
 var hotfixSummary = document.getElementById('hotfixSummary');
+var hotfixPills = document.getElementById('hotfixPills');
 
 // Development ticket (LPD) -> the vulnerability tickets (such as LPE) that it
 // is linked to, from the internal page's lsvHotfixDataFile, so that a hotfix's
@@ -503,11 +504,11 @@ function getOutstandingTickets(issue, versionIndex) {
  * Sets issue.affected (version index -> fix versions) with the hotfix applied
  * (issue.allAffected is without it), and issue.hotfixFixed (version index -> the
  * hotfix tickets that fix it there), and issue.hotfixMatched (whether any hotfix
- * ticket belongs to it). Returns the hotfix tickets that belong to
- * any vulnerability.
+ * ticket belongs to it). Returns a map from each hotfix ticket that belongs to
+ * any vulnerability to the vulnerabilities it belongs to.
  */
 function applyHotfix(hotfixKeys) {
-	var matchedKeys = new Set();
+	var matchedKeys = new Map();
 
 	// A development ticket stands in for the vulnerability tickets it maps to
 
@@ -524,13 +525,21 @@ function applyHotfix(hotfixKeys) {
 	for (var issueKey in lsvData.issues) {
 		var issue = lsvData.issues[issueKey];
 
-		issue.tickets.filter(inHotfix).forEach(function(ticketKey) {
-			hotfixTicketSources[ticketKey].forEach(function(hotfixKey) { matchedKeys.add(hotfixKey); });
-		});
-
 		var resolvingKeys = (issue.resolvedBy || []).filter(inHotfix);
 
-		issue.hotfixMatched = issue.tickets.some(inHotfix) || (resolvingKeys.length > 0);
+		var matchingKeys = issue.tickets.filter(inHotfix).concat(resolvingKeys);
+
+		matchingKeys.forEach(function(ticketKey) {
+			hotfixTicketSources[ticketKey].forEach(function(hotfixKey) {
+				if (!matchedKeys.has(hotfixKey)) {
+					matchedKeys.set(hotfixKey, new Set());
+				}
+
+				matchedKeys.get(hotfixKey).add(issueKey);
+			});
+		});
+
+		issue.hotfixMatched = (matchingKeys.length > 0);
 
 		issue.affected = {};
 		issue.hotfixFixed = {};
@@ -553,21 +562,94 @@ function applyHotfix(hotfixKeys) {
 	return matchedKeys;
 }
 
+/**
+ * Splits the hotfix tickets into security fixes (those that belong to any
+ * vulnerability) and general fixes, showing a count of each and a pill for each
+ * ticket that links to it, with the vulnerabilities it belongs to as its title.
+ */
 function updateHotfixSummary(hotfixKeys, matchedKeys) {
 	if (!hotfixSummary) {
 		return;
 	}
 
+	updateHotfixDisplay();
+
 	if (hotfixKeys.length == 0) {
-		hotfixSummary.textContent = '';
+		hotfixSummary.innerHTML = '';
+		hotfixPills.innerHTML = '';
 		return;
 	}
 
-	var unmatchedKeys = hotfixKeys.filter(function(key) { return !matchedKeys.has(key); });
+	var sortedKeys = hotfixKeys.slice().sort(function(a, b) {
+		return (matchedKeys.has(b) - matchedKeys.has(a)) || a.localeCompare(b, undefined, {numeric: true});
+	});
 
-	hotfixSummary.textContent = hotfixKeys.length + ((hotfixKeys.length == 1) ? ' ticket' : ' tickets') + ', ' +
-		matchedKeys.size + ' related to a published vulnerability' +
-		((unmatchedKeys.length > 0) && (unmatchedKeys.length <= 10) ? ' (not related: ' + unmatchedKeys.join(', ') + ')' : '');
+	var securityCount = sortedKeys.filter(function(key) { return matchedKeys.has(key); }).length;
+
+	hotfixSummary.innerHTML =
+		'<span class="lsv-hotfix-count-security">&#x1F6E1;&#xFE0F; ' + securityCount + ' Security</span>' +
+		'<span class="lsv-hotfix-count-general">&#x1F4C4; ' + (sortedKeys.length - securityCount) + ' General</span>';
+
+	hotfixPills.innerHTML = sortedKeys.map(function(hotfixKey) {
+		var issueKeys = matchedKeys.has(hotfixKey) ? Array.from(matchedKeys.get(hotfixKey)).sort(compareIssues) : [];
+
+		var title = (issueKeys.length > 0) ?
+			'Security fix for ' + issueKeys.join(', ') :
+			'General fix, not related to any vulnerability';
+
+		return '<a class="lsv-hotfix-pill ' + ((issueKeys.length > 0) ? 'lsv-hotfix-pill-security' : 'lsv-hotfix-pill-general') + '"' +
+			' href="https://issues.liferay.com/browse/' + encodeURIComponent(hotfixKey) + '" target="_blank" rel="noopener"' +
+			' data-ticket="' + escapeHtml(hotfixKey) + '" title="' + escapeHtml(title) + '">' +
+			((issueKeys.length > 0) ? '&#x1F6E1;&#xFE0F; ' : '') + escapeHtml(hotfixKey) + '</a>';
+	}).join('');
+}
+
+/**
+ * Shows the hotfix tickets as pills, except while the hotfix field is being
+ * edited or has no tickets, when the field itself is shown instead.
+ */
+function updateHotfixDisplay() {
+	if (!hotfixPills) {
+		return;
+	}
+
+	var hasTickets = (getHotfixKeys().length > 0);
+	var editing = (document.activeElement === hotfixTickets);
+
+	hotfixSummary.hidden = !hasTickets;
+	hotfixPills.hidden = !hasTickets || editing;
+	hotfixTickets.hidden = hasTickets && !editing;
+}
+
+/**
+ * Clicking a blank area of the hotfix pills swaps them for the hotfix field,
+ * selected so that the tickets can be copied or replaced, until it loses focus.
+ */
+function initHotfixPills() {
+	if (!hotfixPills) {
+		return;
+	}
+
+	hotfixPills.addEventListener('click', function(event) {
+		if (event.target !== hotfixPills) {
+			return;
+		}
+
+		hotfixPills.hidden = true;
+		hotfixTickets.hidden = false;
+		hotfixTickets.focus();
+		hotfixTickets.select();
+	});
+
+	hotfixTickets.addEventListener('blur', updateHotfixDisplay);
+
+	hotfixTickets.addEventListener('keydown', function(event) {
+		if (event.key == 'Escape') {
+			hotfixTickets.blur();
+		}
+	});
+
+	updateHotfixDisplay();
 }
 
 /**
@@ -2103,6 +2185,8 @@ Promise.all([fetchJson(lsvDataFile), initUrlParams(), hotfixDataPromise]).then((
 	if (hotfixTickets) {
 		hotfixTickets.oninput = checkLsvInfo;
 	}
+
+	initHotfixPills();
 
 	var columnHeaders = document.getElementById('columnHeaders');
 

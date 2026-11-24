@@ -26,6 +26,16 @@ class TestSecurityIssueSynonyms(unittest.TestCase):
         self.assertIn('LPD-104695', synonyms['LSV-1793'])
         self.assertIn('LPE-18800', synonyms['LSV-1793'])
 
+    def test_link_to_unexported_development_ticket(self):
+        # LPE-17021 links to LPS-112136 (exported, as a security vulnerability)
+        # and to LPS-114587 (not exported), and both fix it
+        synonyms = self.synonyms
+
+        self.assertIn('LPS-114587', synonyms)
+        self.assertIn('LPE-17021', synonyms['LPS-114587'])
+        self.assertIn('LPS-114587', synonyms['LPE-17021'])
+        self.assertIn('LPS-112136', synonyms['LPE-17021'])
+
     def test_cve_and_lpe_synonyms(self):
         synonyms = self.synonyms
 

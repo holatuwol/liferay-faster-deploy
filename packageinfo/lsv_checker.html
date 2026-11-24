@@ -17,7 +17,7 @@
 
 <p class="lsv-help">To check specific vulnerabilities, enter one or more CVE or LSV identifiers in the identifier filter. Matching vulnerabilities are listed even if they do not affect the checked releases, and each status is <span class="bg-success" style="padding: 0 0.3em;">highlighted in green</span> when that release is not affected, along with the reason. To search by text instead, enter one or more phrases in the text filter below it, one per line (such as <code>nginx</code>), each listing the vulnerabilities that affect the checked releases and have that text in their identifier, title, or details. Both filters can be used together, listing the vulnerabilities that match either one, and any identifier or phrase that matches no vulnerability (or, for a phrase, none that affect the checked releases) is listed below the filters.</p>
 
-<p class="lsv-help">If a customer has installed a hotfix, paste its tokens (the tickets it includes, such as LPD-12345 or LPE-12345) into the Hotfix Tickets field in the sidebar. Development tickets (LPD, LPS, LPSA, COMMERCE) are mapped to the LPE tickets they are linked to. A vulnerability is treated as fixed in a checked release if the hotfix includes every one of its LPE tickets that is not yet fixed in that release (or, for a few vulnerabilities, one LPE ticket that fixes it on its own), and it stays listed with a status explaining which hotfix tickets fixed it.</p>
+<p class="lsv-help">If a customer has installed a hotfix, paste its tokens (the tickets it includes, such as LPD-12345 or LPE-12345) into the Hotfix Tickets field in the sidebar. Development tickets (LPD, LPS, LPSA, COMMERCE) are mapped to the LPE tickets they are linked to. A vulnerability is treated as fixed in a checked release if the hotfix includes every one of its LPE tickets that is not yet fixed in that release (or, for a few vulnerabilities, one LPE ticket that fixes it on its own), and it stays listed with a status explaining which hotfix tickets fixed it, even if it is unpublished. Once you leave the field, it shows the hotfix tickets split into security fixes (those related to any vulnerability, which name the vulnerabilities when you hover over them) and general fixes, and clicking a blank area of that list returns to the field to edit or copy the tickets.</p>
 
 <p class="lsv-help">To narrow the list further, check one or more severities, classifications, or categories in the sidebar. A vulnerability is listed only if it matches one of the checked values in each group you use (leaving a group unchecked does not filter by it), and it matches a category if any of its categories is checked. Vulnerabilities that have not been published to customers yet are marked as Unpublished in the Published column, and they are hidden unless you uncheck Hide unpublished in the sidebar.</p>
 
@@ -48,8 +48,9 @@
 </fieldset>
 <fieldset>
 <legend>Hotfix Tickets</legend>
-<textarea id="hotfixTickets" rows="4" placeholder="paste the hotfix tokens (LPD, LPE, or LPS tickets)"></textarea>
-<div id="hotfixSummary" class="lsv-hotfix-summary"></div>
+<div id="hotfixSummary" class="lsv-hotfix-summary" hidden></div>
+<div id="hotfixPills" class="lsv-hotfix-pills" hidden title="Click a blank area to edit the tickets"></div>
+<textarea id="hotfixTickets" class="lsv-hotfix-pills-text" placeholder="paste the hotfix tokens (LPD, LPE, or LPS tickets)"></textarea>
 </fieldset>
 <fieldset>
 <legend>Severity <a class="lsv-clear" data-filter="severityFilter">clear</a></legend>

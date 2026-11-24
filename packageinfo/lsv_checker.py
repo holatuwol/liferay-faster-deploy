@@ -163,17 +163,41 @@ def get_advisory_url(node):
 
 public_export_folder = join(jira_folder, 'security_issue_public_export')
 
-def normalize_title(title):
+advisory_title_prefix_pattern = re.compile(r'^\s*(?:(?:CVE-\d{4}-\d+|CST-[\d-]+|LPS-\d+)[\s,:-]*)+', re.IGNORECASE)
+
+def strip_advisory_title(title):
     """
     Returns an advisory title without its leading identifiers (such as CVE-2020-
-    7961, CST-7113, or LPS-46552) and with only lowercase letters and digits
-    separated by single spaces, so that an LSV's title can be compared with the
-    title of its public advisory.
+    7961, CST-7113, or LPS-46552), or the whole title if it has nothing else.
     """
 
-    title = re.sub(r'^\s*(?:(?:CVE-\d{4}-\d+|CST-[\d-]+|LPS-\d+)[\s,:-]*)+', '', title, flags=re.IGNORECASE)
+    return advisory_title_prefix_pattern.sub('', title).strip() or title.strip()
 
-    return re.sub(r'[^a-z0-9]+', ' ', title.lower()).strip()
+def normalize_title(title):
+    """
+    Returns an advisory title without its leading identifiers and with only
+    lowercase letters and digits separated by single spaces, so that an LSV's
+    title can be compared with the title of its public advisory.
+    """
+
+    return re.sub(r'[^a-z0-9]+', ' ', advisory_title_prefix_pattern.sub('', title).lower()).strip()
+
+def get_advisory_title(public_advisories):
+    """
+    Returns the titles of an LSV's advisories on liferay.dev (without their
+    leading identifiers, which the page already lists), in order and without
+    duplicates, for an LSV that has no title of its own.
+    """
+
+    titles = []
+
+    for advisory in public_advisories:
+        title = strip_advisory_title(advisory['title'])
+
+        if title and title not in titles:
+            titles.append(title)
+
+    return '; '.join(titles)
 
 cve_list_pattern = re.compile(r'(?:(?:CVE|PRISMA)-\d{4}-\d+[\s,]*)+', re.IGNORECASE)
 
@@ -694,9 +718,10 @@ def build(lsv_issues, output_file_name, include_tickets):
 
         issues[lsv_key] = {
             'published': published,
-            # An LSV without a title (summary) is titled by its CVEs instead, or
-            # by its own key if it has no CVEs either
-            'title': fields.get('customfield_10959') or ', '.join(sorted(cves, key=natural_key)) or lsv_key,
+            # An LSV without a title (summary) is titled by its advisories on
+            # liferay.dev instead, or by its CVEs if it has none, or by its own
+            # key if it has no CVEs either
+            'title': fields.get('customfield_10959') or get_advisory_title(public_advisories) or ', '.join(sorted(cves, key=natural_key)) or lsv_key,
             # An LSV without a severity is treated as having a severity of None
             'severity': get_option_value(fields.get('customfield_10786')) or 'None',
             'classification': classification or '',
@@ -1105,26 +1130,23 @@ def get_linked_keys(fields):
 def get_project(issue_key):
     return issue_key[:issue_key.find('-')]
 
-def write_hotfix_tickets(data):
+def get_development_links():
     """
-    Writes development ticket -> the LSV tickets (LPE tickets, or an LSV that has
-    no LPE ticket, such as LSV-1369) that it is linked to. A link is used from
-    either side, since security_issue_export.py only exports the development
-    tickets that are marked as security vulnerabilities, and an LPE can link to
-    a development ticket that is not.
+    Returns development ticket -> the tickets it is directly linked to. A link is
+    used from either side, since security_issue_export.py only exports the
+    development tickets that are marked as security vulnerabilities, and an LPE
+    can link to a development ticket that is not.
 
     Only direct links are used: a development ticket that is only linked to the
     LSV is not mapped to the LSV's LPE tickets, since an LSV with several LPE
     tickets needs every outstanding one of them in the hotfix.
     """
 
-    ticket_keys = {ticket_key for issue in data['issues'].values() for ticket_key in issue['tickets']}
-
-    hotfix_tickets = {}
+    development_links = {}
 
     def add_link(development_key, ticket_key):
-        if (get_project(development_key) in development_projects) and (ticket_key in ticket_keys):
-            hotfix_tickets.setdefault(development_key, set()).add(ticket_key)
+        if get_project(development_key) in development_projects:
+            development_links.setdefault(development_key, set()).add(ticket_key)
 
     export_folder = join(jira_folder, 'security_issue_export')
 
@@ -1143,28 +1165,50 @@ def write_hotfix_tickets(data):
                 add_link(issue_key, linked_key)
                 add_link(linked_key, issue_key)
 
+    return development_links
+
+def write_hotfix_tickets(development_links, ticket_keys, file_name, description):
+    """
+    Writes development ticket -> the given tickets that it is directly linked to
+    (see get_development_links).
+    """
+
     output = {
-        development_key: sorted(hotfix_tickets[development_key], key=natural_key)
-            for development_key in sorted(hotfix_tickets.keys(), key=natural_key)
+        development_key: sorted(linked_keys & ticket_keys, key=natural_key)
+            for development_key, linked_keys in sorted(development_links.items(), key=lambda x: natural_key(x[0]))
+            if linked_keys & ticket_keys
     }
 
-    with open(join(script_folder, hotfix_tickets_file_name), 'wb') as f:
+    with open(join(script_folder, file_name), 'wb') as f:
         f.write(json.dumps(output, option=json.OPT_INDENT_2))
 
     mapped_keys = {ticket_key for values in output.values() for ticket_key in values}
 
-    print(hotfix_tickets_file_name + ':', len(output), 'development tickets mapped to', len(mapped_keys), 'of', len(ticket_keys), 'LSV tickets')
+    print(file_name + ':', len(output), 'development tickets mapped to', len(mapped_keys), 'of', len(ticket_keys), description)
 
     unmapped_keys = sorted(ticket_keys - mapped_keys, key=natural_key)
 
     if unmapped_keys:
-        print(hotfix_tickets_file_name + ':', 'no development ticket is linked to', ', '.join(unmapped_keys))
+        print(file_name + ':', 'no development ticket is linked to', ', '.join(unmapped_keys))
+
+# The same development ticket -> ticket map as lsv_checker_hotfix.json, but for
+# every ticket in security_issue_fix_versions.ndjson (including the LPE tickets
+# that belong to no LSV), for okr-cloud-health-index's dashboards, which audit
+# a customer's hotfix by LPE: a development ticket fixes only the tickets it is
+# linked to, rather than every ticket that shares a CVE with them.
+
+all_hotfix_tickets_file_name = 'lsv_checker_hotfix_all.json'
+
+def get_fix_version_tickets():
+    fix_versions = read_ndjson(join(jira_folder, 'security_issue_fix_versions.ndjson'))
+
+    return {ticket_key for groups in fix_versions.values() for group in groups.values() for ticket_key in group}
 
 # The LSVs that are published to customers (the ones lsv_checker.html lists
 # while Hide unpublished is checked), each with its publication date (empty if
 # it is unknown, such as for an LSV made public by an advisory on liferay.dev
 # without a date), for okr-cloud-health-index's security_fix_checker.html,
-# whose audit report can hide the vulnerabilities that are not published yet.
+# whose audit table can hide the vulnerabilities that are not published yet.
 # An LSV that is missing from it is not published (or was not exported at all).
 
 published_file_name = 'lsv_checker_published.json'
@@ -1205,7 +1249,10 @@ def main():
 
         if include_tickets:
             write_mismatches(lsv_issues, data)
-            write_hotfix_tickets(data)
+            development_links = get_development_links()
+            lsv_ticket_keys = {ticket_key for issue in data['issues'].values() for ticket_key in issue['tickets']}
+            write_hotfix_tickets(development_links, lsv_ticket_keys, hotfix_tickets_file_name, 'LSV tickets')
+            write_hotfix_tickets(development_links, get_fix_version_tickets(), all_hotfix_tickets_file_name, 'tickets in security_issue_fix_versions.ndjson')
             write_published_lsvs(data)
 
 if __name__ == '__main__':
