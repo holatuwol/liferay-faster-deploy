@@ -502,7 +502,8 @@ function getOutstandingTickets(issue, versionIndex) {
  * it in (issue.resolvedIn).
  * Sets issue.affected (version index -> fix versions) with the hotfix applied
  * (issue.allAffected is without it), and issue.hotfixFixed (version index -> the
- * hotfix tickets that fix it there). Returns the hotfix tickets that belong to
+ * hotfix tickets that fix it there), and issue.hotfixMatched (whether any hotfix
+ * ticket belongs to it). Returns the hotfix tickets that belong to
  * any vulnerability.
  */
 function applyHotfix(hotfixKeys) {
@@ -528,6 +529,8 @@ function applyHotfix(hotfixKeys) {
 		});
 
 		var resolvingKeys = (issue.resolvedBy || []).filter(inHotfix);
+
+		issue.hotfixMatched = issue.tickets.some(inHotfix) || (resolvingKeys.length > 0);
 
 		issue.affected = {};
 		issue.hotfixFixed = {};
@@ -568,21 +571,15 @@ function updateHotfixSummary(hotfixKeys, matchedKeys) {
 }
 
 /**
- * Returns HTML for a vulnerability ticket that the hotfix includes, naming the
- * development tickets entered for it, such as LPD-62070 (LPE-18301).
+ * Returns HTML for a vulnerability ticket that the hotfix includes, linking to
+ * the ticket, with the tickets entered for it (itself, or the development
+ * tickets that map to it) as the link's title.
  */
 function getHotfixTicketHtml(ticketKey) {
-	var ticketHtml = '<span class="lsv-id">' + escapeHtml(ticketKey) + '</span>';
+	var hotfixKeys = hotfixTicketSources[ticketKey] || [ticketKey];
 
-	var developmentKeys = (hotfixTicketSources[ticketKey] || []).filter(function(hotfixKey) { return hotfixKey != ticketKey; });
-
-	if ((developmentKeys.length == 0) || (hotfixTicketSources[ticketKey].indexOf(ticketKey) != -1)) {
-		return ticketHtml;
-	}
-
-	return developmentKeys.map(function(hotfixKey) {
-		return '<span class="lsv-id">' + escapeHtml(hotfixKey) + '</span>';
-	}).join(', ') + ' (' + ticketHtml + ')';
+	return '<a href="https://issues.liferay.com/browse/' + encodeURIComponent(ticketKey) + '" target="_blank" rel="noopener" title="' +
+		escapeHtml(hotfixKeys.join(', ')) + '"><span class="lsv-id">' + escapeHtml(ticketKey) + '</span></a>';
 }
 
 /**
@@ -1328,10 +1325,14 @@ function checkLsvInfo() {
 		issueKeys = Array.from(selectedKeys);
 	}
 
+	// An unpublished vulnerability that the hotfix tickets match is listed even
+	// when unpublished vulnerabilities are hidden, since the hotfix addresses it
+
 	issueKeys = issueKeys.filter(function(issueKey) {
 		var issue = lsvData.issues[issueKey];
 
-		return isMatchingAttributes(issue) && !(hideUnpublished && hideUnpublished.checked && issue.unpublished);
+		return isMatchingAttributes(issue) &&
+			!(hideUnpublished && hideUnpublished.checked && issue.unpublished && !issue.hotfixMatched);
 	});
 
 	var comparator = getColumnComparator(sortColumn, versionIndices);
