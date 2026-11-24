@@ -14,11 +14,11 @@
 
 <p class="lsv-help">Lists the published Liferay security vulnerabilities (LSVs). Check one or more Liferay DXP releases in the sidebar to list only the vulnerabilities that affect them, with a status column for each release showing whether it is affected and which releases fix it. Checking several releases lets you compare them, such as the release you run now and the release you plan to upgrade to.</p>
 
-<p class="alert alert-warning"><strong>Warning</strong>: This is NOT an official Liferay tool, nor is it supported by Liferay in any way. The affected releases are computed from fix versions recorded on the issues linked to each LSV, and the published security advisories remain the authoritative source.</p>
+<p class="alert alert-warning"><strong>Warning</strong>: This is NOT an official Liferay tool, nor is it supported by Liferay in any way. Most affected releases are imputed from affects versions and fix versions recorded on the issues linked to each LSV, because Liferay does not provide exhaustive affected versions lists in its ticket metadata. The published security advisories remain the authoritative source of official documentation.</p>
 
 <p class="lsv-help">To check specific vulnerabilities, enter one or more CVE or LSV identifiers in the identifier filter. Matching vulnerabilities are listed even if they do not affect the checked releases, and each status is <span class="bg-success" style="padding: 0 0.3em;">highlighted in green</span> when that release is not affected, along with the reason. To search by title instead, enter one or more phrases in the title filter below it, one per line (such as <code>nginx</code>), each listing the vulnerabilities that affect the checked releases and have that text in their identifier or title. Both filters can be used together, listing the vulnerabilities that match either one, and any identifier or phrase that matches no vulnerability (or, for a phrase, none that affect the checked releases) is listed below the filters.</p>
 
-<p class="lsv-help">To narrow the list further, check one or more severities, classifications, or categories in the sidebar. A vulnerability is listed only if it matches one of the checked values in each group you use (leaving a group unchecked does not filter by it), and it matches a category if any of its categories is checked.</p>
+<p class="lsv-help">To narrow the list further, check one or more severities, classifications, or categories in the sidebar. A vulnerability is listed only if it matches one of the checked values in each group you use (leaving a group unchecked does not filter by it), and it matches a category if any of its categories is checked. Vulnerabilities that have not been published publicly yet are marked as Unpublished in the Published column, and they are hidden unless you uncheck Hide unpublished in the sidebar.</p>
 
 <p class="lsv-help">Click the LSV, Severity, Classification, or Published header to sort by that column (newest, most severe, or alphabetically first), or a release's Status header to list the vulnerabilities that are not fixed in that release line first, then those fixed in a later release, then those that do not affect it. Click the same header again to reverse the order.</p>
 
@@ -33,6 +33,10 @@
 <div class="lsv-layout">
 
 <aside class="lsv-sidebar">
+<fieldset>
+<legend>Publication</legend>
+<label><input id="hideUnpublished" type="checkbox" checked />Hide unpublished</label>
+</fieldset>
 <fieldset>
 <legend>Release <a class="lsv-clear" data-filter="versionFilter">clear</a></legend>
 <div id="versionChips"></div>

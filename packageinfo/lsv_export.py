@@ -22,6 +22,9 @@ issue_fields = ['key', 'customfield_10563', 'customfield_10955', 'customfield_10
 export_file_name = 'LSV.json'
 date_fields = ['customfield_10955', 'customfield_10956']
 
+def wrap_clauses(operator, clauses):
+    return '(%s)' % operator.join(['(%s)' % clause for clause in clauses])
+
 def export_lsv_issues(target_date, target_tz, date_fields, file_name):
     target_date_string = target_date.astimezone(target_tz).strftime("%Y-%m-%d %H:%M")
 
@@ -29,12 +32,20 @@ def export_lsv_issues(target_date, target_tz, date_fields, file_name):
 
     for date_field in date_fields:
         date_cf = 'cf[%s]' % date_field[len('customfield_'):]
-        date_conditions.append(f'({date_cf} is not empty and {date_cf} < "{target_date_string}")')
+        date_conditions.append(f'{date_cf} is not empty and {date_cf} < "{target_date_string}"')
 
-    jql = ' and '.join([
+    jql = wrap_clauses(' and ', [
         'project = LSV',
-        '(cf[10957] is not empty and cf[10957] = "Ready for Publishing")',
-        '(%s)' % ' or '.join(date_conditions),
+        wrap_clauses(' or ', [
+            wrap_clauses(' and ', [
+                'cf[10957] is not empty and cf[10957] = "Ready for Publishing"',
+                wrap_clauses(' or ', date_conditions),
+            ]),
+            wrap_clauses(' and ', [
+                '"Issue Classification" is empty or "Issue Classification" not in ("False Positive", "Ignored", "Not Exploitable")',
+                'resolution is empty or resolution not in (Discarded, Duplicate, "Not a Bug", "Won\'t Fix")'
+            ]),
+        ]),
     ])
 
     issues = { issue_key: issue_response['fields'] for issue_key, issue_response in get_issues(f'{jql} order by key', issue_fields, [], False).items() }

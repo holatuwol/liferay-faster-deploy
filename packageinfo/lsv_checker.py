@@ -1,6 +1,9 @@
 from bs4 import BeautifulSoup
 from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
+from functools import cache
 from html import escape
+import ast
 import inspect
 import orjson as json
 from glob import glob
@@ -33,7 +36,9 @@ jira_folder = join(dirname(script_folder), 'jira')
 # An LSV affects a version if the LSV itself or any ticket linked to it (as
 # recorded in security_issue_lsv_tickets.json) is listed as outstanding for that
 # version in security_issue_fix_versions.ndjson, unless one of its resolving
-# tickets (see read_resolving_tickets) has resolved the LSV in that version.
+# tickets (see read_resolving_tickets) has resolved the LSV in that version. An
+# LSV with resolving tickets only uses those tickets (see get_lsv_ticket_keys),
+# since its other tickets are follow-ups or belong to another LSV.
 #
 # Only the LSV's own linked tickets are used, rather than every ticket that
 # shares one of its CVEs (security_issue_synonyms.ndjson), because a later LSV
@@ -212,10 +217,33 @@ def get_public_advisory_elements(soup, content):
             and 'publication date' not in tag.get_text(' ').lower()
     ]
 
+def get_public_advisory_published(soup):
+    """
+    Returns the publication date (YYYY-MM-DD) of a public advisory, or an empty
+    string if it has none. Newer advisories fill in a date fragment next to the
+    Publication Date label (such as February 20, 2024), while older ones have
+    the date in the text (such as Publication date: Tue, 25 Jun 2019 22:36:00
+    +0000).
+    """
+
+    date_element = soup.find(attrs={'data-lfr-editable-type': 'date-time'})
+    date_text = date_element.get_text(' ', strip=True) if date_element else ''
+
+    if date_text:
+        try:
+            return datetime.strptime(date_text, '%B %d, %Y').strftime('%Y-%m-%d')
+        except ValueError:
+            pass
+
+    match = re.search(r'publication date:\s*(\w{3}, \d{1,2} \w{3} \d{4} \d\d:\d\d:\d\d [+-]\d{4})', re.sub(r'\s+', ' ', soup.get_text(' ')), re.IGNORECASE)
+
+    return parsedate_to_datetime(match.group(1)).strftime('%Y-%m-%d') if match else ''
+
+@cache
 def read_public_advisories():
     """
     Returns the public advisories saved by security_issue_public_export.py, each
-    with its URL, title, and CVEs. An advisory's CVEs are the
+    with its URL, title, CVEs, and publication date. An advisory's CVEs are the
     ones in its title, or if its title has none, the ones in its content, since
     an advisory can mention the CVE of an earlier, incomplete fix.
     """
@@ -257,10 +285,16 @@ def read_public_advisories():
         if not cves:
             cves = {x.upper() for element in elements for x in cve_pattern.findall(element.get_text(' '))}
 
+        published = get_public_advisory_published(soup)
+
+        if not published:
+            print('security_issue_public_export:', 'no publication date found for', entry['url'])
+
         advisories.append({
             'url': entry['url'],
             'title': title,
             'cves': cves,
+            'published': published,
         })
 
     return advisories
@@ -288,10 +322,24 @@ export_file_name = 'LSV.json'
 # fields, which lsv_export.py selected the LSVs by
 
 published_fields = ['customfield_10955', 'customfield_10956']
+customer_published_field = 'customfield_10955'
 public_published_field = 'customfield_10956'
 
-# (page data file, whether to include LPE tickets and audience, which only the
-# internal page gets)
+# The publication status field, which must be Ready for Publishing for an LSV to
+# be included in the public page's data (lsv_export.py does not filter on it,
+# and the internal page lists every LSV in the export)
+
+publication_status_field = 'customfield_10957'
+ready_for_publishing = 'Ready for Publishing'
+
+def is_ready_for_publishing(fields):
+    return get_option_value(fields.get(publication_status_field)) == ready_for_publishing
+
+# (page data file, whether to include LPE tickets, which only the internal page
+# gets). The internal page treats an LSV as published once its
+# customer publication date has passed, and the public page once its public
+# publication date has passed, and both pages mark the LSVs that are not
+# published yet (and can hide them).
 
 builds = [
     ('lsv_checker.json', True),
@@ -307,10 +355,13 @@ def parse_jira_datetime(value):
 
     return datetime.strptime(value, '%Y-%m-%dT%H:%M:%S.%f%z')
 
-def is_public(fields, now):
-    published = fields.get(public_published_field)
+def is_published(fields, published_field, now):
+    published = fields.get(published_field)
 
     return bool(published) and parse_jira_datetime(published) <= now
+
+def is_public(fields, now):
+    return is_published(fields, public_published_field, now)
 
 def get_release_line(version):
     quarter_match = re.match(r'(\d{4}\.q[1-4])', version)
@@ -321,6 +372,78 @@ def get_release_line(version):
     version_match = re.match(r'(\d+\.\d+)', version)
 
     return version_match.group(1) if version_match else version
+
+def read_quarterly_baselines(versions):
+    """
+    Returns the 7.4.13 update that each quarterly release line is based on (from
+    quarterly_releases in releases.py, read from the source since importing
+    releases.py pulls releases from Jira), mapped to the first release of that
+    line in versions (such as 7.4.13-u155 -> 2026.q4.0, or 7.4.13-u112 ->
+    2024.q1.1 since there was no 2024.q1.0), so that the page can name the
+    quarterly release instead of the update it is based on.
+    """
+    with open(join(jira_folder, 'releases.py'), 'rt', encoding='utf-8') as f:
+        tree = ast.parse(f.read())
+
+    quarterly_releases = next(
+        ast.literal_eval(node.value) for node in tree.body
+        if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == 'quarterly_releases' for target in node.targets))
+
+    baselines = {}
+
+    for release_line, update in quarterly_releases.items():
+        first_release = next((version for version in versions if get_release_line(version) == release_line), None)
+
+        if first_release is not None:
+            baselines['7.4.13-u%d' % update] = first_release
+
+    return baselines
+
+def read_ticket_fix_versions():
+    """
+    Returns ticket key -> the ticket's fix versions on every release line, as
+    written by security_issue_fix_versions.py (security_issue_fix_versions.ndjson
+    only lists the fix versions on each release's own line).
+    """
+    file_name = join(jira_folder, 'security_issue_ticket_fix_versions.json')
+
+    if not exists(file_name):
+        return {}
+
+    with open(file_name, 'rb') as f:
+        return json.loads(f.read())
+
+def combine_fix_versions(ticket_keys, resolving, ticket_fix_versions, issue_affected, versions, version_indices):
+    """
+    Returns the releases (in release order) that fix an LSV, one for each release
+    line: the earliest of its tickets' fix versions (or its resolving tickets'
+    fix versions) that the LSV no longer affects, since a release that fixes one
+    ticket does not fix the LSV while another ticket still affects it. A 7.x GA1
+    fix version on a line that the LSV never affects only means that the line
+    was never affected, so it is not a fix.
+    """
+    candidates = set(resolving['fix_versions'] if resolving else [])
+
+    for ticket_key in ticket_keys:
+        candidates.update(ticket_fix_versions.get(ticket_key, []))
+
+    affected_lines = {get_release_line(versions[version_index]) for version_index in issue_affected}
+
+    fix_versions = {}
+
+    for version_index in sorted(version_indices[x] for x in candidates if x in version_indices):
+        version = versions[version_index]
+        release_line = get_release_line(version)
+
+        if version_index in issue_affected or release_line in fix_versions:
+            continue
+
+        if version.endswith('-ga1') and release_line not in affected_lines:
+            continue
+
+        fix_versions[release_line] = version
+
+    return sorted(fix_versions.values(), key=lambda x: version_indices[x])
 
 # LSVs mapped to the tickets that fully resolve the LSV on their own, even if
 # its other tickets are still outstanding (such as LPE-18800, fixed in
@@ -361,6 +484,26 @@ def is_fixed_by(version_index, fix_version_indices, versions):
         fix_version_index <= version_index and get_release_line(versions[fix_version_index]) == release_line
         for fix_version_index in fix_version_indices)
 
+def get_lsv_ticket_keys(lsv_key, resolving, lsv_tickets):
+    """
+    Returns the tickets that decide which releases an LSV affects: the LSV itself
+    and its linked tickets, or if some of them resolve the LSV (see
+    read_resolving_tickets), only those. The other tickets are then either
+    follow-ups or belong to another LSV that is linked to the same development
+    ticket (such as LPE-18875, which is linked to LSV-1250 only through
+    LPD-106203, the development ticket for LSV-1850), so they would otherwise
+    make the LSV affect every release they are outstanding in.
+    """
+
+    ticket_keys = {lsv_key} | set(lsv_tickets.get(lsv_key, []))
+
+    resolving_keys = {
+        ticket_key for ticket_key in (resolving['tickets'] if resolving else [])
+        if ticket_key in ticket_keys
+    }
+
+    return resolving_keys or ticket_keys
+
 def combine_affected(ticket_keys, resolving, outstanding, versions, version_indices):
     """
     Returns version index -> fix versions for an LSV, combining its tickets. An
@@ -394,21 +537,45 @@ def combine_affected(ticket_keys, resolving, outstanding, versions, version_indi
 
     return {version_index: values - affected_versions for version_index, values in affected.items()}
 
+def get_fixed_by(lsv_key, classification, resolving, lsv_tickets):
+    """
+    Returns the LPE tickets that fix an LSV, which the internal page shows next
+    to the LSV: its resolving tickets (see read_resolving_tickets) that are
+    linked to it, or if it has none, every LPE ticket linked to it, since each of
+    them is needed for the fix. Unlike the tickets used for the affected
+    versions, these include tickets that are no longer outstanding in any
+    release. An LSV that is never treated as affecting a release has none.
+    """
+
+    if classification in not_affected_classifications:
+        return []
+
+    linked_keys = [
+        ticket_key for ticket_key in lsv_tickets.get(lsv_key, [])
+        if get_project(ticket_key) == 'LPE'
+    ]
+
+    resolving_keys = [
+        ticket_key for ticket_key in (resolving['tickets'] if resolving else [])
+        if ticket_key in linked_keys
+    ]
+
+    return sorted(resolving_keys or linked_keys, key=natural_key)
+
 def build(lsv_issues, output_file_name, include_tickets):
     now = datetime.now(timezone.utc)
 
-    # Only the public page gets the public advisories, since the internal page
-    # has each LSV's own description
+    # Both pages link each LSV to its public advisories on liferay.dev, and an
+    # LSV with a public advisory is treated as public (see lsv_public below)
 
     advisories_by_cve = {}
     advisories_by_title = {}
 
-    if not include_tickets:
-        for advisory in read_public_advisories():
-            for cve in advisory['cves']:
-                advisories_by_cve.setdefault(cve, []).append(advisory)
+    for advisory in read_public_advisories():
+        for cve in advisory['cves']:
+            advisories_by_cve.setdefault(cve, []).append(advisory)
 
-            advisories_by_title.setdefault(normalize_title(advisory['title']), []).append(advisory)
+        advisories_by_title.setdefault(normalize_title(advisory['title']), []).append(advisory)
 
     fix_versions = read_ndjson(join(jira_folder, 'security_issue_fix_versions.ndjson'))
 
@@ -416,6 +583,7 @@ def build(lsv_issues, output_file_name, include_tickets):
         lsv_tickets = json.loads(f.read())
 
     resolving_tickets = read_resolving_tickets()
+    ticket_fix_versions = read_ticket_fix_versions()
 
     # security_issue_fix_versions.ndjson lists versions in release order (from
     # releases.json), which the page relies on to find the release that fixed an
@@ -461,32 +629,74 @@ def build(lsv_issues, output_file_name, include_tickets):
 
         cves = set(x.upper() for x in cve_pattern.findall(fields.get('customfield_10563') or ''))
 
+        public_advisories = get_public_advisories(fields, cves, advisories_by_cve, advisories_by_title)
+
+        # An LSV with an advisory on liferay.dev was published there, whatever
+        # its publication status says (older LSVs have no publication status or
+        # dates), so it is treated as public and ready for publishing, as of the
+        # advisory's publication date if it has no public publication date of
+        # its own
+
+        publication_status = get_option_value(fields.get(publication_status_field))
+
+        if not include_tickets and not (is_ready_for_publishing(fields) or public_advisories):
+            continue
+
+        # An LSV that is Not Ready is not listed on learn.liferay.com, and its
+        # publication dates are most likely placeholders, so its publication
+        # dates are ignored. It is unpublished, unless it has an advisory on
+        # liferay.dev, in which case it is public as of that advisory's date.
+
+        has_placeholder_dates = (publication_status == 'Not Ready')
+
+        def is_lsv_published(published_field):
+            return not has_placeholder_dates and is_published(fields, published_field, now)
+
+        lsv_public = is_lsv_published(public_published_field) or bool(public_advisories)
+        customer_published = lsv_public or is_lsv_published(customer_published_field)
+
         classification = get_option_value(fields.get('customfield_10961'))
 
         issue_tickets = []
         issue_affected = {}
+        lsv_fix_versions = []
 
         if classification not in not_affected_classifications:
+            lsv_ticket_keys = get_lsv_ticket_keys(lsv_key, resolving_tickets.get(lsv_key), lsv_tickets)
+
             issue_tickets = [
-                ticket_key for ticket_key in sorted({lsv_key} | set(lsv_tickets.get(lsv_key, [])), key=natural_key)
+                ticket_key for ticket_key in sorted(lsv_ticket_keys, key=natural_key)
                 if ticket_key in outstanding
             ]
 
             issue_affected = combine_affected(issue_tickets, resolving_tickets.get(lsv_key), outstanding, versions, version_indices)
 
+            # Every ticket of the LSV, including any that are no longer outstanding
+            # anywhere, can name a release that fixes it
+
+            lsv_fix_versions = combine_fix_versions(
+                lsv_ticket_keys, resolving_tickets.get(lsv_key), ticket_fix_versions,
+                issue_affected, versions, version_indices)
+
         description = fields.get('customfield_10960')
 
         # The publication date is a datetime (e.g. 2024-05-01T09:00:00.000-0700),
         # but only the date is shown. The earliest date field is when the LSV was
-        # first published.
+        # first published. A date that is still in the future is treated as if
+        # it were not set, since the LSV has not been published then yet.
 
-        published_dates = [fields.get(field)[:10] for field in published_fields if fields.get(field)]
+        published_dates = [fields.get(field)[:10] for field in published_fields if is_lsv_published(field)]
+
+        if not is_lsv_published(public_published_field):
+            published_dates.extend(x['published'] for x in public_advisories if x['published'])
+
         published = min(published_dates) if published_dates else ''
 
         issues[lsv_key] = {
             'published': published,
-            # An LSV without a title (summary) is titled by its CVEs instead
-            'title': fields.get('customfield_10959') or ', '.join(sorted(cves, key=natural_key)),
+            # An LSV without a title (summary) is titled by its CVEs instead, or
+            # by its own key if it has no CVEs either
+            'title': fields.get('customfield_10959') or ', '.join(sorted(cves, key=natural_key)) or lsv_key,
             # An LSV without a severity is treated as having a severity of None
             'severity': get_option_value(fields.get('customfield_10786')) or 'None',
             'classification': classification or '',
@@ -528,7 +738,23 @@ def build(lsv_issues, output_file_name, include_tickets):
                     version_index for version_index in sorted(issue_affected.keys())
                     if get_release_line(versions[version_index]) in resolved_lines
                 ]
-            issues[lsv_key]['audience'] = 'Public' if is_public(fields, now) else 'Customers Only'
+
+            fixed_by = get_fixed_by(lsv_key, classification, resolving, lsv_tickets)
+
+            if fixed_by:
+                issues[lsv_key]['fixedBy'] = fixed_by
+
+            # The internal page links to the LSV's advisories on liferay.dev as
+            # well as the advisory linked from the LSV's description (if any)
+
+            if public_advisories:
+                issues[lsv_key]['advisory'] = [x for x in [issues[lsv_key]['advisory']] if x] + [x['url'] for x in public_advisories]
+
+            # An LSV that is already public has been published to customers
+            # too, even without a customer publication date
+
+            if not customer_published:
+                issues[lsv_key]['unpublished'] = True
         else:
             # The public page does not have any descriptions, and links to the
             # LSV's advisories on liferay.dev rather than the advisory linked
@@ -538,8 +764,6 @@ def build(lsv_issues, output_file_name, include_tickets):
 
             del issues[lsv_key]['description']
 
-            public_advisories = get_public_advisories(fields, cves, advisories_by_cve, advisories_by_title)
-
             if public_advisories:
                 issues[lsv_key]['advisory'] = [x['url'] for x in public_advisories]
 
@@ -548,12 +772,42 @@ def build(lsv_issues, output_file_name, include_tickets):
             # it affects), without the title, advisory, or publication date that
             # have only been published to customers
 
-            if not is_public(fields, now):
+            if not lsv_public:
                 issues[lsv_key] = {field: issues[lsv_key][field] for field in ['cves', 'severity', 'classification', 'products']}
+                issues[lsv_key]['unpublished'] = True
+
+        # The CVEs of a confirmed vulnerability that is not public yet are still
+        # reserved, so they have no page on the NVD to link to. The CVEs of an
+        # LSV with any other classification belong to another product (such as
+        # a third-party library), and so already have a page on the NVD.
+
+        if classification == 'Confirmed Vulnerability' and not lsv_public:
+            issues[lsv_key]['cveReserved'] = True
+
+        # learn.liferay.com only lists an LSV once its customer publication date
+        # has passed (even if it is not public yet, so on the public page this
+        # differs from unpublished), so both pages link an LSV without one to
+        # its advisory on liferay.dev instead, or if it has none, to its Jira
+        # ticket.
+
+        if not is_lsv_published(customer_published_field):
+            issues[lsv_key]['learnUnlisted'] = True
+
+            if public_advisories:
+                issues[lsv_key]['lsvUrl'] = public_advisories[0]['url']
 
         issues[lsv_key]['affected'] = {str(version_index): get_fix_list_index(values) for version_index, values in sorted(issue_affected.items())}
 
-    data = {'versions': versions, 'fixLists': fix_lists, 'issues': issues}
+        # The releases that fix the LSV on every release line, so that a release
+        # line without a fix can point to a release on another line that has one
+
+        if lsv_fix_versions:
+            issues[lsv_key]['fixVersions'] = lsv_fix_versions
+
+    # The audience that an LSV is published to, for describing the LSVs that
+    # are not published yet
+
+    data = {'versions': versions, 'fixLists': fix_lists, 'quarterlyBaselines': read_quarterly_baselines(versions), 'issues': issues, 'audience': 'customers' if include_tickets else 'public'}
 
     with open(join(script_folder, output_file_name), 'wb') as f:
         f.write(json.dumps(data))
@@ -561,9 +815,9 @@ def build(lsv_issues, output_file_name, include_tickets):
     print(output_file_name + ':', len(issues), 'issues,', sum(1 for x in issues.values() if x['affected']), 'affecting at least one version' + (', %d tickets' % len({y for x in issues.values() for y in x['tickets']}) if include_tickets else ''))
 
     if include_tickets:
-        print(output_file_name + ':', sum(1 for x in issues.values() if x['audience'] != 'Public'), 'issues not public')
+        print(output_file_name + ':', sum(1 for x in issues.values() if x.get('unpublished')), 'issues not published to customers')
     else:
-        print(output_file_name + ':', sum(1 for x in issues.values() if 'title' not in x), 'issues without details (not public)')
+        print(output_file_name + ':', sum(1 for x in issues.values() if x.get('unpublished')), 'issues without details (not public)')
         print(output_file_name + ':', sum(1 for x in issues.values() if isinstance(x.get('advisory'), list)), 'issues with an advisory on liferay.dev')
 
     return data
@@ -906,6 +1160,26 @@ def write_hotfix_tickets(data):
     if unmapped_keys:
         print(hotfix_tickets_file_name + ':', 'no development ticket is linked to', ', '.join(unmapped_keys))
 
+# The LSVs that are published to customers (the ones lsv_checker.html lists
+# while Hide unpublished is checked), each with its publication date (empty if
+# it is unknown, such as for an LSV made public by an advisory on liferay.dev
+# without a date), for okr-cloud-health-index's security_fix_checker.html,
+# whose audit report can hide the vulnerabilities that are not published yet.
+# An LSV that is missing from it is not published (or was not exported at all).
+
+published_file_name = 'lsv_checker_published.json'
+
+def write_published_lsvs(data):
+    output = {
+        lsv_key: issue['published']
+            for lsv_key, issue in data['issues'].items() if not issue.get('unpublished')
+    }
+
+    with open(join(script_folder, published_file_name), 'wb') as f:
+        f.write(json.dumps(output, option=json.OPT_INDENT_2))
+
+    print(published_file_name + ':', len(output), 'of', len(data['issues']), 'LSVs published to customers')
+
 def main():
     if not exists(join(script_folder, 'lsv_export', export_file_name)):
         print('Skipping:', 'lsv_export/' + export_file_name, 'does not exist (run lsv_export.py)')
@@ -932,6 +1206,7 @@ def main():
         if include_tickets:
             write_mismatches(lsv_issues, data)
             write_hotfix_tickets(data)
+            write_published_lsvs(data)
 
 if __name__ == '__main__':
     main()

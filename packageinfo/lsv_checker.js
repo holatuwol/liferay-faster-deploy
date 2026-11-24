@@ -25,7 +25,6 @@ var noValueOption = '(none)';
 var severityFilter = document.getElementById('severityFilter');
 var classificationFilter = document.getElementById('classificationFilter');
 var categoryFilter = document.getElementById('categoryFilter');
-var audienceFilter = document.getElementById('audienceFilter');
 
 var attributeFilters = [
 	{container: severityFilter, parameter: 'severity', property: 'severity', noValueText: 'No Severity'},
@@ -35,14 +34,13 @@ var attributeFilters = [
 	{container: categoryFilter, parameter: 'category', property: 'products', noValueText: 'No Category', impliedValues: {
 		'PaaS': ['DXP', 'Docker'],
 		'SaaS': ['DXP', 'Docker']
-	}},
-	// Only the customer page has the audience filter, since only its data records
-	// an audience (Public or Customers Only), and the filter is only shown when
-	// some LSVs are not public yet
-	{container: audienceFilter, parameter: 'audience', property: 'audience', noValueText: 'Unknown', hideUnless: function(values) {
-		return values.some(function(value) { return (value != 'Public') && (value != noValueOption); });
 	}}
-].filter(function(attributeFilter) { return attributeFilter.container; });
+];
+
+// Hides the vulnerabilities that are not published yet (to customers on the
+// internal page, or publicly on the public page)
+
+var hideUnpublished = document.getElementById('hideUnpublished');
 
 var versionFilter = document.getElementById('versionFilter');
 var versionSearch = document.getElementById('versionSearch');
@@ -394,7 +392,8 @@ function parseNameFilter(value) {
 
 /**
  * Returns the phrases in the title filter, one per line, which each list the
- * vulnerabilities with that text in their identifier or title.
+ * vulnerabilities with that text in their identifier, title, or details (when
+ * the page's data has details).
  */
 function parseTitleFilter(value) {
 	return value.split('\n').map(function(phrase) {
@@ -426,6 +425,23 @@ function getHotfixKeys() {
 }
 
 /**
+ * Returns the text of a vulnerability's details (HTML), in lower case, for the
+ * title filter, or an empty string if the page's data has no details for it.
+ */
+function getDescriptionText(description) {
+	if (!description) {
+		return '';
+	}
+
+	// A parsed document that is not attached to the page does not load images
+	// or run scripts
+
+	var doc = new DOMParser().parseFromString(description, 'text/html');
+
+	return (doc.body.textContent || '').replace(/\s+/g, ' ').toLowerCase();
+}
+
+/**
  * Sets issue.allAffected (version index -> fix versions) for each vulnerability
  * from its affected versions, which lsv_checker.py has already combined across
  * the vulnerability's tickets.
@@ -438,17 +454,22 @@ function initAffected() {
 		// the CVEs, severity, classification, and categories of a vulnerability
 		// that has not been made public yet, so fill in empty details
 
-		issue.title = issue.title || issue.cves.join(', ');
+		issue.title = issue.title || issue.cves.join(', ') || issueKey;
 		issue.severity = issue.severity || '';
 		issue.classification = issue.classification || '';
 		issue.products = issue.products || [];
 		issue.published = issue.published || '';
+		issue.unpublished = !!issue.unpublished;
+		issue.learnUnlisted = !!issue.learnUnlisted;
+		issue.cveReserved = !!issue.cveReserved;
 		// An advisory is a single URL, or for the public page's vulnerabilities
 		// with advisories on liferay.dev, a list of URLs
 
 		issue.advisories = [].concat(issue.advisory || []);
 		issue.description = issue.description || '';
+		issue.descriptionText = getDescriptionText(issue.description);
 		issue.tickets = issue.tickets || [];
+		issue.fixedBy = issue.fixedBy || [];
 
 		issue.allAffected = {};
 
@@ -613,6 +634,137 @@ function getVersionHtml(version) {
 	return '<span class="lsv-id">' + escapeHtml(version) + '</span>';
 }
 
+/**
+ * Returns the number of the earliest 7.4.13 update with the fix, among fix
+ * versions that are a 7.4.13 update or the first release of a quarterly release
+ * line (which has the fix of the 7.4.13 update that the line is based on, such
+ * as 7.4.13-u143 for 2025.q4.0), or Infinity if there is none.
+ */
+function getFirstFixedUpdate(fixVersions) {
+	var quarterlyBaselines = lsvData.quarterlyBaselines || {};
+	var firstFixedUpdate = Infinity;
+
+	for (var update in quarterlyBaselines) {
+		var updateNumber = parseInt(update.substring(update.lastIndexOf('-u') + 2));
+
+		if (fixVersions.has(update) || fixVersions.has(quarterlyBaselines[update])) {
+			firstFixedUpdate = Math.min(firstFixedUpdate, updateNumber);
+		}
+	}
+
+	fixVersions.forEach(function(fixVersion) {
+		var updateMatch = /^7\.4\.13-u(\d+)$/.exec(fixVersion);
+
+		if (updateMatch) {
+			firstFixedUpdate = Math.min(firstFixedUpdate, parseInt(updateMatch[1]));
+		}
+	});
+
+	return firstFixedUpdate;
+}
+
+/**
+ * Returns the release that has the fix in a release line, which is its own fix
+ * version on that line if it has one, or else the first release of a quarterly
+ * release line based on a 7.4.13 update at or after the first fixed update (see
+ * getFirstFixedUpdate), since each quarterly release line is branched from the
+ * 7.4.13 update it is based on.
+ */
+function getLineFixVersion(releaseLine, orderedFixVersions, firstFixedUpdate) {
+	var lineFixVersion = orderedFixVersions.find(function(version) { return getReleaseLine(version) == releaseLine; });
+
+	if (lineFixVersion) {
+		return lineFixVersion;
+	}
+
+	var quarterlyBaselines = lsvData.quarterlyBaselines || {};
+
+	for (var update in quarterlyBaselines) {
+		var firstRelease = quarterlyBaselines[update];
+
+		if ((getReleaseLine(firstRelease) == releaseLine) && (parseInt(update.substring(update.lastIndexOf('-u') + 2)) >= firstFixedUpdate)) {
+			return firstRelease;
+		}
+	}
+
+	return null;
+}
+
+/**
+ * Returns HTML naming where a vulnerability is fixed outside the release line of
+ * the version at the given index, which has no fix:
+ *
+ * - the fix in the next LTS (.q1) release line after it that has one (such as
+ *   2026.q1 rather than 2024.q1 or 2025.q1 for 2025.q3), including an LTS
+ *   release line that has the fix from the start because an earlier quarterly
+ *   release line was fixed in its first release (such as 2026.q1.0 when
+ *   2025.q4.0 has the fix), since a customer can only upgrade to an LTS release
+ * - or if no later LTS release line has it, the fix in the next release line
+ *   after it that has one
+ * - or if no later release line has it, the first release with the fix at all
+ *
+ * Fix versions come from the vulnerability's fix versions on every release line
+ * (issue.fixVersions), as well as those of every affected release (without the
+ * hotfix), and lsvData.versions gives their order, which lists release lines in
+ * order. A fix in the 7.4.13 update that a quarterly release line is based on
+ * (such as 7.4.13-u155 for 2026.q4) is named by that line's first release
+ * (lsvData.quarterlyBaselines).
+ */
+function getOtherFixHtml(issue, versionIndex) {
+	var quarterlyBaselines = lsvData.quarterlyBaselines || {};
+	var fixVersions = new Set(issue.fixVersions || []);
+
+	for (var affectedIndex in issue.allAffected) {
+		issue.allAffected[affectedIndex].forEach(function(fixVersion) { fixVersions.add(fixVersion); });
+	}
+
+	var orderedFixVersions = lsvData.versions.filter(function(version) { return fixVersions.has(version); });
+
+	if (orderedFixVersions.length == 0) {
+		return 'fix version undocumented';
+	}
+
+	var releaseLine = getReleaseLine(lsvData.versions[versionIndex]);
+
+	var laterLines = [];
+
+	lsvData.versions.forEach(function(version, index) {
+		var versionLine = getReleaseLine(version);
+
+		if ((index > versionIndex) && (versionLine != releaseLine) && (laterLines.indexOf(versionLine) == -1)) {
+			laterLines.push(versionLine);
+		}
+	});
+
+	var firstFixedUpdate = getFirstFixedUpdate(fixVersions);
+
+	for (var i = 0; i < laterLines.length; i++) {
+		if (!/^\d{4}\.q1$/.test(laterLines[i])) {
+			continue;
+		}
+
+		var ltsFixVersion = getLineFixVersion(laterLines[i], orderedFixVersions, firstFixedUpdate);
+
+		if (ltsFixVersion) {
+			return 'LTS fix in ' + getVersionHtml(ltsFixVersion);
+		}
+	}
+
+	var laterFixVersion = lsvData.versions.find(function(version, index) {
+		return (index > versionIndex) && (getReleaseLine(version) != releaseLine) && orderedFixVersions.some(function(fixVersion) {
+			return (fixVersion == version) || (quarterlyBaselines[fixVersion] == version);
+		});
+	});
+
+	if (laterFixVersion) {
+		return 'fixed in ' + getVersionHtml(laterFixVersion);
+	}
+
+	var firstFixVersion = orderedFixVersions[0];
+
+	return 'first fixed in ' + getVersionHtml(quarterlyBaselines[firstFixVersion] || firstFixVersion);
+}
+
 function getStatusHtml(issue, versionIndex) {
 	var fixVersions = issue.affected[versionIndex];
 
@@ -629,20 +781,55 @@ function getStatusHtml(issue, versionIndex) {
 
 	if (fixVersions.length == 0) {
 		return '<span class="label label-danger">Affected</span> <span class="lsv-fix-versions lsv-status-text">not fixed in ' +
-			getVersionHtml(getReleaseLine(lsvData.versions[versionIndex])) + '</span>';
+			getVersionHtml(getReleaseLine(lsvData.versions[versionIndex])) + '; ' + getOtherFixHtml(issue, versionIndex) + '</span>';
 	}
 
 	return '<span class="label label-danger">Affected</span> <span class="lsv-fix-versions lsv-status-text">fixed in ' + fixVersions.map(getVersionHtml).join(', ') + '</span>';
 }
 
-function getLsvHtml(issueKey) {
-	return '<a class="lsv-id" href="https://learn.liferay.com/security-vulnerabilities#/' + issueKey + '" target="_blank" rel="noopener">' + issueKey + '</a>';
+/**
+ * Returns the HTML for a vulnerability's identifier, followed (on the customer
+ * page, whose data has tickets) by the LPE tickets that fix it.
+ */
+/**
+ * Returns the URL for a vulnerability, which is its page on learn.liferay.com
+ * once its customer publication date has passed (even if it is not public
+ * yet). learn.liferay.com does not list any other vulnerability, so link to its
+ * advisory on liferay.dev (issue.lsvUrl) instead, or if it has none, to its
+ * Jira ticket.
+ */
+function getLsvUrl(issueKey, issue) {
+	if (!issue.learnUnlisted) {
+		return 'https://learn.liferay.com/security-vulnerabilities#/' + issueKey;
+	}
+
+	return issue.lsvUrl || ('https://liferay.atlassian.net/browse/' + issueKey);
+}
+
+function getLsvHtml(issueKey, issue) {
+	var html = '<a class="lsv-id" href="' + getLsvUrl(issueKey, issue) + '" target="_blank" rel="noopener">' + issueKey + '</a>';
+
+	if (issue.fixedBy.length > 0) {
+		html += '<span class="lsv-fixed-by" title="Fixed by">' + issue.fixedBy.map(function(ticketKey) {
+			return '<a class="lsv-id" href="https://liferay.atlassian.net/browse/' + ticketKey + '" target="_blank" rel="noopener">' + ticketKey + '</a>';
+		}).join('<br>') + '</span>';
+	}
+
+	return html;
 }
 
 function getCvesHtml(issue) {
 	return '<span class="lsv-cves">' + issue.cves.map(function(cve) {
 		if (cve.indexOf('CVE-') != 0) {
 			return '<span class="lsv-id">' + escapeHtml(cve) + '</span>';
+		}
+
+		// A confirmed vulnerability that is not public yet has reserved CVEs,
+		// which have no NVD page yet
+
+		if (issue.cveReserved) {
+			return '<span class="lsv-id">' + escapeHtml(cve) + ' ' +
+				'<span class="lsv-reserved" role="img" aria-label="Reserved CVE, not published yet" title="Reserved CVE, not published yet">&#x1F4C5;</span></span>';
 		}
 
 		return '<a class="lsv-id" href="https://nvd.nist.gov/vuln/detail/' + cve + '" target="_blank" rel="noopener">' + cve + '</a>';
@@ -696,8 +883,23 @@ function getCategoryHtml(issue) {
 	return '<span class="lsv-category">' + issue.products.map(escapeHtml).join('<br>') + '</span>';
 }
 
+/**
+ * Returns what a vulnerability that is not published yet has not been published
+ * to, which depends on the page's data.
+ */
+function getUnpublishedTitle() {
+	return (lsvData.audience == 'public') ? 'Not published publicly yet' : 'Not published to customers yet';
+}
+
 function getPublishedHtml(issue) {
-	return '<span class="lsv-published">' + escapeHtml(issue.published) + '</span>';
+	var html = '<span class="lsv-published">' + escapeHtml(issue.published) + '</span>';
+
+	if (issue.unpublished) {
+		html += (issue.published ? '<br>' : '') +
+			'<span class="label label-default lsv-unpublished" title="' + escapeHtml(getUnpublishedTitle()) + '">Unpublished</span>';
+	}
+
+	return html;
 }
 
 function compareIssues(a, b) {
@@ -896,6 +1098,13 @@ function updateURL(versionIndices, pushState) {
 		}
 	});
 
+	// Unpublished vulnerabilities are hidden by default, so the URL only
+	// records when they are shown
+
+	if (hideUnpublished && !hideUnpublished.checked) {
+		params.set('showUnpublished', 'true');
+	}
+
 	if (sortColumn) {
 		params.set('sort', getSortParameter());
 	}
@@ -938,6 +1147,10 @@ function applyUrlParameters() {
 	fitTextarea(titleFilter);
 	if (hotfixTickets) {
 		hotfixTickets.value = getParameterValues('hotfix').join('\n');
+	}
+
+	if (hideUnpublished) {
+		hideUnpublished.checked = (getParameter('showUnpublished') != 'true');
 	}
 
 	setSortParameter(getParameter('sort'));
@@ -1051,7 +1264,8 @@ function checkLsvInfo() {
 
 		return (issueKey.toLowerCase().indexOf(term) != -1) ||
 			(issue.title.toLowerCase().indexOf(term) != -1) ||
-			issue.cves.some(function(cve) { return cve.toLowerCase().indexOf(term) != -1; });
+			issue.cves.some(function(cve) { return cve.toLowerCase().indexOf(term) != -1; }) ||
+			(issue.descriptionText.indexOf(term) != -1);
 	};
 
 	// A vulnerability that the hotfix fixes is still listed, with its status
@@ -1114,7 +1328,11 @@ function checkLsvInfo() {
 		issueKeys = Array.from(selectedKeys);
 	}
 
-	issueKeys = issueKeys.filter(function(issueKey) { return isMatchingAttributes(lsvData.issues[issueKey]); });
+	issueKeys = issueKeys.filter(function(issueKey) {
+		var issue = lsvData.issues[issueKey];
+
+		return isMatchingAttributes(issue) && !(hideUnpublished && hideUnpublished.checked && issue.unpublished);
+	});
 
 	var comparator = getColumnComparator(sortColumn, versionIndices);
 
@@ -1145,7 +1363,7 @@ function checkLsvInfo() {
 		}
 
 		var cells = [
-			getLsvHtml(issueKey),
+			getLsvHtml(issueKey, issue),
 			getCvesHtml(issue),
 			getTitleHtml(issueKey, issue),
 			getSeverityHtml(issue),
@@ -1330,10 +1548,6 @@ function initAttributeFilter(attributeFilter) {
 		return a.localeCompare(b);
 	});
 
-	if (attributeFilter.hideUnless && !attributeFilter.hideUnless(values)) {
-		attributeFilter.container.closest('fieldset').hidden = true;
-	}
-
 	values.forEach(function(value) {
 		attributeFilter.container.appendChild(createCheckbox(
 			value, (value == noValueOption) ? attributeFilter.noValueText : value, false));
@@ -1360,6 +1574,22 @@ function initAttributeFilter(attributeFilter) {
 		attributeFilter.updateClearLink();
 		checkLsvInfoWithHistory();
 	};
+}
+
+/**
+ * Sets up the option to hide unpublished vulnerabilities, which is only shown
+ * when some vulnerabilities are not published yet.
+ */
+function initHideUnpublished() {
+	if (!hideUnpublished) {
+		return;
+	}
+
+	var hasUnpublished = Object.keys(lsvData.issues).some(function(issueKey) { return lsvData.issues[issueKey].unpublished; });
+
+	hideUnpublished.closest('fieldset').hidden = !hasUnpublished;
+	hideUnpublished.parentNode.title = getUnpublishedTitle();
+	hideUnpublished.onchange = checkLsvInfoWithHistory;
 }
 
 /**
@@ -1594,7 +1824,14 @@ function getResultsMarkdown(includeDetails) {
 		}
 
 		lines.push('');
-		lines.push('- **LSV**: [' + issueKey + '](https://learn.liferay.com/security-vulnerabilities#/' + issueKey + ')');
+		lines.push('- **LSV**: [' + issueKey + '](' + getLsvUrl(issueKey, issue) + ')');
+
+		if (issue.fixedBy.length > 0) {
+			lines.push('- **Fixed by**: ' + issue.fixedBy.map(function(ticketKey) {
+				return '[' + ticketKey + '](https://liferay.atlassian.net/browse/' + ticketKey + ')';
+			}).join(', '));
+		}
+
 		if (issue.severity) {
 			lines.push('- **Severity**: ' + escapeMarkdown(issue.severity));
 		}
@@ -1607,8 +1844,8 @@ function getResultsMarkdown(includeDetails) {
 			lines.push('- **Category**: ' + issue.products.map(escapeMarkdown).join(', '));
 		}
 
-		if (issue.published) {
-			lines.push('- **Published**: ' + issue.published);
+		if (issue.published || issue.unpublished) {
+			lines.push('- **Published**: ' + [issue.published, issue.unpublished ? 'Unpublished (' + getUnpublishedTitle().toLowerCase() + ')' : ''].filter(function(x) { return x; }).join(' '));
 		}
 
 		issue.advisories.forEach(function(advisory) {
@@ -1851,6 +2088,8 @@ Promise.all([fetchJson(lsvDataFile), initUrlParams(), hotfixDataPromise]).then((
 	initVersionFilter();
 
 	attributeFilters.forEach(initAttributeFilter);
+
+	initHideUnpublished();
 
 	applyUrlParameters();
 

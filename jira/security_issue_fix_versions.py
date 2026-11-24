@@ -112,6 +112,17 @@ def normalize_version(name):
             pass
     elif len(name) > 8 and (name[4:6] == '.Q' or name[4:6] == '.q'):
         short_name = name.lower().strip()
+
+        # As in releases.py, a -CMS release (such as 2026.Q4.0-CMS) is skipped,
+        # since tickets fixed in it are also fixed in the release it accompanies
+        # (2026.Q4.0), and keeping both would tie them as the latest fix version
+        # of the line, which made the kept one depend on set iteration order.
+        # An -LTS suffix names the same release.
+
+        if short_name.endswith('-cms'):
+            return None
+        if short_name.endswith('-lts'):
+            short_name = short_name[:-4]
     elif name[:6] == '7.3.10' and name.find(' DXP U') != -1:
         try:
             release_num = int(name[name.rfind('U')+1:])
@@ -369,10 +380,16 @@ def get_issue_fix_versions(issue_node):
     fvs, x_lines = get_issue_fix_versions_and_x_lines(issue_node)
     return resolve_x_lines(fvs, x_lines)
 
+# Version names for a whole product line rather than a release, such as
+# 7.4 DXP (7.4.13) or DXP 2024.Q1, which as fix versions mean the same as a .x
+# fix version (fixed on that line, in a release that is not named)
+LINE_VERSION_PATTERN = re.compile(r'^(?:7\.[0-4] DXP \(7\.[0-4]\.1[03]\)|DXP \d{4}\.Q[1-4])$', re.IGNORECASE)
+
 def get_issue_fix_versions_and_x_lines(issue_node):
     """
     Extracts fix versions, customfield_10886 fix versions, and fixpack labels from an issue node.
-    Returns the concrete fix versions and the product lines named by .x fix versions separately,
+    Returns the concrete fix versions and the product lines named by .x fix versions (or by
+    version names for a whole product line, see LINE_VERSION_PATTERN) separately,
     so that the .x lines can be resolved after merging in the fix versions of linked issues.
     """
     fvs = set()
@@ -381,7 +398,7 @@ def get_issue_fix_versions_and_x_lines(issue_node):
     def process_fv(fv_node):
         if isinstance(fv_node, dict) and 'name' in fv_node:
             name = fv_node['name']
-            if '.x' in name.lower():
+            if '.x' in name.lower() or LINE_VERSION_PATTERN.match(name.strip()):
                 product_line = parse_product_line(name)
                 if product_line:
                     x_lines.add(product_line)
@@ -454,6 +471,42 @@ def get_first_quarterly_baselines(fvs):
 
     return baselines
 
+def get_baseline_affects_versions(affects_versions, fix_versions):
+    """
+    An issue that affects a 7.4.13 update (such as 7.4.13-u92) also affects
+    every quarterly release line based on that update or a later one (see
+    QUARTERLY_RELEASES), up to the first 7.4.13 update with the fix (such as
+    7.4.13-u155), since each quarterly line was branched from the same code as
+    the 7.4.13 update it is based on. Without a 7.4 fix version, every later
+    quarterly line is included.
+
+    Returns those quarterly lines as affects versions (such as 'DXP 2025.Q3').
+    Affects versions usually only list the releases that will be patched, so
+    when there is a 7.4 fix version and the affects versions name no 7.4.13
+    update, or only the oldest one that is patched (7.4.13-u92, the baseline of
+    the first quarterly line), every 7.4.13 update before the fix is assumed to
+    be affected.
+
+    A line that has a fix version of its own is still decided by that fix.
+    """
+    affected_levels = {
+        get_standard_ulevel(v) for v in (normalize_version(name) for name in affects_versions if parse_product_line(name) == '7.4')
+        if v and parse_product_line(v) == '7.4'}
+    fixed_levels = [get_standard_ulevel(fv) for fv in fix_versions if parse_product_line(fv) == '7.4']
+    first_fixed = min(fixed_levels) if fixed_levels else None
+
+    if first_fixed is not None and affected_levels <= {min(QUARTERLY_RELEASES.values())}:
+        first_affected = 0
+    elif affected_levels:
+        first_affected = min(affected_levels)
+    else:
+        return set()
+
+    return {
+        'DXP %s' % line.upper()
+        for line, baseline in QUARTERLY_RELEASES.items()
+        if baseline >= first_affected and (first_fixed is None or baseline < first_fixed)}
+
 def add_quarterly_baseline_fixes(fvs):
     """
     A fix in the first release of a quarterly release line (such as 2025.q2.0, or
@@ -468,6 +521,37 @@ def add_quarterly_baseline_fixes(fvs):
         return fvs
 
     return fvs | get_first_quarterly_baselines(fvs)
+
+def get_lsv_x_line_fix_versions(fvs, x_lines, lsv_keys, lsv_issues):
+    """
+    Returns the concrete fix versions recorded on the given LSVs (in their fix
+    version fields) for each product line named by a .x fix version that has no
+    concrete fix version, such as LSV-1211's 7.4.13-u77 for LPE-17752, whose
+    only fix version is 7.4.X EE and which is linked to LSV-1211 through
+    LPS-183598.
+
+    A .x fix version only says that some release of the line has the fix, so a
+    release that the LSV names is better than assuming the latest release (see
+    resolve_x_lines). LSV fix versions are not used for any other line, since an
+    LSV with several tickets is fixed by the last of them, which says nothing
+    about when each of its other tickets was fixed.
+    """
+    open_lines = {
+        product_line for product_line in x_lines
+        if not any((parse_product_line(v) or '').startswith(product_line) for v in fvs)}
+
+    if not open_lines:
+        return set()
+
+    lsv_fvs = set()
+
+    for lsv_key in lsv_keys:
+        if lsv_key in lsv_issues:
+            lsv_fvs.update(get_issue_fix_versions_and_x_lines(lsv_issues[lsv_key])[0])
+
+    return {
+        v for v in lsv_fvs
+        if any((parse_product_line(v) or '').startswith(product_line) for product_line in open_lines)}
 
 def resolve_x_lines(fvs, x_lines):
     """
@@ -542,14 +626,16 @@ OLD_PRODUCT_LINES = {'6.2', '6.2.10', '7.0', '7.1', '7.2', '7.3'}
 
 def get_affects_version_gaps(precomputed):
     """
-    Finds tickets whose affects versions include an old product line (6.2 to
-    7.3) and at least one later product line (7.4 or a quarterly release), but
-    skip some of the later product lines. This usually means that only the
-    supported releases were listed (e.g. 7.4, 2024.Q1, 2025.Q1), even though
-    the releases in between are also affected.
+    Finds tickets whose affects versions include at least one later product
+    line (7.4 or a quarterly release), but skip some of the later product lines.
+    This usually means that only the supported releases were listed (e.g. 7.4,
+    2024.Q1, 2025.Q1, 2025.Q4), even though the releases in between are also
+    affected.
 
-    The later product lines that are expected run from 7.4 up to the newest
-    later product line in the ticket's affects versions or fix versions.
+    The later product lines that are expected run from the oldest one in the
+    ticket's affects versions (7.4 if they also include an old product line,
+    6.2 to 7.3) up to the newest later product line in the ticket's affects
+    versions or fix versions.
     """
     all_lines = sorted({parse_product_line(v) for v in ALL_VERSIONS} - {None}, key=get_version_rank)
     later_lines = all_lines[all_lines.index('7.4'):]
@@ -560,11 +646,15 @@ def get_affects_version_gaps(precomputed):
         affects_lines = {parse_product_line(v) for v in data['affects_versions']} - {None}
         fix_lines = {parse_product_line(v) for v in data['fix_versions']} - {None}
 
-        if not (affects_lines & OLD_PRODUCT_LINES) or not (affects_lines & set(later_lines)):
+        affected_later_lines = affects_lines & set(later_lines)
+
+        if not affected_later_lines:
             continue
 
+        # An old product line means the bug predates 7.4, so every later line from 7.4 on is expected
+        oldest_line = '7.4' if affects_lines & OLD_PRODUCT_LINES else min(affected_later_lines, key=later_lines.index)
         newest_line = max((line for line in affects_lines | fix_lines if line in later_lines), key=later_lines.index)
-        expected_lines = later_lines[:later_lines.index(newest_line) + 1]
+        expected_lines = later_lines[later_lines.index(oldest_line):later_lines.index(newest_line) + 1]
         missing_lines = [line for line in expected_lines if line not in affects_lines]
 
         if not missing_lines:
@@ -586,6 +676,9 @@ def get_affects_version_gaps(precomputed):
         key=lambda item: (not item[1]['unfixed_missing_lines'], [int(x) if x.isdigit() else x for x in re.split(r'(\d+)', item[0])])))
 
 _PRECOMPUTED_DATA = None
+
+# Every cached Jira issue by key (filled by get_precomputed_data), for following issue links
+_EXPORTED_ISSUES = {}
 
 def get_precomputed_data():
     global _PRECOMPUTED_DATA
@@ -662,6 +755,9 @@ def get_precomputed_data():
     issues_all = {}
     for src in [commerce_issues, lpe_issues, lps_issues, lpsa_issues, lpd_issues, lsv_issues]:
         issues_all.update(src)
+
+    global _EXPORTED_ISSUES
+    _EXPORTED_ISSUES = issues_all
 
     # Build undirected adjacency graph across all issues for path finding
     graph = defaultdict(set)
@@ -772,15 +868,27 @@ def get_precomputed_data():
 
             known_fix_versions = std_fix_versions
 
+        # A .x fix version whose line has a concrete fix version on a linked LSV
+        # resolves to that release (see get_lsv_x_line_fix_versions).
+        #
         # The 7.4.13 baseline of a quarterly line's first release is added before
         # .x fix versions are resolved, so that a 7.4.x fix version resolves to
         # the baseline rather than to the latest 7.4 release. The added baselines
         # are remembered, so that merging duplicate tickets can prefer a 7.4 fix
         # version that was recorded on a ticket.
 
+        known_fix_versions = known_fix_versions | get_lsv_x_line_fix_versions(known_fix_versions, x_lines, lsv_keys, lsv_issues)
+
         fix_versions = add_quarterly_baseline_fixes(known_fix_versions)
         baseline_fix_versions = fix_versions - known_fix_versions
-        fix_versions = resolve_x_lines(fix_versions, x_lines)
+        resolved_fix_versions = resolve_x_lines(fix_versions, x_lines)
+
+        # The latest release that a .x fix version is assumed to be fixed in,
+        # which is only a guess, so it is not used to infer quarterly affects
+        # versions below
+
+        x_line_fix_versions = resolved_fix_versions - fix_versions
+        fix_versions = resolved_fix_versions
 
         affects_versions = set(ver['name'] for issue_node in pooled_issues for ver in issue_node.get('versions', []))
 
@@ -828,6 +936,27 @@ def get_precomputed_data():
         if key in extra_affects_versions:
             affects_versions.update(extra_affects_versions[key])
 
+        # Quarterly lines branched between the first affected 7.4.13 update (from
+        # the ticket, its linked issues or its LSVs) and the first 7.4.13 update
+        # with the fix are affected too, even if the affects versions skip them
+
+        lsv_affects_versions = set(
+            ver['name'] for lk in lsv_keys if lk in lsv_issues for ver in lsv_issues[lk].get('versions') or [])
+        affects_lines = {parse_product_line(ver) for ver in affects_versions}
+
+        # Only a recorded 7.4 fix version bounds those quarterly lines, rather
+        # than the latest 7.4 release assumed for a .x fix version (unless an
+        # override names that release), since a ticket such as LPE-18265, with
+        # 7.4.X EE and 2024.Q1.19, would otherwise affect every quarterly line
+        # based on an update before 7.4.13-u155.
+
+        recorded_fix_versions = fix_versions - (x_line_fix_versions - set(extra_fix_versions.get(key, [])))
+
+        baseline_affects_versions = {
+            ver for ver in get_baseline_affects_versions(affects_versions | lsv_affects_versions, recorded_fix_versions)
+            if parse_product_line(ver) not in affects_lines}
+        affects_versions.update(baseline_affects_versions)
+
         fix_versions = keep_latest_fix_version_per_stream(fix_versions)
 
         precomputed[key] = {
@@ -835,8 +964,13 @@ def get_precomputed_data():
             'affects_versions': list(affects_versions),
             'group': group,
             'lsv_keys': sorted(lsv_keys),
-            'master_only': is_master_only(fix_versions, affects_versions),
+            # Inferred quarterly lines don't stop a ticket reported only against master from affecting every line
+            'master_only': is_master_only(fix_versions, affects_versions - baseline_affects_versions),
             'baseline_fix_versions': sorted(baseline_fix_versions & set(fix_versions)),
+            'baseline_affects_versions': sorted(baseline_affects_versions),
+            # The latest releases assumed for .x fix versions, so that merging
+            # duplicate tickets can prefer a release recorded on another ticket
+            'x_line_fix_versions': sorted(fix_versions - recorded_fix_versions),
         }
 
     apply_duplicate_tickets(precomputed, duplicate_tickets)
@@ -880,6 +1014,16 @@ def apply_duplicate_tickets(precomputed, duplicate_tickets):
         if any(parse_product_line(fv) == '7.4' for fv in recorded_fix_versions):
             fix_versions = recorded_fix_versions
 
+        # Likewise, the latest release assumed for a .x fix version (see
+        # resolve_x_lines) gives way to a release on the same line that another
+        # ticket in the group records, such as LPE-18421's 2024.q1.24 rather than
+        # LPE-18388's assumed 2024.q1.33 for DXP 2024.Q1
+
+        x_line_fix_versions = set(fv for key in keys for fv in precomputed[key].get('x_line_fix_versions', []))
+        recorded_lines = {parse_product_line(fv) for fv in fix_versions - x_line_fix_versions}
+
+        fix_versions = {fv for fv in fix_versions if fv not in x_line_fix_versions or parse_product_line(fv) not in recorded_lines}
+
         fix_versions = keep_latest_fix_version_per_stream(fix_versions)
         affects_versions = set(ver for key in keys for ver in precomputed[key]['affects_versions'])
 
@@ -888,6 +1032,7 @@ def apply_duplicate_tickets(precomputed, duplicate_tickets):
             precomputed[key]['affects_versions'] = list(affects_versions)
             precomputed[key]['master_only'] = is_master_only(fix_versions, affects_versions)
             precomputed[key]['baseline_fix_versions'] = sorted(baseline_fix_versions & fix_versions)
+            precomputed[key]['x_line_fix_versions'] = sorted(x_line_fix_versions & fix_versions)
 
 
 def get_lsv_tickets(precomputed):
@@ -951,7 +1096,41 @@ def get_fix_versions_by_line(fix_versions, include_quarterly_from_74=False):
 
     return by_line
 
-def get_lsv_resolving_tickets(precomputed, lsv_issues, lsv_tickets):
+DEV_TICKET_PREFIXES = ('LPS-', 'LPSA-', 'LPD-', 'COMMERCE-')
+
+def get_linked_keys(issue):
+    """
+    Returns the keys of the issues linked directly to an issue (its Jira fields).
+    """
+    return {
+        link[side]['key']
+            for link in (issue or {}).get('issuelinks') or []
+            for side in ('inwardIssue', 'outwardIssue') if side in link
+    }
+
+def get_insufficient_tickets(resolving_key, other_keys, issues):
+    """
+    The tickets that don't fix an LSV that resolving_key alone resolves: its
+    other tickets (other_keys), and the LPS, LPSA, LPD and COMMERCE tickets
+    linked directly to one of them but not to resolving_key. For example,
+    LPE-18800 resolves LSV-1793, so neither LPE-18843 nor its LPD-105462 fixes
+    it, although they share its CVE. Tickets linked to neither (such as
+    LPD-105461) are left out, since it is unknown which fix they belong to.
+    """
+    resolving_links = get_linked_keys(issues.get(resolving_key))
+    insufficient = set(other_keys)
+
+    for key in other_keys:
+        for linked_key in get_linked_keys(issues.get(key)):
+            if not linked_key.startswith(DEV_TICKET_PREFIXES) or linked_key in resolving_links:
+                continue
+
+            if resolving_key not in get_linked_keys(issues.get(linked_key)):
+                insufficient.add(linked_key)
+
+    return sorted(insufficient, key=lambda k: [int(x) if x.isdigit() else x for x in re.split(r'(\d+)', k)])
+
+def get_lsv_resolving_tickets(precomputed, lsv_issues, lsv_tickets, issues=None):
     """
     When an LSV has more than one ticket, a single ticket often resolves the LSV
     on its own, and the other tickets are follow-ups (such as LPE-18800, fixed in
@@ -967,6 +1146,11 @@ def get_lsv_resolving_tickets(precomputed, lsv_issues, lsv_tickets):
     modules). Each of them is fixed wherever the LSV is, so the LSV is still
     fixed there, but it is unknown whether any one of them would resolve the
     LSV on its own (such as in a hotfix).
+
+    When a single ticket resolves the LSV, it is necessary and sufficient, so
+    insufficient_tickets lists the tickets that don't fix the LSV (see
+    get_insufficient_tickets, which follows the links in issues, the cached
+    Jira issues by key).
     """
     resolving = {}
 
@@ -1017,6 +1201,10 @@ def get_lsv_resolving_tickets(precomputed, lsv_issues, lsv_tickets):
             'tickets': candidates,
             'fix_versions': sorted(fix_versions.values(), key=lambda fv: (get_version_rank(fv), get_fix_level(fv))),
         }
+
+        if len(candidates) == 1:
+            resolving[lsv_key]['insufficient_tickets'] = get_insufficient_tickets(
+                candidates[0], [key for key in ticket_keys if key != candidates[0]], issues or {})
 
     return resolving
 
@@ -1196,6 +1384,20 @@ def main():
         with open('security_issue_lsv_tickets.json', 'wb') as f:
             f.write(json.dumps(lsv_tickets, option=json.OPT_INDENT_2))
 
+        # The fix versions of each ticket linked to an LSV across every release
+        # line (including security_issue_extra_fix_versions.json), since the
+        # per-version output only lists the fix versions on the release's own
+        # line, and an LSV that is never fixed on a line (such as 2025.q3) can
+        # still point to the release on another line that fixes it
+
+        lsv_ticket_keys = sorted({key for keys in lsv_tickets.values() for key in keys}, key=lambda k: [int(x) if x.isdigit() else x for x in re.split(r'(\d+)', k)])
+
+        with open('security_issue_ticket_fix_versions.json', 'wb') as f:
+            f.write(json.dumps({
+                key: sorted(precomputed[key]['fix_versions'], key=get_version_rank)
+                for key in lsv_ticket_keys if key in precomputed
+            }, option=json.OPT_INDENT_2))
+
         # The ticket that resolves each LSV with several tickets on its own, on
         # the release lines the LSV has fix versions on
 
@@ -1203,7 +1405,7 @@ def main():
             lsv_issues = json.loads(f.read())
 
         with open('security_issue_lsv_resolving_tickets.json', 'wb') as f:
-            f.write(json.dumps(get_lsv_resolving_tickets(precomputed, lsv_issues, lsv_tickets), option=json.OPT_INDENT_2))
+            f.write(json.dumps(get_lsv_resolving_tickets(precomputed, lsv_issues, lsv_tickets, _EXPORTED_ISSUES), option=json.OPT_INDENT_2))
 
 if __name__ == '__main__':
     main()

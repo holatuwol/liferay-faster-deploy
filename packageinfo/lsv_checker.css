@@ -345,9 +345,22 @@ p {
 	font-size: smaller;
 }
 
+/* The LPE tickets that fix a vulnerability, on their own lines below its LSV */
+
+.lsv-fixed-by {
+	display: block;
+	margin-top: 0.3em;
+	font-size: smaller;
+}
+
 .lsv-id,
 .lsv-published {
 	white-space: nowrap;
+}
+
+.lsv-reserved,
+.lsv-unpublished {
+	cursor: help;
 }
 
 /* Titles can contain long module names without spaces, such as
