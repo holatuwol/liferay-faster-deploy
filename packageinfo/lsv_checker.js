@@ -407,12 +407,14 @@ function isFirstIgnoringCase(x, i, array) {
 }
 
 /**
- * Returns the tickets entered in the hotfix field (LPE tickets, and development
- * tickets such as LPD-12345 that lsvHotfixDataFile maps to them), in the order
- * entered.
+ * Returns the tickets entered in the hotfix field (LPE tickets, development
+ * tickets such as LPD-12345 that lsvHotfixDataFile maps to them, and tickets in
+ * any other Jira project, which are general fixes), in the order entered. A
+ * ticket key is a project key (a letter followed by letters, digits or
+ * underscores) and a number, but not the start of a CVE (such as CVE-2024-1234).
  */
 function parseHotfixTickets(value) {
-	var keys = (value.match(/\b(?:LPE|LPD|LPS|LPSA|COMMERCE)-\d+\b/gi) || []).map(function(key) { return key.toUpperCase(); });
+	var keys = (value.match(/\b[A-Z][A-Z0-9_]+-\d+\b(?!-\d)/gi) || []).map(function(key) { return key.toUpperCase(); });
 
 	return keys.filter(function(key, i) { return keys.indexOf(key) == i; });
 }
@@ -770,38 +772,27 @@ function getLineFixVersion(releaseLine, orderedFixVersions, firstFixedUpdate) {
 }
 
 /**
- * Returns HTML naming where a vulnerability is fixed outside the release line of
- * the version at the given index, which has no fix:
- *
- * - the fix in the next LTS (.q1) release line after it that has one (such as
- *   2026.q1 rather than 2024.q1 or 2025.q1 for 2025.q3), including an LTS
- *   release line that has the fix from the start because an earlier quarterly
- *   release line was fixed in its first release (such as 2026.q1.0 when
- *   2025.q4.0 has the fix), since a customer can only upgrade to an LTS release
- * - or if no later LTS release line has it, the fix in the next release line
- *   after it that has one
- * - or if no later release line has it, the first release with the fix at all
- *
- * Fix versions come from the vulnerability's fix versions on every release line
- * (issue.fixVersions), as well as those of every affected release (without the
- * hotfix), and lsvData.versions gives their order, which lists release lines in
- * order. A fix in the 7.4.13 update that a quarterly release line is based on
- * (such as 7.4.13-u155 for 2026.q4) is named by that line's first release
- * (lsvData.quarterlyBaselines).
+ * Returns the vulnerability's fix versions on every release line, as well as
+ * those of every affected release (without the hotfix).
  */
-function getOtherFixHtml(issue, versionIndex) {
-	var quarterlyBaselines = lsvData.quarterlyBaselines || {};
+function getFixVersions(issue) {
 	var fixVersions = new Set(issue.fixVersions || []);
 
 	for (var affectedIndex in issue.allAffected) {
 		issue.allAffected[affectedIndex].forEach(function(fixVersion) { fixVersions.add(fixVersion); });
 	}
 
-	var orderedFixVersions = lsvData.versions.filter(function(version) { return fixVersions.has(version); });
+	return fixVersions;
+}
 
-	if (orderedFixVersions.length == 0) {
-		return 'fix version undocumented';
-	}
+/**
+ * Returns the release with the fix in the next LTS (.q1) release line after the
+ * release line of the version at the given index that has the fix (see
+ * getOtherFixHtml), or null if there is none.
+ */
+function getLtsFixVersion(issue, versionIndex) {
+	var fixVersions = getFixVersions(issue);
+	var orderedFixVersions = lsvData.versions.filter(function(version) { return fixVersions.has(version); });
 
 	var releaseLine = getReleaseLine(lsvData.versions[versionIndex]);
 
@@ -825,8 +816,49 @@ function getOtherFixHtml(issue, versionIndex) {
 		var ltsFixVersion = getLineFixVersion(laterLines[i], orderedFixVersions, firstFixedUpdate);
 
 		if (ltsFixVersion) {
-			return 'LTS fix in ' + getVersionHtml(ltsFixVersion);
+			return ltsFixVersion;
 		}
+	}
+
+	return null;
+}
+
+/**
+ * Returns HTML naming where a vulnerability is fixed outside the release line of
+ * the version at the given index, which has no fix:
+ *
+ * - the fix in the next LTS (.q1) release line after it that has one (such as
+ *   2026.q1 rather than 2024.q1 or 2025.q1 for 2025.q3), including an LTS
+ *   release line that has the fix from the start because an earlier quarterly
+ *   release line was fixed in its first release (such as 2026.q1.0 when
+ *   2025.q4.0 has the fix), since a customer can only upgrade to an LTS release
+ * - or if no later LTS release line has it, the fix in the next release line
+ *   after it that has one
+ * - or if no later release line has it, the first release with the fix at all
+ *
+ * Fix versions come from the vulnerability's fix versions on every release line
+ * (issue.fixVersions), as well as those of every affected release (without the
+ * hotfix), and lsvData.versions gives their order, which lists release lines in
+ * order. A fix in the 7.4.13 update that a quarterly release line is based on
+ * (such as 7.4.13-u155 for 2026.q4) is named by that line's first release
+ * (lsvData.quarterlyBaselines).
+ */
+function getOtherFixHtml(issue, versionIndex) {
+	var quarterlyBaselines = lsvData.quarterlyBaselines || {};
+	var fixVersions = getFixVersions(issue);
+
+	var orderedFixVersions = lsvData.versions.filter(function(version) { return fixVersions.has(version); });
+
+	if (orderedFixVersions.length == 0) {
+		return 'fix version undocumented';
+	}
+
+	var releaseLine = getReleaseLine(lsvData.versions[versionIndex]);
+
+	var ltsFixVersion = getLtsFixVersion(issue, versionIndex);
+
+	if (ltsFixVersion) {
+		return 'LTS fix in ' + getVersionHtml(ltsFixVersion);
 	}
 
 	var laterFixVersion = lsvData.versions.find(function(version, index) {
@@ -863,7 +895,39 @@ function getStatusHtml(issue, versionIndex) {
 			getVersionHtml(getReleaseLine(lsvData.versions[versionIndex])) + '; ' + getOtherFixHtml(issue, versionIndex) + '</span>';
 	}
 
-	return '<span class="label label-danger">Affected</span> <span class="lsv-fix-versions lsv-status-text">fixed in ' + fixVersions.map(getVersionHtml).join(', ') + '</span>';
+	return '<span class="label label-danger">Affected</span> <span class="lsv-fix-versions lsv-status-text">' + getLineFixHtml(issue, versionIndex, fixVersions) + '</span>';
+}
+
+/**
+ * Returns HTML naming the fix for the version at the given index, whose release
+ * line has the given fix versions. A customer on a 7.4.13 update can only
+ * upgrade to an LTS release, and the only 7.4.13 update that counts as one is
+ * 7.4.13-u92 (the baseline of 2023.q3), so name it if it has the fix, or else
+ * the fix in the next LTS release line (see getLtsFixVersion), falling back to
+ * the 7.4.13 updates with the fix if no LTS release line has it.
+ */
+function getLineFixHtml(issue, versionIndex, fixVersions) {
+	var fixedInHtml = 'fixed in ' + fixVersions.map(getVersionHtml).join(', ');
+
+	if (getReleaseLine(lsvData.versions[versionIndex]) != '7.4') {
+		return fixedInHtml;
+	}
+
+	var ltsUpdate = '7.4.13-u92';
+
+	var updateNumbers = fixVersions.map(function(fixVersion) {
+		var updateMatch = /^7\.4\.13-u(\d+)$/.exec(fixVersion);
+
+		return updateMatch ? parseInt(updateMatch[1]) : Infinity;
+	});
+
+	if (Math.min.apply(null, updateNumbers) <= 92) {
+		return 'LTS fix in ' + getVersionHtml(ltsUpdate);
+	}
+
+	var ltsFixVersion = getLtsFixVersion(issue, versionIndex);
+
+	return ltsFixVersion ? ('LTS fix in ' + getVersionHtml(ltsFixVersion)) : fixedInHtml;
 }
 
 /**

@@ -81,6 +81,14 @@ for file in next/*; do
 	fi
 done
 
+if [ -f next/lsv_checker.json ]; then
+	INTERNAL_MODIFIED=$(date -u -r lsv_checker.json +"%Y-%m-%dT%H:%M:%SZ")
+
+	sed -i "s@<time .*</time>@<time datetime=\"${INTERNAL_MODIFIED}\">${INTERNAL_MODIFIED}</time>@" lsv_checker.html
+	cp -f lsv_checker.html next/lsv_checker.html
+	sed -i "s@<time .*</time>@<time datetime=\"\"></time>@" lsv_checker.html
+fi
+
 source ../bin/activate
 
 if [ "lsv_checker.html" == "${1}" ]; then
