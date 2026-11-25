@@ -403,7 +403,7 @@ html_doc = f"""<!doctype html>
   var tocRows = [];
   var sections = [];
 
-  tickets.forEach(function(t) {{
+  tickets.forEach(function(t, ticketIndex) {{
     var key = t.issueKey || "";
     var anchor = esc(key);
     var reporter = t.accountCode ? `${{esc(t.accountCode)}} (${{esc(t.reporter)}})` : esc(t.reporter);
@@ -428,7 +428,7 @@ html_doc = f"""<!doctype html>
     }}).join("");
 
     tocRows.push(
-      '<tr data-created="' + (t.createdDate || "") + '" data-last-comment="' + (lastCommentMs || "") + '" data-comment-authors="' + commentAuthorsEscaped + '">' +
+      '<tr data-ticket="ticket-' + anchor + '" data-index="' + ticketIndex + '" data-created="' + (t.createdDate || "") + '" data-last-comment="' + (lastCommentMs || "") + '" data-comment-authors="' + commentAuthorsEscaped + '">' +
         '<td data-sort="' + esc(key) + '"><a href="#" onclick="document.getElementById(\\'ticket-' + anchor + '\\').scrollIntoView(); return false;">' + esc(key) + "</a></td>" +
         '<td data-sort="' + esc(reporter) + '">' + reporter + '</td>' +
         "<td>" + summary + "</td>" +
@@ -535,12 +535,17 @@ html_doc = f"""<!doctype html>
 
   headers.forEach(function(th, index) {{
     th.addEventListener("click", function() {{
-      var ascending = th.getAttribute("aria-sort") !== "ascending";
+      // Cycle through ascending, descending, and back to the original export order.
+      var currentSort = th.getAttribute("aria-sort");
+      var nextSort = currentSort === "ascending" ? "descending" : currentSort === "descending" ? null : "ascending";
+      var ascending = nextSort === "ascending";
       headers.forEach(function(h) {{ h.removeAttribute("aria-sort"); }});
-      th.setAttribute("aria-sort", ascending ? "ascending" : "descending");
+      if (nextSort) th.setAttribute("aria-sort", nextSort);
 
       var rows = Array.prototype.slice.call(tbody.querySelectorAll("tr"));
-      rows.sort(function(rowA, rowB) {{
+      rows.sort(nextSort === null ? function(rowA, rowB) {{
+        return parseInt(rowA.dataset.index, 10) - parseInt(rowB.dataset.index, 10);
+      }} : function(rowA, rowB) {{
         var cellA = rowA.cells[index];
         var cellB = rowB.cells[index];
         var valueA = cellA.getAttribute("data-sort") || cellA.textContent.trim();
@@ -556,6 +561,14 @@ html_doc = f"""<!doctype html>
         return ascending ? result : -result;
       }});
       rows.forEach(function(row) {{ tbody.appendChild(row); }});
+
+      // Keep the ticket sections in the same order as the table of contents.
+      var sectionFragment = document.createDocumentFragment();
+      rows.forEach(function(row) {{
+        var section = document.getElementById(row.dataset.ticket);
+        if (section) sectionFragment.appendChild(section);
+      }});
+      document.getElementById("tickets").appendChild(sectionFragment);
     }});
   }});
 
