@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Patcher Read-Only Views Links
 // @namespace      holatuwol
-// @version        12.3
+// @version        12.4
 // @updateURL      https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @downloadURL    https://raw.githubusercontent.com/holatuwol/liferay-faster-deploy/master/userscripts/patcher.user.js
 // @match          https://patcher.liferay.com/group/guest/patching
@@ -228,18 +228,102 @@ tr.qa-analysis-unneeded {
   white-space: nowrap;
 }
 
-.bulk-search-status-fixed {
-  color: #0056b3;
+/* Badges matching lsv_checker.html, scoped so they don't collide with the
+   portal's own Bootstrap label styles */
+.bulk-search-table .label {
+  border-radius: 0.25em;
+  color: #fff;
+  display: inline;
+  font-size: 75%;
   font-weight: bold;
+  padding: 0.2em 0.6em 0.3em;
+  text-shadow: none;
+  white-space: nowrap;
 }
 
-.bulk-search-status-not-fixed {
-  color: #d35400;
-  font-weight: bold;
+.bulk-search-table .label-danger { background-color: #d9534f; }
+.bulk-search-table .label-default { background-color: #777; }
+.bulk-search-table .label-success { background-color: #5cb85c; }
+
+/* Available on Baselines: one line per release line, with a square for
+   each patch level in it */
+.bulk-search-line {
+  align-items: center;
+  display: flex;
+  gap: 0.5em;
+  margin: 0.15em 0;
 }
 
-.bulk-search-status-na {
+.bulk-search-line-name {
+  flex: 0 0 4.5em;
+  font-family: monospace;
+  white-space: nowrap;
+}
+
+.bulk-search-squares {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.bulk-search-square {
+  background-color: #e4e4e4;
+  border: 1px solid #ccc;
+  box-sizing: border-box;
+  display: inline-block;
+  height: 10px;
+  width: 10px;
+}
+
+.bulk-search-square-hotfix {
+  background-color: #337ab7;
+  border-color: #2e6da4;
+}
+
+.bulk-search-square-released {
+  background-color: #5cb85c;
+  border-color: #4cae4c;
+}
+
+.bulk-search-square-affected {
+  background-color: #d9534f;
+  border-color: #d43f3a;
+}
+
+a.bulk-search-square:hover {
+  opacity: 0.7;
+}
+
+.bulk-search-square-selected {
+  outline: 2px solid #f0ad4e;
+  outline-offset: 1px;
+}
+
+.bulk-search-line-summary .bulk-search-status-text {
+  display: inline;
+  margin-top: 0;
+}
+
+.bulk-search-legend {
+  color: #555;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: smaller;
+  gap: 0.4em 1.25em;
+  margin-top: 15px;
+}
+
+.bulk-search-line-count {
   color: #777;
+  font-size: smaller;
+  white-space: nowrap;
+}
+
+/* Puts the fix versions or reason on its own line below the badge */
+.bulk-search-status-text {
+  display: block;
+  margin-top: 0.3em;
+  font-size: smaller;
 }
 
 /* Search panel of the lists (see enhanceSearchToggle) */
@@ -2337,8 +2421,8 @@ function replaceBuild() {
     var childBuildFixesHTML = '<tr><th class="branch-type">' + getBuildLinkHTML(build) + '</th><td>' + build.fixesHTML + "</td></tr>";
     var fixedInLaterVersionsHTML = '';
     if (branchName.indexOf(".q") != -1) {
-        var jql = "key in (" + build.fixes.join(",") + ") and cf[10886] ~ \"" + branchName.substring(0, branchName.lastIndexOf(".")) + ".*\"";
-        fixedInLaterVersionsHTML = "<tr><td colspan=\"2\"><a href=\"https://issues.liferay.com/issues/?jql=" + encodeURIComponent(jql) + "\" target=\"_blank\">check if fixed in newer patch level of this quarterly release</a></td></tr>";
+        var bulkSearchURL = getBulkSearchURL(build.fixes, branchName);
+        fixedInLaterVersionsHTML = "<tr><td colspan=\"2\"><a href=\"" + bulkSearchURL + "\" target=\"_blank\">check if fixed in newer patch level of this quarterly release</a></td></tr>";
     }
     var securityCheckHTML = getSecurityCheckRowHTML(build, 2);
     if (childBuildsButton.length == 0) {
@@ -2968,18 +3052,56 @@ async function updatePreviousBuildsContent() {
     contentHeader.appendChild(baselineSelect);
     renderBuildComparisons(columns, contentRows, contentCells, fixes, projectVersions, baselineSelect.value);
 }
+function isCMSVersion(version) {
+    return version.toLowerCase().indexOf('-cms') != -1;
+}
 // Extract project version text directly from the select options
-function getProjectVersionsFromDOM() {
-    var projectVersionIdFilter = document.getElementById('_1_WAR_osbpatcherportlet_patcherProjectVersionIdFilter');
+function getProjectVersionsFromDOM(doc) {
+    var projectVersionIdFilter = doc.getElementById('_1_WAR_osbpatcherportlet_patcherProjectVersionIdFilter');
     if (!projectVersionIdFilter) {
         return {};
     }
     return Array.from(projectVersionIdFilter.options)
-        .filter(opt => opt.text)
+        .filter(opt => opt.text && !isCMSVersion(opt.text))
         .reduce((acc, next) => {
         acc[next.text.trim()] = next.value;
         return acc;
     }, {});
+}
+var projectVersionsPromise = null;
+function getFixesTabURL() {
+    var tabLinks = Array.from(document.querySelectorAll('ul.nav.nav-tabs li.tab a'));
+    for (var i = 0; i < tabLinks.length; i++) {
+        if ((tabLinks[i].textContent || '').trim() == 'Fixes' && tabLinks[i].href) {
+            return tabLinks[i].href;
+        }
+    }
+    return '/group/guest/patching/-/osb_patcher';
+}
+// The project version select only exists on the fixes page, so if we
+// are on some other page, fetch the fixes page and read it from there.
+function getProjectVersions() {
+    if (projectVersionsPromise) {
+        return projectVersionsPromise;
+    }
+    var activeTab = document.querySelector('.tab.active');
+    var activeTabName = activeTab ? (activeTab.textContent || '').trim() : '';
+    if (activeTabName == 'Fixes') {
+        var projectVersions = getProjectVersionsFromDOM(document);
+        if (Object.keys(projectVersions).length > 0) {
+            projectVersionsPromise = Promise.resolve(projectVersions);
+            return projectVersionsPromise;
+        }
+    }
+    projectVersionsPromise = fetch(getFixesTabURL())
+        .then(response => response.text())
+        .then(html => getProjectVersionsFromDOM(new DOMParser().parseFromString(html, 'text/html')))
+        .catch(err => {
+        console.error('Unable to load project versions from the fixes page', err);
+        projectVersionsPromise = null;
+        return {};
+    });
+    return projectVersionsPromise;
 }
 var patcherFixVersionsCache = {};
 async function getPatcherFixVersionsPage(token, page) {
@@ -3034,7 +3156,7 @@ async function getPatcherFixVersions(token, tokensSet) {
             .filter(it => it);
         return acc.concat(newFoundVersions);
     }, []);
-    var resultSet = new Set(foundVersions);
+    var resultSet = new Set(foundVersions.filter(it => !isCMSVersion(it)));
     patcherFixVersionsCache[token] = resultSet;
     updateSpinner(1);
     return {
@@ -3050,9 +3172,9 @@ async function getAllPatcherFixVersions(tokensList, tokensSet) {
         return acc;
     }, {});
 }
-function getPatcherPortalFixSearchLink(tokens, version, projectVersions) {
+function getPatcherPortalFixSearchURL(tokens, version, projectVersions) {
     if (!(version in projectVersions)) {
-        return version;
+        return null;
     }
     var params = new URLSearchParams();
     params.append('p_p_id', portletId);
@@ -3063,50 +3185,288 @@ function getPatcherPortalFixSearchLink(tokens, version, projectVersions) {
     params.append(ns + 'statusFilter', '100');
     params.append(ns + 'delta', '200');
     params.append(ns + 'patcherProjectVersionIdFilter', projectVersions[version]);
-    return `<a href="/group/guest/patching?${params.toString()}" target="_blank">${version}</a>`;
+    return `/group/guest/patching?${params.toString()}`;
 }
-function compareQuarterlyVersions(a, b) {
-    if (!a)
-        return -1;
-    const aMatch = a.toLowerCase().match(/(\d{4})\.q([1-4])\.(\d+)/);
-    if (!aMatch)
-        return -1;
-    const [, aYearStr, aQuarterStr, aPatchStr] = aMatch;
-    if (!b)
-        return 1;
-    const bMatch = b.toLowerCase().match(/(\d{4})\.q([1-4])\.(\d+)/);
-    if (!bMatch)
-        return 1;
-    const [, bYearStr, bQuarterStr, bPatchStr] = bMatch;
-    if (aYearStr !== bYearStr) {
-        return parseInt(aYearStr) - parseInt(bYearStr);
-    }
-    if (aQuarterStr != bQuarterStr) {
-        return parseInt(aQuarterStr) - parseInt(bQuarterStr);
-    }
-    return parseInt(aPatchStr) - parseInt(bPatchStr);
-}
-function isFixInPrefix(fixVer, prefix) {
-    const cleanFix = fixVer.toLowerCase().replace(/\s+/g, '');
-    const cleanPrefix = prefix.toLowerCase().replace(/\s+/g, '');
-    return cleanFix.indexOf(cleanPrefix) !== -1;
-}
-function getCleanVersionFromFix(fixVer) {
-    if (!fixVer) {
+// The fix pack (or update, for 7.3) that each 7.0, 7.1, 7.2 and 7.3 service
+// pack is equivalent to, indexed by service pack number (7.2 SP3 is 7.2 FP8,
+// and 7.0 SP9 is 7.0 DE60), matching liferay-faster-deploy/jira/releases.py.
+var servicePackFixPacks = {
+    '7.0': [0, 7, 12, 14, 22, 30, 32, 40, 50, 60, 70, 80, 87, 90, 93, 96, 99, 102],
+    '7.1': [0, 5, 10, 15, 17, 20, 23, 26, 28],
+    '7.2': [0, 2, 5, 8, 11, 14, 17, 19, 20],
+    '7.3': [0, 1, 2, 3],
+};
+// Returns the release line and patch level of a Patcher project version (such
+// as 2025.q1.5, 7.4.13-u92 or fix-pack-dxp-8-7210) or a Jira fix version (such
+// as 2025.Q1.5, 7.4.13 DXP U92, 7.2.10 DXP FP8 or 7.2.10.3 DXP SP3), or null if
+// it isn't part of a release line with numbered patch levels. The release
+// lines are quarterly releases (such as 2025.q1), 7.4, 7.3, 7.2, 7.1 and 7.0.
+function parseVersionLevel(version) {
+    if (!version) {
         return null;
     }
-    const match = fixVer.toLowerCase().match(/(\d{4})\.q([1-4])\.(\d+)/);
-    if (match) {
-        return `${match[1]}.q${match[2]}.${match[3]}`;
+    var v = version.trim();
+    var m;
+    if (m = v.match(/^(\d{4})\.q([1-4])\.(\d+)/i)) {
+        return { line: m[1] + '.q' + m[2], level: parseInt(m[3]) };
+    }
+    // Patcher project versions
+    if (m = v.match(/^7\.4\.13-u(\d+)/)) {
+        return { line: '7.4', level: parseInt(m[1]) };
+    }
+    if (/^7\.4\.13-ga1/.test(v)) {
+        return { line: '7.4', level: 0 };
+    }
+    if (m = v.match(/^fix-pack-base-7([0-4])(?:10|13)(?:-private)?$/)) {
+        return { line: '7.' + m[1], level: 0 };
+    }
+    if (m = v.match(/^fix-pack-(?:de|dxp)-(\d+)-7([0-3])10(?:-private)?$/)) {
+        return { line: '7.' + m[2], level: parseInt(m[1]) };
+    }
+    // Jira fix versions
+    if (m = v.match(/^7\.4\.13 DXP U(\d+)/i)) {
+        return { line: '7.4', level: parseInt(m[1]) };
+    }
+    if (m = v.match(/^7\.4\.(?:3|13)\.(\d+)\s+(?:CE\s+)?GA/i)) {
+        var ga = parseInt(m[1]);
+        return (ga >= 15) ? { line: '7.4', level: ga } : (ga > 4) ? { line: '7.4', level: ga - 4 } : null;
+    }
+    if (m = v.match(/^7\.([0-4])\.\d+ DXP GA1/i)) {
+        return { line: '7.' + m[1], level: 0 };
+    }
+    if (m = v.match(/^7\.3\.10(?:\.\d+)? DXP (?:U|FP)\s*(\d+)/i)) {
+        return { line: '7.3', level: parseInt(m[1]) };
+    }
+    if (m = v.match(/^7\.([0-2])\.\d+ DXP FP\s*(\d+)/i)) {
+        return { line: '7.' + m[1], level: parseInt(m[2]) };
+    }
+    if (m = v.match(/^7\.([0-3])\.\d+(?:\.\d+)?[\s.-]*(?:DXP\s*)?SP\s*(\d+)/i)) {
+        var fixPack = servicePackFixPacks['7.' + m[1]][parseInt(m[2])];
+        return (fixPack === undefined) ? null : { line: '7.' + m[1], level: fixPack };
     }
     return null;
+}
+function getVersionLine(version) {
+    var parsed = parseVersionLevel(version);
+    return parsed ? parsed.line : null;
+}
+// Orders release lines from oldest to newest: 7.0 to 7.4, then the quarterly
+// releases.
+function getLineOrder(line) {
+    var m = line.match(/^(\d{4})\.q([1-4])$/);
+    if (m) {
+        return parseInt(m[1]) * 10 + parseInt(m[2]);
+    }
+    m = line.match(/^7\.(\d)$/);
+    return m ? 70 + parseInt(m[1]) : 0;
+}
+function isLTSLine(line) {
+    return /\.q1$/.test(line);
+}
+function compareVersionLevels(a, b) {
+    if (a.line != b.line) {
+        return getLineOrder(a.line) - getLineOrder(b.line);
+    }
+    return a.level - b.level;
+}
+// Compares two version names (Patcher or Jira) by release line and patch
+// level, putting names that aren't part of a release line first.
+function compareFixVersionNames(a, b) {
+    var aLevel = parseVersionLevel(a);
+    var bLevel = parseVersionLevel(b);
+    if (!aLevel || !bLevel) {
+        return (aLevel ? 1 : 0) - (bLevel ? 1 : 0);
+    }
+    return compareVersionLevels(aLevel, bLevel);
+}
+// Returns the short name of a patch level, matching the names used by the LSV
+// checker (such as 2025.q1.5, 7.4.13-u92, 7.3.10-u3, 7.2.10-fp8 or 7.0.10-de60).
+function getReleaseName(level) {
+    if (/\.q[1-4]$/.test(level.line)) {
+        return level.line + '.' + level.level;
+    }
+    var base = (level.line == '7.4') ? '7.4.13' : level.line + '.10';
+    if (level.level == 0) {
+        return base + '-ga1';
+    }
+    var type = ((level.line == '7.4') || (level.line == '7.3')) ? 'u' : (level.line == '7.0') ? 'de' : 'fp';
+    return base + '-' + type + level.level;
+}
+function compareProjectVersionNames(a, b) {
+    var result = compareFixVersionNames(a, b);
+    if (result != 0) {
+        return result;
+    }
+    return a > b ? 1 : a < b ? -1 : 0;
+}
+function getParsedFixVersions(jiraStatus) {
+    if (!jiraStatus) {
+        return [];
+    }
+    var targets = [];
+    for (var original of jiraStatus.fixVersions) {
+        var parsed = parseVersionLevel(original);
+        if (parsed) {
+            targets.push({ original: original, clean: getReleaseName(parsed), line: parsed.line, level: parsed.level });
+        }
+    }
+    targets.sort(compareVersionLevels);
+    return targets;
+}
+// Combines the statuses of every LPE ticket for a CVE: a release line has the
+// fix only once every one of them is fixed in it, so it is fixed in the latest
+// of their fix versions in that release line.
+function combineSecurityStatuses(statuses) {
+    if ((statuses.length == 0) || statuses.some(status => !status)) {
+        return null;
+    }
+    var lineFixes = statuses.map(status => {
+        var fixes = {};
+        for (var target of getParsedFixVersions(status)) {
+            fixes[target.line] = target;
+        }
+        return fixes;
+    });
+    var fixVersions = Object.keys(lineFixes[0])
+        .filter(line => lineFixes.every(fixes => line in fixes))
+        .map(line => lineFixes.map(fixes => fixes[line]).sort(compareVersionLevels).pop())
+        .map(target => target.original);
+    return { fixVersions: fixVersions };
+}
+// Returns HTML showing which baselines have the fix: one line per release line
+// that has a hotfix for it, with a small square for each patch level in that
+// release line, followed by whether that release line has the fix. When a
+// release line is selected, only that release line is shown.
+//
+// - blue: a hotfix is available (and links to it)
+// - green: the release itself includes the fix
+// - red: affected with no hotfix (only known when checking the fix status)
+// - grey: no hotfix
+//
+// The release line being checked is highlighted and followed by its status,
+// and the patch level being checked is outlined.
+function getAvailableBaselinesHTML(tokens, fixVersions, projectVersions, fixStatus) {
+    var lineFixes = {};
+    if (fixStatus) {
+        for (var target of getParsedFixVersions(fixStatus.jiraStatus)) {
+            lineFixes[target.line] = target;
+        }
+    }
+    // Versions that aren't part of a release line (such as marketplace apps)
+    // are left out.
+    var lineVersions = {};
+    fixVersions.forEach(version => {
+        var line = getVersionLine(version);
+        if (line) {
+            lineVersions[line] = lineVersions[line] || new Set();
+            lineVersions[line].add(version);
+        }
+    });
+    // When checking one release line, only show that release line. Otherwise,
+    // also show the release lines that have the fix in a release.
+    if (fixStatus && fixStatus.prefix) {
+        lineVersions = {
+            [fixStatus.prefix]: lineVersions[fixStatus.prefix] || new Set(),
+        };
+    }
+    else {
+        Object.keys(lineFixes).forEach(fixLine => {
+            lineVersions[fixLine] = lineVersions[fixLine] || new Set();
+        });
+    }
+    for (var version of Object.keys(projectVersions)) {
+        var line = getVersionLine(version);
+        if (line && lineVersions[line]) {
+            lineVersions[line].add(version);
+        }
+    }
+    var lines = Object.keys(lineVersions)
+        .filter(line => lineVersions[line].size > 0)
+        .map(line => ({
+        line: line,
+        versions: Array.from(lineVersions[line]).sort(compareProjectVersionNames),
+    }));
+    lines.sort((a, b) => compareProjectVersionNames(a.versions[0], b.versions[0]));
+    var linesHTML = lines.map(item => {
+        var lineFix = lineFixes[item.line] || null;
+        var isSelectedLine = !!fixStatus && (item.line == fixStatus.prefix);
+        var isAffectedKnown = !!fixStatus && !!fixStatus.jiraStatus && (!!lineFix || isSelectedLine);
+        var hotfixCount = item.versions.filter(version => fixVersions.has(version)).length;
+        var selectedLevel = (fixStatus && isSelectedLine) ? parseVersionLevel(fixStatus.selectedVersion) : null;
+        var squaresHTML = item.versions.map(version => {
+            var classNames = ['bulk-search-square'];
+            var title = version;
+            var versionLevel = parseVersionLevel(version);
+            if (lineFix && (versionLevel.level >= lineFix.level)) {
+                classNames.push('bulk-search-square-released');
+                title += ': fixed in ' + lineFix.clean;
+            }
+            else if (fixVersions.has(version)) {
+                classNames.push('bulk-search-square-hotfix');
+                title += ': hotfix available';
+            }
+            else if (isAffectedKnown) {
+                classNames.push('bulk-search-square-affected');
+                title += ': affected, no hotfix';
+            }
+            else {
+                title += ': no hotfix';
+            }
+            if (selectedLevel && (versionLevel.level == selectedLevel.level)) {
+                classNames.push('bulk-search-square-selected');
+            }
+            var url = fixVersions.has(version) ? getPatcherPortalFixSearchURL(tokens, version, projectVersions) : null;
+            if (url) {
+                return `<a class="${classNames.join(' ')}" href="${url}" target="_blank" title="${title}"></a>`;
+            }
+            return `<span class="${classNames.join(' ')}" title="${title}"></span>`;
+        }).join('');
+        var summary = [];
+        if (fixStatus && isSelectedLine) {
+            if (!fixStatus.jiraStatus && fixStatus.unknownReason) {
+                summary.push(`<span class="label label-default">Unknown</span> <span class="bulk-search-status-text">${fixStatus.unknownReason}</span>`);
+            }
+            else {
+                summary.push(getTicketSecurityStatus(fixStatus.prefix, fixStatus.selectedVersion, fixStatus.jiraStatus));
+            }
+        }
+        else if (fixStatus && fixStatus.jiraStatus) {
+            if (lineFix) {
+                summary.push(getStatusBadgeHTML('label-success', 'Fixed', 'fixed in ' + getFixVersionHTML(lineFix)));
+            }
+            else {
+                summary.push(getStatusBadgeHTML('label-default', 'No fix', `not fixed in <span class="bulk-search-ticket-name">${item.line}</span>; ${getOtherFixHTML(getParsedFixVersions(fixStatus.jiraStatus), item.line)}`));
+            }
+        }
+        if (hotfixCount > 0) {
+            summary.push(`<span class="bulk-search-line-count">${hotfixCount} of ${item.versions.length} with hotfixes</span>`);
+        }
+        return `
+      <div class="bulk-search-line">
+        <span class="bulk-search-line-name">${item.line}</span>
+        <span class="bulk-search-squares">${squaresHTML}</span>
+        <span class="bulk-search-line-summary">${summary.join(' ')}</span>
+      </div>
+    `;
+    }).join('');
+    return linesHTML;
+}
+function getBulkSearchLegendHTML() {
+    var items = [
+        ['bulk-search-square-released', 'fixed in the release'],
+        ['bulk-search-square-hotfix', 'affected, hotfix available'],
+        ['bulk-search-square-affected', 'affected, no hotfix'],
+        ['', 'no hotfix (fix status unknown)'],
+        ['bulk-search-square-selected', 'checked patch level'],
+    ];
+    return '<div class="bulk-search-legend">' + items.map(item => `<span><span class="bulk-search-square ${item[0]}"></span> ${item[1]}</span>`).join('') + '</div>';
 }
 async function getJiraFieldsGraph(tokens) {
     const fields = {};
     const prefixes = ['LPE', 'LPD', 'LPS', 'LPSA', 'COMMERCE', 'LSV'];
     tokens = tokens.filter(token => prefixes.some(prefix => token.startsWith(prefix)));
     while (tokens.length > 0) {
-        const issues = await getJiraIssuesByKey(tokens, ['key', 'issuelinks', 'versions', 'fixVersions', 'customfield_10886', 'customfield_10786', 'priority', 'labels'], [], false);
+        const issues = await getJiraIssuesByKey(tokens, ['key', 'issuelinks', 'versions', 'fixVersions', 'customfield_10886'], [], false);
         tokens = [];
         for (const issue of issues) {
             if (!issue.fields) {
@@ -3141,98 +3501,9 @@ async function getJiraFieldsGraph(tokens) {
     }
     return fields;
 }
-function getProductLine(ver) {
-    const m = ver.toLowerCase().match(/(\d{4}\.q[1-4])/);
-    return m ? m[1] : null;
-}
 function isApplicableFixVersion(fvName, targetVersion) {
-    const fvLine = getProductLine(fvName);
-    const targetLine = getProductLine(targetVersion);
-    if (!fvLine || !targetLine) {
-        return false;
-    }
-    return fvLine === targetLine;
-}
-function hasLabel(issue, labelName) {
-    if (!issue.labels) {
-        return false;
-    }
-    for (const label of issue.labels) {
-        if (typeof label === 'string') {
-            if (label === labelName) {
-                return true;
-            }
-        }
-        else if (typeof label === 'object' && label !== null) {
-            const name = label.name || label.value;
-            if (name === labelName) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-function getLsvSeverityGroup(lsvKeys, jiraFieldsGraph) {
-    const sortedKeys = Array.from(lsvKeys).sort();
-    // 1. Check customfield_10786 (Severity) first across all linked LSVs
-    for (const lk of sortedKeys) {
-        const lsvIssue = jiraFieldsGraph[lk];
-        if (lsvIssue) {
-            const cfSev = lsvIssue.customfield_10786;
-            if (cfSev) {
-                let val;
-                if (Array.isArray(cfSev)) {
-                    if (cfSev.length > 0) {
-                        val = cfSev[0].value;
-                    }
-                }
-                else if (cfSev && typeof cfSev === 'object') {
-                    val = cfSev.value;
-                }
-                if (val) {
-                    if (val === 'Critical') {
-                        return 'sev-1';
-                    }
-                    else if (val === 'High') {
-                        return 'sev-2';
-                    }
-                    else {
-                        return 'sev-3'; // Medium, Low, etc.
-                    }
-                }
-            }
-        }
-    }
-    // 2. Fall back to priority if severity is null/empty on all linked LSVs
-    for (const lk of sortedKeys) {
-        const lsvIssue = jiraFieldsGraph[lk];
-        if (lsvIssue) {
-            const prio = lsvIssue.priority;
-            if (prio) {
-                let val;
-                if (Array.isArray(prio)) {
-                    if (prio.length > 0) {
-                        val = prio[0].name;
-                    }
-                }
-                else if (prio && typeof prio === 'object') {
-                    val = prio.name;
-                }
-                if (val) {
-                    if (val === 'Critical') {
-                        return 'sev-1';
-                    }
-                    else if (val === 'High') {
-                        return 'sev-2';
-                    }
-                    else {
-                        return 'sev-3'; // all others = sev-3
-                    }
-                }
-            }
-        }
-    }
-    return null;
+    const fvLine = getVersionLine(fvName);
+    return !!fvLine && (fvLine === getVersionLine(targetVersion));
 }
 async function getJiraSecurityStatusRecord(tokens) {
     if (tokens.length === 0) {
@@ -3343,14 +3614,14 @@ async function getJiraSecurityStatusRecord(tokens) {
         }
         const finalFixVersionsMap = new Map();
         if (lsvAffectsMap.size > 0) {
-            // Use compareQuarterlyVersions to resolve each affected version from lsvAffectsMap 
+            // Use compareFixVersionNames to resolve each affected version from lsvAffectsMap 
             // to the closest fix version chronologically after it from stdFixVersionsMap,
-            // restricted to the correct product/quarterly line via isApplicableFixVersion.
+            // restricted to the correct release line via isApplicableFixVersion.
             for (const [ver, source] of lsvAffectsMap.entries()) {
                 const candidates = Array.from(stdFixVersionsMap.keys())
-                    .filter(candidate => isApplicableFixVersion(candidate, ver) && compareQuarterlyVersions(candidate, ver) > 0);
+                    .filter(candidate => !isCMSVersion(candidate) && isApplicableFixVersion(candidate, ver) && compareFixVersionNames(candidate, ver) > 0);
                 if (candidates.length > 0) {
-                    candidates.sort(compareQuarterlyVersions);
+                    candidates.sort(compareFixVersionNames);
                     const closestFix = candidates[0];
                     const closestSource = stdFixVersionsMap.get(closestFix);
                     finalFixVersionsMap.set(closestFix, `${closestSource}`);
@@ -3389,29 +3660,12 @@ async function getJiraSecurityStatusRecord(tokens) {
         }
         const fixVersions = [];
         for (const [ver, source] of finalFixVersionsMap.entries()) {
+            if (isCMSVersion(ver)) {
+                continue;
+            }
             fixVersions.push(`${ver} (${source})`);
         }
-        // Determine the severity group
-        let group = null;
-        if (hasLabel(issue, 'sev-1')) {
-            group = 'sev-1';
-        }
-        else if (hasLabel(issue, 'sev-2')) {
-            group = 'sev-2';
-        }
-        else if (hasLabel(issue, 'sev-3')) {
-            group = 'sev-3';
-        }
-        if (!group) {
-            if (lsvKeys.size > 0) {
-                group = getLsvSeverityGroup(lsvKeys, jiraFieldsGraph);
-            }
-            if (!group) {
-                group = 'unknown';
-            }
-        }
         record[key] = {
-            severity: group,
             fixVersions: fixVersions
         };
     }
@@ -3485,58 +3739,82 @@ async function getJiraIssues(jql, fields, expand, render) {
     }
     return issues;
 }
-function isFixed(targetVersion, prefix, selectedVersion) {
-    if (!targetVersion) {
-        return false;
-    }
-    if (selectedVersion === 'All') {
-        return targetVersion.startsWith(prefix);
-    }
-    return compareQuarterlyVersions(selectedVersion, targetVersion) >= 0;
+// Badges and wording match the "Liferay Security Vulnerabilities By Release"
+// tool (liferay-faster-deploy/packageinfo/lsv_checker.html) for continuity.
+function getStatusBadgeHTML(labelClass, text, reason) {
+    return `<span class="label ${labelClass}">${text}</span> <span class="bulk-search-status-text">${reason}</span>`;
 }
-function getTicketSecurityStatus(ticket, prefix, selectedVersion, jiraStatus) {
+function getFixVersionHTML(target) {
+    var source = target.original.match(/\((.*)\)\s*$/);
+    var title = source ? ` title="${source[1]}"` : '';
+    return `<span class="bulk-search-ticket-name"${title}>${target.clean}</span>`;
+}
+// Returns the fix outside the selected release line: the earliest fix in the
+// next LTS (.q1) release line after it, or else in the next release line after
+// it, or else the first fix at all.
+function getOtherFixHTML(targets, prefix) {
+    if (targets.length == 0) {
+        return 'fix version undocumented';
+    }
+    var laterTargets = targets.filter(t => getLineOrder(t.line) > getLineOrder(prefix));
+    var ltsTargets = laterTargets.filter(t => isLTSLine(t.line));
+    if (ltsTargets.length > 0) {
+        return 'LTS fix in ' + getFixVersionHTML(ltsTargets[0]);
+    }
+    if (laterTargets.length > 0) {
+        return 'fixed in ' + getFixVersionHTML(laterTargets[0]);
+    }
+    return 'first fixed in ' + getFixVersionHTML(targets[0]);
+}
+function getTicketSecurityStatus(prefix, selectedVersion, jiraStatus) {
     if (!jiraStatus) {
-        return `<span class="bulk-search-status-na">N/A</span>`;
+        return `<span class="label label-default">Unknown</span> <span class="bulk-search-status-text">unable to load from Jira</span>`;
     }
-    const severity = jiraStatus.severity;
-    const allTargets = jiraStatus.fixVersions;
-    if (allTargets.length === 0) {
-        return `<span class="bulk-search-status-not-fixed">Not Fixed</span>, Severity: ${severity}, Target: TBD`;
+    const targets = getParsedFixVersions(jiraStatus);
+    const prefixTargets = targets.filter(t => t.line == prefix);
+    // No release in this release line has the fix yet
+    if (prefixTargets.length == 0) {
+        return getStatusBadgeHTML('label-danger', 'Affected', `not fixed in <span class="bulk-search-ticket-name">${prefix}</span>; ${getOtherFixHTML(targets, prefix)}`);
     }
-    // Filter targets belonging to our baseline prefix
-    const prefixTargets = allTargets.filter(t => isFixInPrefix(t, prefix));
-    if (prefixTargets.length > 0) {
-        // Check the latest target within the same baseline
-        const parsedPrefixTargets = prefixTargets
-            .map(t => ({ original: t, clean: getCleanVersionFromFix(t) }))
-            .filter(item => item.clean !== null);
-        if (parsedPrefixTargets.length > 0) {
-            parsedPrefixTargets.sort((a, b) => compareQuarterlyVersions(a.clean, b.clean));
-            const latestPrefixTarget = parsedPrefixTargets[parsedPrefixTargets.length - 1];
-            const canonicalBranchFix = latestPrefixTarget.clean;
-            if (isFixed(canonicalBranchFix, prefix, selectedVersion)) {
-                if (selectedVersion === 'All') {
-                    return `<span class="bulk-search-status-fixed">Fixed</span> in ${latestPrefixTarget.original}`;
-                }
-                else {
-                    return `<span class="bulk-search-status-fixed">Fixed</span> since ${latestPrefixTarget.original}`;
-                }
-            }
-            else {
-                return `<span class="bulk-search-status-not-fixed">Not Fixed</span>, Severity: ${severity}, Target: ${latestPrefixTarget.original}`;
-            }
-        }
+    const lineFix = prefixTargets[prefixTargets.length - 1];
+    const fixedInHTML = 'fixed in ' + getFixVersionHTML(lineFix);
+    if (selectedVersion === 'All') {
+        return getStatusBadgeHTML('label-success', 'Fixed', fixedInHTML);
     }
-    // If none exist on prefix (or could not parse), point to the latest future baseline
-    const parsedFutureTargets = allTargets
-        .map(t => ({ original: t, clean: getCleanVersionFromFix(t) }))
-        .filter(item => item.clean !== null);
-    if (parsedFutureTargets.length > 0) {
-        parsedFutureTargets.sort((a, b) => compareQuarterlyVersions(a.clean, b.clean));
-        const latestFutureTarget = parsedFutureTargets[parsedFutureTargets.length - 1];
-        return `<span class="bulk-search-status-not-fixed">Not Fixed</span>, Severity: ${severity}, Target: ${latestFutureTarget.original}`;
+    const selectedLevel = parseVersionLevel(selectedVersion);
+    if (selectedLevel && (selectedLevel.level >= lineFix.level)) {
+        return getStatusBadgeHTML('label-success', 'Not affected', fixedInHTML);
     }
-    return `<span class="bulk-search-status-not-fixed">Not Fixed</span>, Severity: ${severity}, Target: ${allTargets.join(', ')}`;
+    return getStatusBadgeHTML('label-danger', 'Affected', fixedInHTML);
+}
+var securityIssueSynonymsPromise = null;
+// Fetches the security issue synonyms once per page load, since changing the
+// bulk search options re-runs the search.
+function getSecurityIssueSynonyms() {
+    if (!securityIssueSynonymsPromise) {
+        securityIssueSynonymsPromise = fetchSecurityIssueSynonyms().catch(err => {
+            securityIssueSynonymsPromise = null;
+            throw err;
+        });
+    }
+    return securityIssueSynonymsPromise;
+}
+var jiraSecurityStatusCache = {};
+function getJiraSecurityStatusCacheKey(tokens) {
+    return tokens.slice().sort().join(',');
+}
+async function getCachedJiraSecurityStatusRecord(tokens) {
+    var key = getJiraSecurityStatusCacheKey(tokens);
+    if (key in jiraSecurityStatusCache) {
+        return jiraSecurityStatusCache[key];
+    }
+    var record = await getJiraSecurityStatusRecord(tokens);
+    // An empty record usually means we couldn't reach Jira (such as not being
+    // logged in), so try again next time instead of remembering it.
+    if (Object.keys(record).length > 0) {
+        jiraSecurityStatusCache[key] = record;
+    }
+    return record;
 }
 async function fetchSecurityIssueSynonyms() {
     const url = 'https://s3-us-west-2.amazonaws.com/mdang.grow/security_issue_synonyms.ndjson';
@@ -3575,8 +3853,32 @@ async function fetchSecurityIssueSynonyms() {
         return acc;
     }, {});
 }
-function generateBulkSearchContentArea() {
-    var projectVersions = getProjectVersionsFromDOM();
+function getBulkSearchURL(tokens, version) {
+    var params = new URLSearchParams();
+    params.set('tokens', tokens.join(','));
+    if (version && parseVersionLevel(version)) {
+        params.set('version', version.trim());
+    }
+    return getFixesTabURL().replace(/#.*$/, '') + '#bulk-search?' + params.toString();
+}
+function getBulkSearchRequestFromHash() {
+    var hash = document.location.hash;
+    if (hash.indexOf('#bulk-search?') != 0) {
+        return null;
+    }
+    var params = new URLSearchParams(hash.substring('#bulk-search?'.length));
+    var tokens = (params.get('tokens') || '').split(',').map(x => x.trim()).filter(Boolean);
+    if (tokens.length == 0) {
+        return null;
+    }
+    return {
+        tokens: tokens,
+        version: params.get('version'),
+    };
+}
+function generateBulkSearchContentArea(request) {
+    var projectVersions = {};
+    var lineVersions = {};
     var contentArea = document.createElement('div');
     contentArea.id = 'bulk-search-content';
     contentArea.style.display = 'none';
@@ -3596,10 +3898,10 @@ function generateBulkSearchContentArea() {
     <div style="margin-bottom: 15px; display: flex; gap: 15px; align-items: flex-end;">
       <div>
         <label for="bulk-baseline-prefix" style="font-weight: bold; display: block; margin-bottom: 5px;">
-          Check Fix Status (Optional):
+          Check Fix Status:
         </label>
         <select id="bulk-baseline-prefix" style="padding: 4px; border: 1px solid #ccc; border-radius: 4px; min-width: 150px;">
-          <option value="">None</option>
+          <option value="">Loading...</option>
         </select>
       </div>
       <div id="bulk-baseline-version-container" style="display: none;">
@@ -3621,33 +3923,44 @@ function generateBulkSearchContentArea() {
     const versionSelect = contentArea.querySelector('#bulk-baseline-version');
     var bulkSearchButton = contentArea.querySelector('#bulk-search-button');
     var bulkSearchResults = contentArea.querySelector('#bulk-search-results');
-    const quarterlyVersions = Object.keys(projectVersions)
-        .map(v => v.trim())
-        .filter(v => getCleanVersionFromFix(v) !== null)
-        .sort(compareQuarterlyVersions);
-    const prefixes = Array.from(new Set(quarterlyVersions.map(v => {
-        const match = v.toLowerCase().match(/(\d{4})\.q([1-4])/);
-        return match ? `${match[1]}.q${match[2]}` : '';
-    }).filter(Boolean)))
-        .sort((a, b) => compareQuarterlyVersions(b + '.0', a + '.0'));
-    for (const prefix of prefixes) {
-        const opt = document.createElement('option');
-        opt.value = prefix;
-        opt.textContent = prefix;
-        prefixSelect.appendChild(opt);
-    }
-    prefixSelect.addEventListener('change', () => {
-        const prefix = prefixSelect.value;
-        if (!prefix) {
-            versionContainer.style.display = 'none';
-            if (tokenListInput.value.trim()) {
-                bulkSearchButton.click();
+    prefixSelect.disabled = true;
+    var projectVersionsReady = getProjectVersions().then(loadedProjectVersions => {
+        projectVersions = loadedProjectVersions;
+        // Group the project versions by release line, leaving out the private
+        // branches since they're at the same patch level as the public ones.
+        lineVersions = {};
+        for (var version of Object.keys(projectVersions)) {
+            var line = getVersionLine(version);
+            if (line && (version.indexOf('-private') == -1)) {
+                lineVersions[line] = lineVersions[line] || [];
+                lineVersions[line].push(version.trim());
             }
-            return;
         }
-        const versions = quarterlyVersions
-            .filter(v => v.toLowerCase().startsWith(prefix.toLowerCase() + '.'))
-            .sort(compareQuarterlyVersions);
+        const prefixes = Object.keys(lineVersions).sort((a, b) => getLineOrder(b) - getLineOrder(a));
+        prefixSelect.innerHTML = '<option value="">All</option>';
+        for (const prefix of prefixes) {
+            const opt = document.createElement('option');
+            opt.value = prefix;
+            opt.textContent = prefix;
+            prefixSelect.appendChild(opt);
+        }
+        prefixSelect.disabled = false;
+        if (request) {
+            tokenListInput.value = request.tokens.join('\n');
+            var requestLevel = parseVersionLevel(request.version);
+            if (requestLevel && (prefixes.indexOf(requestLevel.line) != -1)) {
+                prefixSelect.value = requestLevel.line;
+                populateVersionSelect(requestLevel.line);
+                var versionOption = lineVersions[requestLevel.line].filter(v => parseVersionLevel(v).level == requestLevel.level)[0];
+                if (versionOption) {
+                    versionSelect.value = versionOption;
+                }
+            }
+            bulkSearchButton.click();
+        }
+    });
+    function populateVersionSelect(prefix) {
+        const versions = (lineVersions[prefix] || []).slice().sort(compareProjectVersionNames);
         versionSelect.innerHTML = '<option value="All">All</option>';
         for (const v of versions) {
             const opt = document.createElement('option');
@@ -3656,6 +3969,15 @@ function generateBulkSearchContentArea() {
             versionSelect.appendChild(opt);
         }
         versionContainer.style.display = 'block';
+    }
+    prefixSelect.addEventListener('change', () => {
+        const prefix = prefixSelect.value;
+        if (prefix) {
+            populateVersionSelect(prefix);
+        }
+        else {
+            versionContainer.style.display = 'none';
+        }
         if (tokenListInput.value.trim()) {
             bulkSearchButton.click();
         }
@@ -3666,12 +3988,13 @@ function generateBulkSearchContentArea() {
         }
     });
     bulkSearchButton.addEventListener('click', async (e) => {
+        await projectVersionsReady;
         var rawText = tokenListInput.value;
         var tokensSet = new Set(rawText.split(/[\n,]+/).map(t => t.trim()).filter(Boolean));
         var tokensList = Array.from(tokensSet);
         var cveTokensList = tokensList.filter(it => it.indexOf('CVE-') == 0 || it.indexOf('PRISMA-') == 0);
         var cveFixTokensSet = new Set();
-        var synonymLookup = await fetchSecurityIssueSynonyms();
+        var synonymLookup = await getSecurityIssueSynonyms();
         var isCVE = (it) => it.indexOf('CVE-') == 0 || it.indexOf('PRISMA-') == 0;
         var isLPE = (it) => it.indexOf('LPE-') == 0;
         var cveToLPELookup = Object.keys(synonymLookup).filter(isCVE).reduce((acc, next) => {
@@ -3690,64 +4013,63 @@ function generateBulkSearchContentArea() {
         }
         var selectedPrefix = prefixSelect.value;
         var selectedVersion = versionSelect.value;
-        var showSecurity = !!selectedPrefix;
-        addSpinner(tokensList.length + (showSecurity ? 2 : 0));
+        // Changing the options re-runs the search, but everything we already
+        // fetched is cached, so only show the spinner if we fetch something new.
+        var needsJira = !(getJiraSecurityStatusCacheKey(tokensList) in jiraSecurityStatusCache);
+        var uncachedCount = tokensList.filter(token => !patcherFixVersionsCache[token]).length + (needsJira ? 2 : 0);
+        if (uncachedCount > 0) {
+            addSpinner(tokensList.length + (needsJira ? 2 : 0));
+        }
         var availableFixVersions = await getAllPatcherFixVersions(tokensList, tokensSet);
         var jiraSecurityStatusRecord = {};
-        if (showSecurity) {
-            updateSpinner(1);
-            jiraSecurityStatusRecord = await getJiraSecurityStatusRecord(tokensList);
+        if (needsJira) {
             updateSpinner(1);
         }
+        jiraSecurityStatusRecord = await getCachedJiraSecurityStatusRecord(tokensList);
+        if (needsJira) {
+            updateSpinner(1);
+        }
+        var getFixStatus = function (jiraStatus, unknownReason) {
+            return {
+                prefix: selectedPrefix,
+                selectedVersion: selectedPrefix ? selectedVersion : 'All',
+                jiraStatus: jiraStatus,
+                unknownReason: unknownReason,
+            };
+        };
         var cveRows = cveTokensList.map(cve => {
             var cveFixes = cveToLPELookup[cve] || [];
             var cveFixVersions = new Set(cveFixes.map(ticket => Array.from(availableFixVersions[ticket]) || []).reduce((acc, next) => acc.concat(next), []));
-            var securityCell = '';
-            if (showSecurity) {
-                var securityStatus = '';
-                if (cveFixes.length === 0) {
-                    securityStatus = `<span style="color: #777;">No associated LPEs found</span>`;
-                }
-                else {
-                    securityStatus = cveFixes.map(ticket => {
-                        var status = getTicketSecurityStatus(ticket, selectedPrefix, selectedVersion, jiraSecurityStatusRecord[ticket] || null);
-                        return `<div><strong>${ticket}:</strong> ${status}</div>`;
-                    }).join('');
-                }
-                securityCell = `<td class="bulk-search-fix-status">${securityStatus}</td>`;
-            }
+            var fixStatus = getFixStatus(combineSecurityStatuses(cveFixes.map(ticket => jiraSecurityStatusRecord[ticket] || null)), cveFixes.length == 0 ? 'no associated LPE tickets found' : null);
             return `
         <tr>
           <td class="bulk-search-ticket"><span class="bulk-search-ticket-name">${cve}</span>${cveFixes.length == 0 ? "" : ("<br/>(" + cveFixes.map(fix => `<span class="bulk-search-ticket-name">${fix}</span>`).join(', ') + ")")}</td>
-          <td class="bulk-search-baselines">${Array.from(cveFixVersions).sort((a, b) => getLiferayVersion(a) - getLiferayVersion(b)).map(version => getPatcherPortalFixSearchLink(cveFixes, version, projectVersions)).join(', ')}</td>
-          ${securityCell}
+          <td class="bulk-search-baselines">${getAvailableBaselinesHTML(cveFixes, cveFixVersions, projectVersions, fixStatus)}</td>
         </tr>
       `;
         });
         var nonCVERows = nonCVETokensList.map(ticket => {
-            var securityCell = '';
-            if (showSecurity) {
-                var status = getTicketSecurityStatus(ticket, selectedPrefix, selectedVersion, jiraSecurityStatusRecord[ticket] || null);
-                securityCell = `<td class="bulk-search-fix-status">${status}</td>`;
-            }
+            var fixStatus = getFixStatus(jiraSecurityStatusRecord[ticket] || null, null);
             var cves = lpeToCVELookup[ticket] || [];
             var cveSuffix = cves.length === 0 ? "" : `<br/><span style="font-weight: normal; font-size: 0.9em; color: #555;">(${cves.map(cve => `<span class="bulk-search-ticket-name">${cve}</span>`).join(', ')})</span>`;
             return `
       <tr>
         <td class="bulk-search-ticket"><span class="bulk-search-ticket-name">${ticket}</span>${cveSuffix}</td>
-        <td class="bulk-search-baselines">${Array.from(availableFixVersions[ticket]).sort((a, b) => getLiferayVersion(a) - getLiferayVersion(b)).map(version => getPatcherPortalFixSearchLink([ticket], version, projectVersions)).join(', ')}</td>
-        ${securityCell}
+        <td class="bulk-search-baselines">${getAvailableBaselinesHTML([ticket], availableFixVersions[ticket], projectVersions, fixStatus)}</td>
       </tr>
     `;
         });
-        var fixStatusHeader = selectedVersion === 'All' ? `Fix Status (${selectedPrefix})` : `Fix Status (${selectedVersion})`;
+        var baselinesHeader = 'Available on Baselines';
+        if (selectedPrefix) {
+            baselinesHeader += selectedVersion === 'All' ? ` (checking ${selectedPrefix})` : ` (checking ${selectedVersion})`;
+        }
         bulkSearchResults.innerHTML = `
+      ${getBulkSearchLegendHTML()}
       <table class="bulk-search-table">
         <thead>
           <tr>
             <th class="bulk-search-ticket">Ticket</th>
-            <th class="bulk-search-baselines">Available on Baselines</th>
-            ${showSecurity ? `<th class="bulk-search-fix-status">${fixStatusHeader}</th>` : ''}
+            <th class="bulk-search-baselines">${baselinesHeader}</th>
           </tr>
         </thead>
         <tbody>
@@ -3770,9 +4092,8 @@ function addBulkSearchTab() {
     bulkTab.id = 'bulk-search-tab';
     bulkTab.innerHTML = `<a href="#bulk-search">Bulk Search</a>`;
     navTabs.appendChild(bulkTab);
-    bulkTab.addEventListener('click', (e) => {
-        e.preventDefault();
-        var contentArea = generateBulkSearchContentArea();
+    var activateBulkSearchTab = function (request) {
+        var contentArea = generateBulkSearchContentArea(request);
         Array.from(navTabs.children).forEach(li => li.classList.remove('active'));
         bulkTab.classList.add('active');
         Array.from(navTabsParent.children).forEach(child => {
@@ -3781,7 +4102,15 @@ function addBulkSearchTab() {
             }
         });
         navTabsParent.appendChild(contentArea);
+    };
+    bulkTab.addEventListener('click', (e) => {
+        e.preventDefault();
+        activateBulkSearchTab(null);
     });
+    var request = getBulkSearchRequestFromHash();
+    if (request) {
+        activateBulkSearchTab(request);
+    }
 }
 /**
  * Suspends Liferay.Poller once it becomes available, so that the page
@@ -3840,8 +4169,10 @@ var applyPatcherCustomizations = function () {
         }
         if (activeTabName == 'Fixes') {
             addKeywordsProjectVersionFilter();
-            addBulkSearchTab();
         }
+    }
+    if (activeTabName) {
+        addBulkSearchTab();
     }
     // Runs after addProductVersionFilter, since on the create fix page
     // that function clones the same patcherProjectVersionIdFilter
